@@ -1,0 +1,24 @@
+# macOS
+.DS_Store
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.env
+
+# Build/test artifacts
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+build/
+dist/
+*.egg-info/
+.coverage
+htmlcov/
+
+# Local planning/agent files not intended for the initial public repo
+AGENTS.md
+.agents/
+prompts/
