@@ -43,3 +43,7 @@ class PermissionDeniedError(AskLensError):
 
 class UnsupportedQueryError(PlanValidationError):
     """Raised when a QueryPlan asks for unsupported behavior."""
+
+
+class LLMProviderError(AskLensError):
+    """Raised when an LLM provider cannot return a usable response."""

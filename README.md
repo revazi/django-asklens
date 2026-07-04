@@ -2,7 +2,7 @@
 
 Django AskLens is a reusable Django + DRF package for safe natural-language querying over explicitly registered Django models.
 
-Status: pre-alpha. The current package includes the minimal app scaffold, semantic catalog registration, strict QueryPlan schema/validation, and ORM-only query compilation/execution. LLM providers, DRF APIs, renderers, and audit models will be added in later approved phases.
+Status: pre-alpha. The current package includes the minimal app scaffold, semantic catalog registration, strict QueryPlan schema/validation, ORM-only query compilation/execution, and a deterministic planner/provider layer. Live LLM adapters, DRF APIs, renderers, and audit models will be added in later approved phases.
 
 ## Planned names
 
@@ -66,6 +66,29 @@ print(result.to_dict()["data"])
 ```
 
 The compiler uses Django ORM querysets only and starts from each resource's `base_queryset(request)` hook.
+
+## Current planner/provider layer
+
+```python
+from django_asklens.llms import DummyProvider
+from django_asklens.planning import plan_question
+
+provider = DummyProvider(
+    plans={
+        "Show orders by status": {
+            "resource": "orders",
+            "intent": "aggregate",
+            "group_by": [{"field": "status"}],
+            "metrics": [{"name": "order_count", "op": "count", "field": "id"}],
+            "limit": 100,
+            "visualization": {"type": "bar", "x": "status", "y": "order_count"},
+        }
+    }
+)
+planner_result = plan_question("Show orders by status", provider=provider)
+```
+
+The planner sends safe catalog metadata and the strict QueryPlan JSON schema to the provider. Provider output is always parsed and validated before it can be compiled or executed.
 
 ## Safety posture
 

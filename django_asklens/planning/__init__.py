@@ -1,5 +1,11 @@
 """Query planning schemas and validation."""
 
+from django_asklens.planning.planner import (
+    PlannerRequest,
+    PlannerResult,
+    build_planner_request,
+    plan_question,
+)
 from django_asklens.planning.schemas import (
     SUPPORTED_DATE_TRUNCS,
     SUPPORTED_FILTER_OPERATORS,
@@ -30,13 +36,17 @@ __all__ = [
     "SUPPORTED_ORDER_DIRECTIONS",
     "SUPPORTED_VISUALIZATION_TYPES",
     "FilterSpec",
+    "PlannerRequest",
+    "PlannerResult",
     "GroupBySpec",
     "MetricSpec",
     "OrderBySpec",
     "PlanLimits",
     "QueryPlan",
     "VisualizationSpec",
+    "build_planner_request",
     "get_query_plan_json_schema",
+    "plan_question",
     "parse_and_validate_query_plan",
     "parse_query_plan",
     "validate_query_plan",
