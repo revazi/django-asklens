@@ -11,6 +11,7 @@ INSTALLED_APPS = [
     "django.contrib.contenttypes",
     "rest_framework",
     "django_asklens",
+    "tests.test_project",
 ]
 
 DATABASES = {
@@ -21,6 +22,7 @@ DATABASES = {
 }
 
 MIDDLEWARE = []
+MIGRATION_MODULES = {"test_project": None}
 
 DJANGO_ASKLENS = {
     "MAX_ROWS": 50,

@@ -2,7 +2,7 @@
 
 Django AskLens is a reusable Django + DRF package for safe natural-language querying over explicitly registered Django models.
 
-Status: pre-alpha scaffold. Business logic, model registration, planning, query compilation, LLM providers, and APIs will be added in later approved phases.
+Status: pre-alpha. The current package includes the minimal app scaffold, semantic catalog registration, and strict QueryPlan schema/validation. Query compilation, LLM providers, DRF APIs, and audit models will be added in later approved phases.
 
 ## Planned names
 
@@ -10,6 +10,51 @@ Status: pre-alpha scaffold. Business logic, model registration, planning, query 
 - Python package distribution: `django-asklens`
 - Python import package: `django_asklens`
 - Django app label: `asklens`
+
+## Current catalog usage
+
+```python
+from django_asklens import Metric, register
+from shop.models import Order
+
+register(
+    model=Order,
+    label="Orders",
+    fields={
+        "id": {"label": "Order ID"},
+        "status": {"label": "Status"},
+        "created_at": {"label": "Created date"},
+        "customer.email": {"label": "Customer email", "sensitive": True},
+        "total": {"label": "Order total", "metric": True},
+    },
+    metrics=[
+        Metric("order_count", op="count", field="id", label="Number of orders"),
+        Metric("revenue", op="sum", field="total", label="Revenue"),
+    ],
+)
+```
+
+Only explicitly registered fields are included in the semantic catalog. Sensitive, hidden, and internal Django metadata are excluded from default catalog serialization.
+
+## Current QueryPlan validation
+
+```python
+from django_asklens.planning import parse_query_plan, validate_query_plan
+
+plan = parse_query_plan(
+    {
+        "resource": "orders",
+        "intent": "aggregate",
+        "group_by": [{"field": "status"}],
+        "metrics": [{"name": "order_count", "op": "count", "field": "id"}],
+        "limit": 100,
+        "visualization": {"type": "bar", "x": "status", "y": "order_count"},
+    }
+)
+validated_plan = validate_query_plan(plan)
+```
+
+LLM/provider output is treated as untrusted input: it must parse as a strict QueryPlan and validate against the semantic catalog before later phases can compile or execute it.
 
 ## Safety posture
 

@@ -10,6 +10,8 @@ DEFAULTS: dict[str, Any] = {
     "LLM_MODEL": None,
     "MAX_ROWS": 500,
     "MAX_JOINS": 2,
+    "MAX_METRICS": 5,
+    "MAX_GROUP_BY": 3,
     "ALLOW_RAW_SQL": False,
     "SEND_SAMPLE_ROWS_TO_LLM": False,
     "DEFAULT_VISUALIZATION": "table",
