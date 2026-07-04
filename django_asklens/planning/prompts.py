@@ -1,7 +1,7 @@
 """Prompt construction for QueryPlan generation."""
 
 import json
-from collections.abc import Mapping
+from collections.abc import Iterable, Mapping
 from typing import Any
 
 from django_asklens.catalog.registry import CatalogRegistry, default_registry
@@ -37,6 +37,8 @@ def build_planner_messages(
 
 def build_planner_catalog(
     registry: CatalogRegistry = default_registry,
+    *,
+    permissions: Iterable[str] | None = None,
 ) -> dict[str, Any]:
     """Return safe catalog metadata for planner prompts."""
 
@@ -44,6 +46,7 @@ def build_planner_catalog(
         include_sensitive=False,
         include_hidden=False,
         include_internal=False,
+        permissions=permissions,
     )
 
 

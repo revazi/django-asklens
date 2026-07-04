@@ -14,6 +14,7 @@ from rest_framework.test import APIClient
 from django_asklens import Metric
 from django_asklens.catalog.registry import default_registry
 from django_asklens.models import SemanticQueryRun
+from django_asklens.planning.planner import build_planner_request
 from tests.test_project.models import Account, AccountMembership, Customer, Order
 
 pytestmark = pytest.mark.django_db
@@ -152,7 +153,10 @@ def registered_multitenant_orders() -> None:
             },
             "total": {"label": "Order total", "metric": True},
         },
-        metrics=[Metric("order_count", op="count", field="id")],
+        metrics=[
+            Metric("order_count", op="count", field="id"),
+            Metric("tenant_count", op="count", field="account.slug"),
+        ],
         base_queryset=tenant_scoped_orders,
     )
 
@@ -220,6 +224,66 @@ def grant_account_view_permission(user):
     )
     user.user_permissions.add(permission)
     return type(user).objects.get(pk=user.pk)
+
+
+def test_catalog_endpoint_scopes_fields_and_metrics_to_user_permissions(
+    api_client: APIClient,
+    tenant_data: TenantData,
+    registered_multitenant_orders: None,
+) -> None:
+    api_client.force_authenticate(user=tenant_data.alpha_user)
+    unpermissioned_response = api_client.get("/asklens/catalog/")
+
+    assert unpermissioned_response.status_code == 200
+    unpermissioned_catalog = str(unpermissioned_response.data)
+    assert "status" in unpermissioned_catalog
+    assert "order_count" in unpermissioned_catalog
+    assert "account.slug" not in unpermissioned_catalog
+    assert "tenant_count" not in unpermissioned_catalog
+
+    alpha_user = grant_account_view_permission(tenant_data.alpha_user)
+    api_client.force_authenticate(user=alpha_user)
+    permissioned_response = api_client.get("/asklens/catalog/")
+
+    assert permissioned_response.status_code == 200
+    permissioned_catalog = str(permissioned_response.data)
+    assert "account.slug" in permissioned_catalog
+    assert "tenant_count" in permissioned_catalog
+
+
+def test_planner_prompt_scopes_fields_and_metrics_to_user_permissions(
+    tenant_data: TenantData,
+    registered_multitenant_orders: None,
+) -> None:
+    unpermissioned_request = build_planner_request(
+        question=QUESTION_TENANT_FIELD,
+        registry=default_registry,
+    )
+    unpermissioned_prompt = "\n".join(
+        message["content"] for message in unpermissioned_request.messages
+    )
+
+    assert "status" in unpermissioned_prompt
+    assert "order_count" in unpermissioned_prompt
+    assert "account.slug" not in unpermissioned_prompt
+    assert "tenant_count" not in unpermissioned_prompt
+    assert "alpha" not in unpermissioned_prompt
+    assert "beta" not in unpermissioned_prompt
+
+    alpha_user = grant_account_view_permission(tenant_data.alpha_user)
+    permissioned_request = build_planner_request(
+        question=QUESTION_TENANT_FIELD,
+        registry=default_registry,
+        permissions=alpha_user.get_all_permissions(),
+    )
+    permissioned_prompt = "\n".join(
+        message["content"] for message in permissioned_request.messages
+    )
+
+    assert "account.slug" in permissioned_prompt
+    assert "tenant_count" in permissioned_prompt
+    assert "alpha" not in permissioned_prompt
+    assert "beta" not in permissioned_prompt
 
 
 def test_query_endpoint_applies_base_queryset_for_tenant_isolation(

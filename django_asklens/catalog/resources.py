@@ -1,6 +1,6 @@
 """Semantic catalog resource definitions."""
 
-from collections.abc import Callable, Mapping, Sequence
+from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass, field
 from types import MappingProxyType
 from typing import Any, Literal, NotRequired, TypedDict
@@ -129,12 +129,28 @@ class FieldSpec:
         *,
         include_sensitive: bool,
         include_hidden: bool,
+        permissions: Iterable[str] | None = None,
     ) -> bool:
         """Return whether this field belongs in serialized catalog output."""
 
-        if self.sensitive and not include_sensitive:
+        permission_set = frozenset(permissions or ())
+        permission_allowed = (
+            self.requires_permission is None
+            or self.requires_permission in permission_set
+            or (self.sensitive and include_sensitive)
+        )
+        sensitive_allowed = include_sensitive or (
+            self.sensitive
+            and self.requires_permission is not None
+            and self.requires_permission in permission_set
+        )
+        hidden_allowed = include_hidden or (self.sensitive and sensitive_allowed)
+
+        if not permission_allowed:
             return False
-        if not self.llm_visible and not include_hidden:
+        if self.sensitive and not sensitive_allowed:
+            return False
+        if not self.llm_visible and not hidden_allowed:
             return False
         return True
 
@@ -240,15 +256,18 @@ class SemanticResource:
         include_sensitive: bool = False,
         include_hidden: bool = False,
         include_internal: bool = False,
+        permissions: Iterable[str] | None = None,
     ) -> ResourceCatalogItem:
         """Serialize safe catalog metadata for planners/API consumers."""
 
+        permission_set = frozenset(permissions or ())
         visible_fields: list[FieldCatalogItem] = [
             field_spec.to_dict()
             for field_spec in self.fields.values()
             if field_spec.is_catalog_visible(
                 include_sensitive=include_sensitive,
                 include_hidden=include_hidden,
+                permissions=permission_set,
             )
         ]
         visible_field_names = {field["name"] for field in visible_fields}

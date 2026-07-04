@@ -36,7 +36,7 @@ class CatalogView(AskLensAPIView):
     def get(self, request: Request) -> Response:
         """Return catalog metadata visible to the planner by default."""
 
-        return Response(serialize_catalog())
+        return Response(serialize_catalog(permissions=get_user_permissions(request)))
 
 
 class QueryView(AskLensAPIView):

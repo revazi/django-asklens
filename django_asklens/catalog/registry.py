@@ -1,6 +1,6 @@
 """Semantic resource registry."""
 
-from collections.abc import Mapping, Sequence
+from collections.abc import Iterable, Mapping, Sequence
 
 from django.db import models
 
@@ -81,15 +81,18 @@ class CatalogRegistry:
         include_sensitive: bool = False,
         include_hidden: bool = False,
         include_internal: bool = False,
+        permissions: Iterable[str] | None = None,
     ) -> CatalogSnapshot:
         """Serialize the registry as catalog metadata."""
 
+        permission_set = frozenset(permissions or ())
         return {
             "resources": [
                 resource.to_dict(
                     include_sensitive=include_sensitive,
                     include_hidden=include_hidden,
                     include_internal=include_internal,
+                    permissions=permission_set,
                 )
                 for resource in self._resources.values()
             ]
@@ -137,6 +140,7 @@ def serialize_catalog(
     include_sensitive: bool = False,
     include_hidden: bool = False,
     include_internal: bool = False,
+    permissions: Iterable[str] | None = None,
 ) -> CatalogSnapshot:
     """Serialize the default AskLens catalog registry."""
 
@@ -144,4 +148,5 @@ def serialize_catalog(
         include_sensitive=include_sensitive,
         include_hidden=include_hidden,
         include_internal=include_internal,
+        permissions=permissions,
     )

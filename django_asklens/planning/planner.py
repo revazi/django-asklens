@@ -42,7 +42,12 @@ def plan_question(
 ) -> PlannerResult:
     """Ask a provider for a QueryPlan and validate it before returning."""
 
-    request = build_planner_request(question=question, registry=registry)
+    permission_set = frozenset(permissions or ())
+    request = build_planner_request(
+        question=question,
+        registry=registry,
+        permissions=permission_set,
+    )
     selected_provider = provider or get_llm_provider()
     provider_payload = selected_provider.complete_json(
         messages=request.messages,
@@ -52,7 +57,7 @@ def plan_question(
         provider_payload,
         registry=registry,
         limits=limits,
-        permissions=permissions,
+        permissions=permission_set,
     )
     return PlannerResult(question=question, plan=plan)
 
@@ -61,10 +66,11 @@ def build_planner_request(
     *,
     question: str,
     registry: CatalogRegistry = default_registry,
+    permissions: Iterable[str] | None = None,
 ) -> PlannerRequest:
     """Build a provider request containing safe catalog metadata and schema."""
 
-    catalog = build_planner_catalog(registry)
+    catalog = build_planner_catalog(registry, permissions=permissions)
     return PlannerRequest(
         question=question,
         messages=build_planner_messages(question=question, catalog=catalog),

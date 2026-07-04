@@ -43,6 +43,8 @@ Fields marked `sensitive=True` are hidden from normal catalog serialization. If 
 
 QueryPlan validation checks `request.user.get_all_permissions()` in the API flow. A crafted provider response that selects or filters a permission-gated field fails before ORM compilation unless the user has the required Django permission.
 
+Catalog serialization is permission-scoped. The catalog endpoint and planner prompt include permission-gated sensitive fields only when the current user has the required Django permission. Metrics whose source field is hidden are also hidden.
+
 ## Route-level gates
 
 All AskLens API views use `DJANGO_ASKLENS["API_PERMISSION_CLASSES"]`. Configure DRF permission classes appropriate for your project, for example staff-only, role-based, or feature-flagged access.
@@ -55,7 +57,6 @@ DJANGO_ASKLENS = {
 
 ## Current limitations
 
-- Permission-scoped catalog serialization is not implemented yet; catalog output remains conservative by default.
 - Live LLM providers are not implemented yet.
 - AskLens relies on host apps to define tenant membership and row-level queryset policy.
 - Read-only database replica routing is deferred to a later phase.

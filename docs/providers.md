@@ -37,11 +37,11 @@ class LLMProvider(Protocol):
 
 AskLens sends:
 
-- safe catalog metadata,
+- permission-scoped safe catalog metadata,
 - the user's question,
 - the strict `QueryPlan` JSON schema.
 
-AskLens must not send sample database rows, secrets, credentials, `.env` content, or unregistered/sensitive fields by default.
+AskLens must not send sample database rows, secrets, credentials, `.env` content, or unregistered/unauthorized sensitive fields by default.
 
 ## Live provider requirements
 
