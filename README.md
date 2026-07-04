@@ -142,6 +142,7 @@ Supported visualization hints are `table`, `metric`, `bar`, `line`, and `pie`. C
 - [Registration API](docs/registration.md)
 - [Provider configuration](docs/providers.md)
 - [Security checklist](docs/security-checklist.md)
+- [Multi-tenant security](docs/multitenancy-security.md)
 - [Evaluation fixtures](docs/evaluation.md)
 - [Test matrix plan](docs/test-matrix.md)
 - [Changelog](CHANGELOG.md)

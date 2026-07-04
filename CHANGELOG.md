@@ -16,6 +16,7 @@ The project is pre-alpha and APIs may change before the first public alpha.
 - DRF catalog/query/run endpoints and `SemanticQueryRun` audit model.
 - Frontend-agnostic table renderer and chart-spec normalization.
 - Public-alpha documentation drafts and deterministic evaluation fixtures.
+- Multi-tenant API security tests covering base-queryset scoping, permission-gated fields, and route permission gates.
 
 ### Security
 
@@ -23,3 +24,4 @@ The project is pre-alpha and APIs may change before the first public alpha.
 - No write/update/delete query intents.
 - No sample database rows sent to providers by default.
 - Sensitive and hidden fields excluded from default planner catalog serialization.
+- Crafted provider plans cannot use permission-gated tenant fields without the required Django permission.

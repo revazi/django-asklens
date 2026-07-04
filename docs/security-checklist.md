@@ -10,6 +10,7 @@ Use this checklist before enabling AskLens outside local development.
 - [ ] Use `requires_permission` for fields that need explicit permissions.
 - [ ] Review every registered metric for business meaning and data sensitivity.
 - [ ] Keep tenant and row-level restrictions in `base_queryset(request)`.
+- [ ] Add tests proving each tenant/user only sees rows from the registered resource base queryset.
 
 ## Query safety
 
@@ -24,6 +25,7 @@ Use this checklist before enabling AskLens outside local development.
 - [ ] Require authentication for `/asklens/catalog/`, `/asklens/query/`, and `/asklens/runs/<id>/`.
 - [ ] Restrict `debug=true` to staff users or a stronger permission gate.
 - [ ] Ensure run-detail access is scoped to the requesting user unless a staff/admin policy is intended.
+- [ ] Verify configured `DJANGO_ASKLENS["API_PERMISSION_CLASSES"]` gates every AskLens route.
 - [ ] Consider DRF throttling/rate limits in host projects.
 - [ ] Review audit retention requirements for your environment.
 
