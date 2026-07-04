@@ -1,7 +1,7 @@
 """Execute compiled AskLens ORM queries."""
 
 from collections.abc import Mapping
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass
 from datetime import datetime
 from time import perf_counter
 from typing import Any
@@ -9,6 +9,7 @@ from typing import Any
 from django_asklens.catalog.registry import CatalogRegistry, default_registry
 from django_asklens.compiler import CompiledQuery, ResultColumn, compile_query_plan
 from django_asklens.planning.schemas import QueryPlan
+from django_asklens.renderers import render_query_result
 
 
 @dataclass(frozen=True, slots=True)
@@ -24,13 +25,12 @@ class QueryResult:
     def to_dict(self) -> dict[str, Any]:
         """Serialize the result to table/chart-ready primitives."""
 
-        return {
-            "columns": [asdict(column) for column in self.columns],
-            "data": list(self.rows),
-            "row_count": self.row_count,
-            "duration_ms": self.duration_ms,
-            "visualization": self.visualization,
-        }
+        rendered = render_query_result(
+            columns=self.columns,
+            rows=self.rows,
+            visualization=self.visualization,
+        )
+        return {**rendered, "duration_ms": self.duration_ms}
 
 
 def run_query_plan(

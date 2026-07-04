@@ -167,6 +167,11 @@ def test_query_endpoint_returns_result_and_records_successful_run(
         {"status": "paid", "order_count": 2},
         {"status": "pending", "order_count": 1},
     ]
+    assert response.data["visualization"] == {
+        "type": "bar",
+        "x": {"field": "status", "label": "Status", "type": "string"},
+        "y": {"field": "order_count", "label": "Order Count", "type": "number"},
+    }
 
     run = SemanticQueryRun.objects.get(pk=response.data["run_id"])
     assert run.user == user

@@ -2,7 +2,7 @@
 
 Django AskLens is a reusable Django + DRF package for safe natural-language querying over explicitly registered Django models.
 
-Status: pre-alpha. The current package includes the minimal app scaffold, semantic catalog registration, strict QueryPlan schema/validation, ORM-only query compilation/execution, a deterministic planner/provider layer, DRF endpoints, and query-run audit records. Live LLM adapters, renderer refinements, and dashboards/saved queries will be added in later approved phases.
+Status: pre-alpha. The current package includes the minimal app scaffold, semantic catalog registration, strict QueryPlan schema/validation, ORM-only query compilation/execution, a deterministic planner/provider layer, renderer-normalized table/chart output, DRF endpoints, and query-run audit records. Live LLM adapters, advanced renderers, and dashboards/saved queries will be added in later approved phases.
 
 ## Planned names
 
@@ -111,6 +111,22 @@ GET  /asklens/runs/<id>/
 ```
 
 The query endpoint plans, validates, executes, and records a `SemanticQueryRun` audit row. API views require authenticated users by default, and `debug=true` is restricted to staff users.
+
+## Current renderers
+
+AskLens returns frontend-agnostic table data and chart hints. It does not require a JavaScript charting framework.
+
+```python
+from django_asklens.renderers import render_query_result
+
+payload = render_query_result(
+    columns=result.columns,
+    rows=result.rows,
+    visualization={"type": "bar", "x": "status", "y": "order_count"},
+)
+```
+
+Supported visualization hints are `table`, `metric`, `bar`, `line`, and `pie`. Chart specs are normalized to include axis field, label, and type metadata.
 
 ## Safety posture
 

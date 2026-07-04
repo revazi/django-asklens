@@ -47,3 +47,7 @@ class UnsupportedQueryError(PlanValidationError):
 
 class LLMProviderError(AskLensError):
     """Raised when an LLM provider cannot return a usable response."""
+
+
+class RendererError(AskLensError):
+    """Raised when a result cannot be rendered safely."""
