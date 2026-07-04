@@ -2,7 +2,7 @@
 
 Django AskLens is a reusable Django + DRF package for safe natural-language querying over explicitly registered Django models.
 
-Status: pre-alpha. The current package includes the minimal app scaffold, semantic catalog registration, and strict QueryPlan schema/validation. Query compilation, LLM providers, DRF APIs, and audit models will be added in later approved phases.
+Status: pre-alpha. The current package includes the minimal app scaffold, semantic catalog registration, strict QueryPlan schema/validation, and ORM-only query compilation/execution. LLM providers, DRF APIs, renderers, and audit models will be added in later approved phases.
 
 ## Planned names
 
@@ -53,7 +53,19 @@ validated_plan = parse_and_validate_query_plan(
 )
 ```
 
-LLM/provider output is treated as untrusted input: it must parse as a strict QueryPlan and validate against the semantic catalog before later phases can compile or execute it.
+LLM/provider output is treated as untrusted input: it must parse as a strict QueryPlan and validate against the semantic catalog before it can be compiled or executed.
+
+## Current ORM execution
+
+```python
+from django_asklens.execution import run_query_plan
+
+result = run_query_plan(validated_plan)
+
+print(result.to_dict()["data"])
+```
+
+The compiler uses Django ORM querysets only and starts from each resource's `base_queryset(request)` hook.
 
 ## Safety posture
 

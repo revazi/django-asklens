@@ -3,6 +3,7 @@
 SECRET_KEY = "django-asklens-test-secret-key"
 DEBUG = True
 USE_TZ = True
+TIME_ZONE = "UTC"
 ROOT_URLCONF = "tests.test_project.urls"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
