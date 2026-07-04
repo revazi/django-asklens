@@ -46,10 +46,23 @@ def get_llm_provider() -> DummyProvider:
 
     backend = get_asklens_setting("LLM_BACKEND")
     if backend == "dummy":
-        return DummyProvider()
+        return DummyProvider(
+            plans=get_dummy_plans_setting(),
+            default_plan=get_asklens_setting("DUMMY_DEFAULT_PLAN"),
+        )
 
     msg = f"Unsupported LLM_BACKEND {backend!r}; only 'dummy' is available."
     raise LLMProviderError(msg)
+
+
+def get_dummy_plans_setting() -> Mapping[str, PlanPayload]:
+    """Return deterministic dummy plans configured in Django settings."""
+
+    plans = get_asklens_setting("DUMMY_PLANS")
+    if not isinstance(plans, Mapping):
+        msg = "DJANGO_ASKLENS['DUMMY_PLANS'] must be a mapping."
+        raise LLMProviderError(msg)
+    return plans
 
 
 def extract_question(messages: Sequence[LLMMessage]) -> str:

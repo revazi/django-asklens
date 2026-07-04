@@ -15,6 +15,9 @@ DEFAULTS: dict[str, Any] = {
     "ALLOW_RAW_SQL": False,
     "SEND_SAMPLE_ROWS_TO_LLM": False,
     "DEFAULT_VISUALIZATION": "table",
+    "API_PERMISSION_CLASSES": ["rest_framework.permissions.IsAuthenticated"],
+    "DUMMY_PLANS": {},
+    "DUMMY_DEFAULT_PLAN": None,
 }
 
 
