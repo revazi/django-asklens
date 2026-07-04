@@ -1,0 +1,25 @@
+# Changelog
+
+All notable changes to Django AskLens will be documented here.
+
+The project is pre-alpha and APIs may change before the first public alpha.
+
+## 0.1.0a0 — Unreleased
+
+### Added
+
+- Minimal Django reusable app scaffold and test harness.
+- Explicit semantic catalog registration with field and metric metadata.
+- Strict Pydantic QueryPlan schema and catalog validation.
+- ORM-only compiler and executor for read-only list and aggregate queries.
+- Deterministic planner/provider flow with `DummyProvider`.
+- DRF catalog/query/run endpoints and `SemanticQueryRun` audit model.
+- Frontend-agnostic table renderer and chart-spec normalization.
+- Public-alpha documentation drafts and deterministic evaluation fixtures.
+
+### Security
+
+- No raw SQL execution path in the MVP.
+- No write/update/delete query intents.
+- No sample database rows sent to providers by default.
+- Sensitive and hidden fields excluded from default planner catalog serialization.

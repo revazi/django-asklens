@@ -1,0 +1,20 @@
+# Django AskLens docs
+
+Django AskLens is a pre-alpha reusable Django + DRF package for safe natural-language querying over explicitly registered Django models.
+
+## Guides
+
+- [Installation](installation.md)
+- [Usage guide](usage.md)
+- [Registration API](registration.md)
+- [Provider configuration](providers.md)
+- [Security checklist](security-checklist.md)
+- [Evaluation fixtures](evaluation.md)
+- [Test matrix plan](test-matrix.md)
+- [Demo query ideas](demo-queries.md)
+
+## Current scope
+
+AskLens accepts a natural-language question, asks a deterministic or configured provider for structured `QueryPlan` JSON, validates the plan against the semantic catalog, compiles safe read-only Django ORM queries, executes with limits, and returns table/chart-ready JSON.
+
+The MVP does not execute LLM-generated SQL, mutate data, auto-expose Django models, send sample rows to providers, or require a frontend framework.

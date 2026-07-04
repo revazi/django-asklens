@@ -135,6 +135,17 @@ Supported visualization hints are `table`, `metric`, `bar`, `line`, and `pie`. C
 - No sample database rows sent to LLM providers by default.
 - Only explicitly registered models/resources will be queryable.
 
+## Documentation
+
+- [Installation](docs/installation.md)
+- [Usage guide](docs/usage.md)
+- [Registration API](docs/registration.md)
+- [Provider configuration](docs/providers.md)
+- [Security checklist](docs/security-checklist.md)
+- [Evaluation fixtures](docs/evaluation.md)
+- [Test matrix plan](docs/test-matrix.md)
+- [Changelog](CHANGELOG.md)
+
 ## Development
 
 Use Python 3.12 or newer and [`uv`](https://docs.astral.sh/uv/) for local development.
