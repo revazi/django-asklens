@@ -15,6 +15,27 @@ from pydantic import (
 
 from django_asklens.exceptions import PlanValidationError
 
+SUPPORTED_INTENTS = ("list", "aggregate")
+SUPPORTED_FILTER_OPERATORS = (
+    "eq",
+    "neq",
+    "contains",
+    "icontains",
+    "gt",
+    "gte",
+    "lt",
+    "lte",
+    "in",
+    "isnull",
+    "date_range",
+    "last_n_days",
+    "last_n_months",
+)
+SUPPORTED_METRIC_OPERATORS = ("count", "sum", "avg", "min", "max")
+SUPPORTED_DATE_TRUNCS = ("day", "week", "month", "quarter", "year")
+SUPPORTED_ORDER_DIRECTIONS = ("asc", "desc")
+SUPPORTED_VISUALIZATION_TYPES = ("table", "metric", "bar", "line", "pie")
+
 type Intent = Literal["list", "aggregate"]
 type FilterOperator = Literal[
     "eq",
@@ -36,7 +57,7 @@ type DateTrunc = Literal["day", "week", "month", "quarter", "year"]
 type OrderDirection = Literal["asc", "desc"]
 type VisualizationType = Literal["table", "metric", "bar", "line", "pie"]
 type JsonScalar = str | int | float | bool | None
-type JsonValue = JsonScalar | list[JsonScalar] | dict[str, JsonScalar]
+type JsonValue = JsonScalar | list[JsonScalar]
 
 PLAN_MODEL_CONFIG = ConfigDict(
     extra="forbid",
@@ -139,11 +160,18 @@ class VisualizationSpec(PlanBaseModel):
 
     @model_validator(mode="after")
     def validate_axes_for_type(self) -> "VisualizationSpec":
+        if self.type == "table" and (self.x is not None or self.y is not None):
+            msg = "visualization type 'table' must not define x or y."
+            raise ValueError(msg)
+        if self.type == "metric":
+            if self.x is not None:
+                msg = "visualization type 'metric' must not define x."
+                raise ValueError(msg)
+            if self.y is None:
+                msg = "visualization type 'metric' requires y."
+                raise ValueError(msg)
         if self.type in {"bar", "line", "pie"} and (self.x is None or self.y is None):
             msg = f"visualization type {self.type!r} requires x and y."
-            raise ValueError(msg)
-        if self.type == "metric" and self.y is None:
-            msg = "visualization type 'metric' requires y."
             raise ValueError(msg)
         return self
 
@@ -192,6 +220,12 @@ def parse_query_plan(raw_plan: str | bytes | Mapping[str, Any]) -> QueryPlan:
     except ValidationError as exc:
         msg = format_pydantic_error(exc)
         raise PlanValidationError(msg) from exc
+
+
+def get_query_plan_json_schema() -> dict[str, Any]:
+    """Return the JSON schema for strict QueryPlan output."""
+
+    return QueryPlan.model_json_schema()
 
 
 def parse_plan_payload(raw_plan: str | bytes | Mapping[str, Any]) -> Mapping[str, Any]:
@@ -246,6 +280,9 @@ def validate_filter_value(*, operator: FilterOperator, value: JsonValue) -> None
         if not isinstance(value, list) or len(value) != 2:
             msg = "date_range filters require a two-item list value."
             raise ValueError(msg)
+        if not all(isinstance(item, str) and item for item in value):
+            msg = "date_range filters require two non-empty string values."
+            raise ValueError(msg)
         return
     if operator in {"last_n_days", "last_n_months"}:
         if not isinstance(value, int) or isinstance(value, bool) or value < 1:
@@ -259,6 +296,9 @@ def validate_filter_value(*, operator: FilterOperator, value: JsonValue) -> None
         return
     if value is None:
         msg = f"{operator} filters require a value."
+        raise ValueError(msg)
+    if isinstance(value, list):
+        msg = f"{operator} filters require a scalar value."
         raise ValueError(msg)
 
 

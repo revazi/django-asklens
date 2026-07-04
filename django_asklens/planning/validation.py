@@ -17,6 +17,7 @@ from django_asklens.planning.schemas import (
     MetricSpec,
     OrderBySpec,
     QueryPlan,
+    parse_query_plan,
 )
 from django_asklens.settings import get_asklens_settings
 
@@ -65,6 +66,27 @@ def validate_query_plan(
     return normalized_plan
 
 
+def parse_and_validate_query_plan(
+    raw_plan: str | bytes | Mapping[str, Any],
+    *,
+    registry: CatalogRegistry = default_registry,
+    limits: PlanLimits | None = None,
+    allow_sensitive_fields: bool = False,
+    allow_hidden_fields: bool = False,
+    permissions: Iterable[str] | None = None,
+) -> QueryPlan:
+    """Parse untrusted input and validate it against the semantic catalog."""
+
+    return validate_query_plan(
+        parse_query_plan(raw_plan),
+        registry=registry,
+        limits=limits,
+        allow_sensitive_fields=allow_sensitive_fields,
+        allow_hidden_fields=allow_hidden_fields,
+        permissions=permissions,
+    )
+
+
 def get_plan_limits(settings_overrides: Mapping[str, Any] | None = None) -> PlanLimits:
     """Return query-plan limits from Django settings plus optional overrides."""
 
@@ -96,6 +118,9 @@ def validate_plan_shape(plan: QueryPlan) -> None:
         return
 
     if plan.intent == "aggregate":
+        if plan.select:
+            msg = "Aggregate query plans must not include select."
+            raise PlanValidationError(msg)
         if not plan.metrics:
             msg = "Aggregate query plans must request at least one metric."
             raise PlanValidationError(msg)

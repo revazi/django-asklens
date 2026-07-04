@@ -39,9 +39,9 @@ Only explicitly registered fields are included in the semantic catalog. Sensitiv
 ## Current QueryPlan validation
 
 ```python
-from django_asklens.planning import parse_query_plan, validate_query_plan
+from django_asklens.planning import parse_and_validate_query_plan
 
-plan = parse_query_plan(
+validated_plan = parse_and_validate_query_plan(
     {
         "resource": "orders",
         "intent": "aggregate",
@@ -51,7 +51,6 @@ plan = parse_query_plan(
         "visualization": {"type": "bar", "x": "status", "y": "order_count"},
     }
 )
-validated_plan = validate_query_plan(plan)
 ```
 
 LLM/provider output is treated as untrusted input: it must parse as a strict QueryPlan and validate against the semantic catalog before later phases can compile or execute it.

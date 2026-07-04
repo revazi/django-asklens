@@ -3,7 +3,13 @@
 import pytest
 
 from django_asklens.exceptions import PlanValidationError
-from django_asklens.planning import QueryPlan, parse_query_plan
+from django_asklens.planning import (
+    SUPPORTED_FILTER_OPERATORS,
+    SUPPORTED_VISUALIZATION_TYPES,
+    QueryPlan,
+    get_query_plan_json_schema,
+    parse_query_plan,
+)
 
 
 def valid_aggregate_plan_payload() -> dict[str, object]:
@@ -20,6 +26,15 @@ def valid_aggregate_plan_payload() -> dict[str, object]:
         "limit": 50,
         "visualization": {"type": "bar", "x": "status", "y": "order_count"},
     }
+
+
+def test_supported_constants_and_json_schema_are_available() -> None:
+    schema = get_query_plan_json_schema()
+
+    assert "last_n_days" in SUPPORTED_FILTER_OPERATORS
+    assert "bar" in SUPPORTED_VISUALIZATION_TYPES
+    assert schema["title"] == "QueryPlan"
+    assert "resource" in schema["properties"]
 
 
 def test_valid_query_plan_parses_to_immutable_typed_model() -> None:
@@ -74,4 +89,29 @@ def test_filter_operator_values_are_strictly_validated() -> None:
     payload["filters"] = [{"field": "created_at", "op": "last_n_days", "value": 0}]
 
     with pytest.raises(PlanValidationError, match="positive integer"):
+        parse_query_plan(payload)
+
+    payload["filters"] = [{"field": "status", "op": "eq", "value": ["paid"]}]
+
+    with pytest.raises(PlanValidationError, match="scalar"):
+        parse_query_plan(payload)
+
+    payload["filters"] = [
+        {"field": "created_at", "op": "date_range", "value": ["2026-01-01", None]}
+    ]
+
+    with pytest.raises(PlanValidationError, match="non-empty string"):
+        parse_query_plan(payload)
+
+
+def test_visualization_axes_are_strict_for_type() -> None:
+    payload = valid_aggregate_plan_payload()
+    payload["visualization"] = {"type": "table", "x": "status"}
+
+    with pytest.raises(PlanValidationError, match="must not define"):
+        parse_query_plan(payload)
+
+    payload["visualization"] = {"type": "metric", "x": "status", "y": "order_count"}
+
+    with pytest.raises(PlanValidationError, match="must not define x"):
         parse_query_plan(payload)

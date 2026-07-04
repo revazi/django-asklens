@@ -11,7 +11,12 @@ from django_asklens.exceptions import (
     UnknownMetricError,
     UnknownResourceError,
 )
-from django_asklens.planning import PlanLimits, parse_query_plan, validate_query_plan
+from django_asklens.planning import (
+    PlanLimits,
+    parse_and_validate_query_plan,
+    parse_query_plan,
+    validate_query_plan,
+)
 from tests.planning.test_schemas import valid_aggregate_plan_payload
 from tests.test_project.models import Order
 
@@ -59,6 +64,15 @@ def test_valid_query_plan_validates_against_catalog() -> None:
     plan = parse_valid_plan(resource="Orders")
 
     validated = validate_query_plan(plan, registry=build_registry())
+
+    assert validated.resource == "orders"
+
+
+def test_parse_and_validate_query_plan_combines_untrusted_payload_pipeline() -> None:
+    payload = valid_aggregate_plan_payload()
+    payload["resource"] = "Orders"
+
+    validated = parse_and_validate_query_plan(payload, registry=build_registry())
 
     assert validated.resource == "orders"
 
@@ -213,6 +227,11 @@ def test_intent_specific_shape_is_validated() -> None:
 
     with pytest.raises(PlanValidationError, match="at least one metric"):
         validate_query_plan(aggregate_without_metrics, registry=build_registry())
+
+    aggregate_with_select = parse_valid_plan(select=["id"])
+
+    with pytest.raises(PlanValidationError, match="must not include select"):
+        validate_query_plan(aggregate_with_select, registry=build_registry())
 
     list_with_metric = parse_valid_plan(intent="list", select=["id"])
 
