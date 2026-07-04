@@ -1,0 +1,59 @@
+[build-system]
+requires = ["setuptools>=80", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "django-asklens"
+version = "0.1.0a0"
+description = "Safe natural-language querying over explicitly registered Django models."
+readme = "README.md"
+requires-python = ">=3.12"
+license = "BSD-3-Clause"
+authors = [
+    { name = "Django AskLens contributors" },
+]
+keywords = ["django", "drf", "llm", "analytics", "orm"]
+classifiers = [
+    "Development Status :: 2 - Pre-Alpha",
+    "Environment :: Web Environment",
+    "Framework :: Django",
+    "Framework :: Django :: 6.0",
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Database",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+dependencies = [
+    "Django>=6.0,<7.0",
+    "djangorestframework>=3.17,<4.0",
+    "pydantic>=2,<3",
+]
+
+[dependency-groups]
+dev = [
+    "build>=1",
+    "mypy>=1.13",
+    "pytest>=8",
+    "pytest-django>=4.9",
+    "ruff>=0.8",
+    "twine>=5",
+]
+
+[tool.setuptools.packages.find]
+include = ["django_asklens*"]
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "tests.test_project.settings"
+python_files = ["test_*.py"]
+pythonpath = ["."]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 88
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["B", "E", "F", "I", "UP"]
