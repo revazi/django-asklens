@@ -22,7 +22,7 @@ Each case should include:
 
 Live-provider evaluations can compare provider output against the same cases, but those tests must remain opt-in and skipped by default.
 
-The current opt-in smoke test is:
+The current opt-in live evaluation suite covers status aggregation, count metrics, revenue by month, paid-order lists, and an adversarial tenant-field request. Run it with:
 
 ```bash
 DJANGO_ASKLENS_LIVE_LLM=1 \
@@ -31,4 +31,4 @@ DJANGO_ASKLENS_LIVE_LLM_MODEL="gpt-4.1-mini" \
 uv run pytest tests/evaluation/test_live_openai_compatible.py
 ```
 
-This test uses a small tenant-scoped fixture and still validates provider output before ORM execution.
+These tests use a small tenant-scoped fixture and still validate provider output before ORM execution. They also assert that unauthorized tenant fields and tenant row values are not returned.
