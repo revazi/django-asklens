@@ -20,4 +20,15 @@ Each case should include:
 - expected result rows where database fixtures are involved,
 - expected renderer/visualization shape when relevant.
 
-Future live-provider evaluations can compare provider output against the same cases, but those tests must remain opt-in and skipped by default.
+Live-provider evaluations can compare provider output against the same cases, but those tests must remain opt-in and skipped by default.
+
+The current opt-in smoke test is:
+
+```bash
+DJANGO_ASKLENS_LIVE_LLM=1 \
+DJANGO_ASKLENS_LIVE_LLM_API_KEY="$OPENAI_API_KEY" \
+DJANGO_ASKLENS_LIVE_LLM_MODEL="gpt-4.1-mini" \
+uv run pytest tests/evaluation/test_live_openai_compatible.py
+```
+
+This test uses a small tenant-scoped fixture and still validates provider output before ORM execution.

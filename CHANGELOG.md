@@ -17,6 +17,8 @@ The project is pre-alpha and APIs may change before the first public alpha.
 - Frontend-agnostic table renderer and chart-spec normalization.
 - Public-alpha documentation drafts and deterministic evaluation fixtures.
 - Multi-tenant API security tests covering base-queryset scoping, permission-gated fields, route permission gates, and permission-scoped catalog/planner metadata.
+- OpenAI-compatible provider using Python stdlib HTTP.
+- Mocked and opt-in live provider tests.
 
 ### Security
 
@@ -26,3 +28,4 @@ The project is pre-alpha and APIs may change before the first public alpha.
 - Sensitive and hidden fields excluded from default planner catalog serialization.
 - Crafted provider plans cannot use permission-gated tenant fields without the required Django permission.
 - Catalog and planner prompt metadata are scoped to current-user permissions.
+- Live provider errors avoid exposing API keys or raw credentials.

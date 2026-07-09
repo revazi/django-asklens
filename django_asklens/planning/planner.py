@@ -6,7 +6,7 @@ from typing import Any
 
 from django_asklens.catalog.registry import CatalogRegistry, default_registry
 from django_asklens.llms.base import LLMMessage, LLMProvider
-from django_asklens.llms.dummy import get_llm_provider
+from django_asklens.llms.factory import get_llm_provider
 from django_asklens.planning.prompts import (
     build_planner_catalog,
     build_planner_messages,

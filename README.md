@@ -2,7 +2,7 @@
 
 Django AskLens is a reusable Django + DRF package for safe natural-language querying over explicitly registered Django models.
 
-Status: pre-alpha. The current package includes the minimal app scaffold, semantic catalog registration, strict QueryPlan schema/validation, ORM-only query compilation/execution, a deterministic planner/provider layer, renderer-normalized table/chart output, DRF endpoints, and query-run audit records. Live LLM adapters, advanced renderers, and dashboards/saved queries will be added in later approved phases.
+Status: pre-alpha. The current package includes the minimal app scaffold, semantic catalog registration, strict QueryPlan schema/validation, ORM-only query compilation/execution, deterministic and OpenAI-compatible provider layers, renderer-normalized table/chart output, DRF endpoints, query-run audit records, and multi-tenant security tests. Advanced renderers and dashboards/saved queries will be added in later approved phases.
 
 ## Planned names
 

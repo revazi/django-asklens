@@ -8,6 +8,10 @@ from django.conf import settings
 DEFAULTS: dict[str, Any] = {
     "LLM_BACKEND": "dummy",
     "LLM_MODEL": None,
+    "LLM_BASE_URL": "https://api.openai.com/v1",
+    "LLM_API_KEY": None,
+    "LLM_TIMEOUT_SECONDS": 30,
+    "LLM_TEMPERATURE": 0,
     "MAX_ROWS": 500,
     "MAX_JOINS": 2,
     "MAX_METRICS": 5,

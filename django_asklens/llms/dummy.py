@@ -7,7 +7,6 @@ from typing import Any
 
 from django_asklens.exceptions import LLMProviderError
 from django_asklens.llms.base import LLMMessage
-from django_asklens.settings import get_asklens_setting
 
 type PlanPayload = Mapping[str, Any]
 
@@ -37,26 +36,22 @@ class DummyProvider:
         raise LLMProviderError(msg)
 
 
-def get_llm_provider() -> DummyProvider:
+def get_llm_provider():
     """Return the configured provider instance.
 
-    Phase 5 intentionally supports only the deterministic dummy backend. Real
-    network providers require explicit approval in a later phase.
+    Kept for compatibility with older internal imports; new code should import
+    from django_asklens.llms or django_asklens.llms.factory.
     """
 
-    backend = get_asklens_setting("LLM_BACKEND")
-    if backend == "dummy":
-        return DummyProvider(
-            plans=get_dummy_plans_setting(),
-            default_plan=get_asklens_setting("DUMMY_DEFAULT_PLAN"),
-        )
+    from django_asklens.llms.factory import get_llm_provider as get_configured_provider
 
-    msg = f"Unsupported LLM_BACKEND {backend!r}; only 'dummy' is available."
-    raise LLMProviderError(msg)
+    return get_configured_provider()
 
 
 def get_dummy_plans_setting() -> Mapping[str, PlanPayload]:
     """Return deterministic dummy plans configured in Django settings."""
+
+    from django_asklens.settings import get_asklens_setting
 
     plans = get_asklens_setting("DUMMY_PLANS")
     if not isinstance(plans, Mapping):
