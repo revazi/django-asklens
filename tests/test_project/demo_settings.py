@@ -1,5 +1,6 @@
 """Runnable local settings for the AskLens complex test project demo."""
 
+import os
 from pathlib import Path
 
 from tests.test_project.settings import *  # noqa: F403
@@ -57,102 +58,138 @@ DATABASES = {
 MIGRATION_MODULES = {"test_project": None}
 TEST_PROJECT_REGISTER_COMPLEX_ASKLENS = True
 
-DJANGO_ASKLENS = {
-    "LLM_BACKEND": "dummy",
-    "MAX_ROWS": 100,
-    "MAX_JOINS": 2,
-    "MAX_METRICS": 5,
-    "MAX_GROUP_BY": 3,
-    "API_PERMISSION_CLASSES": ["tests.test_project.permissions.CanUseComplexAnalytics"],
-    "REQUEST_PERMISSIONS_GETTER": (
-        "tests.test_project.permissions.get_request_permissions"
-    ),
-    "DUMMY_PLANS": {
-        "Show paid billing revenue by product": {
-            "resource": "billing_lines",
-            "intent": "aggregate",
-            "filters": [
-                {"field": "billing_document.status", "op": "eq", "value": "PAID"}
-            ],
-            "group_by": [{"field": "product_name"}],
-            "metrics": [
-                {
-                    "name": "gross_revenue",
-                    "op": "sum",
-                    "field": "total_amount_cents",
-                }
-            ],
-            "order_by": [{"metric": "gross_revenue", "direction": "desc"}],
-            "limit": 10,
-            "visualization": {
-                "type": "bar",
-                "x": "product_name",
-                "y": "gross_revenue",
-            },
+DUMMY_PLANS = {
+    "Show paid billing revenue by product": {
+        "resource": "billing_lines",
+        "intent": "aggregate",
+        "filters": [{"field": "billing_document.status", "op": "eq", "value": "PAID"}],
+        "group_by": [{"field": "product_name"}],
+        "metrics": [
+            {
+                "name": "gross_revenue",
+                "op": "sum",
+                "field": "total_amount_cents",
+            }
+        ],
+        "order_by": [{"metric": "gross_revenue", "direction": "desc"}],
+        "limit": 10,
+        "visualization": {
+            "type": "bar",
+            "x": "product_name",
+            "y": "gross_revenue",
         },
-        "Show payment totals by status": {
-            "resource": "payment_attempts",
-            "intent": "aggregate",
-            "group_by": [{"field": "status"}],
-            "metrics": [
-                {"name": "payment_count", "op": "count", "field": "status"},
-                {"name": "payment_amount", "op": "sum", "field": "amount_cents"},
-            ],
-            "order_by": [{"metric": "payment_amount", "direction": "desc"}],
-            "limit": 10,
-            "visualization": {
-                "type": "bar",
-                "x": "status",
-                "y": "payment_amount",
-            },
+    },
+    "Show payment totals by status": {
+        "resource": "payment_attempts",
+        "intent": "aggregate",
+        "group_by": [{"field": "status"}],
+        "metrics": [
+            {"name": "payment_count", "op": "count", "field": "status"},
+            {"name": "payment_amount", "op": "sum", "field": "amount_cents"},
+        ],
+        "order_by": [{"metric": "payment_amount", "direction": "desc"}],
+        "limit": 10,
+        "visualization": {
+            "type": "bar",
+            "x": "status",
+            "y": "payment_amount",
         },
-        "List member contact emails": {
-            "resource": "member_contacts",
-            "intent": "list",
-            "select": ["facility.name", "first_name", "last_name", "email"],
-            "order_by": [{"field": "email", "direction": "asc"}],
-            "limit": 20,
-            "visualization": {"type": "table"},
+    },
+    "List member contact emails": {
+        "resource": "member_contacts",
+        "intent": "list",
+        "select": ["facility.name", "first_name", "last_name", "email"],
+        "order_by": [{"field": "email", "direction": "asc"}],
+        "limit": 20,
+        "visualization": {"type": "table"},
+    },
+    "Count member subscriptions by plan and status": {
+        "resource": "member_subscriptions",
+        "intent": "aggregate",
+        "group_by": [{"field": "plan.name"}, {"field": "status"}],
+        "metrics": [
+            {
+                "name": "subscription_count",
+                "op": "count",
+                "field": "status",
+            }
+        ],
+        "order_by": [{"metric": "subscription_count", "direction": "desc"}],
+        "limit": 20,
+        "visualization": {
+            "type": "bar",
+            "x": "plan.name",
+            "y": "subscription_count",
         },
-        "Count member subscriptions by plan and status": {
-            "resource": "member_subscriptions",
-            "intent": "aggregate",
-            "group_by": [{"field": "plan.name"}, {"field": "status"}],
-            "metrics": [
-                {
-                    "name": "subscription_count",
-                    "op": "count",
-                    "field": "status",
-                }
-            ],
-            "order_by": [{"metric": "subscription_count", "direction": "desc"}],
-            "limit": 20,
-            "visualization": {
-                "type": "bar",
-                "x": "plan.name",
-                "y": "subscription_count",
+    },
+    "Show scheduled capacity by session type": {
+        "resource": "schedule_sessions",
+        "intent": "aggregate",
+        "group_by": [{"field": "session_type.name"}],
+        "metrics": [
+            {"name": "session_count", "op": "count", "field": "start_date"},
+            {"name": "total_capacity", "op": "sum", "field": "capacity"},
+            {
+                "name": "average_duration",
+                "op": "avg",
+                "field": "duration_minutes",
             },
-        },
-        "Show scheduled capacity by session type": {
-            "resource": "schedule_sessions",
-            "intent": "aggregate",
-            "group_by": [{"field": "session_type.name"}],
-            "metrics": [
-                {"name": "session_count", "op": "count", "field": "start_date"},
-                {"name": "total_capacity", "op": "sum", "field": "capacity"},
-                {
-                    "name": "average_duration",
-                    "op": "avg",
-                    "field": "duration_minutes",
-                },
-            ],
-            "order_by": [{"metric": "total_capacity", "direction": "desc"}],
-            "limit": 10,
-            "visualization": {
-                "type": "bar",
-                "x": "session_type.name",
-                "y": "total_capacity",
-            },
+        ],
+        "order_by": [{"metric": "total_capacity", "direction": "desc"}],
+        "limit": 10,
+        "visualization": {
+            "type": "bar",
+            "x": "session_type.name",
+            "y": "total_capacity",
         },
     },
 }
+
+
+def build_demo_asklens_settings(environ=os.environ) -> dict:
+    """Return AskLens settings for local demo mode.
+
+    Dummy mode is the default and makes no network calls. Set
+    DJANGO_ASKLENS_DEMO_LIVE_LLM=1 to use the OpenAI-compatible provider with
+    credentials from environment variables.
+    """
+
+    asklens_settings = {
+        "LLM_BACKEND": "dummy",
+        "MAX_ROWS": 100,
+        "MAX_JOINS": 2,
+        "MAX_METRICS": 5,
+        "MAX_GROUP_BY": 3,
+        "API_PERMISSION_CLASSES": [
+            "tests.test_project.permissions.CanUseComplexAnalytics"
+        ],
+        "REQUEST_PERMISSIONS_GETTER": (
+            "tests.test_project.permissions.get_request_permissions"
+        ),
+        "DUMMY_PLANS": DUMMY_PLANS,
+    }
+    if environ.get("DJANGO_ASKLENS_DEMO_LIVE_LLM") != "1":
+        return asklens_settings
+
+    asklens_settings.update(
+        {
+            "LLM_BACKEND": "openai_compatible",
+            "LLM_BASE_URL": environ.get(
+                "DJANGO_ASKLENS_LIVE_LLM_BASE_URL",
+                "https://api.openai.com/v1",
+            ),
+            "LLM_API_KEY": environ.get("DJANGO_ASKLENS_LIVE_LLM_API_KEY")
+            or environ.get("OPENAI_API_KEY"),
+            "LLM_MODEL": environ.get("DJANGO_ASKLENS_LIVE_LLM_MODEL"),
+            "LLM_TIMEOUT_SECONDS": float(
+                environ.get("DJANGO_ASKLENS_LIVE_LLM_TIMEOUT_SECONDS", "45")
+            ),
+            "LLM_TEMPERATURE": float(
+                environ.get("DJANGO_ASKLENS_LIVE_LLM_TEMPERATURE", "0")
+            ),
+        }
+    )
+    return asklens_settings
+
+
+DJANGO_ASKLENS = build_demo_asklens_settings()

@@ -5,6 +5,7 @@ from django.core.exceptions import PermissionDenied
 from django.shortcuts import render
 from django.urls import reverse
 
+from django_asklens.settings import get_asklens_setting
 from tests.test_project.models import Facility, StaffAssignment, StaffGrant
 from tests.test_project.permissions import (
     get_request_permissions,
@@ -54,6 +55,7 @@ def asklens_demo(request):
             "query_url": reverse("django_asklens:query"),
             "demo_questions": get_demo_questions(request),
             "facility_scope": get_facility_scope_labels(request),
+            "llm_backend": get_asklens_setting("LLM_BACKEND"),
         },
     )
 

@@ -13,6 +13,13 @@ Do not write SQL, raw SQL, code, or explanations.
 Use only resources, fields, and metrics present in the catalog message.
 Never invent fields, metrics, model names, table names, or permissions.
 Only produce read-only list or aggregate query plans.
+Use aggregate plans for counts, sums, averages, totals, trends, and "by ..."
+grouping questions.
+Use list plans only when the user asks to list records or fields.
+Use registered metric names exactly when a requested business concept matches a metric.
+Use date_trunc on date/datetime fields for day, week, month, quarter, or year buckets.
+Treat visualization as an optional display hint over returned data; axes must
+reference result keys.
 If a question asks for data outside the catalog, choose the safest valid plan
 or fail via validation by not inventing fields.
 """.strip()

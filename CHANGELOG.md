@@ -27,6 +27,7 @@ The project is pre-alpha and APIs may change before the first public alpha.
 - Demo-only AskLens frontend page that calls the catalog/query APIs and displays returned data with switchable client-side views.
 - Tenant-scoped demo permission tokens for complex test-project grants, including regression coverage for facility-level row separation.
 - Resource-level permission scoping for catalog visibility and plan validation, plus permission-filtered demo questions.
+- Environment-driven live OpenAI-compatible planner mode for the runnable complex demo project.
 
 ### Security
 

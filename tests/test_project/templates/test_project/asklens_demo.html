@@ -432,7 +432,8 @@
       <section class="panel">
         <h2>Run a question</h2>
         <p class="muted">
-          The demo uses configured dummy plans, so no live LLM API key is required.
+          Planner backend: <code>{{ llm_backend }}</code>. Dummy mode uses configured plans;
+          live mode uses the OpenAI-compatible provider configured in environment variables.
         </p>
         <form id="query-form">
           {% csrf_token %}

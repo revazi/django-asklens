@@ -90,6 +90,8 @@ Optional:
 DJANGO_ASKLENS_LIVE_LLM_BASE_URL="https://api.openai.com/v1"
 ```
 
+The runnable complex demo project can also use the live provider by setting `DJANGO_ASKLENS_DEMO_LIVE_LLM=1` before starting `tests.test_project.demo_settings`. See [Runnable complex test project](test-project-demo.md).
+
 Live provider output must still pass the same strict QueryPlan parsing and catalog validation as dummy output. Before public alpha, run the [private real-project integration](private-integration.md) plan against a real multi-tenant project.
 
 ## Safety notes

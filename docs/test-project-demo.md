@@ -17,6 +17,21 @@ DJANGO_SETTINGS_MODULE=tests.test_project.demo_settings \
 uv run python -m django runserver 127.0.0.1:8000
 ```
 
+By default the demo uses `DummyProvider`, so it makes no network calls and only answers the configured exact demo questions. To use a live OpenAI-compatible provider for free-form planning, set environment variables before starting the server:
+
+```bash
+export DJANGO_ASKLENS_DEMO_LIVE_LLM=1
+export DJANGO_ASKLENS_LIVE_LLM_API_KEY="$OPENAI_API_KEY"
+export DJANGO_ASKLENS_LIVE_LLM_MODEL="gpt-4.1-mini"
+# optional for non-OpenAI-compatible gateways:
+export DJANGO_ASKLENS_LIVE_LLM_BASE_URL="https://api.openai.com/v1"
+
+DJANGO_SETTINGS_MODULE=tests.test_project.demo_settings \
+uv run python -m django runserver 127.0.0.1:8000
+```
+
+Live mode still sends only permission-scoped schema/catalog metadata to the provider. It does not send database rows, sample values, secrets, credentials, or `.env` contents.
+
 Open the demo AskLens frontend page:
 
 ```text
@@ -115,11 +130,29 @@ The demo settings include five exact `DummyProvider` questions, so `/asklens/que
 - `Count member subscriptions by plan and status`
 - `Show scheduled capacity by session type`
 
+In live mode, you can also ask free-form questions that map to the visible schema for your current demo user, for example:
+
+- `Show paid billing revenue by product this year`
+- `Trend paid billing revenue by month`
+- `Show failed payment attempts by billing status`
+- `List member contact emails` for users with member PII grants
+- `Count member subscriptions by plan and status` for users with package-report grants
+- `Show scheduled capacity by session type` for users with schedule-report grants
+
 Example JSON request:
 
 ```json
 {
   "question": "Show paid billing revenue by product"
+}
+```
+
+Clients that want only serialized data can omit display hints:
+
+```json
+{
+  "question": "Show paid billing revenue by product",
+  "include_visualization": false
 }
 ```
 
