@@ -26,6 +26,7 @@ The project is pre-alpha and APIs may change before the first public alpha.
 - Demo seed command creates a local admin superuser, staff users with varied synthetic tenant/reporting grants, and richer per-facility synthetic data.
 - Demo-only AskLens frontend page that calls the catalog/query APIs and displays returned data with switchable client-side views.
 - Tenant-scoped demo permission tokens for complex test-project grants, including regression coverage for facility-level row separation.
+- Resource-level permission scoping for catalog visibility and plan validation, plus permission-filtered demo questions.
 
 ### Security
 

@@ -34,6 +34,7 @@ class CatalogRegistry:
         default_date_field: str | None = None,
         metrics: Sequence[Metric] | None = None,
         base_queryset: BaseQuerySetHook | None = None,
+        requires_permission: str | None = None,
     ) -> SemanticResource:
         """Register one semantic resource and return its normalized metadata."""
 
@@ -47,6 +48,7 @@ class CatalogRegistry:
             default_date_field=default_date_field,
             metrics=metrics,
             base_queryset=base_queryset,
+            requires_permission=requires_permission,
         )
         if resource.name in self._resources:
             msg = f"Semantic resource {resource.name!r} is already registered."
@@ -95,6 +97,7 @@ class CatalogRegistry:
                     permissions=permission_set,
                 )
                 for resource in self._resources.values()
+                if resource.is_catalog_visible(permissions=permission_set)
             ]
         }
 
@@ -113,6 +116,7 @@ def register(
     default_date_field: str | None = None,
     metrics: Sequence[Metric] | None = None,
     base_queryset: BaseQuerySetHook | None = None,
+    requires_permission: str | None = None,
 ) -> SemanticResource:
     """Register one resource in the default AskLens catalog registry."""
 
@@ -126,6 +130,7 @@ def register(
         default_date_field=default_date_field,
         metrics=metrics,
         base_queryset=base_queryset,
+        requires_permission=requires_permission,
     )
 
 

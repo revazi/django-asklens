@@ -110,6 +110,28 @@ def test_registered_resource_metadata_is_effectively_immutable() -> None:
         resource.fields["total"] = FieldSpec("total", "Total", "number", 0)
 
 
+def test_resource_permission_scopes_catalog_visibility() -> None:
+    registry = CatalogRegistry()
+    registry.register(
+        model=Order,
+        name="orders",
+        fields={"id": {}, "status": {}},
+        requires_permission="shop.view_orders",
+    )
+
+    assert registry.to_dict()["resources"] == []
+    assert (
+        registry.to_dict(permissions={"shop.view_orders"})["resources"][0]["name"]
+        == "orders"
+    )
+    assert (
+        registry.to_dict(permissions={"facility:1:shop.view_orders"})["resources"][0][
+            "name"
+        ]
+        == "orders"
+    )
+
+
 def test_sensitive_and_hidden_fields_are_excluded_from_default_catalog() -> None:
     registry = CatalogRegistry()
     registry.register(
@@ -224,6 +246,14 @@ def test_resource_config_validation() -> None:
             name="bad_queryset",
             fields={"id": {}},
             base_queryset=object(),
+        )
+
+    with pytest.raises(InvalidResourceError, match="requires_permission"):
+        registry.register(
+            model=Order,
+            name="bad_resource_permission",
+            fields={"id": {}},
+            requires_permission=object(),
         )
 
 

@@ -55,6 +55,7 @@ def validate_query_plan(
     resolved_limits = limits or get_plan_limits()
     permission_set = frozenset(permissions or ())
     resource = registry.get(plan.resource)
+    validate_resource_permission(resource, permissions=permission_set)
     normalized_plan = plan.model_copy(update={"resource": resource.name})
 
     validate_plan_shape(normalized_plan)
@@ -104,6 +105,22 @@ def get_plan_limits(settings_overrides: Mapping[str, Any] | None = None) -> Plan
         max_metrics=get_positive_int(configured, "MAX_METRICS"),
         max_group_by=get_positive_int(configured, "MAX_GROUP_BY"),
     )
+
+
+def validate_resource_permission(
+    resource: SemanticResource,
+    *,
+    permissions: frozenset[str],
+) -> None:
+    """Validate that the current permissions may query a resource."""
+
+    if permission_set_allows(permissions, resource.requires_permission):
+        return
+    msg = (
+        f"Resource {resource.name!r} requires permission "
+        f"{resource.requires_permission!r}."
+    )
+    raise PermissionDeniedError(msg)
 
 
 def validate_plan_shape(plan: QueryPlan) -> None:

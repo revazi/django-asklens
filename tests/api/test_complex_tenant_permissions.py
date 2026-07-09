@@ -28,6 +28,7 @@ pytestmark = pytest.mark.django_db
 
 QUESTION_REVENUE_BY_PRODUCT = "Show paid billing revenue by product"
 QUESTION_MEMBER_CONTACTS = "List member contact emails"
+QUESTION_MEMBER_SUBSCRIPTIONS = "Count member subscriptions by plan and status"
 QUESTION_HIDDEN_TENANT_FIELD = "Show billing rows for another facility slug"
 
 
@@ -276,6 +277,24 @@ def member_contacts_plan() -> dict[str, Any]:
     }
 
 
+def member_subscriptions_plan() -> dict[str, Any]:
+    """Return a subscription count plan requiring package-report access."""
+
+    return {
+        "resource": "member_subscriptions",
+        "intent": "aggregate",
+        "group_by": [{"field": "plan.name"}, {"field": "status"}],
+        "metrics": [{"name": "subscription_count", "op": "count", "field": "status"}],
+        "order_by": [{"metric": "subscription_count", "direction": "desc"}],
+        "limit": 10,
+        "visualization": {
+            "type": "bar",
+            "x": "plan.name",
+            "y": "subscription_count",
+        },
+    }
+
+
 def hidden_tenant_field_plan() -> dict[str, Any]:
     """Return a crafted plan attempting to use an unregistered tenant slug field."""
 
@@ -305,7 +324,9 @@ def test_complex_catalog_scopes_fields_to_tenant_grants(
     assert "billing_lines" in catalog_text
     assert "gross_revenue" in catalog_text
     assert "payment_amount" not in catalog_text
-    assert "member_contacts" in catalog_text
+    assert "member_contacts" not in catalog_text
+    assert "member_subscriptions" not in catalog_text
+    assert "schedule_sessions" not in catalog_text
     assert "email" not in catalog_text
     assert "processor_payment_id" not in catalog_text
 
@@ -375,6 +396,33 @@ def test_complex_contact_resource_scopes_to_facilities_with_pii_grant(
         }
     ]
     assert "south-member@example.test" not in str(response.data)
+
+
+def test_complex_query_rejects_resource_without_required_grant(
+    settings,
+    api_client: APIClient,
+    complex_tenant_data: ComplexTenantData,
+    registered_complex_resources: None,
+) -> None:
+    configure_complex_dummy_plans(
+        settings,
+        {QUESTION_MEMBER_SUBSCRIPTIONS: member_subscriptions_plan()},
+    )
+    api_client.force_authenticate(user=complex_tenant_data.north_billing_user)
+
+    response = api_client.post(
+        "/asklens/query/",
+        {"question": QUESTION_MEMBER_SUBSCRIPTIONS},
+        format="json",
+    )
+
+    assert response.status_code == 400
+    assert "member_subscriptions" in response.data["error"]
+    assert "PackageReportsView" in response.data["error"]
+    assert "Traceback" not in response.data["error"]
+    run = SemanticQueryRun.objects.get(pk=response.data["run_id"])
+    assert run.status == SemanticQueryRun.Status.FAILED
+    assert run.plan == {}
 
 
 def test_complex_crafted_plan_cannot_use_unregistered_tenant_field(

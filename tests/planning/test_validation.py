@@ -88,6 +88,32 @@ def test_unknown_resource_fails() -> None:
         validate_query_plan(plan, registry=build_registry())
 
 
+def test_resource_permission_fails_without_matching_permission() -> None:
+    registry = CatalogRegistry()
+    registry.register(
+        model=Order,
+        name="orders",
+        fields={"id": {"label": "Order ID"}, "status": {"label": "Status"}},
+        metrics=[Metric("order_count", op="count", field="id")],
+        requires_permission="shop.view_orders",
+    )
+    plan = parse_valid_plan(
+        filters=[],
+        group_by=[{"field": "status"}],
+        metrics=[{"name": "order_count", "op": "count", "field": "id"}],
+        visualization={"type": "bar", "x": "status", "y": "order_count"},
+    )
+
+    with pytest.raises(PermissionDeniedError, match="shop.view_orders"):
+        validate_query_plan(plan, registry=registry)
+
+    validate_query_plan(
+        plan,
+        registry=registry,
+        permissions={"facility:1:shop.view_orders"},
+    )
+
+
 def test_unknown_field_fails() -> None:
     plan = parse_valid_plan(filters=[{"field": "missing", "op": "eq", "value": 1}])
 

@@ -5,19 +5,35 @@ from django.core.exceptions import PermissionDenied
 from django.shortcuts import render
 from django.urls import reverse
 
-from tests.test_project.models import Facility, StaffAssignment
+from tests.test_project.models import Facility, StaffAssignment, StaffGrant
 from tests.test_project.permissions import (
     get_request_permissions,
+    permission_set_allows,
     permission_set_allows_any,
     reporting_permission_names,
 )
 
 DEMO_QUESTIONS = (
-    "Show paid billing revenue by product",
-    "Show payment totals by status",
-    "List member contact emails",
-    "Count member subscriptions by plan and status",
-    "Show scheduled capacity by session type",
+    (
+        "Show paid billing revenue by product",
+        StaffGrant.BILLING_REPORTS_VIEW,
+    ),
+    (
+        "Show payment totals by status",
+        StaffGrant.PAYMENT_REPORTS_VIEW,
+    ),
+    (
+        "List member contact emails",
+        StaffGrant.MEMBER_PII_VIEW,
+    ),
+    (
+        "Count member subscriptions by plan and status",
+        StaffGrant.PACKAGE_REPORTS_VIEW,
+    ),
+    (
+        "Show scheduled capacity by session type",
+        StaffGrant.SCHEDULE_REPORTS_VIEW,
+    ),
 )
 
 
@@ -36,7 +52,7 @@ def asklens_demo(request):
         {
             "catalog_url": reverse("django_asklens:catalog"),
             "query_url": reverse("django_asklens:query"),
-            "demo_questions": DEMO_QUESTIONS,
+            "demo_questions": get_demo_questions(request),
             "facility_scope": get_facility_scope_labels(request),
         },
     )
@@ -50,6 +66,20 @@ def can_access_asklens_demo(request) -> bool:
         return True
     permissions = get_request_permissions(request)
     return permission_set_allows_any(permissions, reporting_permission_names())
+
+
+def get_demo_questions(request) -> list[str]:
+    """Return demo questions the current user has grants to execute."""
+
+    user = getattr(request, "user", None)
+    if getattr(user, "is_superuser", False):
+        return [question for question, _permission in DEMO_QUESTIONS]
+    permissions = get_request_permissions(request)
+    return [
+        question
+        for question, required_permission in DEMO_QUESTIONS
+        if permission_set_allows(permissions, required_permission)
+    ]
 
 
 def get_facility_scope_labels(request) -> list[str]:

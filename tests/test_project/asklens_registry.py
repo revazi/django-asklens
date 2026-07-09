@@ -69,6 +69,7 @@ def register_facilities() -> None:
             Metric("facility_count", op="count", field="name", label="Facilities")
         ],
         base_queryset=queryset_for_permission(Facility, StaffGrant.FACILITY_VIEW),
+        requires_permission=StaffGrant.FACILITY_VIEW,
     )
 
 
@@ -96,6 +97,7 @@ def register_member_resources() -> None:
         base_queryset=queryset_for_permission(
             MemberProfile, StaffGrant.MEMBER_REPORTS_VIEW
         ),
+        requires_permission=StaffGrant.MEMBER_REPORTS_VIEW,
     )
 
     register(
@@ -148,6 +150,7 @@ def register_member_resources() -> None:
         base_queryset=queryset_for_permission(
             MemberProfile, StaffGrant.MEMBER_PII_VIEW
         ),
+        requires_permission=StaffGrant.MEMBER_PII_VIEW,
     )
 
     register(
@@ -167,6 +170,7 @@ def register_member_resources() -> None:
         base_queryset=queryset_for_permission(
             MemberStatus, StaffGrant.MEMBER_REPORTS_VIEW
         ),
+        requires_permission=StaffGrant.MEMBER_REPORTS_VIEW,
     )
 
     register(
@@ -200,6 +204,7 @@ def register_member_resources() -> None:
             MemberSubscription,
             StaffGrant.PACKAGE_REPORTS_VIEW,
         ),
+        requires_permission=StaffGrant.PACKAGE_REPORTS_VIEW,
     )
 
 
@@ -265,6 +270,7 @@ def register_billing_resources() -> None:
         base_queryset=queryset_for_permission(
             BillingLine, StaffGrant.BILLING_REPORTS_VIEW
         ),
+        requires_permission=StaffGrant.BILLING_REPORTS_VIEW,
     )
 
     register(
@@ -305,6 +311,7 @@ def register_billing_resources() -> None:
         base_queryset=queryset_for_permission(
             PaymentAttempt, StaffGrant.PAYMENT_REPORTS_VIEW
         ),
+        requires_permission=StaffGrant.PAYMENT_REPORTS_VIEW,
     )
 
 
@@ -342,6 +349,7 @@ def register_schedule_resources() -> None:
         base_queryset=queryset_for_permission(
             ScheduleSession, StaffGrant.SCHEDULE_REPORTS_VIEW
         ),
+        requires_permission=StaffGrant.SCHEDULE_REPORTS_VIEW,
     )
 
 

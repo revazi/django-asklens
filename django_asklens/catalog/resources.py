@@ -55,6 +55,7 @@ class ResourceCatalogItem(TypedDict):
     default_date_field: str | None
     fields: list[FieldCatalogItem]
     metrics: list[MetricCatalogItem]
+    requires_permission: NotRequired[str]
     model: NotRequired[str]
 
 
@@ -191,6 +192,7 @@ class SemanticResource:
     fields: Mapping[str, FieldSpec] = field(default_factory=dict)
     metrics: Mapping[str, Metric] = field(default_factory=dict)
     base_queryset: BaseQuerySetHook | None = None
+    requires_permission: str | None = None
 
     def __post_init__(self) -> None:
         """Store resource metadata as effectively immutable mappings."""
@@ -211,11 +213,13 @@ class SemanticResource:
         default_date_field: str | None = None,
         metrics: Sequence[Metric] | None = None,
         base_queryset: BaseQuerySetHook | None = None,
+        requires_permission: str | None = None,
     ) -> "SemanticResource":
         """Build and validate a semantic resource from developer configuration."""
 
         validate_model(model)
         validate_base_queryset(base_queryset)
+        validate_requires_permission(requires_permission)
 
         resource_label = label or str(model._meta.verbose_name_plural).title()
         resource_name = normalize_resource_name(name or resource_label)
@@ -241,6 +245,7 @@ class SemanticResource:
             fields=field_specs,
             metrics=metric_specs,
             base_queryset=base_queryset,
+            requires_permission=requires_permission,
         )
 
     def get_base_queryset(self, request: Any = None) -> QuerySet:
@@ -249,6 +254,11 @@ class SemanticResource:
         if self.base_queryset is not None:
             return self.base_queryset(request)
         return self.model._default_manager.all()
+
+    def is_catalog_visible(self, *, permissions: Iterable[str] | None = None) -> bool:
+        """Return whether this resource belongs in permission-scoped catalog output."""
+
+        return permission_set_allows(permissions or (), self.requires_permission)
 
     def to_dict(
         self,
@@ -286,6 +296,8 @@ class SemanticResource:
             "fields": visible_fields,
             "metrics": visible_metrics,
         }
+        if self.requires_permission:
+            data["requires_permission"] = self.requires_permission
         if include_internal:
             data["model"] = self.model._meta.label
         return data
@@ -335,6 +347,14 @@ def validate_base_queryset(base_queryset: BaseQuerySetHook | None) -> None:
 
     if base_queryset is not None and not callable(base_queryset):
         msg = "base_queryset must be callable when provided."
+        raise InvalidResourceError(msg)
+
+
+def validate_requires_permission(requires_permission: str | None) -> None:
+    """Validate optional resource-level permission metadata."""
+
+    if requires_permission is not None and not isinstance(requires_permission, str):
+        msg = "requires_permission must be a string when provided."
         raise InvalidResourceError(msg)
 
 

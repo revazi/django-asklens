@@ -83,6 +83,8 @@ def test_demo_frontend_renders_for_reporting_user() -> None:
     assert 'data-catalog-url="/asklens/catalog/"' in content
     assert 'data-query-url="/asklens/query/"' in content
     assert "Show paid billing revenue by product" in content
+    assert "Count member subscriptions by plan and status" not in content
+    assert "Show scheduled capacity by session type" not in content
     assert "Tenant row scope" in content
     assert "North Studio" in content
     assert "Display as" in content
