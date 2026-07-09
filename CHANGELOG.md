@@ -21,6 +21,7 @@ The project is pre-alpha and APIs may change before the first public alpha.
 - Mocked and opt-in live provider tests.
 - Private real-project integration checklist and templates for multi-tenant validation.
 - Configurable request-permission getter for projects with role-based or staff permission systems outside Django's default `user.get_all_permissions()`.
+- Runnable complex test project with admin-enabled demo settings, synthetic tenant-scoped grants, and complex member/subscription/billing/payment/session resources.
 
 ### Security
 
@@ -30,4 +31,5 @@ The project is pre-alpha and APIs may change before the first public alpha.
 - Sensitive and hidden fields excluded from default planner catalog serialization.
 - Crafted provider plans cannot use permission-gated tenant fields without the required configured permission string.
 - Catalog and planner prompt metadata are scoped to configured request permissions.
+- Complex tenant tests prove resource base querysets restrict rows to facilities where the user has the required synthetic reporting grant.
 - Live provider errors avoid exposing API keys or raw credentials.

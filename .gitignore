@@ -17,6 +17,8 @@ dist/
 *.egg-info/
 .coverage
 htmlcov/
+.asklens-test-project.sqlite3
+.asklens-test-project.sqlite3-*
 
 # Local agent/prompt files not intended for the initial public repo
 AGENTS.md

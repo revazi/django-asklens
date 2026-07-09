@@ -12,7 +12,7 @@ INSTALLED_APPS = [
     "django.contrib.contenttypes",
     "rest_framework",
     "django_asklens",
-    "tests.test_project",
+    "tests.test_project.apps.TestProjectConfig",
 ]
 
 DATABASES = {
