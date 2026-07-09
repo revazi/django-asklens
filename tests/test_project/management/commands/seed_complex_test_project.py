@@ -22,6 +22,8 @@ from tests.test_project.models import (
     SubscriptionPlan,
 )
 
+DEMO_PASSWORD = "12admin34"
+
 
 def aware_datetime(year: int, month: int, day: int, hour: int = 12) -> datetime:
     """Return a timezone-aware datetime in the active timezone."""
@@ -40,16 +42,28 @@ class Command(BaseCommand):
         north = create_facility("North Studio", "north-studio")
         south = create_facility("South Studio", "south-studio")
 
-        owner = create_user("facility-owner")
-        billing_user = create_user("north-billing")
-        mixed_user = create_user("mixed-reporter")
-        support_user = create_user("support-reporter")
+        create_demo_user("admin", is_staff=True, is_superuser=True)
+        owner = create_demo_user("facility-owner", is_staff=True)
+        north_billing_user = create_demo_user("north-billing", is_staff=True)
+        south_billing_user = create_demo_user("south-billing", is_staff=True)
+        mixed_user = create_demo_user("mixed-reporter", is_staff=True)
+        schedule_user = create_demo_user("schedule-reporter", is_staff=True)
+        support_user = create_demo_user("support-reporter", is_staff=True)
+        create_demo_user("no-report", is_staff=True)
 
         create_assignment(owner, north, StaffAssignment.Role.OWNER)
         create_assignment(owner, south, StaffAssignment.Role.OWNER)
         create_assignment(
-            billing_user,
+            north_billing_user,
             north,
+            StaffAssignment.Role.STAFF,
+            StaffGrant.BILLING_REPORTS_VIEW,
+            StaffGrant.PAYMENT_REPORTS_VIEW,
+            StaffGrant.FACILITY_VIEW,
+        )
+        create_assignment(
+            south_billing_user,
+            south,
             StaffAssignment.Role.STAFF,
             StaffGrant.BILLING_REPORTS_VIEW,
             StaffGrant.PAYMENT_REPORTS_VIEW,
@@ -72,6 +86,20 @@ class Command(BaseCommand):
             StaffGrant.FACILITY_VIEW,
         )
         create_assignment(
+            schedule_user,
+            north,
+            StaffAssignment.Role.STAFF,
+            StaffGrant.SCHEDULE_REPORTS_VIEW,
+            StaffGrant.FACILITY_VIEW,
+        )
+        create_assignment(
+            schedule_user,
+            south,
+            StaffAssignment.Role.STAFF,
+            StaffGrant.SCHEDULE_REPORTS_VIEW,
+            StaffGrant.FACILITY_VIEW,
+        )
+        create_assignment(
             support_user,
             north,
             StaffAssignment.Role.SUPPORT,
@@ -90,20 +118,40 @@ class Command(BaseCommand):
             self.style.SUCCESS("Seeded synthetic AskLens test-project data.")
         )
         self.stdout.write(
-            "Create a superuser separately with `createsuperuser` to access /admin/."
+            self.style.SUCCESS(
+                "Created demo admin login admin / "
+                f"{DEMO_PASSWORD} and staff demo users."
+            )
         )
 
 
-def create_user(username: str):
-    """Create a synthetic user with an unusable password."""
+def create_demo_user(
+    username: str,
+    *,
+    is_staff: bool = False,
+    is_superuser: bool = False,
+):
+    """Create or update a login-capable synthetic demo user."""
 
     user_model = get_user_model()
     user, _created = user_model.objects.get_or_create(
         username=username,
         defaults={"email": f"{username}@example.test"},
     )
-    user.set_unusable_password()
-    user.save(update_fields=["password"])
+    user.email = f"{username}@example.test"
+    user.is_staff = is_staff
+    user.is_superuser = is_superuser
+    user.is_active = True
+    user.set_password(DEMO_PASSWORD)
+    user.save(
+        update_fields=[
+            "email",
+            "is_staff",
+            "is_superuser",
+            "is_active",
+            "password",
+        ]
+    )
     return user
 
 

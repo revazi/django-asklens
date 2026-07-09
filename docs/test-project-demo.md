@@ -14,9 +14,6 @@ DJANGO_SETTINGS_MODULE=tests.test_project.demo_settings \
 uv run python -m django seed_complex_test_project
 
 DJANGO_SETTINGS_MODULE=tests.test_project.demo_settings \
-uv run python -m django createsuperuser
-
-DJANGO_SETTINGS_MODULE=tests.test_project.demo_settings \
 uv run python -m django runserver 127.0.0.1:8000
 ```
 
@@ -26,7 +23,44 @@ Open:
 http://127.0.0.1:8000/admin/
 ```
 
+The seed command creates a local demo superuser:
+
+```text
+username: admin
+password: 12admin34
+```
+
+It also creates staff demo users with the same password and different synthetic tenant/reporting grants:
+
+| Username | Purpose |
+| --- | --- |
+| `facility-owner` | owner assignments for both facilities |
+| `north-billing` | billing/payment reports for North Studio |
+| `south-billing` | billing/payment reports for South Studio |
+| `mixed-reporter` | member/PII reports for North Studio and member reports for South Studio |
+| `schedule-reporter` | schedule reports for both facilities |
+| `support-reporter` | global support-style analytics grant |
+| `no-report` | staff login with no reporting grants |
+
+These credentials are for the local synthetic demo project only. Do not reuse them in real projects.
+
 The local database file is `.asklens-test-project.sqlite3` and is ignored by git.
+
+## AskLens in admin
+
+Open the AskLens audit model in admin:
+
+```text
+http://127.0.0.1:8000/admin/asklens/semanticqueryrun/
+```
+
+Open the separate AskLens query admin page:
+
+```text
+http://127.0.0.1:8000/admin/asklens/asklensquery/
+```
+
+The normal admin search box only searches existing audit records. It does not execute a new query. Use the AskLens query page to run a question and see result rows inside the admin UI. Re-running the same successful question for the same admin user reuses the existing audit record instead of creating a duplicate.
 
 ## AskLens endpoints
 
@@ -49,7 +83,7 @@ DJANGO_ASKLENS = {
 }
 ```
 
-Synthetic staff grants are tenant-scoped through `StaffAssignment` and `StaffGrant` records. Base querysets for reporting resources only include facilities where the request user has the required grant. Staff users can query all demo facilities for local exploration.
+Synthetic staff grants are tenant-scoped through `StaffAssignment` and `StaffGrant` records. Base querysets for reporting resources only include facilities where the request user has the required grant. The seeded `admin` superuser can query all demo facilities for local exploration.
 
 ## Demo dummy questions
 

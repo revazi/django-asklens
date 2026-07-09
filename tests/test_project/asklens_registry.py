@@ -355,7 +355,7 @@ def queryset_for_permission(
         user = getattr(request, "user", None)
         if user is None or not getattr(user, "is_authenticated", False):
             return model.objects.none()
-        if getattr(user, "is_staff", False):
+        if getattr(user, "is_superuser", False):
             return model.objects.all()
         facility_ids = permitted_facility_ids(user, permission_name)
         filter_key = "id__in" if model is Facility else "facility_id__in"

@@ -45,6 +45,9 @@ dev = [
 [tool.setuptools.packages.find]
 include = ["django_asklens*"]
 
+[tool.setuptools.package-data]
+django_asklens = ["templates/**/*.html"]
+
 [tool.pytest.ini_options]
 DJANGO_SETTINGS_MODULE = "tests.test_project.settings"
 python_files = ["test_*.py"]

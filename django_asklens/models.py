@@ -35,3 +35,13 @@ class SemanticQueryRun(models.Model):
         """Return a compact admin/debug representation."""
 
         return f"AskLens run {self.pk or 'unsaved'}: {self.status}"
+
+
+class AskLensQuery(SemanticQueryRun):
+    """Admin-only proxy used as a dedicated AskLens query page."""
+
+    class Meta:
+        proxy = True
+        verbose_name = "AskLens query"
+        verbose_name_plural = "AskLens queries"
+        default_permissions = ()

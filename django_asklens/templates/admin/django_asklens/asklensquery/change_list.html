@@ -1,0 +1,89 @@
+{% extends "admin/base_site.html" %}
+{% load i18n %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+  <a href="{% url 'admin:index' %}">{% translate 'Home' %}</a>
+  &rsaquo; <a href="{% url 'admin:app_list' app_label=opts.app_label %}">{{ opts.app_config.verbose_name }}</a>
+  &rsaquo; {{ opts.verbose_name_plural|capfirst }}
+</div>
+{% endblock %}
+
+{% block content %}
+<div id="content-main">
+  <form method="post" novalidate>
+    {% csrf_token %}
+    <fieldset class="module aligned">
+      <h2>{% translate "Run AskLens query" %}</h2>
+      <div class="form-row field-question">
+        {{ form.question.errors }}
+        {{ form.question.label_tag }}
+        {{ form.question }}
+        {% if form.question.help_text %}
+          <div class="help">{{ form.question.help_text }}</div>
+        {% endif %}
+      </div>
+    </fieldset>
+    <div class="submit-row">
+      <input type="submit" value="{% translate 'Run query' %}" class="default">
+      <a href="{{ audit_changelist_url }}" class="closelink">{% translate "View audit records" %}</a>
+    </div>
+  </form>
+
+  {% if error %}
+    <div class="messagelist">
+      <div class="error">{{ error }}</div>
+    </div>
+  {% endif %}
+
+  {% if run %}
+    <div class="module">
+      <h2>{% translate "Audit record" %}</h2>
+      <p>
+        <a href="{% url 'admin:asklens_semanticqueryrun_change' run.pk %}">
+          {% blocktranslate with run_id=run.pk %}View query run #{{ run_id }}{% endblocktranslate %}
+        </a>
+      </p>
+      {% if reused_existing_run %}
+        <p><strong>{% translate "Reused existing successful run; no duplicate audit row was created." %}</strong></p>
+      {% endif %}
+    </div>
+  {% endif %}
+
+  {% if result %}
+    <div class="module">
+      <h2>{% translate "Result" %}</h2>
+      <p>
+        {% blocktranslate with row_count=result.row_count duration_ms=result.duration_ms %}
+          {{ row_count }} rows in {{ duration_ms }} ms
+        {% endblocktranslate %}
+      </p>
+      <table>
+        <thead>
+          <tr>
+            {% for column in result.columns %}
+              <th scope="col">{{ column.label }}</th>
+            {% endfor %}
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in result.rows %}
+            <tr>
+              {% for cell in row.cells %}
+                <td>{{ cell }}</td>
+              {% endfor %}
+            </tr>
+          {% empty %}
+            <tr><td colspan="{{ result.columns|length }}">{% translate "No rows" %}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="module">
+      <h2>{% translate "Visualization" %}</h2>
+      <pre>{{ result.visualization }}</pre>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

@@ -19,7 +19,7 @@ class CanUseComplexAnalytics(BasePermission):
         """Return whether the request has any reporting grant."""
 
         user = getattr(request, "user", None)
-        if getattr(user, "is_staff", False):
+        if getattr(user, "is_superuser", False):
             return True
         permissions = get_request_permissions(request)
         return bool(permissions & reporting_permission_names())
@@ -34,7 +34,7 @@ def get_request_permissions(request):
 
     permissions = set(user.get_all_permissions())
     permissions.update(getattr(user, "asklens_extra_permissions", ()))
-    if getattr(user, "is_staff", False):
+    if getattr(user, "is_superuser", False):
         permissions.update(all_staff_grant_names())
     permissions.update(get_staff_assignment_permissions(user))
     return permissions
@@ -56,9 +56,12 @@ def get_staff_assignment_permissions(user) -> set[str]:
         permissions.add(f"facility:{assignment.facility_id}:role:{assignment.role}")
         if assignment.can_access_all_facilities:
             permissions.add("facility:*:access")
-        for grant in assignment.grants.all():
-            permissions.add(grant.name)
-            permissions.add(f"facility:{assignment.facility_id}:{grant.name}")
+        grant_names = {grant.name for grant in assignment.grants.all()}
+        if assignment.role == StaffAssignment.Role.OWNER:
+            grant_names.update(all_staff_grant_names())
+        for grant_name in grant_names:
+            permissions.add(grant_name)
+            permissions.add(f"facility:{assignment.facility_id}:{grant_name}")
     return permissions
 
 
