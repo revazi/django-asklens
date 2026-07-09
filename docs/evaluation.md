@@ -22,13 +22,14 @@ Each case should include:
 
 Live-provider evaluations can compare provider output against the same cases, but those tests must remain opt-in and skipped by default.
 
-The current opt-in live evaluation suite covers status aggregation, count metrics, revenue by month, paid-order lists, and an adversarial tenant-field request. Run it with:
+The current opt-in live evaluation suite covers status aggregation, count metrics, revenue by month, paid-order lists, an adversarial tenant-field request, and the full DRF `/asklens/query/` path. Run it with:
 
 ```bash
 DJANGO_ASKLENS_LIVE_LLM=1 \
 DJANGO_ASKLENS_LIVE_LLM_API_KEY="$OPENAI_API_KEY" \
 DJANGO_ASKLENS_LIVE_LLM_MODEL="gpt-4.1-mini" \
-uv run pytest tests/evaluation/test_live_openai_compatible.py
+uv run pytest tests/evaluation/test_live_openai_compatible.py \
+  tests/evaluation/test_live_api_openai_compatible.py
 ```
 
-These tests use a small tenant-scoped fixture and still validate provider output before ORM execution. They also assert that unauthorized tenant fields and tenant row values are not returned.
+These tests use small tenant-scoped fixtures and still validate provider output before ORM execution. They also assert that unauthorized tenant fields and tenant row values are not returned. The API evaluation additionally verifies query-run auditing through the DRF endpoint.

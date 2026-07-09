@@ -80,7 +80,8 @@ Run the opt-in live smoke test only when you explicitly want to test a configure
 DJANGO_ASKLENS_LIVE_LLM=1 \
 DJANGO_ASKLENS_LIVE_LLM_API_KEY="$OPENAI_API_KEY" \
 DJANGO_ASKLENS_LIVE_LLM_MODEL="gpt-4.1-mini" \
-uv run pytest tests/evaluation/test_live_openai_compatible.py
+uv run pytest tests/evaluation/test_live_openai_compatible.py \
+  tests/evaluation/test_live_api_openai_compatible.py
 ```
 
 Optional:
