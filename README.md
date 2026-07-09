@@ -144,6 +144,8 @@ Supported visualization hints are `table`, `metric`, `bar`, `line`, and `pie`. C
 - [Security checklist](docs/security-checklist.md)
 - [Multi-tenant security](docs/multitenancy-security.md)
 - [Evaluation fixtures](docs/evaluation.md)
+- [Private real-project integration](docs/private-integration.md)
+- [Private evaluation plan](docs/private-evaluation-plan.md)
 - [Test matrix plan](docs/test-matrix.md)
 - [Changelog](CHANGELOG.md)
 

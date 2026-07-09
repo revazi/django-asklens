@@ -19,6 +19,7 @@ The project is pre-alpha and APIs may change before the first public alpha.
 - Multi-tenant API security tests covering base-queryset scoping, permission-gated fields, route permission gates, and permission-scoped catalog/planner metadata.
 - OpenAI-compatible provider using Python stdlib HTTP.
 - Mocked and opt-in live provider tests.
+- Private real-project integration checklist and templates for multi-tenant validation.
 
 ### Security
 

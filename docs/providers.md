@@ -90,7 +90,7 @@ Optional:
 DJANGO_ASKLENS_LIVE_LLM_BASE_URL="https://api.openai.com/v1"
 ```
 
-Live provider output must still pass the same strict QueryPlan parsing and catalog validation as dummy output.
+Live provider output must still pass the same strict QueryPlan parsing and catalog validation as dummy output. Before public alpha, run the [private real-project integration](private-integration.md) plan against a real multi-tenant project.
 
 ## Safety notes
 

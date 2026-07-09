@@ -57,6 +57,6 @@ DJANGO_ASKLENS = {
 
 ## Current limitations
 
-- Live LLM providers are not implemented yet.
+- Live LLM providers are opt-in and should be validated against a private target project before public alpha.
 - AskLens relies on host apps to define tenant membership and row-level queryset policy.
 - Read-only database replica routing is deferred to a later phase.
