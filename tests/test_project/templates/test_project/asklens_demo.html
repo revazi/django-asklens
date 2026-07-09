@@ -1,0 +1,599 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Django AskLens Demo</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f6f8fb;
+      --panel: #ffffff;
+      --border: #d8e0ea;
+      --muted: #5d6b7a;
+      --text: #182230;
+      --accent: #276ef1;
+      --accent-soft: #e9f1ff;
+      --danger: #b42318;
+      --success: #067647;
+      --shadow: 0 10px 30px rgba(16, 24, 40, 0.08);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.5;
+    }
+
+    a { color: var(--accent); }
+
+    .page-header {
+      padding: 2rem clamp(1rem, 4vw, 3rem);
+      background: linear-gradient(135deg, #13294b, #276ef1);
+      color: #ffffff;
+    }
+
+    .page-header h1 {
+      margin: 0 0 0.5rem;
+      font-size: clamp(2rem, 4vw, 3rem);
+      letter-spacing: -0.04em;
+    }
+
+    .page-header p {
+      max-width: 56rem;
+      margin: 0.35rem 0;
+      color: rgba(255, 255, 255, 0.85);
+    }
+
+    .header-links {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      margin-top: 1rem;
+    }
+
+    .header-links a {
+      color: #ffffff;
+      border: 1px solid rgba(255, 255, 255, 0.45);
+      border-radius: 999px;
+      padding: 0.35rem 0.8rem;
+      text-decoration: none;
+    }
+
+    main {
+      display: grid;
+      grid-template-columns: minmax(18rem, 24rem) minmax(0, 1fr);
+      gap: 1.25rem;
+      padding: 1.25rem clamp(1rem, 4vw, 3rem) 3rem;
+    }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 1rem;
+      box-shadow: var(--shadow);
+      padding: 1rem;
+    }
+
+    .panel h2,
+    .panel h3 {
+      margin-top: 0;
+      letter-spacing: -0.02em;
+    }
+
+    .sidebar {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    form {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    label {
+      font-weight: 700;
+    }
+
+    textarea {
+      min-height: 7rem;
+      width: 100%;
+      resize: vertical;
+      border: 1px solid var(--border);
+      border-radius: 0.75rem;
+      padding: 0.75rem;
+      color: var(--text);
+      font: inherit;
+    }
+
+    button {
+      border: 0;
+      border-radius: 0.75rem;
+      cursor: pointer;
+      font: inherit;
+      font-weight: 700;
+    }
+
+    button:disabled {
+      cursor: not-allowed;
+      opacity: 0.65;
+    }
+
+    .primary-button {
+      background: var(--accent);
+      color: #ffffff;
+      padding: 0.75rem 1rem;
+    }
+
+    .question-list {
+      display: grid;
+      gap: 0.5rem;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .question-button {
+      width: 100%;
+      border: 1px solid var(--border);
+      background: var(--accent-soft);
+      color: #173b78;
+      padding: 0.65rem 0.75rem;
+      text-align: left;
+    }
+
+    .muted {
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+
+    .status {
+      margin-bottom: 1rem;
+      border-radius: 0.75rem;
+      padding: 0.75rem;
+    }
+
+    .status:empty { display: none; }
+    .status.info { background: var(--accent-soft); color: #173b78; }
+    .status.success { background: #ecfdf3; color: var(--success); }
+    .status.error { background: #fef3f2; color: var(--danger); }
+
+    .result-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin: 0 0 1rem;
+      padding: 0;
+      list-style: none;
+    }
+
+    .result-meta li {
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 0.25rem 0.65rem;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .table-wrap {
+      overflow-x: auto;
+      border: 1px solid var(--border);
+      border-radius: 0.75rem;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 34rem;
+    }
+
+    th,
+    td {
+      border-bottom: 1px solid var(--border);
+      padding: 0.65rem 0.75rem;
+      text-align: left;
+      vertical-align: top;
+      white-space: nowrap;
+    }
+
+    th {
+      background: #f8fafc;
+      color: #344054;
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    tr:last-child td { border-bottom: 0; }
+
+    .chart {
+      display: grid;
+      gap: 0.7rem;
+      margin: 1rem 0;
+    }
+
+    .bar-row {
+      display: grid;
+      grid-template-columns: minmax(8rem, 14rem) minmax(10rem, 1fr) auto;
+      gap: 0.75rem;
+      align-items: center;
+    }
+
+    .bar-label {
+      overflow: hidden;
+      color: #344054;
+      font-weight: 650;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .bar-track {
+      height: 1rem;
+      overflow: hidden;
+      border-radius: 999px;
+      background: #e4e7ec;
+    }
+
+    .bar-fill {
+      height: 100%;
+      min-width: 0.25rem;
+      border-radius: inherit;
+      background: linear-gradient(90deg, #276ef1, #56a3ff);
+    }
+
+    .catalog-list {
+      display: grid;
+      gap: 0.75rem;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .catalog-item {
+      border: 1px solid var(--border);
+      border-radius: 0.75rem;
+      padding: 0.75rem;
+    }
+
+    .catalog-item strong { display: block; }
+
+    code {
+      border-radius: 0.35rem;
+      background: #eef2f6;
+      padding: 0.1rem 0.3rem;
+    }
+
+    @media (max-width: 900px) {
+      main { grid-template-columns: 1fr; }
+      .bar-row { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <header class="page-header">
+    <h1>Django AskLens Demo</h1>
+    <p>
+      Ask a natural-language question, let AskLens validate and execute a read-only ORM query,
+      then render table/chart-ready JSON in this browser-only demo UI.
+    </p>
+    <p>Signed in as <strong>{{ request.user.username }}</strong>.</p>
+    <nav class="header-links" aria-label="Demo links">
+      <a href="/admin/asklens/asklensquery/">Admin AskLens query page</a>
+      <a href="/admin/asklens/semanticqueryrun/">Audit runs</a>
+      <a href="{{ catalog_url }}">Catalog JSON</a>
+    </nav>
+  </header>
+
+  <main id="asklens-app" data-catalog-url="{{ catalog_url }}" data-query-url="{{ query_url }}">
+    <aside class="sidebar">
+      <section class="panel">
+        <h2>Run a question</h2>
+        <p class="muted">
+          The demo uses configured dummy plans, so no live LLM API key is required.
+        </p>
+        <form id="query-form">
+          {% csrf_token %}
+          <label for="question-input">Question</label>
+          <textarea id="question-input" name="question" required>{{ demo_questions.0 }}</textarea>
+          <button class="primary-button" id="run-button" type="submit">Run AskLens query</button>
+        </form>
+      </section>
+
+      <section class="panel">
+        <h2>Example questions</h2>
+        {{ demo_questions|json_script:"asklens-demo-questions" }}
+        <ul class="question-list" id="question-list"></ul>
+      </section>
+
+      <section class="panel">
+        <h2>Tenant row scope</h2>
+        <p class="muted">
+          Query results are constrained by resource base querysets to these demo facilities.
+        </p>
+        {{ facility_scope|json_script:"asklens-facility-scope" }}
+        <ul class="catalog-list" id="facility-scope-list"></ul>
+      </section>
+
+      <section class="panel">
+        <h2>Visible schema catalog</h2>
+        <p class="muted">
+          Loaded from <code>{{ catalog_url }}</code>. This is field/metric metadata only;
+          it is not database rows or sample tenant data.
+        </p>
+        <div id="catalog-status" class="muted">Loading schema catalog…</div>
+        <ul class="catalog-list" id="catalog-list"></ul>
+      </section>
+    </aside>
+
+    <section class="panel" aria-live="polite">
+      <h2>Result</h2>
+      <div id="status" class="status"></div>
+      <div id="result"></div>
+    </section>
+  </main>
+
+  <script>
+    const app = document.getElementById("asklens-app");
+    const catalogUrl = app.dataset.catalogUrl;
+    const queryUrl = app.dataset.queryUrl;
+    const csrfToken = document.querySelector("[name=csrfmiddlewaretoken]").value;
+    const questions = JSON.parse(document.getElementById("asklens-demo-questions").textContent);
+    const facilityScope = JSON.parse(document.getElementById("asklens-facility-scope").textContent);
+
+    const questionInput = document.getElementById("question-input");
+    const queryForm = document.getElementById("query-form");
+    const runButton = document.getElementById("run-button");
+    const statusBox = document.getElementById("status");
+    const resultBox = document.getElementById("result");
+    const questionList = document.getElementById("question-list");
+    const facilityScopeList = document.getElementById("facility-scope-list");
+    const catalogStatus = document.getElementById("catalog-status");
+    const catalogList = document.getElementById("catalog-list");
+
+    function setStatus(message, kind = "info") {
+      statusBox.textContent = message;
+      statusBox.className = `status ${kind}`;
+    }
+
+    function clearStatus() {
+      statusBox.textContent = "";
+      statusBox.className = "status";
+    }
+
+    async function fetchJson(url, options = {}) {
+      const { headers = {}, ...fetchOptions } = options;
+      const response = await fetch(url, {
+        credentials: "same-origin",
+        ...fetchOptions,
+        headers: {
+          Accept: "application/json",
+          ...headers,
+        },
+      });
+      const text = await response.text();
+      let payload = null;
+      if (text) {
+        try {
+          payload = JSON.parse(text);
+        } catch (_error) {
+          payload = { detail: text };
+        }
+      }
+      if (!response.ok) {
+        const message = payload?.error || payload?.detail || response.statusText;
+        throw new Error(message);
+      }
+      return payload;
+    }
+
+    function renderQuestionButtons() {
+      questionList.replaceChildren(...questions.map((question) => {
+        const item = document.createElement("li");
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "question-button";
+        button.textContent = question;
+        button.addEventListener("click", () => {
+          questionInput.value = question;
+          questionInput.focus();
+        });
+        item.appendChild(button);
+        return item;
+      }));
+    }
+
+    function renderFacilityScope() {
+      facilityScopeList.replaceChildren(...facilityScope.map((facilityName) => {
+        const item = document.createElement("li");
+        item.className = "catalog-item";
+        item.textContent = facilityName;
+        return item;
+      }));
+    }
+
+    async function loadCatalog() {
+      try {
+        const catalog = await fetchJson(catalogUrl);
+        const resources = catalog.resources || [];
+        catalogStatus.textContent = `${resources.length} schema resources visible.`;
+        catalogList.replaceChildren(...resources.map(renderCatalogItem));
+      } catch (error) {
+        catalogStatus.textContent = `Catalog unavailable: ${error.message}`;
+      }
+    }
+
+    function renderCatalogItem(resource) {
+      const item = document.createElement("li");
+      item.className = "catalog-item";
+      const title = document.createElement("strong");
+      title.textContent = resource.label || resource.name;
+      const details = document.createElement("span");
+      const fieldCount = (resource.fields || []).length;
+      const metricCount = (resource.metrics || []).length;
+      details.className = "muted";
+      details.textContent = `${resource.name} · ${fieldCount} fields · ${metricCount} metrics`;
+      item.append(title, details);
+      return item;
+    }
+
+    queryForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const question = questionInput.value.trim();
+      if (!question) {
+        setStatus("Enter a question before running AskLens.", "error");
+        return;
+      }
+      runButton.disabled = true;
+      resultBox.replaceChildren();
+      setStatus("Planning, validating, and executing query…", "info");
+      try {
+        const payload = await fetchJson(queryUrl, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-CSRFToken": csrfToken,
+          },
+          body: JSON.stringify({ question }),
+        });
+        setStatus("Query completed successfully.", "success");
+        renderResult(payload);
+      } catch (error) {
+        setStatus(error.message, "error");
+      } finally {
+        runButton.disabled = false;
+      }
+    });
+
+    function renderResult(payload) {
+      const fragment = document.createDocumentFragment();
+      const meta = document.createElement("ul");
+      meta.className = "result-meta";
+      meta.append(
+        renderMeta(`Run #${payload.run_id}`),
+        renderMeta(`${payload.row_count} rows`),
+        renderMeta(`${payload.duration_ms} ms`),
+        renderMeta(`Visualization: ${payload.visualization?.type || "table"}`),
+      );
+      fragment.appendChild(meta);
+
+      if (payload.visualization?.type === "bar") {
+        fragment.appendChild(renderBarChart(payload));
+      }
+      fragment.appendChild(renderTable(payload.columns || [], payload.data || []));
+      resultBox.replaceChildren(fragment);
+    }
+
+    function renderMeta(text) {
+      const item = document.createElement("li");
+      item.textContent = text;
+      return item;
+    }
+
+    function renderBarChart(payload) {
+      const chart = document.createElement("div");
+      chart.className = "chart";
+      const xAxis = payload.visualization.x;
+      const yAxis = payload.visualization.y;
+      if (!xAxis || !yAxis) {
+        return chart;
+      }
+      const rows = payload.data || [];
+      const values = rows.map((row) => Number(row[yAxis.field]) || 0);
+      const maxValue = Math.max(...values, 0);
+      rows.forEach((row) => {
+        const value = Number(row[yAxis.field]) || 0;
+        const percent = maxValue > 0 ? Math.max((value / maxValue) * 100, 1) : 0;
+        const chartRow = document.createElement("div");
+        chartRow.className = "bar-row";
+
+        const label = document.createElement("div");
+        label.className = "bar-label";
+        label.title = String(row[xAxis.field] ?? "—");
+        label.textContent = String(row[xAxis.field] ?? "—");
+
+        const track = document.createElement("div");
+        track.className = "bar-track";
+        const fill = document.createElement("div");
+        fill.className = "bar-fill";
+        fill.style.width = `${percent}%`;
+        track.appendChild(fill);
+
+        const amount = document.createElement("div");
+        amount.textContent = formatValue(value, yAxis.field);
+        chartRow.append(label, track, amount);
+        chart.appendChild(chartRow);
+      });
+      return chart;
+    }
+
+    function renderTable(columns, rows) {
+      const wrapper = document.createElement("div");
+      wrapper.className = "table-wrap";
+      if (!rows.length) {
+        const empty = document.createElement("p");
+        empty.className = "muted";
+        empty.textContent = "No rows returned.";
+        wrapper.appendChild(empty);
+        return wrapper;
+      }
+
+      const table = document.createElement("table");
+      const thead = document.createElement("thead");
+      const headRow = document.createElement("tr");
+      columns.forEach((column) => {
+        const th = document.createElement("th");
+        th.scope = "col";
+        th.textContent = column.label || column.key;
+        headRow.appendChild(th);
+      });
+      thead.appendChild(headRow);
+
+      const tbody = document.createElement("tbody");
+      rows.forEach((row) => {
+        const tr = document.createElement("tr");
+        columns.forEach((column) => {
+          const td = document.createElement("td");
+          td.textContent = formatValue(row[column.key], column.key);
+          tr.appendChild(td);
+        });
+        tbody.appendChild(tr);
+      });
+
+      table.append(thead, tbody);
+      wrapper.appendChild(table);
+      return wrapper;
+    }
+
+    function formatValue(value, key = "") {
+      if (value === null || value === undefined || value === "") {
+        return "—";
+      }
+      const lowerKey = key.toLowerCase();
+      if (typeof value === "number" && (
+        lowerKey.includes("cents") ||
+        lowerKey.includes("amount") ||
+        lowerKey.includes("revenue")
+      )) {
+        return new Intl.NumberFormat("en-US", {
+          style: "currency",
+          currency: "USD",
+        }).format(value / 100);
+      }
+      if (typeof value === "number") {
+        return new Intl.NumberFormat("en-US").format(value);
+      }
+      return String(value);
+    }
+
+    renderQuestionButtons();
+    renderFacilityScope();
+    loadCatalog();
+  </script>
+</body>
+</html>

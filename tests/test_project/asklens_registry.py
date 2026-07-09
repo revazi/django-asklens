@@ -3,7 +3,7 @@
 from collections.abc import Callable
 from typing import Any
 
-from django.db.models import Model, QuerySet
+from django.db.models import Model, Q, QuerySet
 
 from django_asklens import Metric, register
 from django_asklens.catalog.registry import default_registry
@@ -367,12 +367,13 @@ def queryset_for_permission(
 def permitted_facility_ids(user: Any, permission_name: str) -> QuerySet:
     """Return facility IDs where a user has an active synthetic grant."""
 
-    global_assignment = StaffAssignment.objects.filter(
+    has_global_grant = StaffAssignment.objects.filter(
+        Q(role=StaffAssignment.Role.OWNER) | Q(grants__name=permission_name),
         user=user,
         is_active=True,
         can_access_all_facilities=True,
-    ).first()
-    if global_assignment is not None:
+    ).exists()
+    if has_global_grant:
         return Facility.objects.values("id")
 
     owner_facility_ids = StaffAssignment.objects.filter(

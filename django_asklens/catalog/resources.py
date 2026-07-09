@@ -136,13 +136,13 @@ class FieldSpec:
         permission_set = frozenset(permissions or ())
         permission_allowed = (
             self.requires_permission is None
-            or self.requires_permission in permission_set
+            or permission_set_allows(permission_set, self.requires_permission)
             or (self.sensitive and include_sensitive)
         )
         sensitive_allowed = include_sensitive or (
             self.sensitive
             and self.requires_permission is not None
-            and self.requires_permission in permission_set
+            and permission_set_allows(permission_set, self.requires_permission)
         )
         hidden_allowed = include_hidden or (self.sensitive and sensitive_allowed)
 
@@ -289,6 +289,27 @@ class SemanticResource:
         if include_internal:
             data["model"] = self.model._meta.label
         return data
+
+
+def permission_set_allows(
+    permissions: Iterable[str], required_permission: str | None
+) -> bool:
+    """Return whether permission tokens include a required permission.
+
+    Exact permission strings are accepted. Scoped permission tokens that end with
+    ``:<required_permission>`` are also accepted so projects can return values
+    such as ``facility:123:BillingReportsView`` from a request-permission hook
+    while AskLens still validates against the registered field permission name.
+    Row-level access must still be enforced by resource ``base_queryset`` hooks.
+    """
+
+    if required_permission is None:
+        return True
+    permission_set = frozenset(permissions)
+    if required_permission in permission_set:
+        return True
+    scoped_suffix = f":{required_permission}"
+    return any(permission.endswith(scoped_suffix) for permission in permission_set)
 
 
 def normalize_resource_name(value: str) -> str:

@@ -22,7 +22,7 @@ class CanUseComplexAnalytics(BasePermission):
         if getattr(user, "is_superuser", False):
             return True
         permissions = get_request_permissions(request)
-        return bool(permissions & reporting_permission_names())
+        return permission_set_allows_any(permissions, reporting_permission_names())
 
 
 def get_request_permissions(request):
@@ -38,6 +38,27 @@ def get_request_permissions(request):
         permissions.update(all_staff_grant_names())
     permissions.update(get_staff_assignment_permissions(user))
     return permissions
+
+
+def permission_set_allows(
+    permissions: set[str] | frozenset[str], permission_name: str
+) -> bool:
+    """Return whether permission tokens include a global or scoped grant."""
+
+    return permission_name in permissions or any(
+        permission.endswith(f":{permission_name}") for permission in permissions
+    )
+
+
+def permission_set_allows_any(
+    permissions: set[str] | frozenset[str], permission_names: set[str]
+) -> bool:
+    """Return whether permission tokens include any grant in a set."""
+
+    return any(
+        permission_set_allows(permissions, permission_name)
+        for permission_name in permission_names
+    )
 
 
 def get_staff_assignment_permissions(user) -> set[str]:
@@ -60,8 +81,10 @@ def get_staff_assignment_permissions(user) -> set[str]:
         if assignment.role == StaffAssignment.Role.OWNER:
             grant_names.update(all_staff_grant_names())
         for grant_name in grant_names:
-            permissions.add(grant_name)
-            permissions.add(f"facility:{assignment.facility_id}:{grant_name}")
+            if assignment.can_access_all_facilities:
+                permissions.add(f"facility:*:{grant_name}")
+            else:
+                permissions.add(f"facility:{assignment.facility_id}:{grant_name}")
     return permissions
 
 

@@ -24,6 +24,8 @@ The project is pre-alpha and APIs may change before the first public alpha.
 - Runnable complex test project with admin-enabled demo settings, synthetic tenant-scoped grants, and complex member/subscription/billing/payment/session resources.
 - Dedicated Django admin AskLens query page that runs validated queries, displays result rows, and reuses existing successful audit records for repeated questions.
 - Demo seed command creates a local admin superuser, staff users with varied synthetic tenant/reporting grants, and richer per-facility synthetic data.
+- Demo-only AskLens frontend page that calls the catalog/query APIs and renders table/chart-ready responses with vanilla JavaScript.
+- Tenant-scoped demo permission tokens for complex test-project grants, including regression coverage for facility-level row separation.
 
 ### Security
 

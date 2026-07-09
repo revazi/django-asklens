@@ -181,7 +181,7 @@ class Command(BaseCommand):
         create_demo_user("no-report", is_staff=True)
 
         create_assignment(owner, north, StaffAssignment.Role.OWNER)
-        create_assignment(owner, south, StaffAssignment.Role.OWNER)
+        deactivate_assignment(owner, south, StaffAssignment.Role.OWNER)
         create_assignment(
             north_billing_user,
             north,
@@ -320,9 +320,23 @@ def create_assignment(
             "can_access_all_facilities": can_access_all_facilities,
         },
     )
-    for grant_name in grants:
+    desired_grants = set(grants)
+    StaffGrant.objects.filter(assignment=assignment).exclude(
+        name__in=desired_grants
+    ).delete()
+    for grant_name in desired_grants:
         StaffGrant.objects.get_or_create(assignment=assignment, name=grant_name)
     return assignment
+
+
+def deactivate_assignment(user, facility: Facility, role: str) -> None:
+    """Deactivate a synthetic assignment that should no longer be active."""
+
+    StaffAssignment.objects.filter(
+        user=user,
+        facility=facility,
+        role=role,
+    ).update(is_active=False, can_access_all_facilities=False)
 
 
 def seed_facility_data(

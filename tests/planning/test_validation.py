@@ -39,7 +39,11 @@ def build_registry() -> CatalogRegistry:
                 "sensitive": True,
                 "requires_permission": "shop.view_pii",
             },
-            "total": {"label": "Order total", "metric": True},
+            "total": {
+                "label": "Order total",
+                "metric": True,
+                "requires_permission": "shop.view_financials",
+            },
             "internal_notes": {"label": "Internal notes", "llm_visible": False},
             "customer.name": {"label": "Customer name", "filter_only": True},
         },
@@ -134,6 +138,28 @@ def test_sensitive_field_fails_without_explicit_permission() -> None:
         plan,
         registry=build_registry(),
         permissions={"shop.view_pii"},
+    )
+
+
+def test_permission_gated_metric_field_fails_without_permission() -> None:
+    plan = parse_valid_plan(
+        metrics=[{"name": "revenue", "op": "sum", "field": "total"}],
+        order_by=[{"metric": "revenue", "direction": "desc"}],
+        visualization={"type": "bar", "x": "status", "y": "revenue"},
+    )
+
+    with pytest.raises(PermissionDeniedError, match="shop.view_financials"):
+        validate_query_plan(plan, registry=build_registry())
+
+    validate_query_plan(
+        plan,
+        registry=build_registry(),
+        permissions={"shop.view_financials"},
+    )
+    validate_query_plan(
+        plan,
+        registry=build_registry(),
+        permissions={"facility:1:shop.view_financials"},
     )
 
 

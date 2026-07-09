@@ -17,7 +17,13 @@ DJANGO_SETTINGS_MODULE=tests.test_project.demo_settings \
 uv run python -m django runserver 127.0.0.1:8000
 ```
 
-Open:
+Open the demo AskLens frontend page:
+
+```text
+http://127.0.0.1:8000/
+```
+
+Or open Django admin:
 
 ```text
 http://127.0.0.1:8000/admin/
@@ -34,7 +40,7 @@ It also creates staff demo users with the same password and different synthetic 
 
 | Username | Purpose |
 | --- | --- |
-| `facility-owner` | owner assignments for both facilities |
+| `facility-owner` | owner assignment for North Studio only |
 | `north-billing` | billing/payment reports for North Studio |
 | `south-billing` | billing/payment reports for South Studio |
 | `mixed-reporter` | member/PII reports for North Studio and member reports for South Studio |
@@ -47,6 +53,18 @@ These credentials are for the local synthetic demo project only. Do not reuse th
 The seed command creates a richer synthetic dataset for each facility, including multiple plans, members, status histories, subscriptions, six months of billing documents, varied billing lines, payment outcomes, locations, session types, and scheduled sessions.
 
 The local database file is `.asklens-test-project.sqlite3` and is ignored by git.
+
+## AskLens frontend demo
+
+Open the demo frontend page:
+
+```text
+http://127.0.0.1:8000/
+```
+
+The page is a small dependency-free single page app served by the runnable test project. It shows the current user's tenant row scope, loads permission-scoped schema metadata from `/asklens/catalog/`, posts natural-language questions to `/asklens/query/`, and renders AskLens table/chart-ready JSON as a result table plus a simple bar chart when the response includes a bar visualization hint.
+
+The catalog panel is schema metadata only: resources, fields, and metrics visible to the planner. It is not database rows or sample tenant data. Query results remain tenant-scoped by each resource `base_queryset(request)`. The page uses the same login session and synthetic reporting grants as the API. Staff users without reporting grants cannot load it.
 
 ## AskLens in admin
 

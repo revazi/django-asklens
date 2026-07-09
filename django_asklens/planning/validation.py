@@ -5,7 +5,11 @@ from dataclasses import dataclass
 from typing import Any, Literal
 
 from django_asklens.catalog.registry import CatalogRegistry, default_registry
-from django_asklens.catalog.resources import FieldSpec, SemanticResource
+from django_asklens.catalog.resources import (
+    FieldSpec,
+    SemanticResource,
+    permission_set_allows,
+)
 from django_asklens.exceptions import (
     PermissionDeniedError,
     PlanValidationError,
@@ -367,6 +371,12 @@ def validate_field_usage(
     if field.sensitive and not sensitive_allowed:
         msg = f"Field {field_name!r} is sensitive and requires explicit permission."
         raise PermissionDeniedError(msg)
+    if field.requires_permission is not None and not permission_set_allows(
+        permissions,
+        field.requires_permission,
+    ):
+        msg = f"Field {field_name!r} requires permission {field.requires_permission!r}."
+        raise PermissionDeniedError(msg)
 
     hidden_allowed = allow_hidden_fields or (field.sensitive and sensitive_allowed)
     if not field.llm_visible and not hidden_allowed:
@@ -390,7 +400,7 @@ def is_sensitive_field_allowed(
         return True
     if field.requires_permission is None:
         return False
-    return field.requires_permission in permissions
+    return permission_set_allows(permissions, field.requires_permission)
 
 
 def get_positive_int(settings: Mapping[str, Any], key: str) -> int:
