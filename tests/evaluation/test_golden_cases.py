@@ -26,7 +26,7 @@ def aware_datetime(year: int, month: int, day: int) -> datetime:
 
 @dataclass(frozen=True, slots=True)
 class GoldenCase:
-    """A deterministic question, plan, and rendered-result expectation."""
+    """A deterministic question, plan, and serialized-result expectation."""
 
     question: str
     plan: dict[str, Any]

@@ -85,3 +85,5 @@ def test_demo_frontend_renders_for_reporting_user() -> None:
     assert "Show paid billing revenue by product" in content
     assert "Tenant row scope" in content
     assert "North Studio" in content
+    assert "Display as" in content
+    assert "Raw JSON" in content

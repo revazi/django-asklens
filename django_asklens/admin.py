@@ -221,7 +221,7 @@ def find_existing_successful_run(request, *, question: str) -> SemanticQueryRun 
 
 
 def build_admin_result(result: dict[str, Any]) -> dict[str, Any]:
-    """Return a template-friendly representation of a rendered query result."""
+    """Return a template-friendly representation of a serialized query result."""
 
     columns = result["columns"]
     return {

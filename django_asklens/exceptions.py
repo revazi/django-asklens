@@ -49,5 +49,9 @@ class LLMProviderError(AskLensError):
     """Raised when an LLM provider cannot return a usable response."""
 
 
-class RendererError(AskLensError):
-    """Raised when a result cannot be rendered safely."""
+class ResultSerializationError(AskLensError):
+    """Raised when result data cannot be serialized safely."""
+
+
+class VisualizationHintError(ResultSerializationError):
+    """Raised when visualization hint metadata is invalid."""

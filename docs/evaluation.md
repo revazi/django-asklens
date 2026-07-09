@@ -1,6 +1,6 @@
 # Evaluation fixtures
 
-Evaluation fixtures are deterministic question-to-plan cases used to verify planner, validation, compiler, and renderer behavior without live LLM calls.
+Evaluation fixtures are deterministic question-to-plan cases used to verify planner, validation, compiler, result serialization, and visualization-hint behavior without live LLM calls.
 
 The current fixture app is `tests.test_project`, which defines `Customer` and `Order` models. Golden cases live under `tests/evaluation/` and use `DummyProvider` so they require no API keys and make no network calls.
 
@@ -18,7 +18,7 @@ Each case should include:
 - deterministic QueryPlan payload,
 - expected validated plan details,
 - expected result rows where database fixtures are involved,
-- expected renderer/visualization shape when relevant.
+- expected serialized result and visualization-hint shape when relevant.
 
 Live-provider evaluations can compare provider output against the same cases, but those tests must remain opt-in and skipped by default.
 

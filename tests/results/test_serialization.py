@@ -1,14 +1,14 @@
-"""Tests for table rendering."""
+"""Tests for result row serialization."""
 
 from datetime import UTC, datetime
 from decimal import Decimal
 
 from django_asklens.compiler import ResultColumn
-from django_asklens.renderers.tables import render_table
+from django_asklens.results.serialization import serialize_rows
 
 
-def test_render_table_normalizes_list_rows_to_json_values() -> None:
-    payload = render_table(
+def test_serialize_rows_normalizes_values_to_json_primitives() -> None:
+    payload = serialize_rows(
         columns=(
             ResultColumn("created_at", "Created", "datetime"),
             ResultColumn("total", "Total", "number"),
@@ -40,8 +40,8 @@ def test_render_table_normalizes_list_rows_to_json_values() -> None:
     }
 
 
-def test_render_table_marks_empty_results() -> None:
-    payload = render_table(
+def test_serialize_rows_marks_empty_results() -> None:
+    payload = serialize_rows(
         columns=(ResultColumn("status", "Status", "string"),),
         rows=(),
     )

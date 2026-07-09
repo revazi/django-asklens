@@ -212,6 +212,48 @@
 
     tr:last-child td { border-bottom: 0; }
 
+    .display-controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      align-items: end;
+      margin: 1rem 0;
+      border: 1px solid var(--border);
+      border-radius: 0.75rem;
+      background: #f8fafc;
+      padding: 0.75rem;
+    }
+
+    .display-controls label {
+      display: grid;
+      gap: 0.25rem;
+    }
+
+    .display-controls select {
+      min-width: 12rem;
+      border: 1px solid var(--border);
+      border-radius: 0.6rem;
+      background: #ffffff;
+      padding: 0.5rem;
+      color: var(--text);
+      font: inherit;
+    }
+
+    .hint-card {
+      display: grid;
+      gap: 0.4rem;
+      margin: 1rem 0;
+      border: 1px solid var(--border);
+      border-radius: 0.75rem;
+      background: #fbfdff;
+      padding: 0.75rem;
+    }
+
+    .hint-card h3 {
+      margin: 0;
+      font-size: 1rem;
+    }
+
     .chart {
       display: grid;
       gap: 0.7rem;
@@ -247,6 +289,100 @@
       background: linear-gradient(90deg, #276ef1, #56a3ff);
     }
 
+    .metric-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+      gap: 0.75rem;
+      margin: 1rem 0;
+    }
+
+    .metric-card {
+      border: 1px solid var(--border);
+      border-radius: 0.9rem;
+      background: linear-gradient(135deg, #f8fbff, #eef5ff);
+      padding: 1rem;
+    }
+
+    .metric-value {
+      color: #173b78;
+      font-size: clamp(1.75rem, 4vw, 3rem);
+      font-weight: 800;
+      letter-spacing: -0.05em;
+      line-height: 1;
+    }
+
+    .metric-label {
+      margin-top: 0.35rem;
+      color: var(--muted);
+      font-weight: 700;
+    }
+
+    .line-chart {
+      margin: 1rem 0;
+      border: 1px solid var(--border);
+      border-radius: 1rem;
+      background: #fbfdff;
+      padding: 1rem;
+    }
+
+    .line-chart svg {
+      display: block;
+      width: 100%;
+      height: auto;
+    }
+
+    .pie-layout {
+      display: grid;
+      grid-template-columns: minmax(12rem, 18rem) minmax(12rem, 1fr);
+      gap: 1rem;
+      align-items: center;
+      margin: 1rem 0;
+    }
+
+    .pie-chart {
+      aspect-ratio: 1;
+      width: min(100%, 18rem);
+      border: 1px solid var(--border);
+      border-radius: 50%;
+      box-shadow: inset 0 0 0 2.5rem #ffffff;
+    }
+
+    .pie-legend {
+      display: grid;
+      gap: 0.5rem;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .pie-legend li {
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 0.25rem 0.65rem;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .legend-swatch {
+      display: inline-block;
+      width: 0.8rem;
+      height: 0.8rem;
+      margin-right: 0.4rem;
+      border-radius: 50%;
+      vertical-align: -0.08rem;
+    }
+
+    .raw-json {
+      max-height: 32rem;
+      overflow: auto;
+      border: 1px solid var(--border);
+      border-radius: 0.75rem;
+      background: #101828;
+      color: #f9fafb;
+      padding: 1rem;
+      white-space: pre-wrap;
+    }
+
     .catalog-list {
       display: grid;
       gap: 0.75rem;
@@ -271,7 +407,8 @@
 
     @media (max-width: 900px) {
       main { grid-template-columns: 1fr; }
-      .bar-row { grid-template-columns: 1fr; }
+      .bar-row,
+      .pie-layout { grid-template-columns: 1fr; }
     }
   </style>
 </head>
@@ -280,7 +417,7 @@
     <h1>Django AskLens Demo</h1>
     <p>
       Ask a natural-language question, let AskLens validate and execute a read-only ORM query,
-      then render table/chart-ready JSON in this browser-only demo UI.
+      then explore the returned columns/data using interchangeable client-side displays.
     </p>
     <p>Signed in as <strong>{{ request.user.username }}</strong>.</p>
     <nav class="header-links" aria-label="Demo links">
@@ -355,6 +492,16 @@
     const facilityScopeList = document.getElementById("facility-scope-list");
     const catalogStatus = document.getElementById("catalog-status");
     const catalogList = document.getElementById("catalog-list");
+    const chartColors = [
+      "#276ef1",
+      "#12b76a",
+      "#f79009",
+      "#7a5af8",
+      "#f04438",
+      "#06aed4",
+      "#e31b54",
+      "#667085",
+    ];
 
     function setStatus(message, kind = "info") {
       statusBox.textContent = message;
@@ -478,15 +625,17 @@
         renderMeta(`Run #${payload.run_id}`),
         renderMeta(`${payload.row_count} rows`),
         renderMeta(`${payload.duration_ms} ms`),
-        renderMeta(`Visualization: ${payload.visualization?.type || "table"}`),
+        renderMeta(`API hint: ${payload.visualization?.type || "table"}`),
       );
       fragment.appendChild(meta);
+      fragment.appendChild(renderVisualizationHint(payload));
 
-      if (payload.visualization?.type === "bar") {
-        fragment.appendChild(renderBarChart(payload));
-      }
-      fragment.appendChild(renderTable(payload.columns || [], payload.data || []));
+      const display = renderDisplayControls(payload);
+      const output = document.createElement("div");
+      output.id = "display-output";
+      fragment.append(display.element, output);
       resultBox.replaceChildren(fragment);
+      renderSelectedDisplay(payload, display, output);
     }
 
     function renderMeta(text) {
@@ -495,27 +644,125 @@
       return item;
     }
 
-    function renderBarChart(payload) {
+    function renderVisualizationHint(payload) {
+      const hint = document.createElement("div");
+      hint.className = "hint-card";
+      const title = document.createElement("h3");
+      title.textContent = "API visualization hint";
+      const description = document.createElement("p");
+      description.className = "muted";
+      description.textContent = "AskLens returns normalized columns and data plus this optional hint. The display selector below is purely client-side demo code.";
+      const details = document.createElement("code");
+      details.textContent = JSON.stringify(payload.visualization || { type: "table" });
+      hint.append(title, description, details);
+      return hint;
+    }
+
+    function renderDisplayControls(payload) {
+      const columns = payload.columns || [];
+      const numericColumns = getNumericColumns(payload);
+      const labelColumns = getLabelColumns(payload);
+      const suggestedType = payload.visualization?.type || "table";
+      const defaultMode = ["table", "bar", "line", "pie", "metric"].includes(suggestedType)
+        ? suggestedType
+        : "table";
+      const xField = pickFieldFromHint(payload, "x", labelColumns, columns);
+      const yField = pickFieldFromHint(payload, "y", numericColumns, columns);
+
+      const element = document.createElement("div");
+      element.className = "display-controls";
+      const mode = buildSelect("Display as", [
+        ["table", "Table"],
+        ["bar", "Bar preview"],
+        ["line", "Line preview"],
+        ["pie", "Pie preview"],
+        ["metric", "Metric cards"],
+        ["json", "Raw JSON"],
+      ], defaultMode);
+      const x = buildColumnSelect("Label column", labelColumns.length ? labelColumns : columns, xField);
+      const y = buildColumnSelect("Value column", numericColumns.length ? numericColumns : columns, yField);
+      element.append(mode.wrapper, x.wrapper, y.wrapper);
+
+      const display = { element, mode: mode.select, x: x.select, y: y.select };
+      [display.mode, display.x, display.y].forEach((select) => {
+        select.addEventListener("change", () => {
+          renderSelectedDisplay(payload, display, document.getElementById("display-output"));
+        });
+      });
+      return display;
+    }
+
+    function buildSelect(labelText, options, selectedValue) {
+      const wrapper = document.createElement("label");
+      wrapper.textContent = labelText;
+      const select = document.createElement("select");
+      options.forEach(([value, label]) => {
+        const option = document.createElement("option");
+        option.value = value;
+        option.textContent = label;
+        select.appendChild(option);
+      });
+      if (selectedValue) {
+        select.value = selectedValue;
+      }
+      wrapper.appendChild(select);
+      return { wrapper, select };
+    }
+
+    function buildColumnSelect(labelText, columns, selectedValue) {
+      const options = columns.map((column) => [column.key, column.label || column.key]);
+      return buildSelect(labelText, options, selectedValue || options[0]?.[0] || "");
+    }
+
+    function renderSelectedDisplay(payload, display, output) {
+      if (!output) {
+        return;
+      }
+      const mode = display.mode.value;
+      output.replaceChildren();
+      if (mode === "json") {
+        output.appendChild(renderRawJson(payload));
+        return;
+      }
+      if (mode === "bar") {
+        output.appendChild(renderBarChart(payload, display.x.value, display.y.value));
+        return;
+      }
+      if (mode === "line") {
+        output.appendChild(renderLineChart(payload, display.x.value, display.y.value));
+        return;
+      }
+      if (mode === "pie") {
+        output.appendChild(renderPieChart(payload, display.x.value, display.y.value));
+        return;
+      }
+      if (mode === "metric") {
+        output.appendChild(renderMetricCards(payload, display.x.value, display.y.value));
+        return;
+      }
+      output.appendChild(renderTable(payload.columns || [], payload.data || []));
+    }
+
+    function renderBarChart(payload, xField, yField) {
       const chart = document.createElement("div");
       chart.className = "chart";
-      const xAxis = payload.visualization.x;
-      const yAxis = payload.visualization.y;
-      if (!xAxis || !yAxis) {
+      const rows = payload.data || [];
+      if (!xField || !yField || !rows.length) {
+        chart.appendChild(renderEmptyDisplay("No chartable rows returned."));
         return chart;
       }
-      const rows = payload.data || [];
-      const values = rows.map((row) => Number(row[yAxis.field]) || 0);
+      const values = rows.map((row) => Number(row[yField]) || 0);
       const maxValue = Math.max(...values, 0);
       rows.forEach((row) => {
-        const value = Number(row[yAxis.field]) || 0;
+        const value = Number(row[yField]) || 0;
         const percent = maxValue > 0 ? Math.max((value / maxValue) * 100, 1) : 0;
         const chartRow = document.createElement("div");
         chartRow.className = "bar-row";
 
         const label = document.createElement("div");
         label.className = "bar-label";
-        label.title = String(row[xAxis.field] ?? "—");
-        label.textContent = String(row[xAxis.field] ?? "—");
+        label.title = formatLabel(row[xField]);
+        label.textContent = formatLabel(row[xField]);
 
         const track = document.createElement("div");
         track.className = "bar-track";
@@ -525,11 +772,165 @@
         track.appendChild(fill);
 
         const amount = document.createElement("div");
-        amount.textContent = formatValue(value, yAxis.field);
+        amount.textContent = formatValue(value, yField);
         chartRow.append(label, track, amount);
         chart.appendChild(chartRow);
       });
       return chart;
+    }
+
+    function renderLineChart(payload, xField, yField) {
+      const chart = document.createElement("div");
+      chart.className = "line-chart";
+      const rows = payload.data || [];
+      if (!xField || !yField || !rows.length) {
+        chart.appendChild(renderEmptyDisplay("No line chart data returned."));
+        return chart;
+      }
+      const width = 640;
+      const height = 260;
+      const padding = { top: 22, right: 24, bottom: 46, left: 72 };
+      const plotWidth = width - padding.left - padding.right;
+      const plotHeight = height - padding.top - padding.bottom;
+      const values = rows.map((row) => Number(row[yField]) || 0);
+      const maxValue = Math.max(...values, 0);
+      const scaleX = (index) => padding.left + (rows.length === 1 ? plotWidth / 2 : (index / (rows.length - 1)) * plotWidth);
+      const scaleY = (value) => padding.top + plotHeight - (maxValue > 0 ? (value / maxValue) * plotHeight : 0);
+      const svg = createSvgElement("svg", { viewBox: `0 0 ${width} ${height}`, role: "img" });
+      const points = rows.map((row, index) => `${scaleX(index)},${scaleY(Number(row[yField]) || 0)}`);
+      svg.append(
+        createSvgElement("line", { x1: padding.left, y1: padding.top, x2: padding.left, y2: padding.top + plotHeight, stroke: "#98a2b3", "stroke-width": 1 }),
+        createSvgElement("line", { x1: padding.left, y1: padding.top + plotHeight, x2: padding.left + plotWidth, y2: padding.top + plotHeight, stroke: "#98a2b3", "stroke-width": 1 }),
+        createSvgElement("polyline", { fill: "none", points: points.join(" "), stroke: "#276ef1", "stroke-linecap": "round", "stroke-linejoin": "round", "stroke-width": 4 }),
+      );
+      rows.forEach((row, index) => {
+        svg.appendChild(createSvgElement("circle", { cx: scaleX(index), cy: scaleY(Number(row[yField]) || 0), r: 4, fill: "#276ef1" }));
+      });
+      svg.append(
+        createSvgText(padding.left - 8, padding.top + 4, formatValue(maxValue, yField), "end"),
+        createSvgText(padding.left - 8, padding.top + plotHeight, formatValue(0, yField), "end"),
+        createSvgText(padding.left, height - 12, formatLabel(rows[0][xField]), "start"),
+        createSvgText(padding.left + plotWidth, height - 12, formatLabel(rows[rows.length - 1][xField]), "end"),
+      );
+      chart.appendChild(svg);
+      return chart;
+    }
+
+    function renderPieChart(payload, xField, yField) {
+      const layout = document.createElement("div");
+      layout.className = "pie-layout";
+      const rows = payload.data || [];
+      if (!xField || !yField || !rows.length) {
+        layout.appendChild(renderEmptyDisplay("No pie chart data returned."));
+        return layout;
+      }
+      const values = rows.map((row) => Math.max(Number(row[yField]) || 0, 0));
+      const total = values.reduce((sum, value) => sum + value, 0);
+      if (total <= 0) {
+        layout.appendChild(renderEmptyDisplay("Pie chart values are all zero."));
+        return layout;
+      }
+      const pie = document.createElement("div");
+      pie.className = "pie-chart";
+      let start = 0;
+      pie.style.background = `conic-gradient(${values.map((value, index) => {
+        const end = start + (value / total) * 100;
+        const segment = `${chartColors[index % chartColors.length]} ${start}% ${end}%`;
+        start = end;
+        return segment;
+      }).join(", ")})`;
+      const legend = document.createElement("ul");
+      legend.className = "pie-legend";
+      rows.forEach((row, index) => {
+        const item = document.createElement("li");
+        const swatch = document.createElement("span");
+        swatch.className = "legend-swatch";
+        swatch.style.background = chartColors[index % chartColors.length];
+        item.append(swatch, `${formatLabel(row[xField])}: ${formatValue(values[index], yField)}`);
+        legend.appendChild(item);
+      });
+      layout.append(pie, legend);
+      return layout;
+    }
+
+    function renderMetricCards(payload, xField, yField) {
+      const grid = document.createElement("div");
+      grid.className = "metric-grid";
+      const rows = payload.data || [];
+      if (!yField || !rows.length) {
+        grid.appendChild(renderEmptyDisplay("No metric values returned."));
+        return grid;
+      }
+      rows.forEach((row) => {
+        const card = document.createElement("div");
+        card.className = "metric-card";
+        const value = document.createElement("div");
+        value.className = "metric-value";
+        value.textContent = formatValue(Number(row[yField]) || 0, yField);
+        const label = document.createElement("div");
+        label.className = "metric-label";
+        label.textContent = xField ? formatLabel(row[xField]) : getColumnLabel(payload, yField);
+        card.append(value, label);
+        grid.appendChild(card);
+      });
+      return grid;
+    }
+
+    function renderRawJson(payload) {
+      const pre = document.createElement("pre");
+      pre.className = "raw-json";
+      pre.textContent = JSON.stringify(payload, null, 2);
+      return pre;
+    }
+
+    function renderEmptyDisplay(message) {
+      const empty = document.createElement("p");
+      empty.className = "muted";
+      empty.textContent = message;
+      return empty;
+    }
+
+    function createSvgElement(tagName, attributes = {}) {
+      const element = document.createElementNS("http://www.w3.org/2000/svg", tagName);
+      Object.entries(attributes).forEach(([name, value]) => {
+        element.setAttribute(name, value);
+      });
+      return element;
+    }
+
+    function createSvgText(x, y, text, anchor) {
+      const element = createSvgElement("text", { x, y, fill: "#667085", "font-size": 12, "text-anchor": anchor });
+      element.textContent = text;
+      return element;
+    }
+
+    function getNumericColumns(payload) {
+      const rows = payload.data || [];
+      return (payload.columns || []).filter((column) => {
+        if (["integer", "number"].includes(column.type)) {
+          return true;
+        }
+        return rows.some((row) => typeof row[column.key] === "number");
+      });
+    }
+
+    function getLabelColumns(payload) {
+      const numericKeys = new Set(getNumericColumns(payload).map((column) => column.key));
+      return (payload.columns || []).filter((column) => !numericKeys.has(column.key));
+    }
+
+    function pickFieldFromHint(payload, axis, preferredColumns, fallbackColumns) {
+      const hinted = payload.visualization?.[axis]?.field;
+      const allowedKeys = new Set((fallbackColumns || []).map((column) => column.key));
+      if (hinted && allowedKeys.has(hinted)) {
+        return hinted;
+      }
+      return preferredColumns[0]?.key || fallbackColumns[0]?.key || "";
+    }
+
+    function getColumnLabel(payload, key) {
+      const column = (payload.columns || []).find((candidate) => candidate.key === key);
+      return column?.label || key;
     }
 
     function renderTable(columns, rows) {
@@ -568,6 +969,13 @@
       table.append(thead, tbody);
       wrapper.appendChild(table);
       return wrapper;
+    }
+
+    function formatLabel(value) {
+      if (value === null || value === undefined || value === "") {
+        return "—";
+      }
+      return String(value);
     }
 
     function formatValue(value, key = "") {

@@ -181,6 +181,31 @@ def test_query_endpoint_returns_result_and_records_successful_run(
     assert run.plan["resource"] == "orders"
 
 
+def test_query_endpoint_can_return_serialized_data_without_visualization_hint(
+    settings,
+    api_client: APIClient,
+    user,
+    order_data: None,
+    registered_orders: None,
+) -> None:
+    configure_dummy_plan(settings, valid_plan_payload())
+    api_client.force_authenticate(user=user)
+
+    response = api_client.post(
+        "/asklens/query/",
+        {"question": QUESTION, "include_visualization": False},
+        format="json",
+    )
+
+    assert response.status_code == 200
+    assert response.data["columns"]
+    assert response.data["data"] == [
+        {"status": "paid", "order_count": 2},
+        {"status": "pending", "order_count": 1},
+    ]
+    assert "visualization" not in response.data
+
+
 def test_query_errors_are_audited_safely(
     settings,
     api_client: APIClient,

@@ -2,7 +2,7 @@
 
 Django AskLens is a reusable Django + DRF package for safe natural-language querying over explicitly registered Django models.
 
-Status: pre-alpha. The current package includes the minimal app scaffold, semantic catalog registration, strict QueryPlan schema/validation, ORM-only query compilation/execution, deterministic and OpenAI-compatible provider layers, renderer-normalized table/chart output, DRF endpoints, query-run audit records, and multi-tenant security tests. Advanced renderers and dashboards/saved queries will be added in later approved phases.
+Status: pre-alpha. The current package includes the minimal app scaffold, semantic catalog registration, strict QueryPlan schema/validation, ORM-only query compilation/execution, deterministic and OpenAI-compatible provider layers, JSON-safe result serialization with optional visualization hints, DRF endpoints, query-run audit records, and multi-tenant security tests. Dashboards/saved queries may be added in later approved phases.
 
 ## Planned names
 
@@ -112,21 +112,21 @@ GET  /asklens/runs/<id>/
 
 The query endpoint plans, validates, executes, and records a `SemanticQueryRun` audit row. API views require authenticated users by default, and `debug=true` is restricted to staff users.
 
-## Current renderers
+## Result serialization
 
-AskLens returns frontend-agnostic table data and chart hints. It does not require a JavaScript charting framework.
+AskLens returns frontend-agnostic `columns` and `data` payloads plus optional visualization hints. It does not require or own a JavaScript charting framework.
 
 ```python
-from django_asklens.renderers import render_query_result
+from django_asklens.results import serialize_query_result
 
-payload = render_query_result(
+payload = serialize_query_result(
     columns=result.columns,
     rows=result.rows,
     visualization={"type": "bar", "x": "status", "y": "order_count"},
 )
 ```
 
-Supported visualization hints are `table`, `metric`, `bar`, `line`, and `pie`. Chart specs are normalized to include axis field, label, and type metadata.
+Supported visualization hints are `table`, `metric`, `bar`, `line`, and `pie`. Hints are normalized to include axis field, label, and type metadata so applications can render the returned data however they prefer. API clients that only want serialized data can send `"include_visualization": false` to `/asklens/query/`.
 
 ## Safety posture
 

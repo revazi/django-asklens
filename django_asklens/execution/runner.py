@@ -9,7 +9,7 @@ from typing import Any
 from django_asklens.catalog.registry import CatalogRegistry, default_registry
 from django_asklens.compiler import CompiledQuery, ResultColumn, compile_query_plan
 from django_asklens.planning.schemas import QueryPlan
-from django_asklens.renderers import render_query_result
+from django_asklens.results import serialize_query_result
 
 
 @dataclass(frozen=True, slots=True)
@@ -22,15 +22,16 @@ class QueryResult:
     duration_ms: int
     visualization: dict[str, Any]
 
-    def to_dict(self) -> dict[str, Any]:
-        """Serialize the result to table/chart-ready primitives."""
+    def to_dict(self, *, include_visualization: bool = True) -> dict[str, Any]:
+        """Serialize the result to JSON-safe primitives plus optional hints."""
 
-        rendered = render_query_result(
+        serialized = serialize_query_result(
             columns=self.columns,
             rows=self.rows,
             visualization=self.visualization,
+            include_visualization=include_visualization,
         )
-        return {**rendered, "duration_ms": self.duration_ms}
+        return {**serialized, "duration_ms": self.duration_ms}
 
 
 def run_query_plan(

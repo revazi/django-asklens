@@ -14,7 +14,7 @@ The project is pre-alpha and APIs may change before the first public alpha.
 - ORM-only compiler and executor for read-only list and aggregate queries.
 - Deterministic planner/provider flow with `DummyProvider`.
 - DRF catalog/query/run endpoints and `SemanticQueryRun` audit model.
-- Frontend-agnostic table renderer and chart-spec normalization.
+- Frontend-agnostic result serialization and visualization-hint normalization.
 - Public-alpha documentation drafts and deterministic evaluation fixtures.
 - Multi-tenant API security tests covering base-queryset scoping, permission-gated fields, route permission gates, and permission-scoped catalog/planner metadata.
 - OpenAI-compatible provider using Python stdlib HTTP.
@@ -24,7 +24,7 @@ The project is pre-alpha and APIs may change before the first public alpha.
 - Runnable complex test project with admin-enabled demo settings, synthetic tenant-scoped grants, and complex member/subscription/billing/payment/session resources.
 - Dedicated Django admin AskLens query page that runs validated queries, displays result rows, and reuses existing successful audit records for repeated questions.
 - Demo seed command creates a local admin superuser, staff users with varied synthetic tenant/reporting grants, and richer per-facility synthetic data.
-- Demo-only AskLens frontend page that calls the catalog/query APIs and renders table/chart-ready responses with vanilla JavaScript.
+- Demo-only AskLens frontend page that calls the catalog/query APIs and displays returned data with switchable client-side views.
 - Tenant-scoped demo permission tokens for complex test-project grants, including regression coverage for facility-level row separation.
 
 ### Security

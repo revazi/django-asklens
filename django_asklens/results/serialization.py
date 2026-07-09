@@ -1,4 +1,4 @@
-"""Table rendering helpers for AskLens query results."""
+"""JSON-safe result serialization helpers for AskLens responses."""
 
 from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import asdict
@@ -13,7 +13,7 @@ type JsonPrimitive = str | int | float | bool | None
 type JsonValue = JsonPrimitive | list[JsonPrimitive] | dict[str, JsonPrimitive]
 
 
-class RenderedColumn(TypedDict):
+class SerializedColumn(TypedDict):
     """Serialized result column metadata."""
 
     key: str
@@ -21,47 +21,47 @@ class RenderedColumn(TypedDict):
     type: str
 
 
-class TablePayload(TypedDict):
-    """Rendered table payload."""
+class SerializedRowsPayload(TypedDict):
+    """Serialized row payload for AskLens API consumers."""
 
-    columns: list[RenderedColumn]
+    columns: list[SerializedColumn]
     data: list[dict[str, JsonValue]]
     row_count: int
     empty: NotRequired[bool]
 
 
-def render_table(
+def serialize_rows(
     *,
     columns: Sequence[ResultColumn],
     rows: Iterable[Mapping[str, Any]],
-) -> TablePayload:
-    """Render rows and columns into JSON-compatible table data."""
+) -> SerializedRowsPayload:
+    """Serialize rows and columns into JSON-compatible response data."""
 
-    rendered_columns = [render_column(column) for column in columns]
+    serialized_columns = [serialize_column(column) for column in columns]
     column_types = {column.key: column.type for column in columns}
-    rendered_rows = [render_row(row, column_types=column_types) for row in rows]
-    payload: TablePayload = {
-        "columns": rendered_columns,
-        "data": rendered_rows,
-        "row_count": len(rendered_rows),
+    serialized_rows = [serialize_row(row, column_types=column_types) for row in rows]
+    payload: SerializedRowsPayload = {
+        "columns": serialized_columns,
+        "data": serialized_rows,
+        "row_count": len(serialized_rows),
     }
-    if not rendered_rows:
+    if not serialized_rows:
         payload["empty"] = True
     return payload
 
 
-def render_column(column: ResultColumn) -> RenderedColumn:
-    """Render one result column as JSON-compatible metadata."""
+def serialize_column(column: ResultColumn) -> SerializedColumn:
+    """Serialize one result column as JSON-compatible metadata."""
 
     return asdict(column)
 
 
-def render_row(
+def serialize_row(
     row: Mapping[str, Any],
     *,
     column_types: Mapping[str, str],
 ) -> dict[str, JsonValue]:
-    """Render one result row using known column types when available."""
+    """Serialize one result row using known column types when available."""
 
     return {
         key: normalize_cell_value(value, column_type=column_types.get(key))

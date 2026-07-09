@@ -52,6 +52,7 @@ class QueryView(AskLensAPIView):
         serializer.is_valid(raise_exception=True)
         question = serializer.validated_data["question"]
         debug = serializer.validated_data["debug"]
+        include_visualization = serializer.validated_data["include_visualization"]
         enforce_debug_permission(request, debug=debug)
 
         try:
@@ -72,7 +73,9 @@ class QueryView(AskLensAPIView):
                 run=run,
                 question=question,
                 plan=planner_result.plan.model_dump(mode="json"),
-                query_result=query_result.to_dict(),
+                query_result=query_result.to_dict(
+                    include_visualization=include_visualization,
+                ),
                 debug=debug,
             )
             return Response(payload)
@@ -167,9 +170,10 @@ def build_success_payload(
         "data": query_result["data"],
         "row_count": query_result["row_count"],
         "duration_ms": query_result["duration_ms"],
-        "visualization": query_result["visualization"],
         "explanation": "Executed a validated read-only AskLens query plan.",
     }
+    if "visualization" in query_result:
+        payload["visualization"] = query_result["visualization"]
     if debug:
         payload["debug"] = {"validated_plan": plan}
     return payload
