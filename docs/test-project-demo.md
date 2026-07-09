@@ -44,6 +44,8 @@ It also creates staff demo users with the same password and different synthetic 
 
 These credentials are for the local synthetic demo project only. Do not reuse them in real projects.
 
+The seed command creates a richer synthetic dataset for each facility, including multiple plans, members, status histories, subscriptions, six months of billing documents, varied billing lines, payment outcomes, locations, session types, and scheduled sessions.
+
 The local database file is `.asklens-test-project.sqlite3` and is ignored by git.
 
 ## AskLens in admin

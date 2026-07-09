@@ -23,7 +23,7 @@ The project is pre-alpha and APIs may change before the first public alpha.
 - Configurable request-permission getter for projects with role-based or staff permission systems outside Django's default `user.get_all_permissions()`.
 - Runnable complex test project with admin-enabled demo settings, synthetic tenant-scoped grants, and complex member/subscription/billing/payment/session resources.
 - Dedicated Django admin AskLens query page that runs validated queries, displays result rows, and reuses existing successful audit records for repeated questions.
-- Demo seed command creates a local admin superuser and staff users with varied synthetic tenant/reporting grants.
+- Demo seed command creates a local admin superuser, staff users with varied synthetic tenant/reporting grants, and richer per-facility synthetic data.
 
 ### Security
 
