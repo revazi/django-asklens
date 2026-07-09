@@ -34,6 +34,8 @@ def get_request_permissions(request):
 
     permissions = set(user.get_all_permissions())
     permissions.update(getattr(user, "asklens_extra_permissions", ()))
+    if getattr(user, "is_staff", False):
+        permissions.update(all_staff_grant_names())
     permissions.update(get_staff_assignment_permissions(user))
     return permissions
 
@@ -73,3 +75,11 @@ def reporting_permission_names() -> set[str]:
         StaffGrant.PACKAGE_REPORTS_VIEW,
         StaffGrant.SCHEDULE_REPORTS_VIEW,
     }
+
+
+def all_staff_grant_names() -> set[str]:
+    """Return all synthetic grant names used by the runnable demo project."""
+
+    from tests.test_project.models import StaffGrant
+
+    return {name for name, _label in StaffGrant.GRANT_CHOICES}

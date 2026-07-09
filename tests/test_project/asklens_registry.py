@@ -65,7 +65,9 @@ def register_facilities() -> None:
             "is_active": {"label": "Active"},
             "created_at": {"label": "Created date"},
         },
-        metrics=[Metric("facility_count", op="count", field="id", label="Facilities")],
+        metrics=[
+            Metric("facility_count", op="count", field="name", label="Facilities")
+        ],
         base_queryset=queryset_for_permission(Facility, StaffGrant.FACILITY_VIEW),
     )
 
@@ -90,9 +92,7 @@ def register_member_resources() -> None:
             "created_at": {"label": "Created date"},
             "created_via_portal": {"label": "Created via portal"},
         },
-        metrics=[
-            Metric("member_count", op="count", field="member_id", label="Members")
-        ],
+        metrics=[Metric("member_count", op="count", field="gender", label="Members")],
         base_queryset=queryset_for_permission(
             MemberProfile, StaffGrant.MEMBER_REPORTS_VIEW
         ),
@@ -163,9 +163,7 @@ def register_member_resources() -> None:
             "end_date": {"label": "End date"},
             "member.member_since": {"label": "Member since"},
         },
-        metrics=[
-            Metric("status_count", op="count", field="status_id", label="Statuses")
-        ],
+        metrics=[Metric("status_count", op="count", field="status", label="Statuses")],
         base_queryset=queryset_for_permission(
             MemberStatus, StaffGrant.MEMBER_REPORTS_VIEW
         ),
@@ -194,7 +192,7 @@ def register_member_resources() -> None:
             Metric(
                 "subscription_count",
                 op="count",
-                field="subscription_id",
+                field="status",
                 label="Subscriptions",
             )
         ],
@@ -245,7 +243,10 @@ def register_billing_resources() -> None:
         },
         metrics=[
             Metric(
-                "billing_line_count", op="count", field="line_id", label="Billing lines"
+                "billing_line_count",
+                op="count",
+                field="product_name",
+                label="Billing lines",
             ),
             Metric(
                 "gross_revenue",
@@ -290,7 +291,7 @@ def register_billing_resources() -> None:
             "refunded": {"label": "Refunded"},
         },
         metrics=[
-            Metric("payment_count", op="count", field="payment_id", label="Payments"),
+            Metric("payment_count", op="count", field="status", label="Payments"),
             Metric(
                 "payment_amount", op="sum", field="amount_cents", label="Payment amount"
             ),
@@ -327,7 +328,7 @@ def register_schedule_resources() -> None:
             "location.name": {"label": "Location"},
         },
         metrics=[
-            Metric("session_count", op="count", field="session_id", label="Sessions"),
+            Metric("session_count", op="count", field="start_date", label="Sessions"),
             Metric(
                 "total_capacity", op="sum", field="capacity", label="Total capacity"
             ),

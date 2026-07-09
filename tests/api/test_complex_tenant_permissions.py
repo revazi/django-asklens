@@ -10,6 +10,7 @@ from rest_framework.test import APIClient
 
 from django_asklens.catalog.registry import default_registry
 from django_asklens.models import SemanticQueryRun
+from django_asklens.planning.validation import parse_and_validate_query_plan
 from tests.test_project.asklens_registry import register_complex_resources
 from tests.test_project.models import (
     BillingDocument,
@@ -414,3 +415,16 @@ def test_complex_route_permission_blocks_users_without_reporting_grants(
     response = api_client.get("/asklens/catalog/")
 
     assert response.status_code == 403
+
+
+def test_demo_settings_include_five_valid_dummy_plans(
+    registered_complex_resources: None,
+) -> None:
+    from tests.test_project.demo_settings import DJANGO_ASKLENS
+    from tests.test_project.permissions import all_staff_grant_names
+
+    dummy_plans = DJANGO_ASKLENS["DUMMY_PLANS"]
+    assert len(dummy_plans) == 5
+
+    for plan in dummy_plans.values():
+        parse_and_validate_query_plan(plan, permissions=all_staff_grant_names())

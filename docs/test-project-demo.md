@@ -42,12 +42,32 @@ The demo settings register the complex resources at startup and use:
 
 ```python
 DJANGO_ASKLENS = {
+    "LLM_BACKEND": "dummy",
     "API_PERMISSION_CLASSES": ["tests.test_project.permissions.CanUseComplexAnalytics"],
     "REQUEST_PERMISSIONS_GETTER": "tests.test_project.permissions.get_request_permissions",
+    "DUMMY_PLANS": {...},
 }
 ```
 
 Synthetic staff grants are tenant-scoped through `StaffAssignment` and `StaffGrant` records. Base querysets for reporting resources only include facilities where the request user has the required grant. Staff users can query all demo facilities for local exploration.
+
+## Demo dummy questions
+
+The demo settings include five exact `DummyProvider` questions, so `/asklens/query/` can run without an API key or live LLM:
+
+- `Show paid billing revenue by product`
+- `Show payment totals by status`
+- `List member contact emails`
+- `Count member subscriptions by plan and status`
+- `Show scheduled capacity by session type`
+
+Example JSON request:
+
+```json
+{
+  "question": "Show paid billing revenue by product"
+}
+```
 
 ## Safety notes
 
