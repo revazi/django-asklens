@@ -20,6 +20,7 @@ DEFAULTS: dict[str, Any] = {
     "SEND_SAMPLE_ROWS_TO_LLM": False,
     "DEFAULT_VISUALIZATION": "table",
     "API_PERMISSION_CLASSES": ["rest_framework.permissions.IsAuthenticated"],
+    "REQUEST_PERMISSIONS_GETTER": None,
     "DUMMY_PLANS": {},
     "DUMMY_DEFAULT_PLAN": None,
 }

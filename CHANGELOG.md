@@ -20,6 +20,7 @@ The project is pre-alpha and APIs may change before the first public alpha.
 - OpenAI-compatible provider using Python stdlib HTTP.
 - Mocked and opt-in live provider tests.
 - Private real-project integration checklist and templates for multi-tenant validation.
+- Configurable request-permission getter for projects with role-based or staff permission systems outside Django's default `user.get_all_permissions()`.
 
 ### Security
 
@@ -27,6 +28,6 @@ The project is pre-alpha and APIs may change before the first public alpha.
 - No write/update/delete query intents.
 - No sample database rows sent to providers by default.
 - Sensitive and hidden fields excluded from default planner catalog serialization.
-- Crafted provider plans cannot use permission-gated tenant fields without the required Django permission.
-- Catalog and planner prompt metadata are scoped to current-user permissions.
+- Crafted provider plans cannot use permission-gated tenant fields without the required configured permission string.
+- Catalog and planner prompt metadata are scoped to configured request permissions.
 - Live provider errors avoid exposing API keys or raw credentials.

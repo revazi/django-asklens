@@ -9,7 +9,10 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from django_asklens.api.permissions import get_api_permission_classes
+from django_asklens.api.permissions import (
+    get_api_permission_classes,
+    get_request_permissions,
+)
 from django_asklens.api.serializers import (
     QueryRequestSerializer,
     SemanticQueryRunSerializer,
@@ -36,7 +39,7 @@ class CatalogView(AskLensAPIView):
     def get(self, request: Request) -> Response:
         """Return catalog metadata visible to the planner by default."""
 
-        return Response(serialize_catalog(permissions=get_user_permissions(request)))
+        return Response(serialize_catalog(permissions=get_request_permissions(request)))
 
 
 class QueryView(AskLensAPIView):
@@ -54,7 +57,7 @@ class QueryView(AskLensAPIView):
         try:
             planner_result = plan_question(
                 question,
-                permissions=get_user_permissions(request),
+                permissions=get_request_permissions(request),
             )
             query_result = run_query_plan(planner_result.plan, request=request)
             run = create_query_run(
@@ -114,12 +117,12 @@ def enforce_debug_permission(request: Request, *, debug: bool) -> None:
 
 
 def get_user_permissions(request: Request) -> frozenset[str]:
-    """Return Django permission strings for the authenticated user."""
+    """Return permission strings for the authenticated request.
 
-    user = request.user
-    if not getattr(user, "is_authenticated", False):
-        return frozenset()
-    return frozenset(user.get_all_permissions())
+    Kept as a small compatibility alias for code importing the previous helper.
+    """
+
+    return get_request_permissions(request)
 
 
 def create_query_run(

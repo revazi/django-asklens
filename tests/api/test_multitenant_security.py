@@ -373,6 +373,37 @@ def test_permissioned_sensitive_field_still_respects_tenant_base_queryset(
     ]
 
 
+def test_configured_request_permission_getter_scopes_catalog_and_query(
+    settings,
+    api_client: APIClient,
+    tenant_data: TenantData,
+    registered_multitenant_orders: None,
+) -> None:
+    settings.DJANGO_ASKLENS = {
+        "REQUEST_PERMISSIONS_GETTER": (
+            "tests.test_project.permissions.get_request_permissions"
+        ),
+        "DUMMY_PLANS": {QUESTION_TENANT_FIELD: tenant_field_plan()},
+    }
+    tenant_data.alpha_user.asklens_extra_permissions = {ACCOUNT_VIEW_PERMISSION}
+    api_client.force_authenticate(user=tenant_data.alpha_user)
+
+    catalog_response = api_client.get("/asklens/catalog/")
+    query_response = api_client.post(
+        "/asklens/query/",
+        {"question": QUESTION_TENANT_FIELD},
+        format="json",
+    )
+
+    assert catalog_response.status_code == 200
+    assert "account.slug" in str(catalog_response.data)
+    assert query_response.status_code == 200, query_response.data
+    assert query_response.data["data"] == [
+        {"account.slug": "alpha", "status": "paid"},
+        {"account.slug": "alpha", "status": "paid"},
+    ]
+
+
 def test_configured_api_permission_class_applies_to_all_asklens_routes(
     settings,
     api_client: APIClient,

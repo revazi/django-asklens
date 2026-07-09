@@ -41,9 +41,38 @@ Use this hook for tenant isolation and row-level visibility. Do not register res
 
 Fields marked `sensitive=True` are hidden from normal catalog serialization. If a sensitive field should be usable in results, opt it in explicitly with `result_visible=True` and protect it with `requires_permission`.
 
-QueryPlan validation checks `request.user.get_all_permissions()` in the API flow. A crafted provider response that selects or filters a permission-gated field fails before ORM compilation unless the user has the required Django permission.
+By default, QueryPlan validation checks `request.user.get_all_permissions()` in the API flow. A crafted provider response that selects or filters a permission-gated field fails before ORM compilation unless the request has the required permission string.
 
-Catalog serialization is permission-scoped. The catalog endpoint and planner prompt include permission-gated sensitive fields only when the current user has the required Django permission. Metrics whose source field is hidden are also hidden.
+Projects with role tables, tenant-scoped staff permissions, or non-Django permission systems can configure `DJANGO_ASKLENS["REQUEST_PERMISSIONS_GETTER"]` with a callable or import string. The callable receives the request and returns permission strings used for catalog serialization, planner prompts, and API QueryPlan validation.
+
+```python
+DJANGO_ASKLENS = {
+    "REQUEST_PERMISSIONS_GETTER": "project.asklens_permissions.get_request_permissions",
+}
+```
+
+```python
+# project/asklens_permissions.py
+
+
+def get_request_permissions(request):
+    permissions = set()
+    user = getattr(request, "user", None)
+    if getattr(user, "is_authenticated", False):
+        permissions.update(user.get_all_permissions())
+
+    role = getattr(request, "role", None)
+    if role:
+        permissions.add(f"role:{role}")
+
+    staff = getattr(request, "staff", None)
+    if staff is not None:
+        permissions.update(staff.permissions.values_list("name", flat=True))
+
+    return permissions
+```
+
+Catalog serialization is permission-scoped. The catalog endpoint and planner prompt include permission-gated sensitive fields only when the configured permission getter returns the required permission string. Metrics whose source field is hidden are also hidden.
 
 ## Route-level gates
 
