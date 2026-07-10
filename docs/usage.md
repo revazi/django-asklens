@@ -51,7 +51,32 @@ DJANGO_ASKLENS = {
 }
 ```
 
-## 3. Query through the API
+## 3. Discover what can be queried
+
+Use the capabilities endpoint to show users what AskLens can answer for the current request permissions. The response is generated from permission-scoped catalog metadata only; it does not include database rows or sample values.
+
+```http
+GET /asklens/capabilities/
+```
+
+A response includes visible resources, exposed fields, metrics, date fields, example questions, supported patterns, and limitations.
+
+```json
+{
+  "summary": "You can ask read-only list and aggregate questions over 1 resource.",
+  "resources": [
+    {
+      "name": "orders",
+      "label": "Orders",
+      "fields": [{"name": "status", "label": "Status", "can_group": true}],
+      "metrics": [{"name": "order_count", "label": "Number of orders"}],
+      "examples": ["Show count of Orders by Status"]
+    }
+  ]
+}
+```
+
+## 4. Query through the API
 
 ```http
 POST /asklens/query/
@@ -77,7 +102,7 @@ A successful response includes the question, validated plan, column metadata, no
 }
 ```
 
-## 4. Query from Python
+## 5. Query from Python
 
 ```python
 from django_asklens.llms import DummyProvider
@@ -96,4 +121,4 @@ payload = result.to_dict()
 - Only registered resources, fields, and metrics are queryable.
 - No raw SQL mode exists in the MVP.
 - No write/update/delete actions are supported.
-- Live LLM providers are not included yet.
+- Live LLM providers are opt-in; the dummy provider remains the default.

@@ -144,6 +144,38 @@ def test_catalog_endpoint_requires_authentication(
     assert "customer.email" not in catalog_text
 
 
+def test_capabilities_endpoint_returns_permission_scoped_query_guidance(
+    api_client: APIClient,
+    registered_orders: None,
+    user,
+) -> None:
+    """Capabilities explain what a requester can query without exposing rows."""
+
+    unauthenticated = api_client.get("/asklens/capabilities/")
+    assert unauthenticated.status_code in {401, 403}
+
+    api_client.force_authenticate(user=user)
+    response = api_client.get("/asklens/capabilities/")
+
+    assert response.status_code == 200
+    assert response.data["summary"] == (
+        "You can ask read-only list and aggregate questions over 1 resource."
+    )
+    assert response.data["query_patterns"]
+    assert response.data["limitations"]
+    [resource] = response.data["resources"]
+    assert resource["name"] == "orders"
+    assert resource["label"] == "Orders"
+    assert {field["name"] for field in resource["fields"]} == {
+        "id",
+        "status",
+        "created_at",
+    }
+    assert resource["metrics"][0]["name"] == "order_count"
+    assert "Show count of Orders by Status" in resource["examples"]
+    assert "customer.email" not in str(response.data)
+
+
 def test_query_endpoint_returns_result_and_records_successful_run(
     settings,
     api_client: APIClient,

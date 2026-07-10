@@ -17,6 +17,7 @@ from django_asklens.api.serializers import (
     QueryRequestSerializer,
     SemanticQueryRunSerializer,
 )
+from django_asklens.catalog.capabilities import build_capabilities
 from django_asklens.catalog.registry import serialize_catalog
 from django_asklens.exceptions import AskLensError
 from django_asklens.execution import run_query_plan
@@ -40,6 +41,17 @@ class CatalogView(AskLensAPIView):
         """Return catalog metadata visible to the planner by default."""
 
         return Response(serialize_catalog(permissions=get_request_permissions(request)))
+
+
+class CapabilitiesView(AskLensAPIView):
+    """Return permission-scoped guidance about what can be queried."""
+
+    def get(self, request: Request) -> Response:
+        """Return safe capabilities derived from visible catalog metadata."""
+
+        return Response(
+            build_capabilities(permissions=get_request_permissions(request))
+        )
 
 
 class QueryView(AskLensAPIView):

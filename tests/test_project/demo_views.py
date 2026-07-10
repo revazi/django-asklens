@@ -52,12 +52,26 @@ def asklens_demo(request):
         "test_project/asklens_demo.html",
         {
             "catalog_url": reverse("django_asklens:catalog"),
+            "capabilities_url": reverse("django_asklens:capabilities"),
             "query_url": reverse("django_asklens:query"),
             "demo_questions": get_demo_questions(request),
             "facility_scope": get_facility_scope_labels(request),
             "llm_backend": get_asklens_setting("LLM_BACKEND"),
+            "llm_mode_label": get_llm_mode_label(),
+            "llm_model": get_asklens_setting("LLM_MODEL"),
         },
     )
+
+
+def get_llm_mode_label() -> str:
+    """Return a safe human-readable planner/LLM status label."""
+
+    backend = get_asklens_setting("LLM_BACKEND")
+    if backend == "dummy":
+        return "Offline dummy plans — live LLM disabled"
+    if backend == "openai_compatible":
+        return "Live LLM enabled — OpenAI-compatible provider"
+    return f"Custom planner backend: {backend}"
 
 
 def can_access_asklens_demo(request) -> bool:

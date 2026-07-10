@@ -77,9 +77,9 @@ Open the demo frontend page:
 http://127.0.0.1:8000/
 ```
 
-The page is a small dependency-free single page app served by the runnable test project. It shows the current user's tenant row scope, loads permission-scoped schema metadata from `/asklens/catalog/`, posts natural-language questions to `/asklens/query/`, and lets you switch client-side between table, bar, line, pie, metric-card, and raw JSON views of the same returned `columns` and `data` payload.
+The page is a small dependency-free single page app served by the runnable test project. It shows whether AskLens is using offline dummy plans or a live LLM provider, shows the current user's tenant row scope, loads permission-scoped guidance from `/asklens/capabilities/`, loads permission-scoped schema metadata from `/asklens/catalog/`, posts natural-language questions to `/asklens/query/`, and lets you switch client-side between table, bar, line, pie, metric-card, and raw JSON views of the same returned `columns` and `data` payload.
 
-The catalog panel is schema metadata only: resources, fields, and metrics visible to the planner. It is not database rows or sample tenant data. Query results remain tenant-scoped by each resource `base_queryset(request)`. Resources and example questions are also filtered by the current user's reporting grants, so a billing-only user does not see or run package/subscription questions. The API visualization value is only a hint for consumers; applications can render the returned data however they prefer or send `"include_visualization": false` to receive serialized data without a visualization hint. The page uses the same login session and synthetic reporting grants as the API. Staff users without reporting grants cannot load it.
+The capabilities and catalog panels are metadata only: resources, fields, metrics, date fields, generated examples, and limitations visible to the current request. They are not database rows or sample tenant data. Query results remain tenant-scoped by each resource `base_queryset(request)`. Resources and example questions are also filtered by the current user's reporting grants, so a billing-only user does not see or run package/subscription questions. The API visualization value is only a hint for consumers; applications can render the returned data however they prefer or send `"include_visualization": false` to receive serialized data without a visualization hint. The page uses the same login session and synthetic reporting grants as the API. Staff users without reporting grants cannot load it.
 
 ## AskLens in admin
 
@@ -103,6 +103,7 @@ The same demo server exposes:
 
 ```text
 GET  http://127.0.0.1:8000/asklens/catalog/
+GET  http://127.0.0.1:8000/asklens/capabilities/
 POST http://127.0.0.1:8000/asklens/query/
 GET  http://127.0.0.1:8000/asklens/runs/<id>/
 ```

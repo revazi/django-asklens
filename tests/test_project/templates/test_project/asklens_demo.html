@@ -424,16 +424,18 @@
       <a href="/admin/asklens/asklensquery/">Admin AskLens query page</a>
       <a href="/admin/asklens/semanticqueryrun/">Audit runs</a>
       <a href="{{ catalog_url }}">Catalog JSON</a>
+      <a href="{{ capabilities_url }}">Capabilities JSON</a>
     </nav>
   </header>
 
-  <main id="asklens-app" data-catalog-url="{{ catalog_url }}" data-query-url="{{ query_url }}">
+  <main id="asklens-app" data-catalog-url="{{ catalog_url }}" data-capabilities-url="{{ capabilities_url }}" data-query-url="{{ query_url }}">
     <aside class="sidebar">
       <section class="panel">
         <h2>Run a question</h2>
         <p class="muted">
-          Planner backend: <code>{{ llm_backend }}</code>. Dummy mode uses configured plans;
-          live mode uses the OpenAI-compatible provider configured in environment variables.
+          LLM mode: <strong>{{ llm_mode_label }}</strong>.
+          Planner backend: <code>{{ llm_backend }}</code>{% if llm_model %}; model: <code>{{ llm_model }}</code>{% endif %}.
+          Dummy mode uses configured plans; live mode uses the OpenAI-compatible provider configured in environment variables.
         </p>
         <form id="query-form">
           {% csrf_token %}
@@ -447,6 +449,16 @@
         <h2>Example questions</h2>
         {{ demo_questions|json_script:"asklens-demo-questions" }}
         <ul class="question-list" id="question-list"></ul>
+      </section>
+
+      <section class="panel">
+        <h2>What can I query?</h2>
+        <p class="muted">
+          Loaded from <code>{{ capabilities_url }}</code>. This permission-scoped guidance
+          is generated from visible resources, fields, metrics, and date fields.
+        </p>
+        <div id="capabilities-status" class="muted">Loading query guidance…</div>
+        <ul class="catalog-list" id="capabilities-list"></ul>
       </section>
 
       <section class="panel">
@@ -479,6 +491,7 @@
   <script>
     const app = document.getElementById("asklens-app");
     const catalogUrl = app.dataset.catalogUrl;
+    const capabilitiesUrl = app.dataset.capabilitiesUrl;
     const queryUrl = app.dataset.queryUrl;
     const csrfToken = document.querySelector("[name=csrfmiddlewaretoken]").value;
     const questions = JSON.parse(document.getElementById("asklens-demo-questions").textContent);
@@ -491,6 +504,8 @@
     const resultBox = document.getElementById("result");
     const questionList = document.getElementById("question-list");
     const facilityScopeList = document.getElementById("facility-scope-list");
+    const capabilitiesStatus = document.getElementById("capabilities-status");
+    const capabilitiesList = document.getElementById("capabilities-list");
     const catalogStatus = document.getElementById("catalog-status");
     const catalogList = document.getElementById("catalog-list");
     const chartColors = [
@@ -565,11 +580,51 @@
       }));
     }
 
+    async function loadCapabilities() {
+      try {
+        const capabilities = await fetchJson(capabilitiesUrl);
+        const resources = capabilities.resources || [];
+        capabilitiesStatus.textContent = capabilities.summary || `${resources.length} queryable resources.`;
+        if (!resources.length) {
+          capabilitiesList.replaceChildren(renderEmptyListItem("No queryable resources are visible for this login."));
+          return;
+        }
+        capabilitiesList.replaceChildren(...resources.map(renderCapabilityItem));
+      } catch (error) {
+        capabilitiesStatus.textContent = `Capabilities unavailable: ${error.message}`;
+      }
+    }
+
+    function renderCapabilityItem(resource) {
+      const item = document.createElement("li");
+      item.className = "catalog-item";
+      const title = document.createElement("strong");
+      title.textContent = resource.label || resource.name;
+      const details = document.createElement("span");
+      const fieldCount = (resource.fields || []).length;
+      const metricCount = (resource.metrics || []).length;
+      const dateCount = (resource.date_fields || []).length;
+      details.className = "muted";
+      details.textContent = `${resource.name} · ${fieldCount} fields · ${metricCount} metrics · ${dateCount} date fields`;
+      item.append(title, details);
+      if ((resource.examples || []).length) {
+        const example = document.createElement("p");
+        example.className = "muted";
+        example.textContent = `Try: ${resource.examples[0]}`;
+        item.appendChild(example);
+      }
+      return item;
+    }
+
     async function loadCatalog() {
       try {
         const catalog = await fetchJson(catalogUrl);
         const resources = catalog.resources || [];
         catalogStatus.textContent = `${resources.length} schema resources visible.`;
+        if (!resources.length) {
+          catalogList.replaceChildren(renderEmptyListItem("No schema resources are visible for this login."));
+          return;
+        }
         catalogList.replaceChildren(...resources.map(renderCatalogItem));
       } catch (error) {
         catalogStatus.textContent = `Catalog unavailable: ${error.message}`;
@@ -587,6 +642,13 @@
       details.className = "muted";
       details.textContent = `${resource.name} · ${fieldCount} fields · ${metricCount} metrics`;
       item.append(title, details);
+      return item;
+    }
+
+    function renderEmptyListItem(message) {
+      const item = document.createElement("li");
+      item.className = "catalog-item muted";
+      item.textContent = message;
       return item;
     }
 
@@ -1002,6 +1064,7 @@
 
     renderQuestionButtons();
     renderFacilityScope();
+    loadCapabilities();
     loadCatalog();
   </script>
 </body>

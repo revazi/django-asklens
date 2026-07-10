@@ -461,8 +461,10 @@ def test_complex_route_permission_blocks_users_without_reporting_grants(
     api_client.force_authenticate(user=complex_tenant_data.no_report_user)
 
     response = api_client.get("/asklens/catalog/")
+    capabilities_response = api_client.get("/asklens/capabilities/")
 
     assert response.status_code == 403
+    assert capabilities_response.status_code == 403
 
 
 def test_demo_settings_include_five_valid_dummy_plans(

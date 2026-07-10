@@ -81,13 +81,57 @@ def test_demo_frontend_renders_for_reporting_user() -> None:
     assert response.status_code == 200
     assert "Django AskLens Demo" in content
     assert 'data-catalog-url="/asklens/catalog/"' in content
+    assert 'data-capabilities-url="/asklens/capabilities/"' in content
     assert 'data-query-url="/asklens/query/"' in content
+    assert "LLM mode:" in content
+    assert "Offline dummy plans" in content
     assert "Planner backend:" in content
     assert "dummy" in content
     assert "Show paid billing revenue by product" in content
     assert "Count member subscriptions by plan and status" not in content
     assert "Show scheduled capacity by session type" not in content
+    assert "What can I query?" in content
     assert "Tenant row scope" in content
     assert "North Studio" in content
     assert "Display as" in content
     assert "Raw JSON" in content
+
+
+@override_settings(
+    TEMPLATES=TEMPLATE_SETTINGS,
+    DJANGO_ASKLENS={
+        "LLM_BACKEND": "openai_compatible",
+        "LLM_MODEL": "test-model",
+        "LLM_API_KEY": "secret-test-key",
+    },
+)
+def test_demo_frontend_renders_live_llm_status_without_secret() -> None:
+    """Live demo mode should be visible without leaking provider secrets."""
+
+    user = get_user_model().objects.create_user(
+        username="north-billing",
+        password="pw",
+        is_staff=True,
+    )
+    facility = Facility.objects.create(name="North Studio", slug="north-studio")
+    assignment = StaffAssignment.objects.create(
+        user=user,
+        facility=facility,
+        role=StaffAssignment.Role.STAFF,
+    )
+    StaffGrant.objects.create(
+        assignment=assignment,
+        name=StaffGrant.BILLING_REPORTS_VIEW,
+    )
+
+    request = RequestFactory().get("/")
+    request.user = user
+
+    response = asklens_demo(request)
+    content = response.content.decode()
+
+    assert response.status_code == 200
+    assert "Live LLM enabled" in content
+    assert "openai_compatible" in content
+    assert "test-model" in content
+    assert "secret-test-key" not in content
