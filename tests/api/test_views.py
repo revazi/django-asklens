@@ -200,6 +200,9 @@ def test_query_endpoint_intercepts_capabilities_question_without_provider_or_aud
     assert response.data["capabilities"]["resources"][0]["name"] == "orders"
     assert response.data["routing_source"] == "fallback"
     assert response.data["capability_intent"]["intent"] == "capabilities"
+    assert response.data["query_help_source"] == "deterministic"
+    assert response.data["query_help"]["suggestions"]
+    assert response.data["query_help"]["suggestions"][0]["resource_name"] == "orders"
     assert "database query" in response.data["explanation"]
     assert "run_id" not in response.data
     assert "plan" not in response.data

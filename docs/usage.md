@@ -59,7 +59,7 @@ Use the capabilities endpoint to show users what AskLens can answer for the curr
 GET /asklens/capabilities/
 ```
 
-A response includes visible resources, exposed fields, metrics, date fields, example questions, supported patterns, and limitations. Users can also ask capability/help questions through `/asklens/query/`; live/custom providers classify those semantically with a strict `QuestionIntent` schema, while dummy/offline mode uses a small local fallback for obvious help questions such as `What can I query?`.
+A response includes visible resources, exposed fields, metrics, date fields, example questions, supported patterns, and limitations. Users can also ask capability/help questions through `/asklens/query/`; live/custom providers classify those semantically with a strict `QuestionIntent` schema, then generate suggested AskLens questions with a strict `QueryHelp` schema using only the visible capabilities metadata. Dummy/offline mode uses deterministic examples for obvious help questions such as `What can I query?`.
 
 ```json
 {
@@ -102,14 +102,21 @@ A successful data-query response includes the question, validated plan, column m
 }
 ```
 
-Capability/help questions return a non-row response and do not execute a database query:
+Capability/help questions return a non-row response and do not execute a database query. In live mode, `query_help_source` is `semantic_provider` when suggestions came from the configured LLM and passed catalog-reference validation:
 
 ```json
 {
   "question": "What can I query?",
   "response_type": "capabilities",
   "routing_source": "fallback",
-  "capabilities": {"summary": "You can ask read-only list and aggregate questions over 1 resource."}
+  "query_help_source": "deterministic",
+  "capabilities": {"summary": "You can ask read-only list and aggregate questions over 1 resource."},
+  "query_help": {
+    "answer": "You can ask read-only list and aggregate questions over 1 resource.",
+    "suggestions": [
+      {"question": "Show count of Orders by Status", "resource_name": "orders"}
+    ]
+  }
 }
 ```
 

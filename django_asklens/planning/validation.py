@@ -1,5 +1,6 @@
 """Semantic validation for parsed QueryPlan objects."""
 
+import re
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from typing import Any, Literal
@@ -57,6 +58,7 @@ def validate_query_plan(
     resource = registry.get(plan.resource)
     validate_resource_permission(resource, permissions=permission_set)
     normalized_plan = plan.model_copy(update={"resource": resource.name})
+    normalized_plan = normalize_visualization_date_trunc_aliases(normalized_plan)
 
     validate_plan_shape(normalized_plan)
     validate_plan_limits(normalized_plan, limits=resolved_limits)
@@ -121,6 +123,55 @@ def validate_resource_permission(
         f"{resource.requires_permission!r}."
     )
     raise PermissionDeniedError(msg)
+
+
+def normalize_visualization_date_trunc_aliases(plan: QueryPlan) -> QueryPlan:
+    """Normalize safe date-bucket visualization aliases to real result keys.
+
+    Query results use the original grouped field name as the public result key,
+    even when ``date_trunc`` is applied. Some providers naturally emit aliases
+    such as ``start_date_month``. Accept only aliases that exactly match a
+    date-truncated group_by field and canonicalize them before normal semantic
+    validation.
+    """
+
+    alias_map = build_date_trunc_alias_map(plan)
+    if not alias_map:
+        return plan
+
+    updates = {}
+    if plan.visualization.x in alias_map:
+        updates["x"] = alias_map[plan.visualization.x]
+    if plan.visualization.y in alias_map:
+        updates["y"] = alias_map[plan.visualization.y]
+    if not updates:
+        return plan
+
+    return plan.model_copy(
+        update={"visualization": plan.visualization.model_copy(update=updates)}
+    )
+
+
+def build_date_trunc_alias_map(plan: QueryPlan) -> dict[str, str]:
+    """Return accepted visualization aliases for date-truncated groupings."""
+
+    aliases: dict[str, str] = {}
+    for group in plan.group_by:
+        if group.date_trunc is None:
+            continue
+        for alias in date_trunc_aliases(group.field, group.date_trunc):
+            aliases[alias] = group.field
+    return aliases
+
+
+def date_trunc_aliases(field_name: str, date_trunc: str) -> set[str]:
+    """Return conservative aliases for one date-truncated grouping field."""
+
+    normalized_field = re.sub(r"[^A-Za-z0-9]+", "_", field_name).strip("_")
+    return {
+        f"{field_name}_{date_trunc}",
+        f"{normalized_field}_{date_trunc}",
+    }
 
 
 def validate_plan_shape(plan: QueryPlan) -> None:

@@ -323,3 +323,28 @@ def test_visualization_refs_must_exist_in_result_keys() -> None:
 
     with pytest.raises(PlanValidationError, match="Metric visualization"):
         validate_query_plan(metric_plan, registry=build_registry())
+
+
+def test_date_trunc_visualization_alias_is_canonicalized() -> None:
+    """Providers often invent date bucket aliases; normalize safe exact aliases."""
+
+    plan = parse_valid_plan(
+        group_by=[{"field": "created_at", "date_trunc": "month"}],
+        visualization={"type": "line", "x": "created_at_month", "y": "order_count"},
+    )
+
+    validated = validate_query_plan(plan, registry=build_registry())
+
+    assert validated.visualization.x == "created_at"
+
+
+def test_date_trunc_visualization_alias_must_match_grouping() -> None:
+    """Only aliases for the actual date-truncated group_by field are accepted."""
+
+    plan = parse_valid_plan(
+        group_by=[{"field": "created_at", "date_trunc": "month"}],
+        visualization={"type": "line", "x": "paid_at_month", "y": "order_count"},
+    )
+
+    with pytest.raises(PlanValidationError, match="Visualization x"):
+        validate_query_plan(plan, registry=build_registry())

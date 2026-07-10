@@ -97,6 +97,8 @@ def test_planner_sends_safe_catalog_metadata_and_schema() -> None:
     assert QUESTION in prompt_text
     assert "status" in prompt_text
     assert "order_count" in prompt_text
+    assert "start_date_month" in prompt_text
+    assert "original group_by field name" in prompt_text
     assert "customer.email" not in prompt_text
     assert "internal_notes" not in prompt_text
     assert "test_project.Order" not in prompt_text
@@ -109,6 +111,7 @@ def test_build_planner_request_is_deterministic_and_safe() -> None:
     assert request.question == QUESTION
     assert request.schema["title"] == "QueryPlan"
     assert "Catalog metadata" in prompt_text
+    assert "Never invent bucket aliases" in prompt_text
     assert "customer.email" not in prompt_text
     assert "internal_notes" not in prompt_text
 

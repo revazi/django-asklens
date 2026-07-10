@@ -23,11 +23,17 @@ from django_asklens.exceptions import AskLensError
 from django_asklens.execution import run_query_plan
 from django_asklens.models import SemanticQueryRun
 from django_asklens.planning import plan_question
+from django_asklens.planning.help import (
+    QueryHelp,
+    build_deterministic_query_help,
+    build_query_help,
+)
 from django_asklens.planning.intents import (
     QuestionIntent,
     filter_capabilities_for_intent,
     route_question_intent,
 )
+from django_asklens.settings import get_asklens_setting
 
 
 class AskLensAPIView(APIView):
@@ -76,16 +82,22 @@ class QueryView(AskLensAPIView):
         try:
             routing_result = route_question_intent(question, permissions=permissions)
             if routing_result.intent.intent == "capabilities":
-                capabilities = build_capabilities(permissions=permissions)
+                capabilities = filter_capabilities_for_intent(
+                    build_capabilities(permissions=permissions),
+                    routing_result.intent,
+                )
+                query_help, query_help_source = get_query_help_for_capabilities(
+                    question,
+                    capabilities=capabilities,
+                )
                 return Response(
                     build_capabilities_payload(
                         question,
                         intent=routing_result.intent,
                         source=routing_result.source,
-                        capabilities=filter_capabilities_for_intent(
-                            capabilities,
-                            routing_result.intent,
-                        ),
+                        capabilities=capabilities,
+                        query_help=query_help,
+                        query_help_source=query_help_source,
                     )
                 )
 
@@ -185,12 +197,36 @@ def create_query_run(
     )
 
 
+def get_query_help_for_capabilities(
+    question: str,
+    *,
+    capabilities: dict[str, Any],
+) -> tuple[QueryHelp, str]:
+    """Return LLM-backed query help when live mode is enabled."""
+
+    if get_asklens_setting("LLM_BACKEND") == "dummy":
+        return build_deterministic_query_help(
+            capabilities=capabilities
+        ), "deterministic"
+    try:
+        return build_query_help(
+            question, capabilities=capabilities
+        ), "semantic_provider"
+    except AskLensError:
+        return (
+            build_deterministic_query_help(capabilities=capabilities),
+            "deterministic_fallback",
+        )
+
+
 def build_capabilities_payload(
     question: str,
     *,
     intent: QuestionIntent,
     source: str,
     capabilities: dict[str, Any],
+    query_help: QueryHelp,
+    query_help_source: str,
 ) -> dict[str, Any]:
     """Build a natural-language help response without executing a query."""
 
@@ -200,9 +236,11 @@ def build_capabilities_payload(
         "capability_intent": intent.model_dump(mode="json"),
         "routing_source": source,
         "capabilities": capabilities,
+        "query_help_source": query_help_source,
+        "query_help": query_help.model_dump(mode="json"),
         "explanation": (
-            "Returned permission-scoped AskLens capabilities without executing "
-            "a database query."
+            "Returned permission-scoped AskLens capabilities and query-writing "
+            "help without executing a database query."
         ),
     }
 

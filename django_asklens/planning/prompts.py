@@ -18,6 +18,10 @@ grouping questions.
 Use list plans only when the user asks to list records or fields.
 Use registered metric names exactly when a requested business concept matches a metric.
 Use date_trunc on date/datetime fields for day, week, month, quarter, or year buckets.
+Result keys are the exact select field names, group_by field names, and metric names.
+For date_trunc groupings, visualization axes and order_by fields must still
+reference the original group_by field name, for example x: "start_date".
+Never invent bucket aliases such as "start_date_month" or "paid_at_month".
 Treat visualization as an optional display hint over returned data; axes must
 reference result keys.
 If a question asks for data outside the catalog, choose the safest valid plan
