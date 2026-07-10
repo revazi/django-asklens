@@ -1,5 +1,7 @@
 """Seed the runnable AskLens test project with synthetic complex data."""
 
+from argparse import ArgumentTypeError
+from dataclasses import dataclass, replace
 from datetime import datetime, time, timedelta
 
 from django.contrib.auth import get_user_model
@@ -23,6 +25,115 @@ from tests.test_project.models import (
 )
 
 DEMO_PASSWORD = "12admin34"
+SCALED_FACILITY_SLUG_PREFIX = "demo-tenant-"
+
+
+@dataclass(frozen=True, slots=True)
+class SeedProfile:
+    """Configuration for synthetic seed scale."""
+
+    name: str
+    scaled_tenant_count: int
+    members_per_tenant: int
+    billing_months: int
+    schedule_weeks: int
+    batch_size: int
+
+
+SEED_PROFILES = {
+    "small": SeedProfile(
+        name="small",
+        scaled_tenant_count=0,
+        members_per_tenant=0,
+        billing_months=6,
+        schedule_weeks=6,
+        batch_size=500,
+    ),
+    "medium": SeedProfile(
+        name="medium",
+        scaled_tenant_count=10,
+        members_per_tenant=1_000,
+        billing_months=6,
+        schedule_weeks=12,
+        batch_size=1_000,
+    ),
+    "large": SeedProfile(
+        name="large",
+        scaled_tenant_count=10,
+        members_per_tenant=25_000,
+        billing_months=12,
+        schedule_weeks=26,
+        batch_size=1_000,
+    ),
+}
+
+SCALED_FIRST_NAMES = (
+    "Avery",
+    "Bailey",
+    "Cameron",
+    "Dakota",
+    "Elliot",
+    "Frankie",
+    "Gale",
+    "Hayden",
+    "Jordan",
+    "Kendall",
+    "Lane",
+    "Morgan",
+    "Noel",
+    "Oakley",
+    "Parker",
+    "Quinn",
+)
+SCALED_LAST_NAMES = (
+    "Atlas",
+    "Brooks",
+    "Chen",
+    "Diaz",
+    "Ellis",
+    "Fields",
+    "Garcia",
+    "Hart",
+    "Iverson",
+    "Jones",
+    "Kim",
+    "Lopez",
+    "Miller",
+    "Nguyen",
+    "Owens",
+    "Patel",
+)
+SCALED_PLAN_KEYS = (
+    "unlimited",
+    "punch_card",
+    "personal_training",
+    "drop_in",
+    "family",
+    "community",
+)
+SCALED_MEMBER_STATUSES = (
+    MemberStatus.Status.ACTIVE,
+    MemberStatus.Status.ACTIVE,
+    MemberStatus.Status.TRIAL,
+    MemberStatus.Status.PROSPECT,
+    MemberStatus.Status.NON_PAYING,
+    MemberStatus.Status.ALUMNI,
+)
+SCALED_SUBSCRIPTION_STATUSES = (
+    MemberSubscription.Status.ACTIVE,
+    MemberSubscription.Status.ACTIVE,
+    MemberSubscription.Status.ACTIVE,
+    MemberSubscription.Status.HOLD,
+    MemberSubscription.Status.ENDED,
+    MemberSubscription.Status.CANCELLED,
+    MemberSubscription.Status.UPCOMING,
+)
+SCALED_GENDERS = (
+    MemberProfile.Gender.FEMALE,
+    MemberProfile.Gender.MALE,
+    MemberProfile.Gender.NON_BINARY,
+    MemberProfile.Gender.NOT_PROVIDED,
+)
 
 MEMBER_FIXTURES = (
     {
@@ -165,8 +276,53 @@ class Command(BaseCommand):
 
     help = "Seed the runnable AskLens test project with synthetic complex data."
 
+    def add_arguments(self, parser) -> None:
+        """Configure seed size/profile options."""
+
+        parser.add_argument(
+            "--size",
+            choices=tuple(SEED_PROFILES),
+            default="small",
+            help=(
+                "Seed profile: small keeps the fast demo; medium/large add "
+                "scaled tenants."
+            ),
+        )
+        parser.add_argument(
+            "--tenant-count",
+            type=positive_int_argument,
+            default=None,
+            help="Override scaled tenant count for medium/large/custom smoke runs.",
+        )
+        parser.add_argument(
+            "--members-per-tenant",
+            type=positive_int_argument,
+            default=None,
+            help="Override scaled member count per generated tenant.",
+        )
+        parser.add_argument(
+            "--months",
+            type=positive_int_argument,
+            default=None,
+            help="Override billing months per generated scaled member.",
+        )
+        parser.add_argument(
+            "--schedule-weeks",
+            type=positive_int_argument,
+            default=None,
+            help="Override scheduled-session weeks per generated scaled tenant.",
+        )
+        parser.add_argument(
+            "--batch-size",
+            type=positive_int_argument,
+            default=None,
+            help="Bulk-create batch size for scaled data.",
+        )
+
     def handle(self, *args, **options) -> None:
         """Seed users, tenants, grants, members, billing, payments, and sessions."""
+
+        profile = resolve_seed_profile(options)
 
         north = create_facility("North Studio", "north-studio")
         south = create_facility("South Studio", "south-studio")
@@ -238,9 +394,12 @@ class Command(BaseCommand):
 
         seed_facility_data(north, "North", amount_multiplier=1.0)
         seed_facility_data(south, "South", amount_multiplier=1.35)
+        seed_scaled_demo_data(profile, stdout=self.stdout, style=self.style)
 
         self.stdout.write(
-            self.style.SUCCESS("Seeded synthetic AskLens test-project data.")
+            self.style.SUCCESS(
+                f"Seeded synthetic AskLens test-project data ({profile.name})."
+            )
         )
         self.stdout.write(
             self.style.SUCCESS(
@@ -248,6 +407,41 @@ class Command(BaseCommand):
                 f"{DEMO_PASSWORD} and staff demo users."
             )
         )
+
+
+def positive_int_argument(value: str) -> int:
+    """Parse a positive integer command argument."""
+
+    try:
+        parsed = int(value)
+    except ValueError as exc:
+        msg = f"Expected a positive integer, got {value!r}."
+        raise ArgumentTypeError(msg) from exc
+    if parsed < 1:
+        msg = f"Expected a positive integer, got {value!r}."
+        raise ArgumentTypeError(msg)
+    return parsed
+
+
+def resolve_seed_profile(options: dict) -> SeedProfile:
+    """Resolve the selected seed profile plus CLI overrides."""
+
+    profile = SEED_PROFILES[options["size"]]
+    updates = {}
+    option_to_field = {
+        "tenant_count": "scaled_tenant_count",
+        "members_per_tenant": "members_per_tenant",
+        "months": "billing_months",
+        "schedule_weeks": "schedule_weeks",
+        "batch_size": "batch_size",
+    }
+    for option_name, field_name in option_to_field.items():
+        if options.get(option_name) is not None:
+            updates[field_name] = options[option_name]
+    if not updates:
+        return profile
+    name = profile.name if profile.name != "small" else "custom"
+    return replace(profile, name=name, **updates)
 
 
 def aware_datetime(year: int, month: int, day: int, hour: int = 12) -> datetime:
@@ -379,6 +573,541 @@ def seed_facility_data(
         amount_multiplier=amount_multiplier,
     )
     seed_schedule(facility, prefix)
+
+
+def seed_scaled_demo_data(profile: SeedProfile, *, stdout, style) -> None:
+    """Seed bulk-generated tenants and operational data for larger profiles."""
+
+    if profile.scaled_tenant_count <= 0 or profile.members_per_tenant <= 0:
+        reset_scaled_facilities()
+        return
+
+    reset_scaled_facilities()
+    scaled_billing_user = create_demo_user("scaled-billing", is_staff=True)
+    scaled_member_user = create_demo_user("scaled-members", is_staff=True)
+    scaled_schedule_user = create_demo_user("scaled-schedule", is_staff=True)
+
+    stdout.write(
+        style.NOTICE(
+            "Seeding scaled demo data: "
+            f"{profile.scaled_tenant_count} tenants × "
+            f"{profile.members_per_tenant} members"
+        )
+    )
+    for tenant_number in range(1, profile.scaled_tenant_count + 1):
+        prefix = f"Tenant {tenant_number:02d}"
+        facility = create_facility(
+            f"Demo Tenant {tenant_number:02d}",
+            f"{SCALED_FACILITY_SLUG_PREFIX}{tenant_number:02d}",
+        )
+        amount_multiplier = 1 + (tenant_number * 0.04)
+        create_assignment(
+            scaled_billing_user,
+            facility,
+            StaffAssignment.Role.STAFF,
+            StaffGrant.BILLING_REPORTS_VIEW,
+            StaffGrant.PAYMENT_REPORTS_VIEW,
+            StaffGrant.FACILITY_VIEW,
+        )
+        create_assignment(
+            scaled_member_user,
+            facility,
+            StaffAssignment.Role.STAFF,
+            StaffGrant.MEMBER_REPORTS_VIEW,
+            StaffGrant.PACKAGE_REPORTS_VIEW,
+            StaffGrant.FACILITY_VIEW,
+        )
+        create_assignment(
+            scaled_schedule_user,
+            facility,
+            StaffAssignment.Role.STAFF,
+            StaffGrant.SCHEDULE_REPORTS_VIEW,
+            StaffGrant.FACILITY_VIEW,
+        )
+        seed_scaled_facility_data(
+            facility,
+            prefix,
+            profile=profile,
+            amount_multiplier=amount_multiplier,
+        )
+        stdout.write(
+            style.SUCCESS(
+                f"  {facility.slug}: {profile.members_per_tenant} members, "
+                f"{profile.billing_months} billing months"
+            )
+        )
+
+
+def reset_scaled_facilities() -> None:
+    """Delete previously generated scaled tenants in dependency order."""
+
+    facility_ids = list(
+        Facility.objects.filter(slug__startswith=SCALED_FACILITY_SLUG_PREFIX)
+        .order_by("id")
+        .values_list("id", flat=True)
+    )
+    if not facility_ids:
+        return
+
+    PaymentAttempt.objects.filter(facility_id__in=facility_ids).delete()
+    BillingLine.objects.filter(facility_id__in=facility_ids).delete()
+    BillingDocument.objects.filter(facility_id__in=facility_ids).delete()
+    MemberStatus.objects.filter(facility_id__in=facility_ids).delete()
+    MemberSubscription.objects.filter(facility_id__in=facility_ids).delete()
+    ScheduleSession.objects.filter(facility_id__in=facility_ids).delete()
+    SessionType.objects.filter(facility_id__in=facility_ids).delete()
+    FacilityLocation.objects.filter(facility_id__in=facility_ids).delete()
+    SubscriptionPlan.objects.filter(facility_id__in=facility_ids).delete()
+    MemberProfile.objects.filter(facility_id__in=facility_ids).delete()
+    StaffGrant.objects.filter(assignment__facility_id__in=facility_ids).delete()
+    StaffAssignment.objects.filter(facility_id__in=facility_ids).delete()
+    Facility.objects.filter(id__in=facility_ids).delete()
+
+
+def seed_scaled_facility_data(
+    facility: Facility,
+    prefix: str,
+    *,
+    profile: SeedProfile,
+    amount_multiplier: float,
+) -> None:
+    """Seed one larger tenant with bulk-generated operational rows."""
+
+    plans = create_plan_catalog(facility, prefix)
+    for start_index in range(1, profile.members_per_tenant + 1, profile.batch_size):
+        end_index = min(
+            start_index + profile.batch_size - 1, profile.members_per_tenant
+        )
+        seed_scaled_member_batch(
+            facility,
+            prefix,
+            plans=plans,
+            start_index=start_index,
+            end_index=end_index,
+            profile=profile,
+            amount_multiplier=amount_multiplier,
+        )
+    seed_scaled_schedule(facility, prefix, weeks=profile.schedule_weeks)
+
+
+def seed_scaled_member_batch(
+    facility: Facility,
+    prefix: str,
+    *,
+    plans: dict[str, SubscriptionPlan],
+    start_index: int,
+    end_index: int,
+    profile: SeedProfile,
+    amount_multiplier: float,
+) -> None:
+    """Bulk-create one batch of scaled members and related reporting rows."""
+
+    indexes = range(start_index, end_index + 1)
+    members = [build_scaled_member(facility, prefix, index) for index in indexes]
+    MemberProfile.objects.bulk_create(members, batch_size=profile.batch_size)
+
+    status_rows: list[MemberStatus] = []
+    subscriptions: list[MemberSubscription] = []
+    for member, index in zip(members, indexes, strict=True):
+        current_status = scaled_member_status(index)
+        status_rows.extend(
+            build_scaled_status_rows(facility, member, current_status, index)
+        )
+        subscriptions.append(
+            build_scaled_subscription(
+                facility,
+                member,
+                plans[scaled_plan_key(index)],
+                status=scaled_subscription_status(index),
+                index=index,
+            )
+        )
+    MemberStatus.objects.bulk_create(status_rows, batch_size=profile.batch_size)
+    MemberSubscription.objects.bulk_create(subscriptions, batch_size=profile.batch_size)
+    seed_scaled_billing_batch(
+        facility,
+        prefix,
+        subscriptions=subscriptions,
+        profile=profile,
+        amount_multiplier=amount_multiplier,
+    )
+
+
+def build_scaled_member(facility: Facility, prefix: str, index: int) -> MemberProfile:
+    """Build one deterministic scaled member profile."""
+
+    first_name = SCALED_FIRST_NAMES[index % len(SCALED_FIRST_NAMES)]
+    last_name = SCALED_LAST_NAMES[
+        (index // len(SCALED_FIRST_NAMES)) % len(SCALED_LAST_NAMES)
+    ]
+    member_month = 1 + (index % 12)
+    member_day = 1 + (index % 27)
+    birth_year = 1965 + (index % 40)
+    return MemberProfile(
+        facility=facility,
+        first_name=f"{prefix} {first_name}",
+        last_name=f"{last_name} {index:06d}",
+        email=f"{facility.slug}-member-{index:06d}@example.test",
+        phone=f"+1555{facility.id:03d}{index % 1_000_000:06d}",
+        date_of_birth=datetime(birth_year, 1 + (index % 12), member_day).date(),
+        gender=SCALED_GENDERS[index % len(SCALED_GENDERS)],
+        member_since=aware_datetime(2025, member_month, member_day),
+        created_via_portal=index % 3 == 0,
+        emergency_contact_name="Synthetic Contact",
+        emergency_contact_phone="+15555550101",
+        medical_notes="Synthetic scaled note for sensitivity testing.",
+        external_profile_id=f"scaled-{facility.slug}-{index:06d}",
+    )
+
+
+def build_scaled_status_rows(
+    facility: Facility,
+    member: MemberProfile,
+    current_status: str,
+    index: int,
+) -> list[MemberStatus]:
+    """Build deterministic status history rows for one scaled member."""
+
+    prospect_start = aware_datetime(2025, 1 + (index % 6), 1 + (index % 20), 8)
+    current_start = prospect_start + timedelta(days=14 + (index % 45))
+    rows = [
+        MemberStatus(
+            facility=facility,
+            member=member,
+            status=MemberStatus.Status.PROSPECT,
+            start_date=prospect_start,
+            end_date=current_start,
+        )
+    ]
+    if current_status != MemberStatus.Status.PROSPECT:
+        rows.append(
+            MemberStatus(
+                facility=facility,
+                member=member,
+                status=current_status,
+                start_date=current_start,
+                end_date=None,
+            )
+        )
+    return rows
+
+
+def build_scaled_subscription(
+    facility: Facility,
+    member: MemberProfile,
+    plan: SubscriptionPlan,
+    *,
+    status: str,
+    index: int,
+) -> MemberSubscription:
+    """Build one scaled subscription row."""
+
+    start_month = 1 + (index % 12)
+    start_day = 1 + (index % 26)
+    start_date = aware_datetime(2025, start_month, start_day)
+    end_date = start_date + timedelta(days=180 + (index % 120))
+    cancellation_date = None
+    cancellation_reason = ""
+    if status in {MemberSubscription.Status.CANCELLED, MemberSubscription.Status.ENDED}:
+        cancellation_date = start_date + timedelta(days=90 + (index % 45))
+        cancellation_reason = "Synthetic scaled cancellation reason."
+    return MemberSubscription(
+        facility=facility,
+        member=member,
+        plan=plan,
+        status=status,
+        start_date=start_date,
+        end_date=end_date,
+        billing_start_date=start_date,
+        cancellation_date=cancellation_date,
+        cancellation_reason=cancellation_reason,
+        auto_renew=plan.auto_renew and status != MemberSubscription.Status.ENDED,
+        auto_pay=status != MemberSubscription.Status.UPCOMING,
+        is_prorated=index % 9 == 0,
+    )
+
+
+def seed_scaled_billing_batch(
+    facility: Facility,
+    prefix: str,
+    *,
+    subscriptions: list[MemberSubscription],
+    profile: SeedProfile,
+    amount_multiplier: float,
+) -> None:
+    """Bulk-create billing documents, lines, and payments for subscriptions."""
+
+    documents: list[BillingDocument] = []
+    contexts: list[tuple[BillingDocument, MemberSubscription, int, str]] = []
+    for subscription in subscriptions:
+        global_index = extract_scaled_member_index(subscription.member.email)
+        for month in range(1, profile.billing_months + 1):
+            status = billing_status_for(member_index=global_index, month=month)
+            due_day = 1 + (global_index % 26)
+            paid_at = None
+            failure_code = ""
+            failure_message = ""
+            if status in {BillingDocument.Status.PAID, BillingDocument.Status.REFUNDED}:
+                paid_at = aware_datetime(
+                    2026, month_for_year(month), min(due_day + 1, 27), 14
+                )
+            if status == BillingDocument.Status.PAYMENT_FAILED:
+                failure_code = "card_declined"
+                failure_message = "Synthetic scaled payment failure."
+            document = BillingDocument(
+                facility=facility,
+                member=subscription.member,
+                subscription=subscription,
+                status=status,
+                due_date=aware_datetime(2026, month_for_year(month), due_day),
+                paid_at=paid_at,
+                auto_pay=True,
+                failure_code=failure_code,
+                failure_message=failure_message,
+                notes="Synthetic scaled billing note.",
+            )
+            documents.append(document)
+            contexts.append((document, subscription, month, status))
+    BillingDocument.objects.bulk_create(documents, batch_size=profile.batch_size)
+
+    lines: list[BillingLine] = []
+    payments: list[PaymentAttempt] = []
+    for document, subscription, month, status in contexts:
+        member_index = extract_scaled_member_index(subscription.member.email)
+        base_amount = round(scaled_base_amount(member_index) * amount_multiplier)
+        membership_total = base_amount + (month * 175) + (member_index % 500)
+        lines.append(
+            build_scaled_line(
+                document,
+                subscription.plan,
+                f"{prefix} membership",
+                membership_total,
+                quantity=1,
+            )
+        )
+        document_total_cents = membership_total
+        if (member_index + month) % 2 == 0:
+            retail_total = round(1800 * amount_multiplier) + (month * 125)
+            lines.append(
+                build_scaled_line(
+                    document,
+                    None,
+                    f"{prefix} retail",
+                    retail_total,
+                    quantity=1 + (member_index % 2),
+                )
+            )
+            document_total_cents += retail_total
+        if member_index % 5 == 0:
+            coaching_total = round(3200 * amount_multiplier)
+            lines.append(
+                build_scaled_line(
+                    document,
+                    subscription.plan,
+                    f"{prefix} coaching add-on",
+                    coaching_total,
+                    quantity=1,
+                )
+            )
+            document_total_cents += coaching_total
+        payments.extend(
+            build_scaled_payments(
+                document,
+                subscription.member,
+                status=status,
+                amount_cents=document_total_cents,
+                month=month,
+            )
+        )
+    BillingLine.objects.bulk_create(lines, batch_size=profile.batch_size)
+    PaymentAttempt.objects.bulk_create(payments, batch_size=profile.batch_size)
+
+
+def build_scaled_line(
+    document: BillingDocument,
+    plan: SubscriptionPlan | None,
+    product_name: str,
+    total_cents: int,
+    *,
+    quantity: int,
+) -> BillingLine:
+    """Build one scaled billing line."""
+
+    tax_cents = round(total_cents * 0.08)
+    pretax_cents = total_cents - tax_cents
+    return BillingLine(
+        facility=document.facility,
+        billing_document=document,
+        plan=plan,
+        product_name=product_name,
+        quantity=quantity,
+        item_price_cents=round(pretax_cents / quantity),
+        pretax_amount_cents=pretax_cents,
+        tax_cents=tax_cents,
+        total_amount_cents=total_cents,
+    )
+
+
+def build_scaled_payments(
+    document: BillingDocument,
+    member: MemberProfile,
+    *,
+    status: str,
+    amount_cents: int,
+    month: int,
+) -> list[PaymentAttempt]:
+    """Build scaled payment attempts for one billing document."""
+
+    if status == BillingDocument.Status.UPCOMING:
+        return []
+    if status == BillingDocument.Status.PAYMENT_FAILED:
+        return [
+            build_scaled_payment(
+                document,
+                member,
+                PaymentAttempt.Status.REQUIRES_PAYMENT_METHOD,
+                amount_cents,
+                failure_code="card_declined",
+                failure_message="Synthetic scaled payment failure.",
+            ),
+            build_scaled_payment(
+                document,
+                member,
+                PaymentAttempt.Status.FAILED,
+                amount_cents,
+                failure_code="retry_failed",
+                failure_message="Synthetic scaled retry failure.",
+            ),
+        ]
+    if status == BillingDocument.Status.REFUNDED:
+        return [
+            build_scaled_payment(
+                document,
+                member,
+                PaymentAttempt.Status.SUCCEEDED,
+                amount_cents,
+                amount_refunded_cents=round(amount_cents * 0.35),
+                refunded=True,
+            )
+        ]
+    payment_status = (
+        PaymentAttempt.Status.PROCESSING
+        if status == BillingDocument.Status.PAST_DUE
+        else PaymentAttempt.Status.SUCCEEDED
+    )
+    return [
+        build_scaled_payment(
+            document, member, payment_status, amount_cents + (month * 10)
+        )
+    ]
+
+
+def build_scaled_payment(
+    document: BillingDocument,
+    member: MemberProfile,
+    status: str,
+    amount_cents: int,
+    *,
+    amount_refunded_cents: int = 0,
+    refunded: bool = False,
+    failure_code: str = "",
+    failure_message: str = "",
+) -> PaymentAttempt:
+    """Build one scaled payment attempt."""
+
+    return PaymentAttempt(
+        facility=document.facility,
+        billing_document=document,
+        member=member,
+        status=status,
+        amount_cents=amount_cents,
+        amount_refunded_cents=amount_refunded_cents,
+        refunded=refunded,
+        processor_payment_id=f"synthetic-{document.document_id}-{status}",
+        failure_code=failure_code,
+        failure_message=failure_message,
+    )
+
+
+def seed_scaled_schedule(facility: Facility, prefix: str, *, weeks: int) -> None:
+    """Create a larger schedule surface for a scaled tenant."""
+
+    locations = [
+        create_location(facility, f"{prefix} Main Room", capacity=32),
+        create_location(facility, f"{prefix} Annex", capacity=18),
+        create_location(facility, f"{prefix} Recovery Room", capacity=14),
+        create_location(facility, f"{prefix} Outdoor Yard", capacity=40),
+    ]
+    session_types = [
+        create_session_type(facility, f"{prefix} Conditioning"),
+        create_session_type(facility, f"{prefix} Strength"),
+        create_session_type(facility, f"{prefix} Mobility"),
+        create_session_type(facility, f"{prefix} Foundations"),
+        create_session_type(facility, f"{prefix} Youth Training"),
+        create_session_type(facility, f"{prefix} Personal Training"),
+    ]
+    base_date = datetime(2026, 1, 5).date()
+    sessions: list[ScheduleSession] = []
+    for week in range(weeks):
+        for type_index, session_type in enumerate(session_types):
+            for day_offset in (0, 2, 4):
+                location = locations[(week + type_index + day_offset) % len(locations)]
+                start_date = base_date + timedelta(days=(week * 7) + day_offset)
+                start_hour = 6 + ((type_index + week + day_offset) % 10)
+                sessions.append(
+                    ScheduleSession(
+                        facility=facility,
+                        session_type=session_type,
+                        location=location,
+                        start_date=start_date,
+                        start_time=time(start_hour, 0),
+                        duration_minutes=45 + ((type_index % 4) * 10),
+                        capacity=max(location.capacity - (type_index % 5), 1),
+                        waitlist_limit=3 + (type_index % 4),
+                        reservation_settings={
+                            "late_cancel_minutes": 30 + (type_index * 10),
+                            "waitlist_enabled": type_index % 2 == 0,
+                        },
+                    )
+                )
+    ScheduleSession.objects.bulk_create(sessions, batch_size=1_000)
+
+
+def scaled_plan_key(index: int) -> str:
+    """Return a deterministic plan key for one scaled member."""
+
+    return SCALED_PLAN_KEYS[index % len(SCALED_PLAN_KEYS)]
+
+
+def scaled_member_status(index: int) -> str:
+    """Return a deterministic current member status."""
+
+    return SCALED_MEMBER_STATUSES[index % len(SCALED_MEMBER_STATUSES)]
+
+
+def scaled_subscription_status(index: int) -> str:
+    """Return a deterministic subscription status."""
+
+    return SCALED_SUBSCRIPTION_STATUSES[index % len(SCALED_SUBSCRIPTION_STATUSES)]
+
+
+def scaled_base_amount(index: int) -> int:
+    """Return a deterministic scaled member base billing amount."""
+
+    return 4_000 + ((index % 60) * 250)
+
+
+def extract_scaled_member_index(email: str) -> int:
+    """Extract the deterministic member index from a scaled synthetic email."""
+
+    local_part = email.split("@", 1)[0]
+    return int(local_part.rsplit("-", 1)[1])
+
+
+def month_for_year(month: int) -> int:
+    """Map unbounded month counters into a calendar month."""
+
+    return 1 + ((month - 1) % 12)
 
 
 def create_plan_catalog(facility: Facility, prefix: str) -> dict[str, SubscriptionPlan]:

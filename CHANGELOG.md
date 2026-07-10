@@ -31,6 +31,7 @@ The project is pre-alpha and APIs may change before the first public alpha.
 - Permission-scoped capabilities endpoint, semantic capability-question routing, LLM-generated query suggestions from visible capabilities, and demo guidance for "what can I query?" UX.
 - Planner guidance and validation normalization for date-bucket visualization aliases such as `start_date_month`.
 - Opt-in demo validation management command for live LLM smoke checks across seeded users/questions.
+- Size profiles for the complex demo seed command, including medium/large bulk-generated tenant/member/billing datasets.
 
 ### Security
 

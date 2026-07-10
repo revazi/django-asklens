@@ -17,6 +17,38 @@ DJANGO_SETTINGS_MODULE=tests.test_project.demo_settings \
 uv run python -m django runserver 127.0.0.1:8000
 ```
 
+The seed command supports opt-in size profiles. The default `small` profile keeps the fast two-facility demo dataset used by tests. `medium` and `large` keep that base demo and add deterministic scaled tenants under slugs like `demo-tenant-01`.
+
+```bash
+# Fast default demo.
+DJANGO_SETTINGS_MODULE=tests.test_project.demo_settings \
+uv run python -m django seed_complex_test_project --size small
+
+# More realistic local dataset: 10 generated tenants × 1,000 members.
+DJANGO_SETTINGS_MODULE=tests.test_project.demo_settings \
+uv run python -m django seed_complex_test_project --size medium
+
+# Stress dataset: 10 generated tenants × 25,000 members.
+# This can create millions of related billing/payment rows and may take time.
+DJANGO_SETTINGS_MODULE=tests.test_project.demo_settings \
+uv run python -m django seed_complex_test_project --size large
+```
+
+You can override profile dimensions for custom smoke runs:
+
+```bash
+DJANGO_SETTINGS_MODULE=tests.test_project.demo_settings \
+uv run python -m django seed_complex_test_project \
+  --size medium \
+  --tenant-count 3 \
+  --members-per-tenant 500 \
+  --months 3 \
+  --schedule-weeks 4 \
+  --batch-size 1000
+```
+
+Seed runs reset previously generated `demo-tenant-*` tenants before reseeding so repeated runs remain deterministic. They do not delete the base North/South demo tenants; `--size small` returns the database to the fast base demo dataset.
+
 By default the demo uses `DummyProvider`, so it makes no network calls and only answers the configured exact demo questions. To use a live OpenAI-compatible provider for free-form planning, set environment variables before starting the server:
 
 ```bash
@@ -88,7 +120,7 @@ It also creates staff demo users with the same password and different synthetic 
 
 These credentials are for the local synthetic demo project only. Do not reuse them in real projects.
 
-The seed command creates a richer synthetic dataset for each facility, including multiple plans, members, status histories, subscriptions, six months of billing documents, varied billing lines, payment outcomes, locations, session types, and scheduled sessions.
+The small seed command creates a richer synthetic dataset for each base facility, including multiple plans, members, status histories, subscriptions, six months of billing documents, varied billing lines, payment outcomes, locations, session types, and scheduled sessions. Medium/large profiles use bulk-created synthetic rows over the same domain tables to validate AskLens behavior on larger tenant and row counts.
 
 The local database file is `.asklens-test-project.sqlite3` and is ignored by git.
 

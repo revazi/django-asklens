@@ -12,7 +12,16 @@ from tests.test_project.asklens_registry import (
     permitted_facility_ids,
     register_complex_resources,
 )
-from tests.test_project.models import Facility, StaffAssignment, StaffGrant
+from tests.test_project.models import (
+    BillingDocument,
+    BillingLine,
+    Facility,
+    MemberProfile,
+    PaymentAttempt,
+    ScheduleSession,
+    StaffAssignment,
+    StaffGrant,
+)
 from tests.test_project.permissions import (
     get_request_permissions,
     permission_set_allows,
@@ -128,6 +137,64 @@ def test_seeded_permissions_use_scoped_facility_tokens() -> None:
     assert StaffGrant.BILLING_REPORTS_VIEW not in permissions
     assert f"facility:{north.id}:{StaffGrant.BILLING_REPORTS_VIEW}" in permissions
     assert permission_set_allows(permissions, StaffGrant.BILLING_REPORTS_VIEW)
+
+
+def test_seed_size_medium_can_create_scaled_tenants_with_overrides() -> None:
+    """Scaled seed profiles create realistic extra tenants without huge CI data."""
+
+    call_command(
+        "seed_complex_test_project",
+        size="medium",
+        tenant_count=3,
+        members_per_tenant=5,
+        months=2,
+        schedule_weeks=1,
+        batch_size=4,
+        verbosity=0,
+    )
+
+    scaled_facilities = Facility.objects.filter(slug__startswith="demo-tenant-")
+    assert scaled_facilities.count() == 3
+    assert MemberProfile.objects.filter(facility__in=scaled_facilities).count() == 15
+    assert BillingDocument.objects.filter(facility__in=scaled_facilities).count() == 30
+    assert BillingLine.objects.filter(facility__in=scaled_facilities).count() > 30
+    assert PaymentAttempt.objects.filter(facility__in=scaled_facilities).count() > 0
+    assert ScheduleSession.objects.filter(facility__in=scaled_facilities).count() == 54
+
+    scaled_billing = get_user_model().objects.get(username="scaled-billing")
+    assert facility_slugs_for(scaled_billing, StaffGrant.BILLING_REPORTS_VIEW) == [
+        "demo-tenant-01",
+        "demo-tenant-02",
+        "demo-tenant-03",
+    ]
+
+
+def test_scaled_seed_rerun_resets_generated_tenants() -> None:
+    """Scaled seed output should be deterministic when the size changes."""
+
+    call_command(
+        "seed_complex_test_project",
+        size="medium",
+        tenant_count=3,
+        members_per_tenant=5,
+        months=2,
+        schedule_weeks=1,
+        verbosity=0,
+    )
+    call_command(
+        "seed_complex_test_project",
+        size="medium",
+        tenant_count=2,
+        members_per_tenant=4,
+        months=1,
+        schedule_weeks=1,
+        verbosity=0,
+    )
+
+    scaled_facilities = Facility.objects.filter(slug__startswith="demo-tenant-")
+    assert scaled_facilities.count() == 2
+    assert MemberProfile.objects.filter(facility__in=scaled_facilities).count() == 8
+    assert BillingDocument.objects.filter(facility__in=scaled_facilities).count() == 8
 
 
 def test_seeded_permission_matrix_scopes_facilities_by_grant() -> None:
