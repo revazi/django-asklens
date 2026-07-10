@@ -176,6 +176,36 @@ def test_capabilities_endpoint_returns_permission_scoped_query_guidance(
     assert "customer.email" not in str(response.data)
 
 
+def test_query_endpoint_intercepts_capabilities_question_without_provider_or_audit(
+    api_client: APIClient,
+    registered_orders: None,
+    user,
+) -> None:
+    """Natural-language help questions should return capabilities locally."""
+
+    api_client.force_authenticate(user=user)
+
+    response = api_client.post(
+        "/asklens/query/",
+        {"question": "What can I query?"},
+        format="json",
+    )
+
+    assert response.status_code == 200
+    assert response.data["question"] == "What can I query?"
+    assert response.data["response_type"] == "capabilities"
+    assert response.data["capabilities"]["summary"] == (
+        "You can ask read-only list and aggregate questions over 1 resource."
+    )
+    assert response.data["capabilities"]["resources"][0]["name"] == "orders"
+    assert response.data["routing_source"] == "fallback"
+    assert response.data["capability_intent"]["intent"] == "capabilities"
+    assert "database query" in response.data["explanation"]
+    assert "run_id" not in response.data
+    assert "plan" not in response.data
+    assert SemanticQueryRun.objects.count() == 0
+
+
 def test_query_endpoint_returns_result_and_records_successful_run(
     settings,
     api_client: APIClient,

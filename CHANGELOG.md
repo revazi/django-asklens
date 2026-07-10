@@ -28,7 +28,7 @@ The project is pre-alpha and APIs may change before the first public alpha.
 - Tenant-scoped demo permission tokens for complex test-project grants, including regression coverage for facility-level row separation.
 - Resource-level permission scoping for catalog visibility and plan validation, plus permission-filtered demo questions.
 - Environment-driven live OpenAI-compatible planner mode for the runnable complex demo project.
-- Permission-scoped capabilities endpoint and demo guidance for "what can I query?" UX.
+- Permission-scoped capabilities endpoint, semantic capability-question routing, and demo guidance for "what can I query?" UX.
 
 ### Security
 

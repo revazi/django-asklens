@@ -23,6 +23,11 @@ from django_asklens.exceptions import AskLensError
 from django_asklens.execution import run_query_plan
 from django_asklens.models import SemanticQueryRun
 from django_asklens.planning import plan_question
+from django_asklens.planning.intents import (
+    QuestionIntent,
+    filter_capabilities_for_intent,
+    route_question_intent,
+)
 
 
 class AskLensAPIView(APIView):
@@ -66,11 +71,27 @@ class QueryView(AskLensAPIView):
         debug = serializer.validated_data["debug"]
         include_visualization = serializer.validated_data["include_visualization"]
         enforce_debug_permission(request, debug=debug)
+        permissions = get_request_permissions(request)
 
         try:
+            routing_result = route_question_intent(question, permissions=permissions)
+            if routing_result.intent.intent == "capabilities":
+                capabilities = build_capabilities(permissions=permissions)
+                return Response(
+                    build_capabilities_payload(
+                        question,
+                        intent=routing_result.intent,
+                        source=routing_result.source,
+                        capabilities=filter_capabilities_for_intent(
+                            capabilities,
+                            routing_result.intent,
+                        ),
+                    )
+                )
+
             planner_result = plan_question(
                 question,
-                permissions=get_request_permissions(request),
+                permissions=permissions,
             )
             query_result = run_query_plan(planner_result.plan, request=request)
             run = create_query_run(
@@ -162,6 +183,28 @@ def create_query_run(
         duration_ms=duration_ms,
         error=error,
     )
+
+
+def build_capabilities_payload(
+    question: str,
+    *,
+    intent: QuestionIntent,
+    source: str,
+    capabilities: dict[str, Any],
+) -> dict[str, Any]:
+    """Build a natural-language help response without executing a query."""
+
+    return {
+        "question": question,
+        "response_type": "capabilities",
+        "capability_intent": intent.model_dump(mode="json"),
+        "routing_source": source,
+        "capabilities": capabilities,
+        "explanation": (
+            "Returned permission-scoped AskLens capabilities without executing "
+            "a database query."
+        ),
+    }
 
 
 def build_success_payload(

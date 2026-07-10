@@ -681,6 +681,10 @@
     });
 
     function renderResult(payload) {
+      if (payload.response_type === "capabilities") {
+        renderCapabilitiesResponse(payload);
+        return;
+      }
       const fragment = document.createDocumentFragment();
       const meta = document.createElement("ul");
       meta.className = "result-meta";
@@ -705,6 +709,62 @@
       const item = document.createElement("li");
       item.textContent = text;
       return item;
+    }
+
+    function renderCapabilitiesResponse(payload) {
+      const capabilities = payload.capabilities || {};
+      const resources = capabilities.resources || [];
+      const fragment = document.createDocumentFragment();
+      const meta = document.createElement("ul");
+      meta.className = "result-meta";
+      const routingLabel = payload.routing_source === "semantic_provider"
+        ? "Semantic provider routing"
+        : "Local fallback routing";
+      meta.append(
+        renderMeta("Capabilities"),
+        renderMeta(`${resources.length} resources`),
+        renderMeta(routingLabel),
+        renderMeta("No DB query"),
+      );
+      const card = document.createElement("div");
+      card.className = "hint-card";
+      const title = document.createElement("h3");
+      title.textContent = "What can I query?";
+      const summary = document.createElement("p");
+      summary.textContent = capabilities.summary || "AskLens capabilities are available.";
+      const explanation = document.createElement("p");
+      explanation.className = "muted";
+      explanation.textContent = payload.explanation || "This response was generated from permission-scoped catalog metadata.";
+      card.append(title, summary, explanation);
+      fragment.append(meta, card, renderCapabilitiesDetail(capabilities));
+      resultBox.replaceChildren(fragment);
+    }
+
+    function renderCapabilitiesDetail(capabilities) {
+      const wrapper = document.createElement("div");
+      const resources = capabilities.resources || [];
+      const resourceList = document.createElement("ul");
+      resourceList.className = "catalog-list";
+      if (!resources.length) {
+        resourceList.appendChild(renderEmptyListItem("No queryable resources are visible for this login."));
+      } else {
+        resourceList.replaceChildren(...resources.map(renderCapabilityItem));
+      }
+      wrapper.appendChild(resourceList);
+      if ((capabilities.limitations || []).length) {
+        const limitations = document.createElement("details");
+        const summary = document.createElement("summary");
+        summary.textContent = "Limits and safety notes";
+        const list = document.createElement("ul");
+        (capabilities.limitations || []).forEach((limitation) => {
+          const item = document.createElement("li");
+          item.textContent = limitation;
+          list.appendChild(item);
+        });
+        limitations.append(summary, list);
+        wrapper.appendChild(limitations);
+      }
+      return wrapper;
     }
 
     function renderVisualizationHint(payload) {

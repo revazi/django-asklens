@@ -59,7 +59,7 @@ Use the capabilities endpoint to show users what AskLens can answer for the curr
 GET /asklens/capabilities/
 ```
 
-A response includes visible resources, exposed fields, metrics, date fields, example questions, supported patterns, and limitations.
+A response includes visible resources, exposed fields, metrics, date fields, example questions, supported patterns, and limitations. Users can also ask capability/help questions through `/asklens/query/`; live/custom providers classify those semantically with a strict `QuestionIntent` schema, while dummy/offline mode uses a small local fallback for obvious help questions such as `What can I query?`.
 
 ```json
 {
@@ -85,7 +85,7 @@ Content-Type: application/json
 {"question": "Show orders by status"}
 ```
 
-A successful response includes the question, validated plan, column metadata, normalized rows, visualization hint, timing, and audit run id.
+A successful data-query response includes the question, validated plan, column metadata, normalized rows, visualization hint, timing, and audit run id.
 
 ```json
 {
@@ -99,6 +99,17 @@ A successful response includes the question, validated plan, column metadata, no
     "y": {"field": "order_count", "label": "Number Of Orders", "type": "number"}
   },
   "run_id": 1
+}
+```
+
+Capability/help questions return a non-row response and do not execute a database query:
+
+```json
+{
+  "question": "What can I query?",
+  "response_type": "capabilities",
+  "routing_source": "fallback",
+  "capabilities": {"summary": "You can ask read-only list and aggregate questions over 1 resource."}
 }
 ```
 

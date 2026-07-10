@@ -111,7 +111,7 @@ POST /asklens/query/
 GET  /asklens/runs/<id>/
 ```
 
-The capabilities endpoint returns permission-scoped, human-readable guidance about visible resources, exposed fields, metrics, date fields, examples, and limitations. The query endpoint plans, validates, executes, and records a `SemanticQueryRun` audit row. API views require authenticated users by default, and `debug=true` is restricted to staff users.
+The capabilities endpoint returns permission-scoped, human-readable guidance about visible resources, exposed fields, metrics, date fields, examples, and limitations. The query endpoint semantically routes capability/help questions to that same guidance path and otherwise plans, validates, executes, and records a `SemanticQueryRun` audit row. API views require authenticated users by default, and `debug=true` is restricted to staff users.
 
 ## Result serialization
 
