@@ -30,7 +30,30 @@ DJANGO_SETTINGS_MODULE=tests.test_project.demo_settings \
 uv run python -m django runserver 127.0.0.1:8000
 ```
 
-Live mode still sends only permission-scoped schema/catalog metadata to the provider. It does not send database rows, sample values, secrets, credentials, or `.env` contents.
+Live mode still sends only permission-scoped schema/catalog/capabilities metadata to the provider. It does not send database rows, sample values, secrets, credentials, or `.env` contents.
+
+To run a repeatable live validation matrix through the same AskLens API without starting a browser, use the opt-in command after migrating/seeding:
+
+```bash
+DJANGO_ASKLENS_DEMO_LIVE_LLM=1 \
+DJANGO_ASKLENS_LIVE_LLM_API_KEY="$OPENAI_API_KEY" \
+DJANGO_ASKLENS_LIVE_LLM_MODEL="gpt-4.1-mini" \
+DJANGO_SETTINGS_MODULE=tests.test_project.demo_settings \
+uv run python -m django validate_live_asklens_demo --user admin
+```
+
+For Gemini through its OpenAI-compatible endpoint:
+
+```bash
+DJANGO_ASKLENS_DEMO_LIVE_LLM=1 \
+DJANGO_ASKLENS_LIVE_LLM_API_KEY="$GEMINI_API_KEY" \
+DJANGO_ASKLENS_LIVE_LLM_MODEL="gemini-2.5-flash" \
+DJANGO_ASKLENS_LIVE_LLM_BASE_URL="https://generativelanguage.googleapis.com/v1beta/openai" \
+DJANGO_SETTINGS_MODULE=tests.test_project.demo_settings \
+uv run python -m django validate_live_asklens_demo --user admin
+```
+
+The command prints safe summaries only: HTTP status, capabilities/query routing, suggestion counts, plan resource/intent, row count, column keys, and safe errors. It does not print API keys or raw environment values. Use `--user north-billing`, `--user mixed-reporter`, or `--all-users` to compare tenant/resource permissions. Pass `--question "..."` one or more times to validate specific prompts.
 
 Open the demo AskLens frontend page:
 
