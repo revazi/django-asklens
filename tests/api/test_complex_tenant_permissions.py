@@ -511,7 +511,7 @@ def test_demo_settings_include_valid_dummy_plans(
     from tests.test_project.permissions import all_staff_grant_names
 
     dummy_plans = DJANGO_ASKLENS["DUMMY_PLANS"]
-    assert len(dummy_plans) == 11
+    assert len(dummy_plans) == 12
 
     for plan in dummy_plans.values():
         parse_and_validate_query_plan(plan, permissions=all_staff_grant_names())

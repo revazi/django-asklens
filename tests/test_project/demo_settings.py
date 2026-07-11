@@ -96,12 +96,16 @@ DUMMY_PLANS = {
         },
     },
     "List facilities, facility name titles and facility owner full name as a table.": {
-        "resource": "facility_staff_assignments",
+        "resource": "facility_owners",
         "intent": "list",
-        "filters": [
-            {"field": "role", "op": "eq", "value": "owner"},
-            {"field": "is_active", "op": "eq", "value": True},
-        ],
+        "select": ["facility.name", "user.first_name", "user.last_name"],
+        "order_by": [{"field": "facility.name", "direction": "asc"}],
+        "limit": 20,
+        "visualization": {"type": "table"},
+    },
+    "List facilities and names, show also owner's full names.": {
+        "resource": "facility_owners",
+        "intent": "list",
         "select": ["facility.name", "user.first_name", "user.last_name"],
         "order_by": [{"field": "facility.name", "direction": "asc"}],
         "limit": 20,

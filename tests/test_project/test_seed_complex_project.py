@@ -39,6 +39,9 @@ QUESTION_REVENUE_BY_PRODUCT = "Show paid billing revenue by product"
 QUESTION_FACILITY_OWNER_NAMES = (
     "List facilities, facility name titles and facility owner full name as a table."
 )
+QUESTION_FACILITY_OWNER_NAMES_ALT = (
+    "List facilities and names, show also owner's full names."
+)
 
 
 def revenue_by_product_plan() -> dict[str, Any]:
@@ -71,12 +74,8 @@ def facility_owner_names_plan() -> dict[str, Any]:
     """Return a staff-assignment list plan for facility owner lookup."""
 
     return {
-        "resource": "facility_staff_assignments",
+        "resource": "facility_owners",
         "intent": "list",
-        "filters": [
-            {"field": "role", "op": "eq", "value": StaffAssignment.Role.OWNER},
-            {"field": "is_active", "op": "eq", "value": True},
-        ],
         "select": ["facility.name", "user.first_name", "user.last_name"],
         "order_by": [{"field": "facility.name", "direction": "asc"}],
         "limit": 20,
@@ -97,6 +96,7 @@ def configure_complex_query_settings(settings) -> None:
         "DUMMY_PLANS": {
             QUESTION_REVENUE_BY_PRODUCT: revenue_by_product_plan(),
             QUESTION_FACILITY_OWNER_NAMES: facility_owner_names_plan(),
+            QUESTION_FACILITY_OWNER_NAMES_ALT: facility_owner_names_plan(),
         },
         "MAX_ROWS": 100,
         "MAX_JOINS": 2,
@@ -115,21 +115,25 @@ def facility_slugs_for(user, permission_name: str) -> list[str]:
     )
 
 
-def test_seed_scopes_facility_owner_to_one_facility() -> None:
-    """The demo facility-owner should only own North Studio after seeding."""
+def test_seed_scopes_facility_owners_to_one_facility_each() -> None:
+    """Seeded facility owners should each own one base demo facility."""
 
     call_command("seed_complex_test_project", verbosity=0)
 
-    owner = get_user_model().objects.get(username="facility-owner")
-    active_assignments = StaffAssignment.objects.filter(
-        user=owner,
-        is_active=True,
-        role=StaffAssignment.Role.OWNER,
-    ).select_related("facility")
+    user_model = get_user_model()
+    owner = user_model.objects.get(username="facility-owner")
+    south_owner = user_model.objects.get(username="south-owner")
 
-    assert [assignment.facility.slug for assignment in active_assignments] == [
-        "north-studio"
-    ]
+    def owner_facility_slugs(user) -> list[str]:
+        assignments = StaffAssignment.objects.filter(
+            user=user,
+            is_active=True,
+            role=StaffAssignment.Role.OWNER,
+        ).select_related("facility")
+        return [assignment.facility.slug for assignment in assignments]
+
+    assert owner_facility_slugs(owner) == ["north-studio"]
+    assert owner_facility_slugs(south_owner) == ["south-studio"]
 
 
 def test_seed_deactivates_stale_south_owner_assignment() -> None:
@@ -159,7 +163,9 @@ def test_seed_sets_demo_user_names_and_role_groups() -> None:
     """Seeded role data should be easy to inspect in the admin database."""
 
     call_command("seed_complex_test_project", verbosity=0)
-    owner = get_user_model().objects.get(username="facility-owner")
+    user_model = get_user_model()
+    owner = user_model.objects.get(username="facility-owner")
+    south_owner = user_model.objects.get(username="south-owner")
     role_group_names = set(
         Group.objects.filter(name__startswith="AskLens Demo ").values_list(
             "name", flat=True
@@ -168,6 +174,8 @@ def test_seed_sets_demo_user_names_and_role_groups() -> None:
 
     assert owner.first_name == "Facility"
     assert owner.last_name == "Owner"
+    assert south_owner.first_name == "South"
+    assert south_owner.last_name == "Owner"
     assert role_group_names == {
         "AskLens Demo Members",
         "AskLens Demo Owners",
@@ -175,6 +183,9 @@ def test_seed_sets_demo_user_names_and_role_groups() -> None:
         "AskLens Demo Support",
     }
     assert list(owner.groups.values_list("name", flat=True)) == ["AskLens Demo Owners"]
+    assert list(south_owner.groups.values_list("name", flat=True)) == [
+        "AskLens Demo Owners"
+    ]
 
 
 def test_seeded_permissions_use_scoped_facility_tokens() -> None:
@@ -337,6 +348,43 @@ def test_support_reporter_catalog_includes_analytics_resources(settings) -> None
     assert "support_tickets" in catalog_text
     assert "billing_lines" not in catalog_text
     assert "member_contacts" not in catalog_text
+
+
+def test_north_billing_owner_name_query_returns_only_owner(settings) -> None:
+    """Owner-name questions should not return every visible staff assignment."""
+
+    configure_complex_query_settings(settings)
+    register_complex_resources()
+    call_command("seed_complex_test_project", verbosity=0)
+    north_billing = get_user_model().objects.get(username="north-billing")
+    client = APIClient()
+    client.force_authenticate(user=north_billing)
+
+    catalog_response = client.get("/asklens/catalog/")
+    response = client.post(
+        "/asklens/query/",
+        {"question": QUESTION_FACILITY_OWNER_NAMES_ALT},
+        format="json",
+    )
+
+    assert catalog_response.status_code == 200, catalog_response.data
+    assert "facility_owners" in str(catalog_response.data)
+    assert "facility_staff_assignments" not in str(catalog_response.data)
+    assert response.status_code == 200, response.data
+    assert response.data["plan"]["resource"] == "facility_owners"
+    assert response.data["data"] == [
+        {
+            "facility.name": "North Studio",
+            "user.first_name": "Facility",
+            "user.last_name": "Owner",
+        }
+    ]
+    response_text = str(response.data)
+    assert "North Billing" not in response_text
+    assert "Mixed Reporter" not in response_text
+    assert "Schedule Reporter" not in response_text
+    assert "Support Reporter" not in response_text
+    assert "South Studio" not in response_text
 
 
 def test_facility_owner_can_query_facility_owner_name(settings) -> None:

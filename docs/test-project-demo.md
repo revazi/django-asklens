@@ -111,6 +111,7 @@ It also creates staff demo users with the same password, deterministic first/las
 | Username | Purpose |
 | --- | --- |
 | `facility-owner` | owner assignment for North Studio only |
+| `south-owner` | owner assignment for South Studio only |
 | `north-billing` | billing/payment reports for North Studio |
 | `south-billing` | billing/payment reports for South Studio |
 | `mixed-reporter` | member/PII reports for North Studio and member reports for South Studio |
@@ -174,7 +175,7 @@ DJANGO_ASKLENS = {
 }
 ```
 
-Synthetic staff grants are tenant-scoped through `StaffAssignment` and `StaffGrant` records. The seed command also creates Django auth groups named `AskLens Demo Owners`, `AskLens Demo Staff`, `AskLens Demo Support`, and `AskLens Demo Members` so role membership is visible in admin. Base querysets for reporting resources only include facilities where the request user has the required grant. The seeded `admin` superuser can query all demo facilities for local exploration. The AskLens catalog includes operational resources for facilities, facility staff assignments, members, member contacts, member statuses, subscriptions, billing lines, payment attempts, marketing campaigns, leads, staff shifts, schedule sessions, session bookings, and support tickets. Capabilities are still permission-scoped, so each user sees only the resources they can query.
+Synthetic staff grants are tenant-scoped through `StaffAssignment` and `StaffGrant` records. The seed command also creates Django auth groups named `AskLens Demo Owners`, `AskLens Demo Staff`, `AskLens Demo Support`, and `AskLens Demo Members` so role membership is visible in admin. Base querysets for reporting resources only include facilities where the request user has the required grant. The seeded `admin` superuser can query all demo facilities for local exploration. The AskLens catalog includes operational resources for facilities, facility owners, members, member contacts, member statuses, subscriptions, billing lines, payment attempts, marketing campaigns, leads, staff shifts, schedule sessions, session bookings, and support tickets. The owner resource is intentionally owner-only so owner-name questions do not return all staff assignments. Capabilities are still permission-scoped, so each user sees only the resources they can query.
 
 ## Demo dummy questions
 

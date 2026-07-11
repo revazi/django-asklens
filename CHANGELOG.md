@@ -36,7 +36,7 @@ The project is pre-alpha and APIs may change before the first public alpha.
 - Sanitized capability scope guidance and validation so query-help suggestions do not imply multi-tenant access for single-scope users.
 - Suppressed single-scope entity examples such as plural facility-list suggestions for users scoped to one facility.
 - Added schema-agnostic `scope_resource` and `scope_dimension` registration metadata so scope-aware help does not depend on tenant/facility/account naming.
-- Seeded demo role groups, user full names, explicit owner grants, and a facility staff-assignment resource for owner/role lookup questions.
+- Seeded demo role groups, user full names, explicit owner grants, and an owner-only facility owners resource for owner lookup questions.
 
 ### Security
 

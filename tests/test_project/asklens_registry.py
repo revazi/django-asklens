@@ -83,15 +83,15 @@ def register_facilities() -> None:
 
 
 def register_staff_resources() -> None:
-    """Register facility staff assignment resources."""
+    """Register owner-specific facility staff resources."""
 
     register(
         model=StaffAssignment,
-        name="facility_staff_assignments",
-        label="Facility staff assignments",
+        name="facility_owners",
+        label="Facility owners",
         description=(
-            "Tenant-scoped facility staff roles, including owner names and "
-            "role assignments."
+            "Tenant-scoped active facility owner assignments. Use this resource "
+            "for questions about facility owner names."
         ),
         default_date_field="created_at",
         fields={
@@ -101,26 +101,21 @@ def register_staff_resources() -> None:
                 "scope_dimension": True,
                 "requires_permission": StaffGrant.FACILITY_VIEW,
             },
-            "role": {"label": "Staff role"},
-            "user.first_name": {"label": "Staff first name"},
-            "user.last_name": {"label": "Staff last name"},
-            "user.username": {"label": "Staff username"},
-            "is_primary": {"label": "Primary assignment"},
-            "can_access_all_facilities": {"label": "Can access all facilities"},
-            "is_active": {"label": "Active assignment"},
+            "user.first_name": {"label": "Owner first name"},
+            "user.last_name": {"label": "Owner last name"},
+            "user.username": {"label": "Owner username"},
+            "is_primary": {"label": "Primary owner assignment"},
             "created_at": {"label": "Created date"},
         },
         metrics=[
             Metric(
-                "staff_assignment_count",
+                "facility_owner_count",
                 op="count",
-                field="role",
-                label="Staff assignments",
+                field="user.username",
+                label="Facility owners",
             )
         ],
-        base_queryset=queryset_for_permission(
-            StaffAssignment, StaffGrant.FACILITY_VIEW
-        ),
+        base_queryset=owner_queryset_for_permission(StaffGrant.FACILITY_VIEW),
         requires_permission=StaffGrant.FACILITY_VIEW,
     )
 
@@ -627,6 +622,20 @@ def register_support_resources() -> None:
         base_queryset=queryset_for_permission(SupportTicket, StaffGrant.ANALYTICS_VIEW),
         requires_permission=StaffGrant.ANALYTICS_VIEW,
     )
+
+
+def owner_queryset_for_permission(permission_name: str) -> Callable[[Any], QuerySet]:
+    """Return active owner assignments scoped by a facility permission."""
+
+    def base_queryset(request: Any) -> QuerySet:
+        return queryset_for_permission(StaffAssignment, permission_name)(
+            request
+        ).filter(
+            role=StaffAssignment.Role.OWNER,
+            is_active=True,
+        )
+
+    return base_queryset
 
 
 def queryset_for_permission(

@@ -41,6 +41,7 @@ ROLE_GROUP_NAMES = {
 DEMO_USER_FULL_NAMES = {
     "admin": ("Demo", "Admin"),
     "facility-owner": ("Facility", "Owner"),
+    "south-owner": ("South", "Owner"),
     "north-billing": ("North", "Billing"),
     "south-billing": ("South", "Billing"),
     "mixed-reporter": ("Mixed", "Reporter"),
@@ -381,6 +382,7 @@ class Command(BaseCommand):
 
         create_demo_user("admin", is_staff=True, is_superuser=True)
         owner = create_demo_user("facility-owner", is_staff=True)
+        south_owner = create_demo_user("south-owner", is_staff=True)
         north_billing_user = create_demo_user("north-billing", is_staff=True)
         south_billing_user = create_demo_user("south-billing", is_staff=True)
         mixed_user = create_demo_user("mixed-reporter", is_staff=True)
@@ -396,6 +398,13 @@ class Command(BaseCommand):
             is_primary=True,
         )
         deactivate_assignment(owner, south, StaffAssignment.Role.OWNER)
+        create_assignment(
+            south_owner,
+            south,
+            StaffAssignment.Role.OWNER,
+            *all_staff_grant_names(),
+            is_primary=True,
+        )
         create_assignment(
             north_billing_user,
             north,
@@ -452,6 +461,7 @@ class Command(BaseCommand):
         )
         sync_demo_role_groups(
             owner,
+            south_owner,
             north_billing_user,
             south_billing_user,
             mixed_user,
