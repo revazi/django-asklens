@@ -110,6 +110,24 @@ def test_registered_resource_metadata_is_effectively_immutable() -> None:
         resource.fields["total"] = FieldSpec("total", "Total", "number", 0)
 
 
+def test_scope_metadata_is_explicit_and_schema_agnostic() -> None:
+    """Registrations can mark arbitrary resources/fields as scope metadata."""
+
+    registry = CatalogRegistry()
+    registry.register(
+        model=Order,
+        name="locations",
+        label="Locations",
+        fields={"id": {}, "customer.email": {"scope_dimension": True}},
+        scope_resource=True,
+    )
+
+    resource = registry.to_dict()["resources"][0]
+    fields = {field["name"]: field for field in resource["fields"]}
+    assert resource["scope_resource"] is True
+    assert fields["customer.email"]["scope_dimension"] is True
+
+
 def test_resource_permission_scopes_catalog_visibility() -> None:
     registry = CatalogRegistry()
     registry.register(
@@ -197,6 +215,13 @@ def test_field_config_validation_catches_typos_and_bad_types() -> None:
             fields={"customer.email": {"requires_permission": object()}},
         )
 
+    with pytest.raises(InvalidResourceError, match="scope_dimension"):
+        registry.register(
+            model=Order,
+            name="bad_scope_dimension",
+            fields={"customer.email": {"scope_dimension": "yes"}},
+        )
+
 
 def test_prebuilt_field_specs_are_still_validated_against_model_paths() -> None:
     registry = CatalogRegistry()
@@ -254,6 +279,14 @@ def test_resource_config_validation() -> None:
             name="bad_resource_permission",
             fields={"id": {}},
             requires_permission=object(),
+        )
+
+    with pytest.raises(InvalidResourceError, match="scope_resource"):
+        registry.register(
+            model=Order,
+            name="bad_scope_resource",
+            fields={"id": {}},
+            scope_resource=object(),
         )
 
 

@@ -36,6 +36,7 @@ resource = register(
 - `default_date_field`: registered date/datetime field used by date-oriented planning.
 - `metrics`: explicit aggregate metrics available to plans.
 - `base_queryset`: request-aware hook for tenant and row-level scoping.
+- `scope_resource`: optional boolean. Set `True` when this resource represents the scoped entity itself, regardless of what your project calls that entity.
 
 ## Field metadata
 
@@ -51,10 +52,13 @@ Supported field config keys:
     "filter_only": True,
     "requires_permission": "customers.view_pii",
     "metric": False,
+    "scope_dimension": False,
 }
 ```
 
 Defaults are conservative for catalog exposure: sensitive fields and hidden fields are not included in normal planner catalog serialization.
+
+Use `scope_dimension=True` for any field that identifies the user's row scope, whatever your schema calls it, such as `account.name`, `organization.title`, `gym.label`, or another project-specific relation. Use `scope_resource=True` when the whole resource represents the scoped entity. These flags only shape capabilities/help examples; row access must still be enforced by `base_queryset(request)`.
 
 ## Metrics
 

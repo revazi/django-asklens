@@ -143,6 +143,7 @@ def test_build_query_help_uses_provider_and_validates_references() -> None:
     prompt_text = "\n".join(message["content"] for message in provider.messages)
     assert "Visible capabilities metadata" in prompt_text
     assert "orders" in prompt_text
+    assert "facilities/accounts/tenants" not in prompt_text
 
 
 def test_build_query_help_rejects_unknown_references() -> None:
@@ -249,6 +250,63 @@ def test_build_query_help_rejects_single_scope_resource_suggestions() -> None:
         )
 
 
+def test_build_query_help_rejects_arbitrarily_named_scope_resource() -> None:
+    """Scope-resource validation should not depend on resource naming."""
+
+    payload = capabilities_payload()
+    payload["resources"] = [
+        {
+            "name": "locations",
+            "label": "Studios",
+            "description": "Visible studios.",
+            "synonyms": [],
+            "default_date_field": None,
+            "scope": {
+                "level": "single",
+                "kind": "gym",
+                "guidance": "Visible rows are scoped to one gym.",
+            },
+            "scope_resource": True,
+            "fields": [
+                {
+                    "name": "display_name",
+                    "label": "Display name",
+                    "type": "string",
+                    "relation_depth": 0,
+                    "can_filter": True,
+                    "can_select": True,
+                    "can_group": True,
+                    "can_order": True,
+                    "can_date_bucket": False,
+                }
+            ],
+            "metrics": [],
+            "date_fields": [],
+            "examples": [],
+            "guidance": [],
+        }
+    ]
+    provider = HelpProvider(
+        {
+            "answer": "Try this.",
+            "suggestions": [
+                {
+                    "question": "List Studios with Display name",
+                    "resource_name": "locations",
+                    "fields": ["display_name"],
+                }
+            ],
+        }
+    )
+
+    with pytest.raises(PlanValidationError, match="single visible gym"):
+        build_query_help(
+            "Help me write studio questions",
+            provider=provider,
+            capabilities=payload,
+        )
+
+
 def test_build_query_help_rejects_single_scope_comparison_wording() -> None:
     """Help suggestions must not imply multi-scope access for single scopes."""
 
@@ -287,6 +345,52 @@ def test_build_query_help_rejects_single_scope_comparison_wording() -> None:
     )
 
     with pytest.raises(PlanValidationError, match="single visible facility"):
+        build_query_help(
+            "Help me write order questions",
+            provider=provider,
+            capabilities=payload,
+        )
+
+
+def test_build_query_help_rejects_explicit_scope_dimension_fields() -> None:
+    """Scope fields do not need facility/account/tenant naming to be blocked."""
+
+    payload = capabilities_payload()
+    resource = payload["resources"][0]
+    resource["scope"] = {
+        "level": "single",
+        "kind": "gym",
+        "guidance": "Visible rows are scoped to one gym.",
+    }
+    resource["fields"].append(
+        {
+            "name": "home_box.label",
+            "label": "Home box",
+            "type": "string",
+            "relation_depth": 1,
+            "can_filter": True,
+            "can_select": True,
+            "can_group": True,
+            "can_order": True,
+            "can_date_bucket": False,
+            "scope_dimension": True,
+        }
+    )
+    provider = HelpProvider(
+        {
+            "answer": "Try this.",
+            "suggestions": [
+                {
+                    "question": "Show order count by home box",
+                    "resource_name": "orders",
+                    "fields": ["home_box.label"],
+                    "metrics": ["order_count"],
+                }
+            ],
+        }
+    )
+
+    with pytest.raises(PlanValidationError, match="scope fields"):
         build_query_help(
             "Help me write order questions",
             provider=provider,

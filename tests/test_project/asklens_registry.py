@@ -77,6 +77,7 @@ def register_facilities() -> None:
         ],
         base_queryset=queryset_for_permission(Facility, StaffGrant.FACILITY_VIEW),
         requires_permission=StaffGrant.FACILITY_VIEW,
+        scope_resource=True,
     )
 
 
@@ -93,6 +94,7 @@ def register_member_resources() -> None:
             "member_id": {"label": "Member ID", "llm_visible": False},
             "facility.name": {
                 "label": "Facility",
+                "scope_dimension": True,
                 "requires_permission": StaffGrant.FACILITY_VIEW,
             },
             "gender": {"label": "Gender"},
@@ -117,6 +119,7 @@ def register_member_resources() -> None:
             "member_id": {"label": "Member ID", "llm_visible": False},
             "facility.name": {
                 "label": "Facility",
+                "scope_dimension": True,
                 "requires_permission": StaffGrant.FACILITY_VIEW,
             },
             "first_name": {
@@ -335,6 +338,7 @@ def register_growth_resources() -> None:
             "campaign_id": {"label": "Campaign ID", "llm_visible": False},
             "facility.name": {
                 "label": "Facility",
+                "scope_dimension": True,
                 "requires_permission": StaffGrant.ANALYTICS_VIEW,
             },
             "name": {"label": "Campaign"},
@@ -387,6 +391,7 @@ def register_growth_resources() -> None:
             "lead_id": {"label": "Lead ID", "llm_visible": False},
             "facility.name": {
                 "label": "Facility",
+                "scope_dimension": True,
                 "requires_permission": StaffGrant.FACILITY_VIEW,
             },
             "campaign.name": {"label": "Campaign"},
@@ -428,6 +433,7 @@ def register_schedule_resources() -> None:
             "shift_id": {"label": "Shift ID", "llm_visible": False},
             "facility.name": {
                 "label": "Facility",
+                "scope_dimension": True,
                 "requires_permission": StaffGrant.FACILITY_VIEW,
             },
             "staff_user.username": {"label": "Staff username"},
@@ -551,6 +557,7 @@ def register_support_resources() -> None:
             "ticket_id": {"label": "Ticket ID", "llm_visible": False},
             "facility.name": {
                 "label": "Facility",
+                "scope_dimension": True,
                 "requires_permission": StaffGrant.ANALYTICS_VIEW,
             },
             "category": {"label": "Category"},

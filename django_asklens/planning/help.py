@@ -49,8 +49,8 @@ For each suggestion, include the exact resource_name and referenced field,
 metric, and date_field names from the metadata.
 If a resource scope has level="single", suggestions must be phrased within
 that single visible scope. Do not suggest comparing, grouping, filtering, or
-trending across facilities/accounts/tenants/scopes unless the resource scope
-allows multiple or all scopes and the scope field is visible.
+trending across any scope dimension unless the resource scope allows multiple
+or all scopes and the scope-dimension field is visible.
 Do not suggest internal result-key aliases such as "start_date_month"; say
 "by month using start date" in the natural-language question instead.
 Do not include SQL, code, database rows, sample values, secrets, credentials,
@@ -278,15 +278,14 @@ def validate_suggestion_respects_scope(
         )
         raise PlanValidationError(msg)
 
-    field_labels = {
-        field["name"]: field["label"] for field in resource.get("fields", [])
-    }
+    fields_by_name = {field["name"]: field for field in resource.get("fields", [])}
     blocked_fields = [
         field_name
         for field_name in suggestion.fields
-        if is_scope_dimension_field(
+        if fields_by_name.get(field_name, {}).get("scope_dimension")
+        or is_scope_dimension_field(
             field_name=field_name,
-            field_label=field_labels.get(field_name, field_name),
+            field_label=fields_by_name.get(field_name, {}).get("label", field_name),
             scope_kind=scope_kind,
         )
     ]
@@ -325,8 +324,8 @@ def question_implies_multi_scope(question: str, *, scope_kind: str) -> bool:
         rf"\bper\s+{plural}\b",
         rf"\bgroup(?:ed|ing)?\s+by\s+{kind}\b",
         rf"\bgroup(?:ed|ing)?\s+by\s+{plural}\b",
-        r"\bmulti[-\s]?tenant\b",
-        r"\bcross[-\s]?tenant\b",
+        r"\bacross\s+(?:all\s+)?scopes\b",
+        r"\bcross[-\s]?scope\b",
     ]
     return any(re.search(pattern, lower_question) for pattern in patterns)
 

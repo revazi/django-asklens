@@ -192,3 +192,90 @@ def test_build_capabilities_omits_single_scope_resource_examples() -> None:
     assert resource["examples"] == []
     assert capabilities["examples"] == []
     assert "List Facilities with Facility name" not in str(capabilities)
+
+
+def test_build_capabilities_uses_explicit_scope_metadata_for_arbitrary_names() -> None:
+    """Scope help should not depend on facility/account/tenant naming."""
+
+    capabilities = build_capabilities(
+        permissions={"gym:abc:ReportsView"},
+        catalog={
+            "resources": [
+                {
+                    "name": "locations",
+                    "label": "Studios",
+                    "description": "Visible studios.",
+                    "synonyms": [],
+                    "default_date_field": "opened_at",
+                    "requires_permission": "ReportsView",
+                    "scope_resource": True,
+                    "fields": [
+                        {
+                            "name": "display_name",
+                            "label": "Display name",
+                            "type": "string",
+                            "relation_depth": 0,
+                        },
+                        {
+                            "name": "opened_at",
+                            "label": "Opened date",
+                            "type": "datetime",
+                            "relation_depth": 0,
+                        },
+                    ],
+                    "metrics": [
+                        {
+                            "name": "studio_count",
+                            "label": "Studios",
+                            "op": "count",
+                            "field": "display_name",
+                        }
+                    ],
+                },
+                {
+                    "name": "bookings",
+                    "label": "Bookings",
+                    "description": "Bookings.",
+                    "synonyms": [],
+                    "default_date_field": "booked_at",
+                    "requires_permission": "ReportsView",
+                    "fields": [
+                        {
+                            "name": "home_box.label",
+                            "label": "Home box",
+                            "type": "string",
+                            "relation_depth": 1,
+                            "scope_dimension": True,
+                        },
+                        {
+                            "name": "status",
+                            "label": "Status",
+                            "type": "string",
+                            "relation_depth": 0,
+                        },
+                        {
+                            "name": "booked_at",
+                            "label": "Booked date",
+                            "type": "datetime",
+                            "relation_depth": 0,
+                        },
+                    ],
+                    "metrics": [
+                        {
+                            "name": "booking_count",
+                            "label": "Bookings",
+                            "op": "count",
+                            "field": "status",
+                        }
+                    ],
+                },
+            ]
+        },
+    )
+
+    resources = {resource["name"]: resource for resource in capabilities["resources"]}
+    assert resources["locations"]["scope"]["level"] == "single"
+    assert resources["locations"]["examples"] == []
+    assert resources["bookings"]["fields"][0]["scope_dimension"] is True
+    assert "Home box" not in str(resources["bookings"]["examples"])
+    assert "Show count of Bookings by Status" in resources["bookings"]["examples"]

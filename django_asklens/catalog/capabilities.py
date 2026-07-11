@@ -35,6 +35,7 @@ class CapabilityField(TypedDict):
     can_date_bucket: bool
     sensitive: NotRequired[bool]
     requires_permission: NotRequired[str]
+    scope_dimension: NotRequired[bool]
 
 
 class CapabilityMetric(TypedDict):
@@ -69,6 +70,7 @@ class CapabilityResource(TypedDict):
     guidance: list[str]
     scope: CapabilityScope
     requires_permission: NotRequired[str]
+    scope_resource: NotRequired[bool]
 
 
 class CapabilitiesSnapshot(TypedDict):
@@ -163,8 +165,8 @@ def build_limitations() -> list[str]:
             "sample values."
         ),
         (
-            "Tenant and row-level scope still depends on each resource base "
-            "queryset for the current request."
+            "Row-level scope still depends on each resource base queryset "
+            "for the current request."
         ),
     ]
 
@@ -210,6 +212,8 @@ def build_resource_capability(
     }
     if resource.get("requires_permission"):
         capability["requires_permission"] = resource["requires_permission"]
+    if resource.get("scope_resource"):
+        capability["scope_resource"] = True
     return capability
 
 
@@ -221,9 +225,10 @@ def infer_capability_scope(
     """Infer sanitized scope metadata from permission tokens.
 
     AskLens treats permission strings as opaque for authorization, but it also
-    recognizes common scoped tokens such as ``facility:123:ReportView`` to give
-    LLMs safe guidance about whether examples may imply cross-scope access. The
-    returned metadata never includes scope identifiers or tenant names.
+    recognizes generic scoped tokens shaped as
+    ``<scope-kind>:<opaque-scope-id>:<permission>`` to give LLMs safe guidance
+    about whether examples may imply cross-scope access. The returned metadata
+    never includes scope identifiers or scope names.
     """
 
     if required_permission is None:
@@ -340,6 +345,8 @@ def build_field_capability(field: FieldCatalogItem) -> CapabilityField:
         capability["sensitive"] = True
     if field.get("requires_permission"):
         capability["requires_permission"] = field["requires_permission"]
+    if field.get("scope_dimension"):
+        capability["scope_dimension"] = True
     return capability
 
 
@@ -421,6 +428,9 @@ def is_single_scope_resource(
 
     if scope["level"] != "single" or "kind" not in scope:
         return False
+    if resource.get("scope_resource"):
+        return True
+
     kind = humanize_scope_kind(scope["kind"]).lower()
     plural = pluralize_scope_kind(scope["kind"]).lower()
     candidates = {
@@ -438,8 +448,8 @@ def filter_single_scope_dimension_fields(
 ) -> list[CapabilityField]:
     """Remove single-scope dimensions from examples.
 
-    If a request is scoped to one facility/account/etc., examples like "by
-    facility" imply comparisons the user cannot make. Query execution remains
+    If a request is scoped to one row-scope value, examples that use that scope
+    dimension imply comparisons the user cannot make. Query execution remains
     safe either way; this only improves help UX and provider guidance.
     """
 
@@ -449,7 +459,8 @@ def filter_single_scope_dimension_fields(
     return [
         field
         for field in fields
-        if not is_scope_dimension_field(
+        if not field.get("scope_dimension")
+        and not is_scope_dimension_field(
             field_name=field["name"],
             field_label=field["label"],
             scope_kind=kind,

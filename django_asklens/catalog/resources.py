@@ -43,6 +43,7 @@ class FieldCatalogItem(TypedDict):
     filter_only: NotRequired[bool]
     requires_permission: NotRequired[str]
     metric: NotRequired[bool]
+    scope_dimension: NotRequired[bool]
 
 
 class ResourceCatalogItem(TypedDict):
@@ -56,6 +57,7 @@ class ResourceCatalogItem(TypedDict):
     fields: list[FieldCatalogItem]
     metrics: list[MetricCatalogItem]
     requires_permission: NotRequired[str]
+    scope_resource: NotRequired[bool]
     model: NotRequired[str]
 
 
@@ -74,6 +76,7 @@ ALLOWED_FIELD_CONFIG_KEYS = {
     "requires_permission",
     "result_visible",
     "sensitive",
+    "scope_dimension",
     "type",
 }
 DATE_FIELD_TYPES = {"date", "datetime"}
@@ -124,6 +127,7 @@ class FieldSpec:
     filter_only: bool = False
     requires_permission: str | None = None
     metric: bool = False
+    scope_dimension: bool = False
 
     def is_catalog_visible(
         self,
@@ -176,6 +180,8 @@ class FieldSpec:
             data["requires_permission"] = self.requires_permission
         if self.metric:
             data["metric"] = True
+        if self.scope_dimension:
+            data["scope_dimension"] = True
         return data
 
 
@@ -193,6 +199,7 @@ class SemanticResource:
     metrics: Mapping[str, Metric] = field(default_factory=dict)
     base_queryset: BaseQuerySetHook | None = None
     requires_permission: str | None = None
+    scope_resource: bool = False
 
     def __post_init__(self) -> None:
         """Store resource metadata as effectively immutable mappings."""
@@ -214,12 +221,14 @@ class SemanticResource:
         metrics: Sequence[Metric] | None = None,
         base_queryset: BaseQuerySetHook | None = None,
         requires_permission: str | None = None,
+        scope_resource: bool = False,
     ) -> "SemanticResource":
         """Build and validate a semantic resource from developer configuration."""
 
         validate_model(model)
         validate_base_queryset(base_queryset)
         validate_requires_permission(requires_permission)
+        validate_scope_resource(scope_resource)
 
         resource_label = label or str(model._meta.verbose_name_plural).title()
         resource_name = normalize_resource_name(name or resource_label)
@@ -246,6 +255,7 @@ class SemanticResource:
             metrics=metric_specs,
             base_queryset=base_queryset,
             requires_permission=requires_permission,
+            scope_resource=scope_resource,
         )
 
     def get_base_queryset(self, request: Any = None) -> QuerySet:
@@ -298,6 +308,8 @@ class SemanticResource:
         }
         if self.requires_permission:
             data["requires_permission"] = self.requires_permission
+        if self.scope_resource:
+            data["scope_resource"] = True
         if include_internal:
             data["model"] = self.model._meta.label
         return data
@@ -310,8 +322,9 @@ def permission_set_allows(
 
     Exact permission strings are accepted. Scoped permission tokens that end with
     ``:<required_permission>`` are also accepted so projects can return values
-    such as ``facility:123:BillingReportsView`` from a request-permission hook
-    while AskLens still validates against the registered field permission name.
+    shaped as ``<scope-kind>:<opaque-scope-id>:<required_permission>`` from a
+    request-permission hook while AskLens still validates against the registered
+    field permission name.
     Row-level access must still be enforced by resource ``base_queryset`` hooks.
     """
 
@@ -355,6 +368,14 @@ def validate_requires_permission(requires_permission: str | None) -> None:
 
     if requires_permission is not None and not isinstance(requires_permission, str):
         msg = "requires_permission must be a string when provided."
+        raise InvalidResourceError(msg)
+
+
+def validate_scope_resource(scope_resource: bool) -> None:
+    """Validate resource-level scope metadata."""
+
+    if not isinstance(scope_resource, bool):
+        msg = "scope_resource must be a boolean when provided."
         raise InvalidResourceError(msg)
 
 
@@ -502,6 +523,11 @@ def build_field_specs(
             ),
             requires_permission=requires_permission,
             metric=get_bool_field_config(field_config, "metric", default=False),
+            scope_dimension=get_bool_field_config(
+                field_config,
+                "scope_dimension",
+                default=False,
+            ),
         )
 
     return field_specs

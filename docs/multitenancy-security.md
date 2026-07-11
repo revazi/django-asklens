@@ -28,6 +28,7 @@ register(
             "sensitive": True,
             "result_visible": True,
             "requires_permission": "accounts.view_account",
+            "scope_dimension": True,
         },
     },
     metrics=[Metric("order_count", op="count", field="id")],
@@ -43,7 +44,7 @@ Fields marked `sensitive=True` are hidden from normal catalog serialization. If 
 
 By default, QueryPlan validation checks `request.user.get_all_permissions()` in the API flow. A crafted provider response that selects or filters a permission-gated field fails before ORM compilation unless the request has the required permission string.
 
-Projects with role tables, tenant-scoped staff permissions, or non-Django permission systems can configure `DJANGO_ASKLENS["REQUEST_PERMISSIONS_GETTER"]` with a callable or import string. The callable receives the request and returns permission strings used for catalog serialization, planner prompts, and API QueryPlan validation.
+Projects with role tables, tenant-scoped staff permissions, or non-Django permission systems can configure `DJANGO_ASKLENS["REQUEST_PERMISSIONS_GETTER"]` with a callable or import string. The callable receives the request and returns permission strings used for catalog serialization, planner prompts, API QueryPlan validation, and sanitized capabilities scope guidance.
 
 ```python
 DJANGO_ASKLENS = {
@@ -73,6 +74,8 @@ def get_request_permissions(request):
 ```
 
 Catalog serialization is permission-scoped. The catalog endpoint and planner prompt include permission-gated sensitive fields only when the configured permission getter returns the required permission string. Metrics whose source field is hidden are also hidden.
+
+For capabilities/help UX, AskLens can infer generic row-scope breadth from scoped permission tokens shaped as `<scope-kind>:<opaque-scope-id>:<permission>`, for example `account:123:orders.view_reports`, `organization:abc:orders.view_reports`, or any other project-specific scope kind. The scope kind is used only for generic wording such as single-scope vs multi-scope guidance. Scope IDs are not included in capabilities output or sent to providers. If your schema names do not match the scope kind, mark fields with `scope_dimension=True` and resources with `scope_resource=True` during registration so help suggestions do not imply broader access than the request has.
 
 ## Route-level gates
 
