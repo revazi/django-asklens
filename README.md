@@ -86,9 +86,12 @@ register(
         Metric("order_count", op="count", field="id", label="Orders"),
         Metric("revenue", op="sum", field="total_cents", label="Revenue"),
     ],
+    requires_permission="orders.view_reports",
     base_queryset=visible_orders,
 )
 ```
+
+`requires_permission` on the resource gates catalog visibility and query validation for the whole resource. Field-level `requires_permission` gates individual fields such as PII.
 
 Start with the deterministic dummy provider:
 

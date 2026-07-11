@@ -41,6 +41,6 @@ Use this checklist before enabling AskLens outside local development.
 
 - [ ] Consider a read-only database role or replica as defense in depth if your deployment can enforce it outside AskLens.
 - [ ] Monitor query volume and slow queries using normal Django/database tooling.
-- [ ] Review logs to ensure errors do not include stack traces, secrets, raw credentials, provider payload dumps, or private row values.
+- [ ] Review logs to ensure errors do not include stack traces, secrets, raw credentials, provider payload dumps, or sensitive row values.
 
 AskLens is a data access surface. If in doubt, register less data and add fields/metrics only after review.

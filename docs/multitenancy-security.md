@@ -32,15 +32,16 @@ register(
         },
     },
     metrics=[Metric("order_count", op="count", field="id")],
+    requires_permission="orders.view_reports",
     base_queryset=visible_orders,
 )
 ```
 
 Use this hook for tenant isolation and row-level visibility. Do not register resources with unrestricted querysets in multi-tenant apps.
 
-## Field permissions
+## Resource and field permissions
 
-Fields marked `sensitive=True` are hidden from normal catalog serialization. If a sensitive field should be usable in results, opt it in explicitly with `result_visible=True` and protect it with `requires_permission`.
+Use resource-level `requires_permission` on `register()` to hide and reject an entire resource unless the current request has the required permission string. Fields marked `sensitive=True` are hidden from normal catalog serialization. If a sensitive field should be usable in results, opt it in explicitly with `result_visible=True` and protect it with field-level `requires_permission`.
 
 By default, QueryPlan validation checks `request.user.get_all_permissions()` in the API flow. A crafted provider response that selects or filters a permission-gated field fails before ORM compilation unless the request has the required permission string.
 

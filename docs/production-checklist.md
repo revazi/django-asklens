@@ -74,7 +74,7 @@ AskLens is a data access surface. Configure it as carefully as any reporting, an
 - [ ] Keep `LOG_LLM_IO` disabled in production unless explicitly approved.
 - [ ] If provider I/O logging is enabled for debugging, treat logs as sensitive.
 - [ ] Confirm logs exclude authorization headers and API keys.
-- [ ] Confirm errors do not include tracebacks, secrets, raw credentials, or private row values.
+- [ ] Confirm errors do not include tracebacks, secrets, raw credentials, or sensitive row values.
 
 ## UI and saved queries
 
@@ -96,5 +96,5 @@ AskLens is a data access surface. Configure it as carefully as any reporting, an
 - [ ] Full test suite passes.
 - [ ] Live provider validation passes for representative roles.
 - [ ] Security checklist is complete.
-- [ ] No private data, sample rows, provider payload logs, `.env` files, or credentials are committed.
+- [ ] No sensitive data, sample rows, provider payload logs, `.env` files, or credentials are committed.
 - [ ] Maintainer/security owner approves the deployment scope.

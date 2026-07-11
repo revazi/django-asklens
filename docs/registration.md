@@ -21,6 +21,7 @@ resource = register(
         "total": {"label": "Order total", "metric": True},
     },
     metrics=[Metric("order_count", op="count", field="id")],
+    requires_permission="orders.view_reports",
     base_queryset=lambda request: Order.objects.filter(account=request.user.account),
 )
 ```
@@ -35,6 +36,7 @@ resource = register(
 - `synonyms`: optional alternate words for the resource.
 - `default_date_field`: registered date/datetime field used by date-oriented planning.
 - `metrics`: explicit aggregate metrics available to plans.
+- `requires_permission`: optional permission string required to see and query the whole resource.
 - `base_queryset`: request-aware hook for tenant and row-level scoping.
 - `scope_resource`: optional boolean. Set `True` when this resource represents the scoped entity itself, regardless of what your project calls that entity.
 - `examples_enabled`: optional boolean, default `True`. Set `False` for helper/lookup resources that should remain queryable but should not generate deterministic “suggested question” examples.
@@ -58,6 +60,35 @@ Supported field config keys:
 ```
 
 Defaults are conservative for catalog exposure: sensitive fields and hidden fields are not included in normal planner catalog serialization.
+
+## Resource and field permissions
+
+Use resource-level `requires_permission` when the entire resource should be visible/queryable only to users with a permission string:
+
+```python
+register(
+    model=Order,
+    name="orders",
+    fields={"id": {"label": "Order ID"}},
+    requires_permission="orders.view_reports",
+    base_queryset=lambda request: Order.objects.filter(account=request.user.account),
+)
+```
+
+Use field-level `requires_permission` for individual fields that need stronger access than the resource:
+
+```python
+fields={
+    "status": {"label": "Status"},
+    "customer.email": {
+        "label": "Customer email",
+        "sensitive": True,
+        "requires_permission": "customers.view_pii",
+    },
+}
+```
+
+By default, AskLens checks `request.user.get_all_permissions()` in the API flow. If your project uses role tables, tenant-scoped grants, or another permission system, configure `DJANGO_ASKLENS["REQUEST_PERMISSIONS_GETTER"]`; see [Multi-tenant security](multitenancy-security.md).
 
 Use `scope_dimension=True` for any field that identifies the user's row scope, whatever your schema calls it, such as `account.name`, `organization.title`, `gym.label`, or another project-specific relation. Use `scope_resource=True` when the whole resource represents the scoped entity. These flags only shape capabilities/help examples; row access must still be enforced by `base_queryset(request)`.
 

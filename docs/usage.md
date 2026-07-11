@@ -8,6 +8,13 @@ AskLens only queries resources that your project explicitly registers. Register 
 from django_asklens import Metric, register
 from shop.models import Order
 
+
+def visible_orders(request):
+    if not getattr(request.user, "is_authenticated", False):
+        return Order.objects.none()
+    return Order.objects.filter(account__memberships__user=request.user)
+
+
 register(
     model=Order,
     name="orders",
@@ -18,17 +25,23 @@ register(
         "id": {"label": "Order ID"},
         "status": {"label": "Status"},
         "created_at": {"label": "Created date"},
-        "customer.email": {"label": "Customer email", "sensitive": True},
+        "customer.email": {
+            "label": "Customer email",
+            "sensitive": True,
+            "requires_permission": "customers.view_pii",
+        },
         "total": {"label": "Order total", "metric": True},
     },
     metrics=[
         Metric("order_count", op="count", field="id", label="Number of orders"),
         Metric("revenue", op="sum", field="total", label="Revenue"),
     ],
+    requires_permission="orders.view_reports",
+    base_queryset=visible_orders,
 )
 ```
 
-Sensitive fields are hidden from the default catalog serialization. Hidden fields and internal model names are not sent to the planner prompt by default.
+Resource-level `requires_permission` gates the whole resource. Field-level `requires_permission` gates individual fields. Sensitive fields are hidden from the default catalog serialization. Hidden fields and internal model names are not sent to the planner prompt by default.
 
 ## 2. Configure a provider
 
