@@ -17,6 +17,7 @@ DEFAULTS: dict[str, Any] = {
     "MAX_JOINS": 2,
     "MAX_METRICS": 5,
     "MAX_GROUP_BY": 3,
+    "PROMPT_RESOURCE_SHORTLIST_LIMIT": 0,
     "ALLOW_RAW_SQL": False,
     "SEND_SAMPLE_ROWS_TO_LLM": False,
     "DEFAULT_VISUALIZATION": "table",

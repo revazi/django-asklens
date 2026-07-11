@@ -264,6 +264,157 @@ def test_plan_asklens_response_synthesizes_help_suggestion_plans() -> None:
     assert suggestion.plan["intent"] == "aggregate"
 
 
+def multi_resource_capabilities_payload() -> dict[str, Any]:
+    """Return capabilities with more than one visible resource."""
+
+    capabilities = capabilities_payload()
+    capabilities["summary"] = "You can query Orders and Payment attempts."
+    capabilities["resources"] = [
+        *capabilities["resources"],
+        {
+            "name": "payment_attempts",
+            "label": "Payment attempts",
+            "description": "Payment collection attempts.",
+            "synonyms": ["payments"],
+            "default_date_field": "created_at",
+            "fields": [
+                {
+                    "name": "status",
+                    "label": "Status",
+                    "type": "string",
+                    "relation_depth": 0,
+                    "can_filter": True,
+                    "can_select": True,
+                    "can_group": True,
+                    "can_order": True,
+                    "can_date_bucket": False,
+                },
+                {
+                    "name": "created_at",
+                    "label": "Created date",
+                    "type": "datetime",
+                    "relation_depth": 0,
+                    "can_filter": True,
+                    "can_select": True,
+                    "can_group": True,
+                    "can_order": True,
+                    "can_date_bucket": True,
+                },
+            ],
+            "metrics": [
+                {
+                    "name": "payment_amount",
+                    "label": "Payment amount",
+                    "op": "sum",
+                    "field": "status",
+                }
+            ],
+            "date_fields": [
+                {
+                    "name": "created_at",
+                    "label": "Created date",
+                    "type": "datetime",
+                    "relation_depth": 0,
+                    "can_filter": True,
+                    "can_select": True,
+                    "can_group": True,
+                    "can_order": True,
+                    "can_date_bucket": True,
+                }
+            ],
+            "examples": ["Show payment amount by Status"],
+            "guidance": [],
+            "scope": {"level": "unknown", "guidance": "Use visible rows."},
+        },
+    ]
+    capabilities["examples"] = [
+        "Show count of Orders by Status",
+        "Show payment amount by Status",
+    ]
+    return capabilities
+
+
+def test_plan_asklens_response_default_prompt_keeps_all_resources() -> None:
+    """Alpha default should not rely on heuristic resource shortlisting."""
+
+    provider = UnifiedProvider(
+        {"response_type": "query", "query_plan": valid_query_plan_payload()}
+    )
+
+    plan_asklens_response(
+        "Show orders by status",
+        provider=provider,
+        registry=build_registry(),
+        capabilities=multi_resource_capabilities_payload(),
+    )
+
+    assert provider.messages is not None
+    prompt_text = "\n".join(message["content"] for message in provider.messages)
+    assert '"name": "orders"' in prompt_text
+    assert "payment_attempts" in prompt_text
+    assert '"date_fields"' not in prompt_text
+    assert '"examples"' not in prompt_text
+
+
+def test_plan_asklens_response_shortlists_data_question_prompt(settings) -> None:
+    """Likely data questions should send only likely visible resources."""
+
+    settings.DJANGO_ASKLENS = {"PROMPT_RESOURCE_SHORTLIST_LIMIT": 1}
+    provider = UnifiedProvider(
+        {"response_type": "query", "query_plan": valid_query_plan_payload()}
+    )
+
+    plan_asklens_response(
+        "Show orders by status",
+        provider=provider,
+        registry=build_registry(),
+        capabilities=multi_resource_capabilities_payload(),
+    )
+
+    assert provider.messages is not None
+    prompt_text = "\n".join(message["content"] for message in provider.messages)
+    assert '"name": "orders"' in prompt_text
+    assert "payment_attempts" not in prompt_text
+    assert '"date_fields"' not in prompt_text
+    assert '"examples"' not in prompt_text
+
+
+def test_plan_asklens_response_keeps_full_prompt_for_explicit_help(settings) -> None:
+    """Explicit help questions should keep full visible capabilities metadata."""
+
+    settings.DJANGO_ASKLENS = {"PROMPT_RESOURCE_SHORTLIST_LIMIT": 1}
+    provider = UnifiedProvider(
+        {
+            "response_type": "capabilities",
+            "query_help": {
+                "answer": "Try these examples.",
+                "suggestions": [
+                    {
+                        "question": "Show order count by status",
+                        "resource_name": "orders",
+                        "fields": ["status"],
+                        "metrics": ["order_count"],
+                    }
+                ],
+            },
+        }
+    )
+
+    plan_asklens_response(
+        "show me example queries",
+        provider=provider,
+        registry=build_registry(),
+        capabilities=multi_resource_capabilities_payload(),
+    )
+
+    assert provider.messages is not None
+    prompt_text = "\n".join(message["content"] for message in provider.messages)
+    assert '"name": "orders"' in prompt_text
+    assert "payment_attempts" in prompt_text
+    assert '"date_fields"' in prompt_text
+    assert '"examples"' in prompt_text
+
+
 def test_plan_asklens_response_filters_invalid_help_suggestions() -> None:
     """Provider help suggestions still fail closed against capabilities."""
 

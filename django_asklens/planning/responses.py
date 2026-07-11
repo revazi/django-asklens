@@ -17,6 +17,8 @@ from django_asklens.planning.help import (
     requested_suggestion_count,
     validate_query_help,
 )
+from django_asklens.planning.intents import is_capabilities_fallback_question
+from django_asklens.planning.optimization import build_provider_prompt_capabilities
 from django_asklens.planning.prompts import stable_json_dumps
 from django_asklens.planning.schemas import (
     PLAN_MODEL_CONFIG,
@@ -26,6 +28,7 @@ from django_asklens.planning.schemas import (
     parse_plan_payload,
 )
 from django_asklens.planning.validation import PlanLimits, parse_and_validate_query_plan
+from django_asklens.settings import get_asklens_setting
 
 ResponseType = Literal["query", "capabilities"]
 
@@ -119,10 +122,16 @@ def plan_asklens_response(
 
     permission_set = tuple(permissions or ())
     selected_provider = provider or get_llm_provider()
+    prompt_capabilities = build_provider_prompt_capabilities(
+        question=question,
+        capabilities=capabilities,
+        full_capabilities=is_capabilities_fallback_question(question),
+        max_resources=int(get_asklens_setting("PROMPT_RESOURCE_SHORTLIST_LIMIT")),
+    )
     payload = selected_provider.complete_json(
         messages=build_unified_response_messages(
             question=question,
-            capabilities=capabilities,
+            capabilities=prompt_capabilities,
             suggestion_count=requested_suggestion_count(question),
         ),
         schema=get_asklens_provider_response_json_schema(),
@@ -165,7 +174,7 @@ def plan_asklens_response(
 def build_unified_response_messages(
     *,
     question: str,
-    capabilities: CapabilitiesSnapshot,
+    capabilities: Mapping[str, Any],
     suggestion_count: int,
 ) -> tuple[LLMMessage, ...]:
     """Build messages for a single provider query/help decision."""

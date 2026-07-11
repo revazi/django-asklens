@@ -100,6 +100,24 @@ AskLens sends:
 
 AskLens must not send sample database rows, secrets, credentials, `.env` content, or unregistered/unauthorized sensitive fields by default.
 
+## Prompt-size optimization
+
+Live `/asklens/query/` calls use permission-scoped capabilities metadata for provider prompts. By default, AskLens sends all visible resources in a compact provider-facing shape so the provider can choose among the user's full allowed catalog.
+
+Resource shortlisting is available as an opt-in prompt-size optimization for larger catalogs. When enabled, likely data questions send only the top matching visible resources before the provider call. This can reduce prompt size and cost, but it is not an authorization decision: every returned plan is still validated against the full catalog, request permissions, and limits before execution.
+
+Explicit help/capability questions such as `show me example queries` always keep the full visible capabilities payload so users can discover everything available to them.
+
+The alpha default is `0`, which disables resource shortlisting:
+
+```python
+DJANGO_ASKLENS = {
+    "PROMPT_RESOURCE_SHORTLIST_LIMIT": 0,
+}
+```
+
+To opt into data-question resource shortlisting, set a positive value such as `4` after validating representative questions against your catalog.
+
 ## Testing live providers
 
 Default tests never call live providers and require no API keys.
