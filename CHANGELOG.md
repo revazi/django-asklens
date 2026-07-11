@@ -19,12 +19,12 @@ The project is pre-alpha and APIs may change before the first public alpha.
 - Multi-tenant API security tests covering base-queryset scoping, permission-gated fields, route permission gates, and permission-scoped catalog/planner metadata.
 - OpenAI-compatible provider using Python stdlib HTTP.
 - Mocked and opt-in live provider tests.
-- Private real-project integration checklist and templates for multi-tenant validation.
+- Public security, production-readiness, provider, custom-UI, and multi-tenant guidance for alpha adopters.
 - Configurable request-permission getter for projects with role-based or staff permission systems outside Django's default `user.get_all_permissions()`.
 - Runnable complex test project with admin-enabled demo settings, synthetic tenant-scoped grants, and complex member/subscription/billing/payment/session resources.
-- Dedicated Django admin AskLens query page that runs validated queries, displays result rows, and reuses existing successful audit records for repeated questions.
+- Dedicated Django admin AskLens query page that runs the same shared query/help orchestration as the DRF API and displays result rows or capability guidance.
 - Demo seed command creates a local admin superuser, staff users with varied synthetic tenant/reporting grants, and richer per-facility synthetic data.
-- Demo-only AskLens frontend page that calls the catalog/query APIs and displays returned data with switchable client-side views.
+- Packaged optional AskLens frontend page that calls the catalog/query APIs and displays returned data with switchable client-side views.
 - Tenant-scoped demo permission tokens for complex test-project grants, including regression coverage for facility-level row separation.
 - Resource-level permission scoping for catalog visibility and plan validation, plus permission-filtered demo questions.
 - Environment-driven live OpenAI-compatible planner mode for the runnable complex demo project.
@@ -42,10 +42,15 @@ The project is pre-alpha and APIs may change before the first public alpha.
 - Tolerated missing `visualization.y` for unambiguous single-metric aggregate plans by inferring the requested metric, and ignored accidental table visualization axes, reducing live-LLM failures for generated metric/table questions.
 - Added a unified live provider response path for `/asklens/query/`: one LLM call now decides whether to return a data `QueryPlan` or capability `QueryHelp`, using permission-scoped capabilities metadata once. QueryHelp suggestions use provider-generated questions plus catalog references; AskLens synthesizes and validates executable QueryPlans locally, filters invalid suggestions before display, and the demo can execute clicked suggestions with the validated plan without making another LLM call.
 - Added opt-in `LOG_LLM_IO` provider logging for local live-LLM debugging; logs include sanitized provider request/response payloads without API keys or authorization headers.
+- Added `response_type: "query"` and `result_metadata` to successful data responses so API clients can distinguish query/help responses and display alpha-safe limit guidance.
+- Added opt-in provider prompt resource shortlisting with alpha default disabled (`PROMPT_RESOURCE_SHORTLIST_LIMIT=0`) so providers see all visible resources in compact form unless projects opt into prompt reduction.
+- Added deterministic offline help improvements: generated suggestions include catalog references and locally validated plans when possible.
+- Added safer provider-help fallback diagnostics that avoid exposing raw validation details or provider payloads.
+- Added GitHub Actions CI for Python 3.12 and 3.13 with tests, Ruff lint/format checks, Django checks, migration drift checks, package build/Twine checks, artifact guards, and wheel-install smoke testing.
 
 ### Security
 
-- No raw SQL execution path in the MVP.
+- No raw SQL execution path.
 - No write/update/delete query intents.
 - No sample database rows sent to providers by default.
 - Sensitive and hidden fields excluded from default planner catalog serialization.

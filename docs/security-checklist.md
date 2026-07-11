@@ -14,7 +14,7 @@ Use this checklist before enabling AskLens outside local development.
 
 ## Query safety
 
-- [ ] Keep `ALLOW_RAW_SQL` disabled. The MVP has no raw SQL execution path.
+- [ ] Keep `ALLOW_RAW_SQL` disabled. AskLens has no raw SQL execution path.
 - [ ] Keep `SEND_SAMPLE_ROWS_TO_LLM` disabled.
 - [ ] Set conservative `MAX_ROWS`, `MAX_JOINS`, `MAX_METRICS`, and `MAX_GROUP_BY` values.
 - [ ] Confirm validation rejects unknown resources, fields, metrics, operators, mutation intents, and raw-SQL-like payloads.

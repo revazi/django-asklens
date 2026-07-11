@@ -49,7 +49,7 @@ AskLens is a data access surface. Configure it as carefully as any reporting, an
 
 ## Limits and query safety
 
-- [ ] Keep `ALLOW_RAW_SQL` disabled. The MVP has no raw SQL execution path.
+- [ ] Keep `ALLOW_RAW_SQL` disabled. AskLens has no raw SQL execution path.
 - [ ] Keep `SEND_SAMPLE_ROWS_TO_LLM` disabled.
 - [ ] Set conservative values for:
   - [ ] `MAX_ROWS`

@@ -32,7 +32,7 @@ Sensitive fields are hidden from the default catalog serialization. Hidden field
 
 ## 2. Configure a provider
 
-The MVP ships with `DummyProvider`, which maps exact questions to deterministic `QueryPlan` payloads. It is useful for tests, local demos, and evaluation fixtures.
+AskLens ships with `DummyProvider`, which maps exact questions to deterministic `QueryPlan` payloads. It is useful for tests, local demos, and evaluation fixtures.
 
 ```python
 DJANGO_ASKLENS = {
@@ -212,6 +212,6 @@ payload = result.to_dict()
 - Only list and aggregate intents are supported.
 - Only registered resources, fields, and metrics are queryable.
 - List responses are capped by `MAX_ROWS`; use filters, ordering, and explicit limits to narrow large result sets.
-- No raw SQL mode exists in the MVP.
+- No raw SQL mode exists in AskLens.
 - No write/update/delete actions are supported.
 - Live LLM providers are opt-in; the dummy provider remains the default.

@@ -4,7 +4,7 @@ Evaluation fixtures are deterministic question-to-plan cases used to verify plan
 
 The current fixture app is `tests.test_project`, which defines `Customer` and `Order` models. Golden cases live under `tests/evaluation/` and use `DummyProvider` so they require no API keys and make no network calls.
 
-## MVP golden-case themes
+## Golden-case themes
 
 - Aggregate orders by status as a bar chart.
 - Count orders with a metric visualization.

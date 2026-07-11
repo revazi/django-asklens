@@ -63,7 +63,7 @@ Use `scope_dimension=True` for any field that identifies the user's row scope, w
 
 ## Metrics
 
-MVP aggregate queries must use explicit `Metric(...)` definitions.
+Aggregate queries currently use explicit `Metric(...)` definitions.
 
 ```python
 Metric("revenue", op="sum", field="total", label="Revenue")
