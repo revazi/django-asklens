@@ -59,7 +59,7 @@ Use the capabilities endpoint to show users what AskLens can answer for the curr
 GET /asklens/capabilities/
 ```
 
-A response includes visible resources, exposed fields, metrics, date fields, example questions, supported patterns, and limitations. Users can also ask capability/help questions through `/asklens/query/`; live/custom providers classify those semantically with a strict `QuestionIntent` schema, then generate suggested AskLens questions with a strict `QueryHelp` schema using only the visible capabilities metadata. Provider-backed suggestions must include a QueryPlan in the same response; AskLens validates that plan locally and filters invalid suggestions before returning help. Dummy/offline mode uses deterministic examples for obvious help questions such as `What can I query?`.
+A response includes visible resources, exposed fields, metrics, date fields, example questions, supported patterns, and limitations. Users can also ask capability/help questions through `/asklens/query/`. In live mode, AskLens uses one unified provider call to decide whether the request is a data query or capability help, using visible capabilities metadata once. Provider-backed suggestions include catalog references, and AskLens synthesizes/validates executable QueryPlans from those references locally before returning help. Dummy/offline mode uses deterministic examples for obvious help questions such as `What can I query?`.
 
 ```json
 {
@@ -85,7 +85,7 @@ Content-Type: application/json
 {"question": "Show orders by status"}
 ```
 
-A successful data-query response includes the question, validated plan, column metadata, normalized rows, visualization hint, timing, and audit run id. Advanced clients may submit a previously returned `query_help.suggestions[].plan` with the question; AskLens revalidates the plan against the current request permissions and executes it directly instead of making another planner LLM call.
+A successful data-query response includes the question, validated plan, column metadata, normalized rows, visualization hint, timing, and audit run id. In live mode, deciding between data query and capability help plus producing the data `QueryPlan` happens in one provider call. Advanced clients may submit a previously returned `query_help.suggestions[].plan` with the question; AskLens revalidates the plan against the current request permissions and executes it directly instead of making another LLM call.
 
 ```json
 {
@@ -102,7 +102,7 @@ A successful data-query response includes the question, validated plan, column m
 }
 ```
 
-Capability/help questions return a non-row response and do not execute a database query. In live mode, `query_help_source` is `semantic_provider` when suggestions came from the configured LLM and passed catalog-reference plus embedded-plan validation:
+Capability/help questions return a non-row response and do not execute a database query. In live mode, `query_help_source` is `semantic_provider` when the unified provider response chose capability help and suggestions passed catalog-reference plus locally synthesized plan validation:
 
 ```json
 {

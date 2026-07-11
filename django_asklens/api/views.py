@@ -22,7 +22,7 @@ from django_asklens.catalog.registry import serialize_catalog
 from django_asklens.exceptions import AskLensError
 from django_asklens.execution import run_query_plan
 from django_asklens.models import SemanticQueryRun
-from django_asklens.planning import plan_question
+from django_asklens.planning import plan_asklens_response, plan_question
 from django_asklens.planning.help import (
     QueryHelp,
     build_deterministic_query_help,
@@ -30,7 +30,9 @@ from django_asklens.planning.help import (
 )
 from django_asklens.planning.intents import (
     QuestionIntent,
+    capabilities_intent,
     filter_capabilities_for_intent,
+    is_capabilities_fallback_question,
     route_question_intent,
 )
 from django_asklens.planning.validation import parse_and_validate_query_plan
@@ -82,44 +84,68 @@ class QueryView(AskLensAPIView):
         permissions = get_request_permissions(request)
 
         try:
-            routing_result = route_question_intent(question, permissions=permissions)
-            if routing_result.intent.intent == "capabilities":
-                capabilities = filter_capabilities_for_intent(
-                    build_capabilities(permissions=permissions),
-                    routing_result.intent,
+            if provided_plan is not None:
+                plan = parse_and_validate_query_plan(
+                    provided_plan,
+                    permissions=permissions,
                 )
-                (
-                    query_help,
-                    query_help_source,
-                    query_help_error,
-                ) = get_query_help_for_capabilities(
+            elif should_use_unified_provider_response():
+                capabilities = build_capabilities(permissions=permissions)
+                provider_result = plan_asklens_response(
                     question,
                     capabilities=capabilities,
                     permissions=permissions,
                 )
-                return Response(
-                    build_capabilities_payload(
-                        question,
-                        intent=routing_result.intent,
-                        source=routing_result.source,
-                        capabilities=capabilities,
-                        query_help=query_help,
-                        query_help_source=query_help_source,
-                        query_help_error=query_help_error,
+                if provider_result.response_type == "capabilities":
+                    assert provider_result.query_help is not None
+                    return Response(
+                        build_capabilities_payload(
+                            question,
+                            intent=capabilities_intent(),
+                            source="semantic_provider",
+                            capabilities=capabilities,
+                            query_help=provider_result.query_help,
+                            query_help_source="semantic_provider",
+                        )
                     )
+                assert provider_result.query_plan is not None
+                plan = provider_result.query_plan
+            else:
+                routing_result = route_question_intent(
+                    question, permissions=permissions
                 )
+                if routing_result.intent.intent == "capabilities":
+                    capabilities = filter_capabilities_for_intent(
+                        build_capabilities(permissions=permissions),
+                        routing_result.intent,
+                    )
+                    (
+                        query_help,
+                        query_help_source,
+                        query_help_error,
+                    ) = get_query_help_for_capabilities(
+                        question,
+                        capabilities=capabilities,
+                        permissions=permissions,
+                    )
+                    return Response(
+                        build_capabilities_payload(
+                            question,
+                            intent=routing_result.intent,
+                            source=routing_result.source,
+                            capabilities=capabilities,
+                            query_help=query_help,
+                            query_help_source=query_help_source,
+                            query_help_error=query_help_error,
+                        )
+                    )
 
-            if provided_plan is None:
                 planner_result = plan_question(
                     question,
                     permissions=permissions,
                 )
                 plan = planner_result.plan
-            else:
-                plan = parse_and_validate_query_plan(
-                    provided_plan,
-                    permissions=permissions,
-                )
+
             query_result = run_query_plan(plan, request=request)
             run = create_query_run(
                 request=request,
@@ -140,6 +166,25 @@ class QueryView(AskLensAPIView):
             )
             return Response(payload)
         except AskLensError as exc:
+            if should_return_capabilities_fallback(
+                question,
+                provided_plan=provided_plan,
+            ):
+                capabilities = build_capabilities(permissions=permissions)
+                return Response(
+                    build_capabilities_payload(
+                        question,
+                        intent=capabilities_intent(confidence=0.5),
+                        source="fallback",
+                        capabilities=capabilities,
+                        query_help=build_deterministic_query_help(
+                            capabilities=capabilities,
+                            question=question,
+                        ),
+                        query_help_source="deterministic_fallback",
+                        query_help_error=safe_error_message(exc),
+                    )
+                )
             run = create_query_run(
                 request=request,
                 question=question,
@@ -170,6 +215,26 @@ class QueryRunDetailView(AskLensAPIView):
         if not can_view_run(request, run):
             raise PermissionDenied("You do not have access to this AskLens run.")
         return Response(SemanticQueryRunSerializer(run).data)
+
+
+def should_use_unified_provider_response() -> bool:
+    """Return whether live query requests should use one unified provider call."""
+
+    return get_asklens_setting("LLM_BACKEND") != "dummy"
+
+
+def should_return_capabilities_fallback(
+    question: str,
+    *,
+    provided_plan: Any,
+) -> bool:
+    """Return whether a failed unified call should become deterministic help."""
+
+    return (
+        provided_plan is None
+        and should_use_unified_provider_response()
+        and is_capabilities_fallback_question(question)
+    )
 
 
 def enforce_debug_permission(request: Request, *, debug: bool) -> None:

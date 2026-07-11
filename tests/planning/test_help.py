@@ -222,13 +222,18 @@ def test_build_query_help_uses_provider_and_validates_references() -> None:
     assert result.suggestions[0].resource_name == "orders"
     assert result.suggestions[0].fields == ("status",)
     assert result.suggestions[1].date_fields == ("created_at",)
+    assert result.suggestions[0].plan is not None
+    assert result.suggestions[1].plan is not None
     assert provider.schema is not None
     assert provider.schema["title"] == "QueryHelp"
     assert provider.messages is not None
     prompt_text = "\n".join(message["content"] for message in provider.messages)
     assert "Visible capabilities metadata" in prompt_text
+    assert "Each suggestion.plan must match" not in prompt_text
     assert "orders" in prompt_text
     assert "facilities/accounts/tenants" not in prompt_text
+    suggestion_schema = provider.schema["$defs"]["QueryHelpSuggestion"]
+    assert "plan" not in suggestion_schema["properties"]
 
 
 def test_build_query_help_allows_ten_provider_examples_when_requested() -> None:
@@ -358,8 +363,8 @@ def test_build_query_help_keeps_valid_provider_suggestions() -> None:
     ]
 
 
-def test_build_query_help_rejects_missing_executable_plan() -> None:
-    """Provider suggestions must include locally validated plans."""
+def test_build_query_help_synthesizes_missing_executable_plan() -> None:
+    """Provider suggestions get locally validated plans without extra LLM calls."""
 
     provider = HelpProvider(
         {
@@ -375,12 +380,18 @@ def test_build_query_help_rejects_missing_executable_plan() -> None:
         }
     )
 
-    with pytest.raises(PlanValidationError, match="must include"):
-        build_query_help(
-            "Help me write order questions",
-            provider=provider,
-            capabilities=capabilities_payload(),
-        )
+    result = build_query_help(
+        "Help me write order questions",
+        provider=provider,
+        capabilities=capabilities_payload(),
+    )
+
+    [suggestion] = result.suggestions
+    assert suggestion.plan is not None
+    assert suggestion.plan["resource"] == "orders"
+    assert suggestion.plan["intent"] == "aggregate"
+    assert suggestion.plan["group_by"] == [{"field": "status", "date_trunc": None}]
+    assert suggestion.plan["metrics"][0]["name"] == "order_count"
 
 
 def test_build_query_help_rejects_unknown_references() -> None:

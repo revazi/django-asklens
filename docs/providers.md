@@ -61,7 +61,7 @@ The provider sends a request to:
 POST {LLM_BASE_URL}/chat/completions
 ```
 
-It requests strict JSON output with the QueryPlan JSON schema using OpenAI-compatible `response_format={"type": "json_schema", ...}`.
+For normal live `/asklens/query/` calls, it requests strict JSON output with a unified AskLens provider-response schema using OpenAI-compatible `response_format={"type": "json_schema", ...}`. That single response chooses either a data `QueryPlan` or capability `QueryHelp`. Other lower-level planner/helper APIs may request their narrower schemas directly.
 
 ## Provider interface
 
@@ -75,9 +75,9 @@ class LLMProvider(Protocol):
 
 AskLens sends:
 
-- permission-scoped safe catalog metadata,
+- permission-scoped safe capabilities or catalog metadata,
 - the user's question,
-- the strict `QueryPlan` JSON schema.
+- a strict JSON schema for the response being requested.
 
 AskLens must not send sample database rows, secrets, credentials, `.env` content, or unregistered/unauthorized sensitive fields by default.
 
@@ -103,7 +103,7 @@ DJANGO_ASKLENS_LIVE_LLM_BASE_URL="https://api.openai.com/v1"
 
 The runnable complex demo project can also use the live provider by setting `DJANGO_ASKLENS_DEMO_LIVE_LLM=1` before starting `tests.test_project.demo_settings`. See [Runnable complex test project](test-project-demo.md).
 
-Live provider output must still pass the same strict QueryPlan parsing and catalog validation as dummy output. Before public alpha, run the [private real-project integration](private-integration.md) plan against a real multi-tenant project.
+Live provider output must still pass strict schema parsing plus catalog/permission validation. Unified live query responses validate either the returned `QueryPlan` or the returned `QueryHelp` suggestions; help suggestions get executable plans synthesized and validated locally. Before public alpha, run the [private real-project integration](private-integration.md) plan against a real multi-tenant project.
 
 ## Safety notes
 

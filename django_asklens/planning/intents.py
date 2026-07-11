@@ -138,10 +138,10 @@ def route_question_intent(
 ) -> IntentRoutingResult:
     """Route a question to query execution or capability guidance.
 
-    Live/custom providers get the first chance to classify intent with a strict
-    schema. The local fallback only catches obvious help/capability wording and
-    exists so dummy/offline mode can answer "what can I query?" without a live
-    LLM call.
+    Obvious help/capability wording is routed locally before any provider call.
+    This avoids spending a live LLM request just to decide that a user asked for
+    examples or capabilities. Live/custom providers are still available for
+    ambiguous questions that the local detector does not recognize.
     """
 
     permission_set = frozenset(permissions or ())
@@ -150,6 +150,13 @@ def route_question_intent(
         if capabilities is not None
         else build_capabilities(permissions=permission_set)
     )
+
+    if is_capabilities_fallback_question(question):
+        return IntentRoutingResult(
+            question=question,
+            intent=capabilities_intent(confidence=0.7),
+            source="fallback",
+        )
 
     if provider is not None or get_asklens_setting("LLM_BACKEND") != "dummy":
         try:
@@ -176,12 +183,6 @@ def route_question_intent(
             source="semantic_provider",
         )
 
-    if is_capabilities_fallback_question(question):
-        return IntentRoutingResult(
-            question=question,
-            intent=capabilities_intent(confidence=0.5),
-            source="fallback",
-        )
     return IntentRoutingResult(
         question=question,
         intent=query_intent(),
@@ -313,6 +314,50 @@ def is_capabilities_fallback_question(question: str) -> bool:
         return True
     if tokens & FALLBACK_CAPABILITY_HINTS and tokens & FALLBACK_CAPABILITY_TARGETS:
         return True
-    return {"what", "can"}.issubset(tokens) and bool(
-        tokens & {"ask", "query", "queries"}
+    if {"what", "can"}.issubset(tokens) and bool(tokens & {"ask", "query", "queries"}):
+        return True
+    if {"queries", "run"}.issubset(tokens) and tokens & {"can", "could"}:
+        return True
+    if {"questions", "ask"}.issubset(tokens) and tokens & {"can", "could"}:
+        return True
+    if tokens & {
+        "example",
+        "examples",
+        "sample",
+        "samples",
+        "suggestion",
+        "suggestions",
+    } and tokens & {
+        "ask",
+        "queries",
+        "query",
+        "questions",
+        "question",
+    }:
+        return True
+    if (
+        tokens & {"show", "give", "list", "suggest", "return"}
+        and tokens
+        & {
+            "example",
+            "examples",
+            "queries",
+            "query",
+            "questions",
+            "question",
+            "sample",
+            "samples",
+            "suggestion",
+            "suggestions",
+        }
+        and (
+            tokens & {"can", "could"}
+            or tokens & {"example", "examples", "sample", "samples"}
+        )
+    ):
+        return True
+    return (
+        bool(tokens & {"which", "what"})
+        and bool(tokens & {"fields", "metrics", "resources", "entities"})
+        and bool(tokens & {"ask", "query", "queries", "available"})
     )

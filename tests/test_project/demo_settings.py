@@ -58,6 +58,33 @@ DATABASES = {
 MIGRATION_MODULES = {"test_project": None}
 TEST_PROJECT_REGISTER_COMPLEX_ASKLENS = True
 
+DEMO_LOG_LEVEL = os.environ.get("DJANGO_ASKLENS_DEMO_LOG_LEVEL", "INFO")
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+        },
+    },
+    "root": {
+        "handlers": ["console"],
+        "level": DEMO_LOG_LEVEL,
+    },
+    "loggers": {
+        "django_asklens": {
+            "handlers": ["console"],
+            "level": DEMO_LOG_LEVEL,
+            "propagate": False,
+        },
+        "django.server": {
+            "handlers": ["console"],
+            "level": "INFO",
+            "propagate": False,
+        },
+    },
+}
+
 DUMMY_PLANS = {
     "Show paid billing revenue by product": {
         "resource": "billing_lines",

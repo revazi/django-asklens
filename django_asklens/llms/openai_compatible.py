@@ -87,6 +87,19 @@ def log_llm_response(response_payload: Mapping[str, Any]) -> None:
     )
 
 
+def log_llm_http_error(status_code: int, body: str) -> None:
+    """Log a provider HTTP error body when explicitly enabled."""
+
+    if not should_log_llm_io():
+        return
+    logger.info(
+        "AskLens LLM HTTP error: %s",
+        json.dumps(
+            {"status_code": status_code, "body": body}, indent=2, sort_keys=True
+        ),
+    )
+
+
 def log_llm_parsed_content(parsed_content: Mapping[str, Any]) -> None:
     """Log the parsed JSON content returned by the provider."""
 
@@ -96,6 +109,19 @@ def log_llm_parsed_content(parsed_content: Mapping[str, Any]) -> None:
         "AskLens LLM parsed JSON: %s",
         json.dumps(parsed_content, indent=2, sort_keys=True),
     )
+
+
+def read_http_error_body(exc: HTTPError) -> str:
+    """Return a provider HTTP error body as safe text for opt-in logs."""
+
+    try:
+        body = exc.read()
+    except Exception:  # noqa: BLE001 - best-effort logging helper
+        return ""
+    try:
+        return body.decode("utf-8")
+    except UnicodeDecodeError:
+        return "<non-utf8 error body>"
 
 
 def sanitize_request_for_logging(request: Request) -> dict[str, Any]:
@@ -187,6 +213,8 @@ def send_json_request(
         with urlopen_func(request, timeout=timeout_seconds) as response:
             body = response.read()
     except HTTPError as exc:
+        error_body = read_http_error_body(exc)
+        log_llm_http_error(exc.code, error_body)
         msg = f"LLM provider request failed with HTTP status {exc.code}."
         raise LLMProviderError(msg) from exc
     except URLError as exc:

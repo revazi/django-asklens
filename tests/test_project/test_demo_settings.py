@@ -1,6 +1,14 @@
 """Tests for runnable demo settings helpers."""
 
+from tests.test_project import demo_settings
 from tests.test_project.demo_settings import build_demo_asklens_settings
+
+
+def test_demo_logging_routes_asklens_logs_to_console() -> None:
+    """The runnable demo should show AskLens provider logs in the terminal."""
+
+    assert demo_settings.LOGGING["loggers"]["django_asklens"]["level"] == "INFO"
+    assert demo_settings.LOGGING["loggers"]["django_asklens"]["handlers"] == ["console"]
 
 
 def test_demo_asklens_settings_default_to_dummy_backend() -> None:

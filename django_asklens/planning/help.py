@@ -24,7 +24,6 @@ from django_asklens.planning.schemas import (
     PlanBaseModel,
     QueryPlan,
     format_pydantic_error,
-    get_query_plan_json_schema,
     parse_plan_payload,
     validate_non_empty_string,
 )
@@ -54,12 +53,11 @@ produce valid AskLens plans. For broad help questions like "what can I query?",
 provide fresh, diverse suggestions across useful visible resources; prefer
 analytical aggregate or trend questions over simple lookup/list questions unless
 the user asks about a specific lookup resource.
-For each suggestion, include the exact resource_name, referenced field,
-metric, and date_field names from the metadata, plus a full QueryPlan in the
-suggestion's plan field. The plan must answer the suggested question and must
-validate against the same visible capabilities metadata. Do not simply copy
-generated examples from the metadata when better provider-generated suggestions
-are possible.
+For each suggestion, include the exact resource_name and referenced field,
+metric, and date_field names from the metadata. AskLens will build executable
+plans locally from those references; do not include plan JSON. Do not simply
+copy generated examples from the metadata when better provider-generated
+suggestions are possible.
 If a resource scope has level="single", suggestions must be phrased within
 that single visible scope. Do not suggest comparing, grouping, filtering, or
 trending across any scope dimension unless the resource scope allows multiple
@@ -242,11 +240,6 @@ def build_query_help_messages(
         },
         {
             "role": "user",
-            "content": "Each suggestion.plan must match this QueryPlan schema:\n"
-            + stable_json_dumps(get_query_plan_json_schema()),
-        },
-        {
-            "role": "user",
             "content": "Visible capabilities metadata:\n"
             + stable_json_dumps(capabilities),
         },
@@ -265,9 +258,14 @@ def parse_query_help(raw_help: str | bytes | Mapping[str, Any]) -> QueryHelp:
 
 
 def get_query_help_json_schema() -> dict[str, Any]:
-    """Return the JSON schema for strict query-help output."""
+    """Return the provider-facing JSON schema for strict query-help output."""
 
-    return QueryHelp.model_json_schema()
+    schema = QueryHelp.model_json_schema()
+    suggestion_schema = schema.get("$defs", {}).get("QueryHelpSuggestion", {})
+    properties = suggestion_schema.get("properties", {})
+    if isinstance(properties, dict):
+        properties.pop("plan", None)
+    return schema
 
 
 def validate_query_help(
@@ -365,19 +363,16 @@ def validate_suggestion_plan(
     permissions: Sequence[str] | None,
     require_plan: bool,
 ) -> QueryHelpSuggestion:
-    """Validate an optional executable plan attached to one help suggestion."""
+    """Validate or locally synthesize an executable plan for a suggestion."""
 
-    if suggestion.plan is None:
+    raw_plan = suggestion.plan
+    if raw_plan is None:
         if not require_plan:
             return suggestion
-        msg = (
-            f"QueryHelp suggestion for resource {suggestion.resource_name!r} "
-            "must include a validated QueryPlan."
-        )
-        raise PlanValidationError(msg)
+        raw_plan = build_suggestion_plan_payload(suggestion, resource=resource)
 
     validated_plan = parse_and_validate_query_plan(
-        suggestion.plan,
+        raw_plan,
         registry=registry,
         permissions=permissions,
     )
@@ -392,6 +387,139 @@ def validate_suggestion_plan(
     return suggestion.model_copy(
         update={"plan": validated_plan.model_dump(mode="json")}
     )
+
+
+def build_suggestion_plan_payload(
+    suggestion: QueryHelpSuggestion,
+    *,
+    resource: CapabilityResource,
+) -> dict[str, Any]:
+    """Build a conservative QueryPlan from validated suggestion references."""
+
+    metric_lookup = {metric["name"]: metric for metric in resource.get("metrics", [])}
+    field_lookup = {field["name"]: field for field in resource.get("fields", [])}
+    metrics = [
+        metric_lookup[name] for name in suggestion.metrics if name in metric_lookup
+    ]
+
+    if metrics:
+        return build_aggregate_suggestion_plan(
+            suggestion,
+            resource=resource,
+            field_lookup=field_lookup,
+            metrics=metrics,
+        )
+    return build_list_suggestion_plan(
+        suggestion,
+        resource=resource,
+        field_lookup=field_lookup,
+    )
+
+
+def build_aggregate_suggestion_plan(
+    suggestion: QueryHelpSuggestion,
+    *,
+    resource: CapabilityResource,
+    field_lookup: Mapping[str, Mapping[str, Any]],
+    metrics: Sequence[Mapping[str, Any]],
+) -> dict[str, Any]:
+    """Build an aggregate plan from suggestion metric references."""
+
+    group_by: list[dict[str, str]] = []
+    if suggestion.date_fields:
+        date_field = suggestion.date_fields[0]
+        group_by.append({"field": date_field, "date_trunc": "month"})
+    else:
+        group_by.extend(
+            {"field": field_name}
+            for field_name in suggestion.fields[:2]
+            if field_lookup.get(field_name, {}).get("can_group")
+        )
+
+    metric_payloads = [
+        {
+            "name": metric["name"],
+            "op": metric["op"],
+            "field": metric["field"],
+        }
+        for metric in metrics
+    ]
+    first_metric_name = metric_payloads[0]["name"]
+    order_by: list[dict[str, str]] = []
+    if suggestion.date_fields and group_by:
+        order_by.append({"field": group_by[0]["field"], "direction": "asc"})
+    else:
+        order_by.append({"metric": first_metric_name, "direction": "desc"})
+
+    visualization = build_aggregate_suggestion_visualization(
+        group_by=group_by,
+        metric_name=first_metric_name,
+        has_date_field=bool(suggestion.date_fields),
+    )
+    return {
+        "resource": resource["name"],
+        "intent": "aggregate",
+        "filters": [],
+        "group_by": group_by,
+        "metrics": metric_payloads,
+        "select": [],
+        "order_by": order_by,
+        "limit": 50,
+        "visualization": visualization,
+    }
+
+
+def build_aggregate_suggestion_visualization(
+    *,
+    group_by: Sequence[Mapping[str, str]],
+    metric_name: str,
+    has_date_field: bool,
+) -> dict[str, str]:
+    """Return a valid visualization hint for a synthesized aggregate plan."""
+
+    if not group_by:
+        return {"type": "metric", "y": metric_name}
+    chart_type = "line" if has_date_field else "bar"
+    return {"type": chart_type, "x": group_by[0]["field"], "y": metric_name}
+
+
+def build_list_suggestion_plan(
+    suggestion: QueryHelpSuggestion,
+    *,
+    resource: CapabilityResource,
+    field_lookup: Mapping[str, Mapping[str, Any]],
+) -> dict[str, Any]:
+    """Build a list plan from suggestion field references."""
+
+    select = [
+        field_name
+        for field_name in suggestion.fields
+        if field_lookup.get(field_name, {}).get("can_select")
+    ]
+    if not select:
+        select = [
+            field["name"]
+            for field in resource.get("fields", [])
+            if field.get("can_select")
+        ][:3]
+    if not select:
+        msg = (
+            f"QueryHelp suggestion for resource {suggestion.resource_name!r} "
+            "does not reference selectable fields or metrics."
+        )
+        raise PlanValidationError(msg)
+
+    return {
+        "resource": resource["name"],
+        "intent": "list",
+        "filters": [],
+        "group_by": [],
+        "metrics": [],
+        "select": select[:8],
+        "order_by": [],
+        "limit": 50,
+        "visualization": {"type": "table"},
+    }
 
 
 def validate_plan_uses_capabilities(

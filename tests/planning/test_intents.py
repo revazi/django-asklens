@@ -15,6 +15,13 @@ from django_asklens.planning.intents import (
 )
 
 
+class FailingIntentProvider:
+    """Provider double that should not be called."""
+
+    def complete_json(self, *, messages, schema):
+        raise AssertionError("intent provider should not be called")
+
+
 class IntentProvider:
     """Provider double for semantic intent routing tests."""
 
@@ -77,8 +84,24 @@ def test_fallback_capabilities_detector_is_compact_and_conservative() -> None:
     assert is_capabilities_fallback_question("What can I query?") is True
     assert is_capabilities_fallback_question("what fields are available") is True
     assert is_capabilities_fallback_question("List queryable resources") is True
+    assert is_capabilities_fallback_question("show me the queries I can run") is True
+    assert is_capabilities_fallback_question("show me example queries") is True
+    assert is_capabilities_fallback_question("give me sample questions") is True
     assert is_capabilities_fallback_question("Show orders by status") is False
     assert is_capabilities_fallback_question("List member contact emails") is False
+
+
+def test_obvious_help_routes_locally_before_provider() -> None:
+    """Obvious help questions should not spend a live intent-routing call."""
+
+    result = route_question_intent(
+        "show me example queries",
+        provider=FailingIntentProvider(),
+        capabilities=capabilities_payload(),
+    )
+
+    assert result.source == "fallback"
+    assert result.intent.intent == "capabilities"
 
 
 def test_provider_backed_semantic_routing_selects_capabilities_resource() -> None:
@@ -95,7 +118,7 @@ def test_provider_backed_semantic_routing_selects_capabilities_resource() -> Non
     capabilities = capabilities_payload()
 
     result = route_question_intent(
-        "Which payment metrics can I ask about?",
+        "payment metric guidance",
         provider=provider,
         capabilities=capabilities,
     )
@@ -143,7 +166,7 @@ def test_question_intent_rejects_unknown_resources() -> None:
 
     with pytest.raises(PlanValidationError, match="private_invoices"):
         route_question_intent(
-            "What invoice fields can I query?",
+            "invoice metadata guidance",
             provider=provider,
             capabilities=capabilities_payload(),
         )

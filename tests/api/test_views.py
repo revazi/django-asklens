@@ -20,6 +20,20 @@ pytestmark = pytest.mark.django_db
 QUESTION = "Show orders by status"
 
 
+class UnifiedProvider:
+    """Provider double returning unified query/help responses."""
+
+    def __init__(self, payload: dict[str, Any]) -> None:
+        self.payload = payload
+        self.calls = 0
+
+    def complete_json(self, *, messages, schema):
+        """Return one unified provider response."""
+
+        self.calls += 1
+        return self.payload
+
+
 class QueryHelpProvider:
     """Provider double for API query-help source tests."""
 
@@ -261,6 +275,115 @@ def test_query_help_fallback_returns_safe_error(
     assert query_help.suggestions
     assert "private_notes" in error
     assert "Traceback" not in error
+
+
+def test_live_query_endpoint_uses_one_unified_call_for_help(
+    settings,
+    monkeypatch,
+    api_client: APIClient,
+    registered_orders: None,
+    user,
+) -> None:
+    """Live help should not spend a separate intent-routing LLM call."""
+
+    settings.DJANGO_ASKLENS = {"LLM_BACKEND": "openai_compatible"}
+    provider = UnifiedProvider(
+        {
+            "response_type": "capabilities",
+            "query_help": {
+                "answer": "Provider examples.",
+                "suggestions": [
+                    {
+                        "question": "Show order count by status",
+                        "resource_name": "orders",
+                        "fields": ["status"],
+                        "metrics": ["order_count"],
+                    }
+                ],
+            },
+        }
+    )
+    monkeypatch.setattr(
+        "django_asklens.planning.responses.get_llm_provider",
+        lambda: provider,
+    )
+    monkeypatch.setattr(
+        "django_asklens.api.views.route_question_intent",
+        lambda *args, **kwargs: (_ for _ in ()).throw(
+            AssertionError("intent router should not be called in live mode")
+        ),
+    )
+    monkeypatch.setattr(
+        "django_asklens.api.views.plan_question",
+        lambda *args, **kwargs: (_ for _ in ()).throw(
+            AssertionError("planner should not be called for live help")
+        ),
+    )
+    api_client.force_authenticate(user=user)
+
+    response = api_client.post(
+        "/asklens/query/",
+        {"question": "show me example queries"},
+        format="json",
+    )
+
+    assert response.status_code == 200
+    assert provider.calls == 1
+    assert response.data["response_type"] == "capabilities"
+    assert response.data["routing_source"] == "semantic_provider"
+    assert response.data["query_help_source"] == "semantic_provider"
+    [suggestion] = response.data["query_help"]["suggestions"]
+    assert suggestion["resource_name"] == "orders"
+    assert suggestion["plan"]["resource"] == "orders"
+    assert SemanticQueryRun.objects.count() == 0
+
+
+def test_live_query_endpoint_uses_one_unified_call_for_query(
+    settings,
+    monkeypatch,
+    api_client: APIClient,
+    user,
+    order_data: None,
+    registered_orders: None,
+) -> None:
+    """Live data queries should use one provider call for decision and plan."""
+
+    settings.DJANGO_ASKLENS = {"LLM_BACKEND": "openai_compatible"}
+    provider = UnifiedProvider(
+        {"response_type": "query", "query_plan": valid_plan_payload()}
+    )
+    monkeypatch.setattr(
+        "django_asklens.planning.responses.get_llm_provider",
+        lambda: provider,
+    )
+    monkeypatch.setattr(
+        "django_asklens.api.views.route_question_intent",
+        lambda *args, **kwargs: (_ for _ in ()).throw(
+            AssertionError("intent router should not be called in live mode")
+        ),
+    )
+    monkeypatch.setattr(
+        "django_asklens.api.views.plan_question",
+        lambda *args, **kwargs: (_ for _ in ()).throw(
+            AssertionError("legacy planner should not be called in live mode")
+        ),
+    )
+    api_client.force_authenticate(user=user)
+
+    response = api_client.post(
+        "/asklens/query/",
+        {"question": "Show orders by status"},
+        format="json",
+    )
+
+    assert response.status_code == 200
+    assert provider.calls == 1
+    assert response.data["plan"]["resource"] == "orders"
+    assert response.data["data"] == [
+        {"status": "paid", "order_count": 2},
+        {"status": "pending", "order_count": 1},
+    ]
+    assert SemanticQueryRun.objects.count() == 1
 
 
 def test_query_endpoint_intercepts_capabilities_question_without_provider_or_audit(
