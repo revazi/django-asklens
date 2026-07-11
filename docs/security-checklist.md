@@ -35,11 +35,12 @@ Use this checklist before enabling AskLens outside local development.
 - [ ] Do not run live-provider tests by default.
 - [ ] Do not include API keys, credentials, `.env` values, sample rows, tenant identifiers, or hidden/sensitive fields in prompts.
 - [ ] Treat all provider output as untrusted and require QueryPlan validation before execution.
+- [ ] Keep `LOG_LLM_IO` disabled in production unless an approved logging policy covers user questions and permission-scoped schema metadata.
 
 ## Deployment safety
 
 - [ ] Consider a read-only database role or replica as defense in depth once supported by a later phase.
 - [ ] Monitor query volume and slow queries using normal Django/database tooling.
-- [ ] Review logs to ensure errors do not include stack traces, secrets, or raw credentials.
+- [ ] Review logs to ensure errors do not include stack traces, secrets, raw credentials, provider payload dumps, or private row values.
 
 AskLens is a data access surface. If in doubt, register less data and add fields/metrics only after review.

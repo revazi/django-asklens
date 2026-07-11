@@ -27,7 +27,7 @@ DJANGO_ASKLENS = {
 
 ## OpenAI-compatible backend
 
-Phase 10 adds an OpenAI-compatible chat-completions provider implemented with Python stdlib HTTP. It adds no required runtime dependency.
+AskLens includes an OpenAI-compatible chat-completions provider implemented with Python stdlib HTTP. It adds no required runtime dependency.
 
 ```python
 import os
@@ -43,6 +43,25 @@ DJANGO_ASKLENS = {
 ```
 
 Use environment variables or your deployment secret manager for `LLM_API_KEY`. Do not commit API keys or place them in docs, fixtures, or tests.
+
+## Gemini through the OpenAI-compatible endpoint
+
+Gemini can be used through Google's OpenAI-compatible endpoint:
+
+```python
+import os
+
+DJANGO_ASKLENS = {
+    "LLM_BACKEND": "openai_compatible",
+    "LLM_BASE_URL": "https://generativelanguage.googleapis.com/v1beta/openai",
+    "LLM_API_KEY": os.environ["GEMINI_API_KEY"],
+    "LLM_MODEL": "gemini-2.5-flash",
+    "LLM_TIMEOUT_SECONDS": 30,
+    "LLM_TEMPERATURE": 0,
+}
+```
+
+As with every provider, Gemini output is still parsed as untrusted JSON and validated locally before execution.
 
 For local prompt/provider tuning, you can temporarily enable provider I/O logging:
 

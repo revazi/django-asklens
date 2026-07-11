@@ -25,7 +25,7 @@ INSTALLED_APPS = [
 ]
 ```
 
-Include the API URLs if you want the DRF endpoints:
+Include the API URLs:
 
 ```python
 from django.urls import include, path
@@ -34,6 +34,17 @@ urlpatterns = [
     path("", include("django_asklens.api.urls")),
 ]
 ```
+
+Optionally mount the packaged reference frontend:
+
+```python
+urlpatterns = [
+    path("", include("django_asklens.api.urls")),
+    path("", include("django_asklens.frontend.urls")),  # /asklens/ui/
+]
+```
+
+The packaged frontend is optional. Production projects can build custom UIs directly on the API; see [Building a custom AskLens UI](custom-ui.md).
 
 Run migrations for AskLens-owned audit models:
 
@@ -61,7 +72,7 @@ DJANGO_ASKLENS = {
 }
 ```
 
-The default API permission class is `rest_framework.permissions.IsAuthenticated`.
+The default API permission class is `rest_framework.permissions.IsAuthenticated`. Review the [production checklist](production-checklist.md) before enabling AskLens outside local development.
 
 ## Compatibility
 

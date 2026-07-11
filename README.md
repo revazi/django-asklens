@@ -2,97 +2,41 @@
 
 Django AskLens is a reusable Django + DRF package for safe natural-language querying over explicitly registered Django models.
 
-Status: pre-alpha. The current package includes the minimal app scaffold, semantic catalog registration, strict QueryPlan schema/validation, ORM-only query compilation/execution, deterministic and OpenAI-compatible provider layers, JSON-safe result serialization with optional visualization hints, DRF endpoints, query-run audit records, and multi-tenant security tests. Dashboards/saved queries may be added in later approved phases.
+AskLens does **not** let an LLM write SQL. It asks a provider for structured JSON, validates the plan against your registered catalog and permissions, compiles a read-only Django ORM query, executes with limits, and returns table/chart-ready JSON.
 
-## Planned names
+Status: **pre-alpha**. APIs may still change before the first public alpha.
 
-- GitHub repository: `django-asklens`
-- Python package distribution: `django-asklens`
-- Python import package: `django_asklens`
-- Django app label: `asklens`
+## What it provides
 
-## Current catalog usage
+- Explicit semantic resource registration.
+- Permission-scoped catalog and capabilities endpoints.
+- Strict Pydantic `QueryPlan` validation.
+- ORM-only list and aggregate query execution.
+- Dummy provider for deterministic tests and demos.
+- OpenAI-compatible live provider adapter.
+- Query-run audit records.
+- Frontend-agnostic `columns` + `data` JSON output.
+- Optional packaged browser UI for demos/reference use.
 
-```python
-from django_asklens import Metric, register
-from shop.models import Order
+## Quickstart
 
-register(
-    model=Order,
-    label="Orders",
-    fields={
-        "id": {"label": "Order ID"},
-        "status": {"label": "Status"},
-        "created_at": {"label": "Created date"},
-        "customer.email": {"label": "Customer email", "sensitive": True},
-        "total": {"label": "Order total", "metric": True},
-    },
-    metrics=[
-        Metric("order_count", op="count", field="id", label="Number of orders"),
-        Metric("revenue", op="sum", field="total", label="Revenue"),
-    ],
-)
+Install:
+
+```bash
+python -m pip install django-asklens
 ```
 
-Only explicitly registered fields are included in the semantic catalog. Sensitive, hidden, and internal Django metadata are excluded from default catalog serialization.
-
-## Current QueryPlan validation
+Add the app and DRF:
 
 ```python
-from django_asklens.planning import parse_and_validate_query_plan
-
-validated_plan = parse_and_validate_query_plan(
-    {
-        "resource": "orders",
-        "intent": "aggregate",
-        "group_by": [{"field": "status"}],
-        "metrics": [{"name": "order_count", "op": "count", "field": "id"}],
-        "limit": 100,
-        "visualization": {"type": "bar", "x": "status", "y": "order_count"},
-    }
-)
+INSTALLED_APPS = [
+    # ...
+    "rest_framework",
+    "django_asklens",
+]
 ```
 
-LLM/provider output is treated as untrusted input: it must parse as a strict QueryPlan and validate against the semantic catalog before it can be compiled or executed.
-
-## Current ORM execution
-
-```python
-from django_asklens.execution import run_query_plan
-
-result = run_query_plan(validated_plan)
-
-print(result.to_dict()["data"])
-```
-
-The compiler uses Django ORM querysets only and starts from each resource's `base_queryset(request)` hook.
-
-## Current planner/provider layer
-
-```python
-from django_asklens.llms import DummyProvider
-from django_asklens.planning import plan_question
-
-provider = DummyProvider(
-    plans={
-        "Show orders by status": {
-            "resource": "orders",
-            "intent": "aggregate",
-            "group_by": [{"field": "status"}],
-            "metrics": [{"name": "order_count", "op": "count", "field": "id"}],
-            "limit": 100,
-            "visualization": {"type": "bar", "x": "status", "y": "order_count"},
-        }
-    }
-)
-planner_result = plan_question("Show orders by status", provider=provider)
-```
-
-The planner sends safe catalog metadata and the strict QueryPlan JSON schema to the provider. Provider output is always parsed and validated before it can be compiled or executed.
-
-## Current DRF API
-
-Include the AskLens URLs in your project URL configuration:
+Mount the API:
 
 ```python
 from django.urls import include, path
@@ -102,50 +46,187 @@ urlpatterns = [
 ]
 ```
 
-Available endpoints:
+Run migrations for AskLens audit records:
 
-```text
-GET  /asklens/catalog/
-GET  /asklens/capabilities/
-POST /asklens/query/
-GET  /asklens/runs/<id>/
+```bash
+python -m django migrate asklens
 ```
 
-The capabilities endpoint returns permission-scoped, human-readable guidance about visible resources, exposed fields, metrics, date fields, examples, and limitations. In live mode, the query endpoint uses one unified provider call to decide whether the user wants data or capability help, using permission-scoped capabilities metadata once. Data responses return a validated `QueryPlan`; capability responses return `QueryHelp` suggestions, for which AskLens synthesizes validated QueryPlans locally. Clients may submit a previously returned suggestion plan back to `/asklens/query/`; AskLens revalidates it for the current request and executes it directly without another LLM call. API views require authenticated users by default, and `debug=true` is restricted to staff users.
-
-## Result serialization
-
-AskLens returns frontend-agnostic `columns` and `data` payloads plus optional visualization hints. It does not require or own a JavaScript charting framework.
+Register a resource during app startup:
 
 ```python
-from django_asklens.results import serialize_query_result
+from django_asklens import Metric, register
+from shop.models import Order
 
-payload = serialize_query_result(
-    columns=result.columns,
-    rows=result.rows,
-    visualization={"type": "bar", "x": "status", "y": "order_count"},
+
+def visible_orders(request):
+    if not getattr(request.user, "is_authenticated", False):
+        return Order.objects.none()
+    return Order.objects.filter(account__memberships__user=request.user)
+
+
+register(
+    model=Order,
+    name="orders",
+    label="Orders",
+    description="Orders visible to the current user.",
+    default_date_field="created_at",
+    fields={
+        "id": {"label": "Order ID"},
+        "status": {"label": "Status"},
+        "created_at": {"label": "Created date"},
+        "customer.email": {
+            "label": "Customer email",
+            "sensitive": True,
+            "requires_permission": "customers.view_pii",
+        },
+        "total_cents": {"label": "Total in cents"},
+    },
+    metrics=[
+        Metric("order_count", op="count", field="id", label="Orders"),
+        Metric("revenue", op="sum", field="total_cents", label="Revenue"),
+    ],
+    base_queryset=visible_orders,
 )
 ```
 
-Supported visualization hints are `table`, `metric`, `bar`, `line`, and `pie`. Hints are normalized to include axis field, label, and type metadata so applications can render the returned data however they prefer. API clients that only want serialized data can send `"include_visualization": false` to `/asklens/query/`.
+Start with the deterministic dummy provider:
+
+```python
+DJANGO_ASKLENS = {
+    "LLM_BACKEND": "dummy",
+    "DUMMY_PLANS": {
+        "Show orders by status": {
+            "resource": "orders",
+            "intent": "aggregate",
+            "group_by": [{"field": "status"}],
+            "metrics": [{"name": "order_count", "op": "count", "field": "id"}],
+            "limit": 100,
+            "visualization": {"type": "bar", "x": "status", "y": "order_count"},
+        }
+    },
+}
+```
+
+Ask through the API:
+
+```http
+POST /asklens/query/
+Content-Type: application/json
+
+{"question": "Show orders by status"}
+```
+
+Successful data responses include:
+
+```json
+{
+  "run_id": 1,
+  "question": "Show orders by status",
+  "plan": {"resource": "orders", "intent": "aggregate"},
+  "columns": [{"key": "status", "label": "Status", "type": "string"}],
+  "data": [{"status": "paid", "order_count": 12}],
+  "row_count": 1,
+  "visualization": {"type": "bar"}
+}
+```
+
+Help questions such as `show me example queries` return `response_type: "capabilities"` with suggestions instead of running a database query.
+
+## Building a UI
+
+AskLens is API-first. Build your own UI with React, Vue, HTMX, Django templates, a mobile client, or any chart/table library by rendering the returned `columns` and `data` arrays.
+
+The packaged frontend is optional and intended as a dependency-free demo/reference UI. Projects that need product-specific layout, charts, saved queries, or workflows should call the API directly. See [Building a custom AskLens UI](docs/custom-ui.md).
+
+## Optional packaged frontend
+
+If you want the built-in reference UI:
+
+```python
+urlpatterns = [
+    path("", include("django_asklens.api.urls")),
+    path("", include("django_asklens.frontend.urls")),  # /asklens/ui/
+]
+```
+
+Gate the page for selected users with:
+
+```python
+DJANGO_ASKLENS = {
+    "FRONTEND_PERMISSION_CHECK": "myapp.permissions.can_use_asklens_frontend",
+}
+```
+
+API route permissions still apply to every API call. The frontend permission check only controls whether the packaged page can load.
+
+## Live providers
+
+The default backend is `dummy` and makes no network calls. To use an OpenAI-compatible provider:
+
+```python
+import os
+
+DJANGO_ASKLENS = {
+    "LLM_BACKEND": "openai_compatible",
+    "LLM_BASE_URL": "https://api.openai.com/v1",
+    "LLM_API_KEY": os.environ["OPENAI_API_KEY"],
+    "LLM_MODEL": "gpt-4.1-mini",
+    "LLM_TEMPERATURE": 0,
+}
+```
+
+Gemini can be used through its OpenAI-compatible endpoint:
+
+```python
+DJANGO_ASKLENS = {
+    "LLM_BACKEND": "openai_compatible",
+    "LLM_BASE_URL": "https://generativelanguage.googleapis.com/v1beta/openai",
+    "LLM_API_KEY": os.environ["GEMINI_API_KEY"],
+    "LLM_MODEL": "gemini-2.5-flash",
+    "LLM_TEMPERATURE": 0,
+}
+```
+
+Live provider tests are opt-in and skipped by default. See [Provider configuration](docs/providers.md).
 
 ## Safety posture
 
-- No arbitrary SQL execution in the MVP.
-- No data mutation features in the MVP.
-- No sample database rows sent to LLM providers by default.
-- Only explicitly registered models/resources will be queryable.
+- Only explicitly registered resources and fields are queryable.
+- Every query starts from the resource `base_queryset(request)` hook.
+- Sensitive fields are hidden unless explicitly permissioned.
+- Provider output is untrusted and always validated before execution.
+- AskLens executes read-only Django ORM queries only.
+- AskLens does not execute LLM-generated SQL.
+- AskLens does not create, update, or delete application data.
+- AskLens does not send database rows, sample values, secrets, credentials, or `.env` content to providers by default.
+- Query runs are audited.
+
+Review the [security checklist](docs/security-checklist.md) and [production checklist](docs/production-checklist.md) before enabling AskLens outside local development.
+
+## Current limitations
+
+- Pre-alpha APIs may change.
+- Supported query intents are list and aggregate.
+- Query planning depends on the quality of registered resources, fields, descriptions, and metrics.
+- Live provider quality varies by model and prompt complexity.
+- Raw SQL mode is not implemented.
+- Writes/mutations are not supported.
+- Server-side saved queries and dashboards are not first-class package features yet.
+- Read-only replica/database routing is deferred.
+- Django 5.2 compatibility is intended but not yet covered by CI; current package metadata targets Django 6.x.
 
 ## Documentation
 
 - [Installation](docs/installation.md)
 - [Usage guide](docs/usage.md)
+- [Custom UI guide](docs/custom-ui.md)
 - [Registration API](docs/registration.md)
 - [Provider configuration](docs/providers.md)
 - [Security checklist](docs/security-checklist.md)
+- [Production checklist](docs/production-checklist.md)
 - [Multi-tenant security](docs/multitenancy-security.md)
 - [Evaluation fixtures](docs/evaluation.md)
-- [Custom UI guide](docs/custom-ui.md)
 - [Runnable complex test project](docs/test-project-demo.md)
 - [Test matrix plan](docs/test-matrix.md)
 - [Changelog](CHANGELOG.md)
