@@ -757,6 +757,12 @@ def test_deterministic_query_help_uses_capabilities_examples() -> None:
     assert result.answer == "You can query Orders."
     assert result.suggestions[0].question == "Show count of Orders by Status"
     assert result.suggestions[0].resource_name == "orders"
+    assert result.suggestions[0].fields == ("status",)
+    assert result.suggestions[0].metrics == ("order_count",)
+    assert result.suggestions[0].plan is not None
+    assert result.suggestions[0].plan["resource"] == "orders"
+    assert result.suggestions[0].plan["intent"] == "aggregate"
+    assert any("explicit limit" in note for note in result.notes)
 
 
 def test_deterministic_query_help_honors_requested_example_count() -> None:

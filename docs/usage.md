@@ -185,6 +185,7 @@ payload = result.to_dict()
 
 - Only list and aggregate intents are supported.
 - Only registered resources, fields, and metrics are queryable.
+- List responses are capped by `MAX_ROWS`; use filters, ordering, and explicit limits to narrow large result sets.
 - No raw SQL mode exists in the MVP.
 - No write/update/delete actions are supported.
 - Live LLM providers are opt-in; the dummy provider remains the default.

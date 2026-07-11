@@ -9,13 +9,18 @@ from pydantic import Field, ValidationError, field_validator
 from django_asklens.catalog.capabilities import (
     CapabilitiesSnapshot,
     CapabilityResource,
+    build_list_example,
+    build_metric_by_field_example,
+    build_metric_trend_example,
+    filter_single_scope_dimension_fields,
+    group_field_example_sort_key,
     humanize_scope_kind,
     is_scope_dimension_field,
     is_single_scope_resource,
     pluralize_scope_kind,
 )
 from django_asklens.catalog.registry import CatalogRegistry, default_registry
-from django_asklens.exceptions import PlanValidationError
+from django_asklens.exceptions import AskLensError, PlanValidationError
 from django_asklens.llms.base import LLMMessage, LLMProvider
 from django_asklens.llms.factory import get_llm_provider
 from django_asklens.planning.prompts import stable_json_dumps
@@ -620,6 +625,8 @@ def build_deterministic_query_help(
     capabilities: CapabilitiesSnapshot,
     question: str | None = None,
     suggestion_count: int | None = None,
+    registry: CatalogRegistry = default_registry,
+    permissions: Sequence[str] | None = None,
 ) -> QueryHelp:
     """Build query-help suggestions from deterministic capabilities examples."""
 
@@ -628,10 +635,11 @@ def build_deterministic_query_help(
     for resource in capabilities.get("resources", []):
         for example in resource.get("examples", []):
             suggestions.append(
-                QueryHelpSuggestion(
-                    question=example,
-                    resource_name=resource["name"],
-                    why="Generated from registered AskLens capabilities metadata.",
+                build_deterministic_suggestion_from_example(
+                    resource,
+                    example,
+                    registry=registry,
+                    permissions=permissions,
                 )
             )
             if len(suggestions) >= desired_count:
@@ -643,8 +651,94 @@ def build_deterministic_query_help(
     notes = (
         "Suggestions are based only on resources and fields visible to this request.",
         "AskLens will still validate every generated query plan before execution.",
+        (
+            "For broad list questions, add filters, ordering, or an explicit "
+            "limit to narrow large result sets."
+        ),
     )
     return QueryHelp(answer=answer, suggestions=tuple(suggestions), notes=notes)
+
+
+def build_deterministic_suggestion_from_example(
+    resource: CapabilityResource,
+    example: str,
+    *,
+    registry: CatalogRegistry,
+    permissions: Sequence[str] | None,
+) -> QueryHelpSuggestion:
+    """Return one deterministic suggestion enriched with catalog references."""
+
+    suggestion = QueryHelpSuggestion(
+        question=example,
+        resource_name=resource["name"],
+        why="Generated from registered AskLens capabilities metadata.",
+    )
+    enriched = enrich_deterministic_suggestion_references(suggestion, resource)
+    if not (enriched.fields or enriched.metrics or enriched.date_fields):
+        return enriched
+    try:
+        plan = validate_suggestion_plan(
+            enriched,
+            resource=resource,
+            registry=registry,
+            permissions=permissions,
+            require_plan=True,
+        ).plan
+    except AskLensError:
+        return enriched
+    return enriched.model_copy(update={"plan": plan})
+
+
+def enrich_deterministic_suggestion_references(
+    suggestion: QueryHelpSuggestion,
+    resource: CapabilityResource,
+) -> QueryHelpSuggestion:
+    """Infer catalog references for a generated deterministic example."""
+
+    fields = list(resource.get("fields", []))
+    selectable_fields = filter_single_scope_dimension_fields(
+        [field for field in fields if field["can_select"]],
+        scope=resource.get("scope", {"level": "unknown", "guidance": ""}),
+    )
+    group_fields = sorted(
+        [field for field in selectable_fields if not field["can_date_bucket"]],
+        key=group_field_example_sort_key,
+    )
+    date_fields = [field for field in selectable_fields if field["can_date_bucket"]]
+    metrics = list(resource.get("metrics", []))
+
+    if selectable_fields and suggestion.question == build_list_example(
+        resource,
+        selectable_fields,
+    ):
+        return suggestion.model_copy(
+            update={"fields": tuple(field["name"] for field in selectable_fields[:3])}
+        )
+    if metrics and group_fields:
+        metric = metrics[0]
+        group_field = group_fields[0]
+        if suggestion.question == build_metric_by_field_example(
+            resource,
+            metric,
+            group_field,
+        ):
+            return suggestion.model_copy(
+                update={
+                    "fields": (group_field["name"],),
+                    "metrics": (metric["name"],),
+                }
+            )
+    if metrics and date_fields:
+        metric = metrics[0]
+        date_field = date_fields[0]
+        if suggestion.question == build_metric_trend_example(metric, date_field):
+            return suggestion.model_copy(
+                update={
+                    "metrics": (metric["name"],),
+                    "date_fields": (date_field["name"],),
+                }
+            )
+    return suggestion
 
 
 def index_resource_references(

@@ -7,7 +7,11 @@ from django.core.exceptions import PermissionDenied
 
 from django_asklens.api.permissions import get_request_permissions
 from django_asklens.catalog.capabilities import build_capabilities
-from django_asklens.exceptions import AskLensError
+from django_asklens.exceptions import (
+    AskLensError,
+    LLMProviderError,
+    PlanValidationError,
+)
 from django_asklens.execution import run_query_plan
 from django_asklens.models import SemanticQueryRun
 from django_asklens.planning import plan_asklens_response, plan_question
@@ -152,9 +156,10 @@ def execute_asklens_query_request(
                     query_help=build_deterministic_query_help(
                         capabilities=capabilities,
                         question=question,
+                        permissions=tuple(permissions),
                     ),
                     query_help_source="deterministic_fallback",
-                    query_help_error=safe_error_message(exc),
+                    query_help_error=safe_provider_fallback_message(exc),
                 ),
             )
 
@@ -250,6 +255,7 @@ def get_query_help_for_capabilities(
             build_deterministic_query_help(
                 capabilities=capabilities,
                 question=question,
+                permissions=tuple(permissions or ()),
             ),
             "deterministic",
             "",
@@ -269,9 +275,10 @@ def get_query_help_for_capabilities(
             build_deterministic_query_help(
                 capabilities=capabilities,
                 question=question,
+                permissions=tuple(permissions or ()),
             ),
             "deterministic_fallback",
-            safe_error_message(exc),
+            safe_provider_fallback_message(exc),
         )
 
 
@@ -332,7 +339,31 @@ def build_success_payload(
     return payload
 
 
+def safe_provider_fallback_message(exc: AskLensError) -> str:
+    """Return a provider-fallback reason without raw provider details."""
+
+    category = safe_error_category(exc)
+    if category == "provider_error":
+        reason = "Provider request failed."
+    elif category == "provider_validation_error":
+        reason = "Provider output failed AskLens validation."
+    else:
+        reason = "Provider output could not be used."
+    return f"{reason} Returned deterministic AskLens help instead."
+
+
+def safe_error_category(exc: AskLensError) -> str:
+    """Return a stable safe error category for diagnostics."""
+
+    if isinstance(exc, LLMProviderError):
+        return "provider_error"
+    if isinstance(exc, PlanValidationError):
+        return "provider_validation_error"
+    return "asklens_error"
+
+
 def safe_error_message(exc: AskLensError) -> str:
     """Return a safe API/audit error message without traceback details."""
 
-    return str(exc) or exc.__class__.__name__
+    message = str(exc) or exc.__class__.__name__
+    return " ".join(message.split())[:500]

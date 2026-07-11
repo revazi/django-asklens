@@ -275,7 +275,8 @@ def test_query_help_fallback_returns_safe_error(
 
     assert source == "deterministic_fallback"
     assert query_help.suggestions
-    assert "private_notes" in error
+    assert "Provider output failed AskLens validation" in error
+    assert "private_notes" not in error
     assert "Traceback" not in error
 
 

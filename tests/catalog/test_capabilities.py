@@ -85,6 +85,17 @@ def test_build_capabilities_describes_visible_fields_metrics_and_examples() -> N
     assert capabilities["examples"] == resource["examples"]
 
 
+def test_build_capabilities_includes_configured_row_limit_guidance(settings) -> None:
+    """Capabilities should guide users to narrow broad list results."""
+
+    settings.DJANGO_ASKLENS = {"MAX_ROWS": 25}
+
+    capabilities = build_capabilities(catalog={"resources": []})
+
+    assert any("25 rows" in item for item in capabilities["limitations"])
+    assert any("25-row" in item for item in capabilities["query_patterns"])
+
+
 def test_build_capabilities_adds_sanitized_single_scope_guidance() -> None:
     """Capabilities can guide LLM help without leaking scope identifiers."""
 

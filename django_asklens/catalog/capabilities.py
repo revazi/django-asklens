@@ -11,6 +11,7 @@ from django_asklens.catalog.resources import (
     MetricCatalogItem,
     ResourceCatalogItem,
 )
+from django_asklens.settings import get_asklens_setting
 
 DATE_FIELD_TYPES = {"date", "datetime"}
 MAX_RESOURCE_EXAMPLES = 3
@@ -107,10 +108,11 @@ def build_capabilities(
         for resource in scoped_catalog.get("resources", [])
     ]
     examples = collect_examples(resources)
+    max_rows = int(get_asklens_setting("MAX_ROWS"))
     return {
         "summary": build_summary(resources),
-        "query_patterns": build_query_patterns(),
-        "limitations": build_limitations(),
+        "query_patterns": build_query_patterns(max_rows=max_rows),
+        "limitations": build_limitations(max_rows=max_rows),
         "resources": resources,
         "examples": examples,
     }
@@ -130,11 +132,14 @@ def build_summary(resources: Sequence[CapabilityResource]) -> str:
     )
 
 
-def build_query_patterns() -> list[str]:
+def build_query_patterns(*, max_rows: int) -> list[str]:
     """Return supported natural-language query patterns."""
 
     return [
-        "List records with exposed fields from one visible resource.",
+        (
+            "List records with exposed fields from one visible resource, up "
+            f"to the configured {max_rows}-row response limit."
+        ),
         "Filter by exposed fields such as status, dates, booleans, or related labels.",
         "Group aggregate metrics by exposed fields.",
         (
@@ -148,7 +153,7 @@ def build_query_patterns() -> list[str]:
     ]
 
 
-def build_limitations() -> list[str]:
+def build_limitations(*, max_rows: int) -> list[str]:
     """Return safe usage limits for capabilities consumers."""
 
     return [
@@ -164,6 +169,11 @@ def build_limitations() -> list[str]:
         (
             "Catalog and capabilities metadata do not include database rows or "
             "sample values."
+        ),
+        (
+            f"List-style answers return at most {max_rows} rows by default; "
+            "ask with filters, ordering, or a smaller explicit limit to narrow "
+            "large result sets."
         ),
         (
             "Row-level scope still depends on each resource base queryset "
