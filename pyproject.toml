@@ -10,20 +10,48 @@ readme = "README.md"
 requires-python = ">=3.12"
 license = "BSD-3-Clause"
 authors = [
-    { name = "Django AskLens contributors" },
+    { name = "Revaz Zakalashvili", email = "revaz.zakalashvili@gmail.com" },
 ]
-keywords = ["django", "drf", "llm", "analytics", "orm"]
+keywords = [
+    "analytics",
+    "business-intelligence",
+    "data-exploration",
+    "django",
+    "django-orm",
+    "django-rest-framework",
+    "drf",
+    "generative-ai",
+    "llm",
+    "multi-tenant",
+    "natural-language-query",
+    "openai-compatible",
+    "orm",
+    "pydantic",
+    "python",
+    "query-builder",
+    "reporting",
+    "semantic-layer",
+    "text-to-query",
+]
 classifiers = [
-    "Development Status :: 2 - Pre-Alpha",
+    "Development Status :: 3 - Alpha",
     "Environment :: Web Environment",
     "Framework :: Django",
     "Framework :: Django :: 6.0",
     "Intended Audience :: Developers",
+    "Intended Audience :: Information Technology",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Topic :: Database",
+    "Topic :: Database :: Front-Ends",
+    "Topic :: Internet :: WWW/HTTP",
+    "Topic :: Internet :: WWW/HTTP :: Dynamic Content",
+    "Topic :: Office/Business",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Scientific/Engineering :: Information Analysis",
+    "Topic :: Software Development :: Libraries :: Application Frameworks",
     "Topic :: Software Development :: Libraries :: Python Modules",
 ]
 dependencies = [
