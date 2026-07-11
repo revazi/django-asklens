@@ -6,6 +6,7 @@ from django.contrib.auth.models import AnonymousUser
 from django.core.exceptions import PermissionDenied
 from django.test import RequestFactory, override_settings
 
+from django_asklens.frontend.views import asklens_frontend
 from tests.test_project.demo_views import asklens_demo
 from tests.test_project.models import Facility, StaffAssignment, StaffGrant
 
@@ -35,6 +36,51 @@ def test_demo_frontend_redirects_anonymous_user() -> None:
 
     assert response.status_code == 302
     assert response.url == "/admin/login/?next=/"
+
+
+def deny_frontend_access(_request) -> bool:
+    """Permission-check helper for packaged frontend tests."""
+
+    return False
+
+
+@override_settings(TEMPLATES=TEMPLATE_SETTINGS)
+def test_packaged_frontend_defaults_to_authenticated_users() -> None:
+    """Projects can mount the packaged frontend without demo-only code."""
+
+    anonymous_request = RequestFactory().get("/asklens/ui/")
+    anonymous_request.user = AnonymousUser()
+
+    anonymous_response = asklens_frontend(anonymous_request)
+
+    assert anonymous_response.status_code == 302
+
+    user = get_user_model().objects.create_user(username="regular", password="pw")
+    request = RequestFactory().get("/asklens/ui/")
+    request.user = user
+
+    response = asklens_frontend(request)
+    content = response.content.decode()
+
+    assert response.status_code == 200
+    assert "AskLens" in content
+    assert 'data-query-url="/asklens/query/"' in content
+    assert "Ask AskLens" in content
+
+
+@override_settings(
+    TEMPLATES=TEMPLATE_SETTINGS,
+    DJANGO_ASKLENS={"FRONTEND_PERMISSION_CHECK": deny_frontend_access},
+)
+def test_packaged_frontend_supports_project_permission_check() -> None:
+    """Projects can restrict the built-in frontend to selected users."""
+
+    user = get_user_model().objects.create_user(username="regular", password="pw")
+    request = RequestFactory().get("/asklens/ui/")
+    request.user = user
+
+    with pytest.raises(PermissionDenied):
+        asklens_frontend(request)
 
 
 def test_demo_frontend_denies_staff_user_without_reporting_grants() -> None:
@@ -83,22 +129,34 @@ def test_demo_frontend_renders_for_reporting_user() -> None:
     assert 'data-catalog-url="/asklens/catalog/"' in content
     assert 'data-capabilities-url="/asklens/capabilities/"' in content
     assert 'data-query-url="/asklens/query/"' in content
-    assert "LLM mode:" in content
+    assert "Ask AskLens" in content
+    assert "Saved queries" in content
+    assert "Saved locally in this browser" in content
+    assert "No saved queries yet" in content
+    assert "Save query" in content
+    assert "AskLens is working" in content
+    assert "Running…" in content
+    assert "Suggestions" in content
+    assert "Starter questions" in content
+    assert "Visible capabilities" in content
     assert "Offline dummy plans" in content
-    assert "Planner backend:" in content
     assert "dummy" in content
     assert "Show paid billing revenue by product" in content
     assert "Count member subscriptions by plan and status" not in content
     assert "Show scheduled capacity by session type" not in content
-    assert "What can I query?" in content
     assert "LLM help" in content
     assert "Deterministic fallback help" in content
     assert "Reason:" in content
-    assert "Enable live LLM mode for provider-generated suggestions" in content
     assert "Tenant row scope" in content
     assert "North Studio" in content
-    assert "Display as" in content
-    assert "Raw JSON" in content
+    assert "Raw response" in content
+    assert content.index("Session") < content.index("Tenant row scope")
+    assert content.index("Tenant row scope") < content.index("Saved queries")
+    assert content.index("Saved queries") < content.index("Suggestions")
+    assert content.index("Suggestions") < content.index("Visible capabilities")
+    assert (
+        '<details class="card disclosure" aria-label="Visible capabilities">' in content
+    )
 
 
 @override_settings(

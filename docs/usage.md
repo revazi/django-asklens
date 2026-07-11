@@ -124,7 +124,49 @@ Capability/help questions return a non-row response and do not execute a databas
 }
 ```
 
-## 5. Query from Python
+## 5. Optional packaged frontend
+
+Projects that want a built-in browser UI can mount the dependency-free AskLens frontend. It uses the same API endpoints and Django session authentication as the rest of AskLens. Users can save useful questions locally in their browser; saved plans are sent back only as normal query requests and are revalidated against current permissions before execution.
+
+```python
+# urls.py
+from django.urls import include, path
+
+urlpatterns = [
+    path("", include("django_asklens.api.urls")),
+    path("", include("django_asklens.frontend.urls")),  # /asklens/ui/
+]
+```
+
+By default the frontend requires an authenticated Django user. To restrict it to selected users, configure a project-specific permission check:
+
+```python
+DJANGO_ASKLENS = {
+    "FRONTEND_PERMISSION_CHECK": "myapp.permissions.can_use_asklens_frontend",
+}
+```
+
+The callable receives the Django request and must return `True` or `False`. API route permissions still apply to `/asklens/catalog/`, `/asklens/capabilities/`, `/asklens/query/`, and `/asklens/runs/<id>/`; the frontend permission check only controls whether the packaged UI page can load.
+
+```python
+def can_use_asklens_frontend(request):
+    return request.user.is_staff and request.user.has_perm("reports.view_analytics")
+```
+
+Optional frontend settings:
+
+```python
+DJANGO_ASKLENS = {
+    "FRONTEND_TITLE": "Company Analytics",
+    "FRONTEND_SUBTITLE": "Ask read-only questions over approved reporting data.",
+    "FRONTEND_STARTER_QUESTIONS": [
+        "Show orders by status",
+        "Trend revenue by month",
+    ],
+}
+```
+
+## 6. Query from Python
 
 ```python
 from django_asklens.llms import DummyProvider

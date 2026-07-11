@@ -22,6 +22,10 @@ DEFAULTS: dict[str, Any] = {
     "DEFAULT_VISUALIZATION": "table",
     "API_PERMISSION_CLASSES": ["rest_framework.permissions.IsAuthenticated"],
     "REQUEST_PERMISSIONS_GETTER": None,
+    "FRONTEND_PERMISSION_CHECK": None,
+    "FRONTEND_TITLE": "AskLens",
+    "FRONTEND_SUBTITLE": "Ask read-only questions over approved Django data.",
+    "FRONTEND_STARTER_QUESTIONS": (),
     "DUMMY_PLANS": {},
     "DUMMY_DEFAULT_PLAN": None,
 }

@@ -1,0 +1,1417 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ page_title }}</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f4f6fb;
+      --surface: #ffffff;
+      --surface-soft: #f8fafc;
+      --surface-blue: #eef5ff;
+      --line: #d7deea;
+      --line-strong: #b7c2d4;
+      --text: #111827;
+      --muted: #667085;
+      --accent: #2563eb;
+      --accent-strong: #1d4ed8;
+      --accent-soft: #dbeafe;
+      --danger: #b42318;
+      --success: #067647;
+      --warning: #b54708;
+      --shadow: 0 18px 48px rgba(16, 24, 40, 0.10);
+      --soft-shadow: 0 8px 24px rgba(16, 24, 40, 0.07);
+      --radius-lg: 1.35rem;
+      --radius-md: 0.95rem;
+    }
+
+    * { box-sizing: border-box; }
+
+    html,
+    body {
+      height: 100%;
+      overflow: hidden;
+    }
+
+    body {
+      min-height: 100dvh;
+      margin: 0;
+      background:
+        radial-gradient(circle at top left, rgba(37, 99, 235, 0.13), transparent 30rem),
+        radial-gradient(circle at bottom right, rgba(124, 58, 237, 0.08), transparent 32rem),
+        var(--bg);
+      color: var(--text);
+      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.5;
+    }
+
+    button,
+    textarea,
+    select { font: inherit; }
+
+    a { color: var(--accent); }
+
+    .app {
+      width: min(1380px, 100%);
+      height: 100dvh;
+      overflow: hidden;
+      margin: 0 auto;
+      padding: clamp(0.8rem, 2vw, 1.4rem);
+    }
+
+    .app-grid {
+      display: grid;
+      height: 100%;
+      min-height: 0;
+      grid-template-columns: minmax(18rem, 22rem) minmax(0, 1fr);
+      gap: 1rem;
+    }
+
+    .side,
+    .chat {
+      border: 1px solid rgba(215, 222, 234, 0.86);
+      background: rgba(255, 255, 255, 0.84);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(18px);
+    }
+
+    .side {
+      display: flex;
+      min-height: 0;
+      flex-direction: column;
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+    }
+
+    .brand {
+      padding: 1rem;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .brand-row {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .brand-mark {
+      display: grid;
+      width: 2.65rem;
+      height: 2.65rem;
+      flex: 0 0 auto;
+      place-items: center;
+      border-radius: 0.95rem;
+      background: linear-gradient(135deg, #2563eb, #7c3aed);
+      color: #ffffff;
+      font-weight: 850;
+      letter-spacing: -0.07em;
+      box-shadow: 0 10px 22px rgba(37, 99, 235, 0.25);
+    }
+
+    h1,
+    h2,
+    h3,
+    p { margin-top: 0; }
+
+    h1 {
+      margin-bottom: 0.1rem;
+      font-size: 1.15rem;
+      letter-spacing: -0.04em;
+      line-height: 1.1;
+    }
+
+    .brand p {
+      margin: 0.45rem 0 0;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .side-scroll {
+      display: grid;
+      min-height: 0;
+      gap: 0.8rem;
+      overflow: auto;
+      padding: 1rem;
+    }
+
+    .card {
+      border: 1px solid var(--line);
+      border-radius: var(--radius-md);
+      background: rgba(255, 255, 255, 0.74);
+      padding: 0.9rem;
+    }
+
+    .card h2 {
+      margin-bottom: 0.5rem;
+      font-size: 0.95rem;
+      letter-spacing: -0.02em;
+    }
+
+    .small {
+      color: var(--muted);
+      font-size: 0.88rem;
+    }
+
+    .small:last-child { margin-bottom: 0; }
+
+    .pill-row,
+    .chip-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.45rem;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .pill {
+      display: inline-flex;
+      max-width: 100%;
+      align-items: center;
+      gap: 0.35rem;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: var(--surface-soft);
+      color: #344054;
+      font-size: 0.82rem;
+      font-weight: 650;
+      line-height: 1.2;
+      padding: 0.35rem 0.55rem;
+    }
+
+    .pill.good { border-color: #abefc6; background: #ecfdf3; color: var(--success); }
+    .pill.blue { border-color: #b2ddff; background: #eff8ff; color: #175cd3; }
+
+    .chip {
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: #ffffff;
+      color: #243b63;
+      cursor: pointer;
+      font-size: 0.88rem;
+      font-weight: 650;
+      padding: 0.48rem 0.7rem;
+      text-align: left;
+      transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+    }
+
+    .chip:hover {
+      border-color: #93c5fd;
+      background: var(--surface-blue);
+      transform: translateY(-1px);
+    }
+
+    .chip.danger {
+      color: var(--danger);
+    }
+
+    .text-button {
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: #ffffff;
+      color: #344054;
+      cursor: pointer;
+      font-size: 0.82rem;
+      font-weight: 750;
+      padding: 0.38rem 0.62rem;
+    }
+
+    .text-button:hover {
+      border-color: #93c5fd;
+      background: var(--surface-blue);
+      color: #175cd3;
+    }
+
+    .action-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.45rem;
+      align-items: center;
+    }
+
+    .saved-query {
+      display: grid;
+      gap: 0.45rem;
+    }
+
+    .saved-query-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+    }
+
+    .resource-list {
+      display: grid;
+      gap: 0.5rem;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .resource-item {
+      border: 1px solid var(--line);
+      border-radius: 0.8rem;
+      background: #ffffff;
+      padding: 0.72rem;
+    }
+
+    .resource-item strong {
+      display: block;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .chat {
+      display: grid;
+      min-width: 0;
+      min-height: 0;
+      grid-template-rows: auto minmax(0, 1fr) auto;
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+    }
+
+    .chat-topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      border-bottom: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.88);
+      padding: 0.85rem 1rem;
+    }
+
+    .chat-title h2 {
+      margin-bottom: 0.1rem;
+      font-size: 1rem;
+      letter-spacing: -0.02em;
+    }
+
+    .chat-title p { margin-bottom: 0; }
+
+    .top-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.45rem;
+      justify-content: flex-end;
+    }
+
+    .top-actions a {
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: #ffffff;
+      color: #344054;
+      font-size: 0.84rem;
+      font-weight: 650;
+      padding: 0.4rem 0.65rem;
+      text-decoration: none;
+    }
+
+    .thread {
+      display: grid;
+      align-content: start;
+      gap: 1rem;
+      min-height: 0;
+      overflow: auto;
+      padding: clamp(1rem, 2vw, 1.35rem);
+    }
+
+    .message {
+      display: grid;
+      max-width: min(58rem, 100%);
+      align-items: start;
+    }
+
+    .message.user {
+      justify-self: end;
+    }
+
+    .bubble {
+      min-width: 0;
+      border: 1px solid var(--line);
+      border-radius: 1.05rem;
+      background: #ffffff;
+      box-shadow: var(--soft-shadow);
+      padding: 0.95rem;
+    }
+
+    .message.user .bubble {
+      border-color: transparent;
+      background: linear-gradient(135deg, #2563eb, #1d4ed8);
+      color: #ffffff;
+    }
+
+    .message.user .bubble p { margin-bottom: 0; }
+
+    .welcome {
+      max-width: min(42rem, 100%);
+    }
+
+    .welcome h2 {
+      margin-bottom: 0.45rem;
+      font-size: clamp(1.45rem, 3vw, 2.25rem);
+      line-height: 1.08;
+      letter-spacing: -0.055em;
+    }
+
+    .composer {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 0.75rem;
+      border-top: 1px solid var(--line);
+      background: #ffffff;
+      padding: 0.95rem;
+    }
+
+    .composer textarea {
+      min-height: 3.8rem;
+      max-height: 12rem;
+      resize: vertical;
+      border: 1px solid var(--line-strong);
+      border-radius: 1rem;
+      background: var(--surface-soft);
+      color: var(--text);
+      outline: none;
+      padding: 0.85rem 1rem;
+    }
+
+    .composer textarea:focus {
+      border-color: #93c5fd;
+      background: #ffffff;
+      box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
+    }
+
+    .send {
+      min-width: 6rem;
+      border: 0;
+      border-radius: 1rem;
+      background: var(--accent);
+      color: #ffffff;
+      cursor: pointer;
+      font-weight: 800;
+      padding: 0 1rem;
+      box-shadow: 0 10px 20px rgba(37, 99, 235, 0.22);
+    }
+
+    .send:hover:not(:disabled) { background: var(--accent-strong); }
+    .send:disabled { cursor: not-allowed; opacity: 0.62; }
+
+    .loading-card {
+      display: flex;
+      align-items: center;
+      gap: 0.85rem;
+      border: 1px solid #bfdbfe;
+      border-radius: 0.95rem;
+      background: #eff6ff;
+      color: #1e3a8a;
+      padding: 0.85rem;
+    }
+
+    .spinner {
+      width: 1.35rem;
+      height: 1.35rem;
+      flex: 0 0 auto;
+      border: 0.18rem solid rgba(37, 99, 235, 0.18);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    .loading-card strong {
+      display: block;
+      margin-bottom: 0.15rem;
+    }
+
+    .loading-card p {
+      margin: 0;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .composer-meta {
+      grid-column: 1 / -1;
+      min-height: 1.35rem;
+      color: var(--muted);
+      font-size: 0.88rem;
+    }
+
+    .composer-meta.error { color: var(--danger); }
+    .composer-meta.success { color: var(--success); }
+
+    .result-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.45rem;
+      margin: 0 0 0.8rem;
+      padding: 0;
+      list-style: none;
+    }
+
+    .result-card {
+      display: grid;
+      gap: 0.85rem;
+    }
+
+    .table-wrap {
+      overflow: auto;
+      border: 1px solid var(--line);
+      border-radius: 0.85rem;
+      background: #ffffff;
+    }
+
+    table {
+      width: 100%;
+      min-width: 32rem;
+      border-collapse: collapse;
+    }
+
+    th,
+    td {
+      border-bottom: 1px solid var(--line);
+      padding: 0.62rem 0.72rem;
+      text-align: left;
+      vertical-align: top;
+      white-space: nowrap;
+    }
+
+    th {
+      background: var(--surface-soft);
+      color: #475467;
+      font-size: 0.78rem;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    tr:last-child td { border-bottom: 0; }
+
+    .chart {
+      display: grid;
+      gap: 0.6rem;
+      border: 1px solid var(--line);
+      border-radius: 0.85rem;
+      background: #fbfdff;
+      padding: 0.85rem;
+    }
+
+    .bar-row {
+      display: grid;
+      grid-template-columns: minmax(7rem, 13rem) minmax(8rem, 1fr) auto;
+      gap: 0.65rem;
+      align-items: center;
+    }
+
+    .bar-label {
+      overflow: hidden;
+      color: #344054;
+      font-weight: 700;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .bar-track {
+      height: 0.85rem;
+      overflow: hidden;
+      border-radius: 999px;
+      background: #e4e7ec;
+    }
+
+    .bar-fill {
+      height: 100%;
+      min-width: 0.25rem;
+      border-radius: inherit;
+      background: linear-gradient(90deg, #2563eb, #60a5fa);
+    }
+
+    .metric-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+      gap: 0.65rem;
+    }
+
+    .metric-card {
+      border: 1px solid var(--line);
+      border-radius: 0.85rem;
+      background: linear-gradient(135deg, #f8fbff, #eff6ff);
+      padding: 0.85rem;
+    }
+
+    .metric-value {
+      color: var(--accent-strong);
+      font-size: clamp(1.65rem, 4vw, 2.55rem);
+      font-weight: 850;
+      letter-spacing: -0.055em;
+      line-height: 1;
+    }
+
+    .metric-label {
+      margin-top: 0.35rem;
+      color: var(--muted);
+      font-weight: 750;
+    }
+
+    .disclosure {
+      padding: 0;
+    }
+
+    .disclosure summary {
+      display: flex;
+      cursor: pointer;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+      padding: 0.9rem;
+      font-weight: 750;
+      list-style: none;
+    }
+
+    .disclosure summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .disclosure summary::after {
+      content: "⌄";
+      color: var(--muted);
+      font-size: 1.1rem;
+      transition: transform 0.15s ease;
+    }
+
+    .disclosure[open] summary::after {
+      transform: rotate(180deg);
+    }
+
+    .disclosure-content {
+      border-top: 1px solid var(--line);
+      padding: 0 0.9rem 0.9rem;
+    }
+
+    .result-card details {
+      border: 1px solid var(--line);
+      border-radius: 0.85rem;
+      background: var(--surface-soft);
+      padding: 0.7rem 0.85rem;
+    }
+
+    .result-card summary {
+      cursor: pointer;
+      font-weight: 750;
+    }
+
+    pre {
+      overflow: auto;
+      max-height: 26rem;
+      margin-bottom: 0;
+      border-radius: 0.7rem;
+      background: #0f172a;
+      color: #f8fafc;
+      padding: 0.85rem;
+      white-space: pre-wrap;
+    }
+
+    code {
+      border-radius: 0.35rem;
+      background: #eef2f7;
+      padding: 0.1rem 0.28rem;
+    }
+
+    .empty {
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .hidden { display: none !important; }
+
+    @media (max-width: 980px) {
+      .app { padding: 0.55rem; }
+      .app-grid {
+        grid-template-columns: 1fr;
+        grid-template-rows: minmax(0, 1fr) minmax(10rem, 34vh);
+      }
+      .side { order: 2; min-height: 0; }
+      .chat { min-height: 0; }
+      .chat-topbar { align-items: flex-start; flex-direction: column; }
+      .top-actions { justify-content: flex-start; }
+    }
+
+    @media (max-width: 680px) {
+      .composer { grid-template-columns: 1fr; }
+      .send { min-height: 3rem; }
+      .bar-row { grid-template-columns: 1fr; }
+      .bubble,
+      .message.user .bubble { border-radius: 1rem; }
+    }
+  </style>
+</head>
+<body>
+  <main
+    class="app"
+    id="asklens-app"
+    data-catalog-url="{{ catalog_url }}"
+    data-capabilities-url="{{ capabilities_url }}"
+    data-query-url="{{ query_url }}"
+  >
+    <div class="app-grid">
+      <aside class="side" aria-label="AskLens context">
+        <section class="brand">
+          <div class="brand-row">
+            <div class="brand-mark" aria-hidden="true">AL</div>
+            <div>
+              <h1>{{ page_title }}</h1>
+              <p>{{ page_subtitle }}</p>
+            </div>
+          </div>
+        </section>
+        <div class="side-scroll">
+          <section class="card" aria-label="Current session">
+            <h2>Session</h2>
+            <div class="pill-row">
+              <span class="pill blue">{{ user_label }}</span>
+              <span class="pill good">{{ llm_mode_label }}</span>
+              <span class="pill"><code>{{ llm_backend }}</code>{% if llm_model %} · <code>{{ llm_model }}</code>{% endif %}</span>
+            </div>
+          </section>
+
+          <section class="card {% if not scope_labels %}hidden{% endif %}" aria-label="{{ scope_title }}">
+            <h2>{{ scope_title }}</h2>
+            {{ scope_labels|json_script:"asklens-scope-labels" }}
+            <ul class="resource-list" id="scope-list"></ul>
+          </section>
+
+          <section class="card" aria-label="Saved queries">
+            <h2>Saved queries</h2>
+            <p class="small" id="saved-query-status">Saved locally in this browser.</p>
+            <ul class="resource-list" id="saved-query-list"></ul>
+            <div class="action-row">
+              <button class="text-button" id="clear-saved-queries" type="button">Clear saved</button>
+            </div>
+          </section>
+
+          <section class="card" id="pinned-card" aria-label="Pinned suggestions">
+            <h2>Suggestions</h2>
+            <p class="small" id="suggestion-status">Ask for examples to pin reusable suggestions here.</p>
+            <ul class="chip-list" id="suggestion-list"></ul>
+          </section>
+
+          <section class="card" aria-label="Starter questions">
+            <h2>Starter questions</h2>
+            {{ starter_questions|json_script:"asklens-starter-questions" }}
+            <ul class="chip-list" id="starter-list"></ul>
+          </section>
+
+          <details class="card disclosure" aria-label="Visible capabilities">
+            <summary>
+              <span>Visible capabilities</span>
+              <span class="small" id="capabilities-status">Loading…</span>
+            </summary>
+            <div class="disclosure-content">
+              <ul class="resource-list" id="capabilities-list"></ul>
+            </div>
+          </details>
+        </div>
+      </aside>
+
+      <section class="chat" aria-label="AskLens chat workspace">
+        <header class="chat-topbar">
+          <div class="chat-title">
+            <h2>Ask AskLens</h2>
+            <p class="small">Natural-language questions become validated, read-only Django ORM queries.</p>
+          </div>
+          <nav class="top-actions" aria-label="AskLens API links">
+            <a href="{{ catalog_url }}">Catalog JSON</a>
+            <a href="{{ capabilities_url }}">Capabilities JSON</a>
+          </nav>
+        </header>
+
+        <section class="thread" id="thread" aria-live="polite">
+          <article class="message assistant">
+            <div class="bubble welcome">
+              <h2>What would you like to know?</h2>
+              <p>
+                Ask about records, counts, totals, trends, or “show me query examples”.
+                AskLens validates every plan against the visible catalog before anything runs.
+              </p>
+              <p class="small">
+                Suggestions with validated local plans can be re-run without another planner call.
+              </p>
+            </div>
+          </article>
+        </section>
+
+        <form class="composer" id="query-form">
+          {% csrf_token %}
+          <textarea id="question-input" name="question" required placeholder="Ask a question…">{{ starter_questions.0|default:"show me query examples" }}</textarea>
+          <button class="send" id="send-button" type="submit">Send</button>
+          <div class="composer-meta" id="composer-status"></div>
+        </form>
+      </section>
+    </div>
+  </main>
+
+  <script>
+    const app = document.getElementById("asklens-app");
+    const catalogUrl = app.dataset.catalogUrl;
+    const capabilitiesUrl = app.dataset.capabilitiesUrl;
+    const queryUrl = app.dataset.queryUrl;
+    const csrfToken = document.querySelector("[name=csrfmiddlewaretoken]").value;
+    const starterQuestions = JSON.parse(document.getElementById("asklens-starter-questions").textContent);
+    const scopeLabels = JSON.parse(document.getElementById("asklens-scope-labels").textContent);
+
+    const thread = document.getElementById("thread");
+    const form = document.getElementById("query-form");
+    const input = document.getElementById("question-input");
+    const sendButton = document.getElementById("send-button");
+    const composerStatus = document.getElementById("composer-status");
+    const starterList = document.getElementById("starter-list");
+    const suggestionList = document.getElementById("suggestion-list");
+    const suggestionStatus = document.getElementById("suggestion-status");
+    const savedQueryList = document.getElementById("saved-query-list");
+    const savedQueryStatus = document.getElementById("saved-query-status");
+    const clearSavedQueriesButton = document.getElementById("clear-saved-queries");
+    const scopeList = document.getElementById("scope-list");
+    const capabilitiesStatus = document.getElementById("capabilities-status");
+    const capabilitiesList = document.getElementById("capabilities-list");
+
+    const savedQueriesStorageKey = "django_asklens.saved_queries.v1";
+
+    let pendingSuggestionQuestion = "";
+    let pendingSuggestionPlan = null;
+    let pinnedSuggestions = [];
+    let savedQueries = loadSavedQueries();
+
+    function setComposerStatus(message, kind = "") {
+      composerStatus.textContent = message;
+      composerStatus.className = `composer-meta ${kind}`.trim();
+    }
+
+    function setBusy(isBusy) {
+      sendButton.disabled = isBusy;
+      sendButton.textContent = isBusy ? "Running…" : "Send";
+      form.setAttribute("aria-busy", String(isBusy));
+      input.toggleAttribute("aria-busy", isBusy);
+    }
+
+    async function fetchJson(url, options = {}) {
+      const { headers = {}, ...fetchOptions } = options;
+      const response = await fetch(url, {
+        credentials: "same-origin",
+        ...fetchOptions,
+        headers: {
+          Accept: "application/json",
+          ...headers,
+        },
+      });
+      const text = await response.text();
+      let payload = null;
+      if (text) {
+        try {
+          payload = JSON.parse(text);
+        } catch (_error) {
+          payload = { detail: text };
+        }
+      }
+      if (!response.ok) {
+        const message = payload?.error || payload?.detail || response.statusText;
+        throw new Error(message);
+      }
+      return payload;
+    }
+
+    function appendMessage(role, content = "") {
+      const article = document.createElement("article");
+      article.className = `message ${role}`;
+      const bubble = document.createElement("div");
+      bubble.className = "bubble";
+      if (content) {
+        const paragraph = document.createElement("p");
+        paragraph.textContent = content;
+        bubble.appendChild(paragraph);
+      }
+      article.appendChild(bubble);
+      thread.appendChild(article);
+      scrollThread();
+      return bubble;
+    }
+
+    function appendLoadingMessage() {
+      const bubble = appendMessage("assistant");
+      bubble.setAttribute("aria-busy", "true");
+      const loading = document.createElement("div");
+      loading.className = "loading-card";
+      const spinner = document.createElement("div");
+      spinner.className = "spinner";
+      spinner.setAttribute("aria-hidden", "true");
+      const copy = document.createElement("div");
+      const title = document.createElement("strong");
+      title.textContent = "AskLens is working";
+      const detail = document.createElement("p");
+      detail.className = "small";
+      detail.textContent = "Planning, validating permissions, and executing safely…";
+      copy.append(title, detail);
+      loading.append(spinner, copy);
+      bubble.appendChild(loading);
+      return bubble;
+    }
+
+    function scrollThread() {
+      thread.scrollTop = thread.scrollHeight;
+    }
+
+    function useQuestion(question, plan = null) {
+      pendingSuggestionQuestion = question;
+      pendingSuggestionPlan = plan;
+      input.value = question;
+      input.focus();
+      if (plan) {
+        setComposerStatus("Validated suggestion loaded. Send will execute it without another planner call.", "success");
+      } else {
+        setComposerStatus("Question loaded.");
+      }
+    }
+
+    input.addEventListener("input", () => {
+      if (input.value.trim() !== pendingSuggestionQuestion) {
+        pendingSuggestionQuestion = "";
+        pendingSuggestionPlan = null;
+      }
+    });
+
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const question = input.value.trim();
+      if (!question) {
+        setComposerStatus("Enter a question first.", "error");
+        return;
+      }
+
+      setBusy(true);
+      appendMessage("user", question);
+      const responseBubble = appendLoadingMessage();
+      setComposerStatus("Running AskLens…");
+      try {
+        const body = { question };
+        if (pendingSuggestionPlan && question === pendingSuggestionQuestion) {
+          body.plan = pendingSuggestionPlan;
+        }
+        const payload = await fetchJson(queryUrl, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-CSRFToken": csrfToken,
+          },
+          body: JSON.stringify(body),
+        });
+        responseBubble.removeAttribute("aria-busy");
+        responseBubble.replaceChildren(renderResponse(payload, question));
+        setComposerStatus("Done.", "success");
+      } catch (error) {
+        responseBubble.removeAttribute("aria-busy");
+        responseBubble.replaceChildren(renderError(error.message));
+        setComposerStatus(error.message, "error");
+      } finally {
+        setBusy(false);
+        scrollThread();
+      }
+    });
+
+    function renderResponse(payload, question) {
+      if (payload.response_type === "capabilities") {
+        return renderCapabilitiesResponse(payload, question);
+      }
+      return renderQueryResponse(payload, question);
+    }
+
+    function renderQueryResponse(payload, question) {
+      const wrapper = document.createElement("div");
+      wrapper.className = "result-card";
+      const meta = document.createElement("ul");
+      meta.className = "result-meta";
+      meta.append(
+        renderPill(`Run #${payload.run_id || "—"}`),
+        renderPill(`${payload.row_count ?? 0} rows`),
+        renderPill(`${payload.duration_ms ?? "—"} ms`),
+        renderPill(`Display hint: ${payload.visualization?.type || "table"}`),
+      );
+      wrapper.appendChild(meta);
+      wrapper.appendChild(renderQueryActions(question, payload.plan || null));
+      const metricGrid = renderMetricGrid(payload);
+      if (metricGrid) {
+        wrapper.appendChild(metricGrid);
+      }
+      const chart = renderBarPreview(payload);
+      if (chart) {
+        wrapper.appendChild(chart);
+      }
+      wrapper.appendChild(renderTable(payload.columns || [], payload.data || []));
+      wrapper.appendChild(renderRawDetails(payload));
+      return wrapper;
+    }
+
+    function renderCapabilitiesResponse(payload, question) {
+      const queryHelp = payload.query_help || null;
+      if (queryHelp?.suggestions?.length) {
+        pinnedSuggestions = queryHelp.suggestions;
+        renderPinnedSuggestions();
+      }
+
+      const wrapper = document.createElement("div");
+      wrapper.className = "result-card";
+      const meta = document.createElement("ul");
+      meta.className = "result-meta";
+      meta.append(
+        renderPill("Capabilities"),
+        renderPill(queryHelpSourceLabel(payload.query_help_source)),
+        renderPill("No DB query"),
+      );
+      wrapper.appendChild(meta);
+      wrapper.appendChild(renderQueryActions(question, null));
+
+      const answer = document.createElement("div");
+      answer.className = "card";
+      const title = document.createElement("h3");
+      title.textContent = queryHelp?.answer || "What can I query?";
+      const summary = document.createElement("p");
+      summary.className = "small";
+      summary.textContent = payload.capabilities?.summary || payload.explanation || "AskLens capabilities are available.";
+      answer.append(title, summary);
+      if (payload.query_help_error) {
+        const reason = document.createElement("p");
+        reason.className = "small";
+        reason.textContent = `Reason: ${payload.query_help_error}`;
+        answer.appendChild(reason);
+      }
+      wrapper.appendChild(answer);
+
+      if (queryHelp?.suggestions?.length) {
+        const suggestions = document.createElement("ul");
+        suggestions.className = "chip-list";
+        queryHelp.suggestions.forEach((suggestion) => {
+          suggestions.appendChild(renderSuggestionChip(suggestion));
+        });
+        wrapper.appendChild(suggestions);
+      }
+      return wrapper;
+    }
+
+    function renderError(message) {
+      const wrapper = document.createElement("div");
+      wrapper.className = "result-card";
+      const title = document.createElement("h3");
+      title.textContent = "AskLens could not complete that request.";
+      const detail = document.createElement("p");
+      detail.className = "small";
+      detail.textContent = message;
+      wrapper.append(title, detail);
+      return wrapper;
+    }
+
+    function renderPill(text) {
+      const pill = document.createElement("li");
+      pill.className = "pill";
+      pill.textContent = text;
+      return pill;
+    }
+
+    function renderQueryActions(question, plan) {
+      const actions = document.createElement("div");
+      actions.className = "action-row";
+      const saveButton = document.createElement("button");
+      saveButton.type = "button";
+      saveButton.className = "text-button";
+      saveButton.textContent = "Save query";
+      saveButton.addEventListener("click", () => {
+        saveQuery(question, plan);
+        saveButton.textContent = "Saved";
+        setComposerStatus("Query saved locally in this browser.", "success");
+      });
+      const note = document.createElement("span");
+      note.className = "small";
+      note.textContent = plan
+        ? "Saved plans are revalidated before execution."
+        : "Saved question will run through normal planning.";
+      actions.append(saveButton, note);
+      return actions;
+    }
+
+    function loadSavedQueries() {
+      try {
+        const raw = window.localStorage.getItem(savedQueriesStorageKey);
+        const parsed = raw ? JSON.parse(raw) : [];
+        if (!Array.isArray(parsed)) {
+          return [];
+        }
+        return parsed.filter((item) => item && typeof item.question === "string");
+      } catch (_error) {
+        return [];
+      }
+    }
+
+    function persistSavedQueries() {
+      try {
+        window.localStorage.setItem(
+          savedQueriesStorageKey,
+          JSON.stringify(savedQueries.slice(0, 25)),
+        );
+      } catch (_error) {
+        savedQueryStatus.textContent = "Saved queries are unavailable in this browser.";
+      }
+    }
+
+    function saveQuery(question, plan = null) {
+      const trimmedQuestion = String(question || "").trim();
+      if (!trimmedQuestion) {
+        return;
+      }
+      const normalizedQuestion = trimmedQuestion.toLowerCase();
+      const existing = savedQueries.findIndex(
+        (item) => item.question.trim().toLowerCase() === normalizedQuestion,
+      );
+      const saved = {
+        id: existing >= 0 ? savedQueries[existing].id : buildSavedQueryId(),
+        question: trimmedQuestion,
+        plan,
+        savedAt: new Date().toISOString(),
+      };
+      if (existing >= 0) {
+        savedQueries.splice(existing, 1);
+      }
+      savedQueries.unshift(saved);
+      savedQueries = savedQueries.slice(0, 25);
+      persistSavedQueries();
+      renderSavedQueries();
+    }
+
+    function buildSavedQueryId() {
+      return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    }
+
+    function removeSavedQuery(savedId) {
+      savedQueries = savedQueries.filter((item) => item.id !== savedId);
+      persistSavedQueries();
+      renderSavedQueries();
+    }
+
+    function clearSavedQueries() {
+      savedQueries = [];
+      persistSavedQueries();
+      renderSavedQueries();
+      setComposerStatus("Saved queries cleared.");
+    }
+
+    function renderSavedQueries() {
+      savedQueryList.replaceChildren();
+      if (!savedQueries.length) {
+        savedQueryStatus.textContent = "Saved locally in this browser.";
+        const empty = document.createElement("li");
+        empty.className = "empty";
+        empty.textContent = "No saved queries yet.";
+        savedQueryList.appendChild(empty);
+        return;
+      }
+      savedQueryStatus.textContent = `${savedQueries.length} saved locally in this browser.`;
+      savedQueries.forEach((saved) => {
+        savedQueryList.appendChild(renderSavedQueryItem(saved));
+      });
+    }
+
+    function renderSavedQueryItem(saved) {
+      const item = document.createElement("li");
+      item.className = "resource-item saved-query";
+      const title = document.createElement("strong");
+      title.textContent = saved.question;
+      const detail = document.createElement("span");
+      detail.className = "small";
+      detail.textContent = saved.plan
+        ? "Saved with a revalidated execution plan."
+        : "Saved as a question.";
+      const actions = document.createElement("div");
+      actions.className = "saved-query-actions";
+      const runButton = document.createElement("button");
+      runButton.type = "button";
+      runButton.className = "text-button";
+      runButton.textContent = "Use";
+      runButton.addEventListener("click", () => {
+        useQuestion(saved.question, saved.plan || null);
+      });
+      const removeButton = document.createElement("button");
+      removeButton.type = "button";
+      removeButton.className = "text-button";
+      removeButton.textContent = "Remove";
+      removeButton.addEventListener("click", () => removeSavedQuery(saved.id));
+      actions.append(runButton, removeButton);
+      item.append(title, detail, actions);
+      return item;
+    }
+
+    clearSavedQueriesButton.addEventListener("click", clearSavedQueries);
+
+    function renderPinnedSuggestions() {
+      suggestionList.replaceChildren();
+      if (!pinnedSuggestions.length) {
+        suggestionStatus.textContent = "Ask for examples to pin reusable suggestions here.";
+        return;
+      }
+      suggestionStatus.textContent = `${pinnedSuggestions.length} reusable suggestions pinned.`;
+      pinnedSuggestions.forEach((suggestion) => {
+        suggestionList.appendChild(renderSuggestionChip(suggestion));
+      });
+    }
+
+    function renderSuggestionChip(suggestion) {
+      const item = document.createElement("li");
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "chip";
+      button.textContent = suggestion.question || String(suggestion);
+      button.addEventListener("click", () => {
+        if (typeof suggestion === "string") {
+          useQuestion(suggestion);
+        } else {
+          useQuestion(suggestion.question, suggestion.plan || null);
+        }
+      });
+      item.appendChild(button);
+      return item;
+    }
+
+    function queryHelpSourceLabel(source) {
+      if (source === "semantic_provider") {
+        return "LLM help";
+      }
+      if (source === "deterministic_fallback") {
+        return "Deterministic fallback help";
+      }
+      return "Deterministic help";
+    }
+
+    function renderMetricGrid(payload) {
+      const rows = payload.data || [];
+      const numericColumns = getNumericColumns(payload);
+      if (rows.length !== 1 || !numericColumns.length) {
+        return null;
+      }
+      const grid = document.createElement("div");
+      grid.className = "metric-grid";
+      numericColumns.forEach((column) => {
+        const card = document.createElement("div");
+        card.className = "metric-card";
+        const value = document.createElement("div");
+        value.className = "metric-value";
+        value.textContent = formatValue(rows[0][column.key], column.key);
+        const label = document.createElement("div");
+        label.className = "metric-label";
+        label.textContent = column.label || column.key;
+        card.append(value, label);
+        grid.appendChild(card);
+      });
+      return grid;
+    }
+
+    function renderBarPreview(payload) {
+      const rows = payload.data || [];
+      if (!rows.length) {
+        return null;
+      }
+      const columns = payload.columns || [];
+      const xField = getHintField(payload.visualization?.x) || getLabelColumns(payload)[0]?.key;
+      const yField = getHintField(payload.visualization?.y) || getNumericColumns(payload)[0]?.key;
+      if (!xField || !yField || rows.length < 2) {
+        return null;
+      }
+      const values = rows.map((row) => Math.max(Number(row[yField]) || 0, 0));
+      const maxValue = Math.max(...values, 0);
+      if (maxValue <= 0) {
+        return null;
+      }
+      const chart = document.createElement("div");
+      chart.className = "chart";
+      const heading = document.createElement("h3");
+      heading.textContent = `${getColumnLabel(columns, yField)} by ${getColumnLabel(columns, xField)}`;
+      chart.appendChild(heading);
+      rows.slice(0, 16).forEach((row) => {
+        const value = Math.max(Number(row[yField]) || 0, 0);
+        const percent = Math.max((value / maxValue) * 100, 1);
+        const chartRow = document.createElement("div");
+        chartRow.className = "bar-row";
+        const label = document.createElement("div");
+        label.className = "bar-label";
+        label.textContent = formatLabel(row[xField]);
+        label.title = formatLabel(row[xField]);
+        const track = document.createElement("div");
+        track.className = "bar-track";
+        const fill = document.createElement("div");
+        fill.className = "bar-fill";
+        fill.style.width = `${percent}%`;
+        track.appendChild(fill);
+        const amount = document.createElement("div");
+        amount.textContent = formatValue(value, yField);
+        chartRow.append(label, track, amount);
+        chart.appendChild(chartRow);
+      });
+      return chart;
+    }
+
+    function renderTable(columns, rows) {
+      const wrapper = document.createElement("div");
+      wrapper.className = "table-wrap";
+      if (!rows.length) {
+        const empty = document.createElement("p");
+        empty.className = "empty";
+        empty.textContent = "No rows returned.";
+        wrapper.appendChild(empty);
+        return wrapper;
+      }
+      const table = document.createElement("table");
+      const thead = document.createElement("thead");
+      const headRow = document.createElement("tr");
+      columns.forEach((column) => {
+        const th = document.createElement("th");
+        th.scope = "col";
+        th.textContent = column.label || column.key;
+        headRow.appendChild(th);
+      });
+      thead.appendChild(headRow);
+      const tbody = document.createElement("tbody");
+      rows.forEach((row) => {
+        const tr = document.createElement("tr");
+        columns.forEach((column) => {
+          const td = document.createElement("td");
+          td.textContent = formatValue(row[column.key], column.key);
+          tr.appendChild(td);
+        });
+        tbody.appendChild(tr);
+      });
+      table.append(thead, tbody);
+      wrapper.appendChild(table);
+      return wrapper;
+    }
+
+    function renderRawDetails(payload) {
+      const details = document.createElement("details");
+      const summary = document.createElement("summary");
+      summary.textContent = "Raw response";
+      const raw = document.createElement("pre");
+      raw.textContent = JSON.stringify(payload, null, 2);
+      details.append(summary, raw);
+      return details;
+    }
+
+    function getHintField(value) {
+      if (typeof value === "string") {
+        return value;
+      }
+      return value?.field || "";
+    }
+
+    function getNumericColumns(payload) {
+      const rows = payload.data || [];
+      return (payload.columns || []).filter((column) => {
+        if (["integer", "number", "float", "decimal"].includes(column.type)) {
+          return true;
+        }
+        return rows.some((row) => typeof row[column.key] === "number");
+      });
+    }
+
+    function getLabelColumns(payload) {
+      const numericKeys = new Set(getNumericColumns(payload).map((column) => column.key));
+      return (payload.columns || []).filter((column) => !numericKeys.has(column.key));
+    }
+
+    function getColumnLabel(columns, key) {
+      const column = columns.find((candidate) => candidate.key === key);
+      return column?.label || key;
+    }
+
+    function formatLabel(value) {
+      if (value === null || value === undefined || value === "") {
+        return "—";
+      }
+      return String(value);
+    }
+
+    function formatValue(value, key = "") {
+      if (value === null || value === undefined || value === "") {
+        return "—";
+      }
+      const lowerKey = key.toLowerCase();
+      if (typeof value === "number" && (
+        lowerKey.includes("cents") ||
+        lowerKey.includes("amount") ||
+        lowerKey.includes("revenue") ||
+        lowerKey.includes("cost") ||
+        lowerKey.includes("spend")
+      )) {
+        return new Intl.NumberFormat("en-US", {
+          style: "currency",
+          currency: "USD",
+        }).format(value / 100);
+      }
+      if (typeof value === "number") {
+        return new Intl.NumberFormat("en-US").format(value);
+      }
+      return String(value);
+    }
+
+    function renderStarters() {
+      starterList.replaceChildren();
+      if (!starterQuestions.length) {
+        const item = document.createElement("li");
+        item.className = "empty";
+        item.textContent = "No starter questions configured.";
+        starterList.appendChild(item);
+        return;
+      }
+      starterQuestions.forEach((question) => {
+        starterList.appendChild(renderSuggestionChip(question));
+      });
+    }
+
+    function renderScope() {
+      scopeList.replaceChildren();
+      scopeLabels.forEach((label) => {
+        const item = document.createElement("li");
+        item.className = "resource-item";
+        item.textContent = label;
+        scopeList.appendChild(item);
+      });
+    }
+
+    async function loadCapabilities() {
+      try {
+        const capabilities = await fetchJson(capabilitiesUrl);
+        const resources = capabilities.resources || [];
+        capabilitiesStatus.textContent = capabilities.summary || `${resources.length} resources visible.`;
+        capabilitiesList.replaceChildren();
+        resources.slice(0, 20).forEach((resource) => {
+          const item = document.createElement("li");
+          item.className = "resource-item";
+          const name = document.createElement("strong");
+          name.textContent = resource.label || resource.name;
+          const meta = document.createElement("span");
+          meta.className = "small";
+          meta.textContent = `${resource.name} · ${(resource.fields || []).length} fields · ${(resource.metrics || []).length} metrics`;
+          item.append(name, meta);
+          capabilitiesList.appendChild(item);
+        });
+        if (!resources.length) {
+          const item = document.createElement("li");
+          item.className = "empty";
+          item.textContent = "No resources are visible for this login.";
+          capabilitiesList.appendChild(item);
+        }
+      } catch (error) {
+        capabilitiesStatus.textContent = `Capabilities unavailable: ${error.message}`;
+      }
+    }
+
+    renderSavedQueries();
+    renderPinnedSuggestions();
+    renderStarters();
+    renderScope();
+    loadCapabilities();
+  </script>
+</body>
+</html>

@@ -2,10 +2,8 @@
 
 from django.contrib.auth.views import redirect_to_login
 from django.core.exceptions import PermissionDenied
-from django.shortcuts import render
-from django.urls import reverse
 
-from django_asklens.settings import get_asklens_setting
+from django_asklens.frontend.views import render_asklens_frontend
 from tests.test_project.models import Facility, StaffAssignment, StaffGrant
 from tests.test_project.permissions import (
     get_request_permissions,
@@ -67,31 +65,16 @@ def asklens_demo(request):
     if not can_access_asklens_demo(request):
         raise PermissionDenied("You do not have permission to use the AskLens demo.")
 
-    return render(
+    return render_asklens_frontend(
         request,
-        "test_project/asklens_demo.html",
-        {
-            "catalog_url": reverse("django_asklens:catalog"),
-            "capabilities_url": reverse("django_asklens:capabilities"),
-            "query_url": reverse("django_asklens:query"),
-            "demo_questions": get_demo_questions(request),
-            "facility_scope": get_facility_scope_labels(request),
-            "llm_backend": get_asklens_setting("LLM_BACKEND"),
-            "llm_mode_label": get_llm_mode_label(),
-            "llm_model": get_asklens_setting("LLM_MODEL"),
+        extra_context={
+            "page_title": "Django AskLens Demo",
+            "page_subtitle": "Explore permission-scoped synthetic demo data.",
+            "starter_questions": get_demo_questions(request),
+            "scope_title": "Tenant row scope",
+            "scope_labels": get_facility_scope_labels(request),
         },
     )
-
-
-def get_llm_mode_label() -> str:
-    """Return a safe human-readable planner/LLM status label."""
-
-    backend = get_asklens_setting("LLM_BACKEND")
-    if backend == "dummy":
-        return "Offline dummy plans — live LLM disabled"
-    if backend == "openai_compatible":
-        return "Live LLM enabled — OpenAI-compatible provider"
-    return f"Custom planner backend: {backend}"
 
 
 def can_access_asklens_demo(request) -> bool:
