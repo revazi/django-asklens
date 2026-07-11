@@ -39,6 +39,7 @@ def register_complex_resources() -> None:
     """Register complex resources in the default AskLens registry."""
 
     register_facilities()
+    register_staff_resources()
     register_member_resources()
     register_billing_resources()
     register_growth_resources()
@@ -78,6 +79,49 @@ def register_facilities() -> None:
         base_queryset=queryset_for_permission(Facility, StaffGrant.FACILITY_VIEW),
         requires_permission=StaffGrant.FACILITY_VIEW,
         scope_resource=True,
+    )
+
+
+def register_staff_resources() -> None:
+    """Register facility staff assignment resources."""
+
+    register(
+        model=StaffAssignment,
+        name="facility_staff_assignments",
+        label="Facility staff assignments",
+        description=(
+            "Tenant-scoped facility staff roles, including owner names and "
+            "role assignments."
+        ),
+        default_date_field="created_at",
+        fields={
+            "id": {"label": "Assignment ID", "llm_visible": False},
+            "facility.name": {
+                "label": "Facility",
+                "scope_dimension": True,
+                "requires_permission": StaffGrant.FACILITY_VIEW,
+            },
+            "role": {"label": "Staff role"},
+            "user.first_name": {"label": "Staff first name"},
+            "user.last_name": {"label": "Staff last name"},
+            "user.username": {"label": "Staff username"},
+            "is_primary": {"label": "Primary assignment"},
+            "can_access_all_facilities": {"label": "Can access all facilities"},
+            "is_active": {"label": "Active assignment"},
+            "created_at": {"label": "Created date"},
+        },
+        metrics=[
+            Metric(
+                "staff_assignment_count",
+                op="count",
+                field="role",
+                label="Staff assignments",
+            )
+        ],
+        base_queryset=queryset_for_permission(
+            StaffAssignment, StaffGrant.FACILITY_VIEW
+        ),
+        requires_permission=StaffGrant.FACILITY_VIEW,
     )
 
 

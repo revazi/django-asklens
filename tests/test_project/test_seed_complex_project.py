@@ -4,6 +4,7 @@ from typing import Any
 
 import pytest
 from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Group
 from django.core.management import call_command
 from rest_framework.test import APIClient
 
@@ -35,6 +36,9 @@ from tests.test_project.permissions import (
 pytestmark = pytest.mark.django_db
 
 QUESTION_REVENUE_BY_PRODUCT = "Show paid billing revenue by product"
+QUESTION_FACILITY_OWNER_NAMES = (
+    "List facilities, facility name titles and facility owner full name as a table."
+)
 
 
 def revenue_by_product_plan() -> dict[str, Any]:
@@ -63,6 +67,23 @@ def clear_default_registry() -> None:
     default_registry.clear()
 
 
+def facility_owner_names_plan() -> dict[str, Any]:
+    """Return a staff-assignment list plan for facility owner lookup."""
+
+    return {
+        "resource": "facility_staff_assignments",
+        "intent": "list",
+        "filters": [
+            {"field": "role", "op": "eq", "value": StaffAssignment.Role.OWNER},
+            {"field": "is_active", "op": "eq", "value": True},
+        ],
+        "select": ["facility.name", "user.first_name", "user.last_name"],
+        "order_by": [{"field": "facility.name", "direction": "asc"}],
+        "limit": 20,
+        "visualization": {"type": "table"},
+    }
+
+
 def configure_complex_query_settings(settings) -> None:
     """Configure AskLens API settings for seeded complex-project tests."""
 
@@ -73,7 +94,10 @@ def configure_complex_query_settings(settings) -> None:
         "REQUEST_PERMISSIONS_GETTER": (
             "tests.test_project.permissions.get_request_permissions"
         ),
-        "DUMMY_PLANS": {QUESTION_REVENUE_BY_PRODUCT: revenue_by_product_plan()},
+        "DUMMY_PLANS": {
+            QUESTION_REVENUE_BY_PRODUCT: revenue_by_product_plan(),
+            QUESTION_FACILITY_OWNER_NAMES: facility_owner_names_plan(),
+        },
         "MAX_ROWS": 100,
         "MAX_JOINS": 2,
         "MAX_METRICS": 5,
@@ -131,6 +155,28 @@ def test_seed_deactivates_stale_south_owner_assignment() -> None:
     ).exists()
 
 
+def test_seed_sets_demo_user_names_and_role_groups() -> None:
+    """Seeded role data should be easy to inspect in the admin database."""
+
+    call_command("seed_complex_test_project", verbosity=0)
+    owner = get_user_model().objects.get(username="facility-owner")
+    role_group_names = set(
+        Group.objects.filter(name__startswith="AskLens Demo ").values_list(
+            "name", flat=True
+        )
+    )
+
+    assert owner.first_name == "Facility"
+    assert owner.last_name == "Owner"
+    assert role_group_names == {
+        "AskLens Demo Members",
+        "AskLens Demo Owners",
+        "AskLens Demo Staff",
+        "AskLens Demo Support",
+    }
+    assert list(owner.groups.values_list("name", flat=True)) == ["AskLens Demo Owners"]
+
+
 def test_seeded_permissions_use_scoped_facility_tokens() -> None:
     """Tenant assignments should not emit unscoped global grant names."""
 
@@ -139,9 +185,18 @@ def test_seeded_permissions_use_scoped_facility_tokens() -> None:
     north = Facility.objects.get(slug="north-studio")
     permissions = get_request_permissions(type("Request", (), {"user": owner})())
 
+    owner_assignment = StaffAssignment.objects.get(
+        user=owner,
+        facility=north,
+        role=StaffAssignment.Role.OWNER,
+        is_active=True,
+    )
+    owner_grants = set(owner_assignment.grants.values_list("name", flat=True))
+
     assert StaffGrant.BILLING_REPORTS_VIEW not in permissions
     assert f"facility:{north.id}:{StaffGrant.BILLING_REPORTS_VIEW}" in permissions
     assert permission_set_allows(permissions, StaffGrant.BILLING_REPORTS_VIEW)
+    assert owner_grants == {name for name, _label in StaffGrant.GRANT_CHOICES}
 
 
 def test_seed_size_medium_can_create_scaled_tenants_with_overrides() -> None:
@@ -282,6 +337,33 @@ def test_support_reporter_catalog_includes_analytics_resources(settings) -> None
     assert "support_tickets" in catalog_text
     assert "billing_lines" not in catalog_text
     assert "member_contacts" not in catalog_text
+
+
+def test_facility_owner_can_query_facility_owner_name(settings) -> None:
+    """Seeded owner assignments should be queryable through AskLens."""
+
+    configure_complex_query_settings(settings)
+    register_complex_resources()
+    call_command("seed_complex_test_project", verbosity=0)
+    owner = get_user_model().objects.get(username="facility-owner")
+    client = APIClient()
+    client.force_authenticate(user=owner)
+
+    response = client.post(
+        "/asklens/query/",
+        {"question": QUESTION_FACILITY_OWNER_NAMES},
+        format="json",
+    )
+
+    assert response.status_code == 200, response.data
+    assert response.data["data"] == [
+        {
+            "facility.name": "North Studio",
+            "user.first_name": "Facility",
+            "user.last_name": "Owner",
+        }
+    ]
+    assert "South Studio" not in str(response.data)
 
 
 def test_facility_owner_query_returns_only_owned_facility(settings) -> None:

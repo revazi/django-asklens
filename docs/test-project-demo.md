@@ -106,7 +106,7 @@ username: admin
 password: 12admin34
 ```
 
-It also creates staff demo users with the same password and different synthetic tenant/reporting grants:
+It also creates staff demo users with the same password, deterministic first/last names, Django role groups, `StaffAssignment` rows, and different synthetic tenant/reporting grants:
 
 | Username | Purpose |
 | --- | --- |
@@ -120,7 +120,7 @@ It also creates staff demo users with the same password and different synthetic 
 
 These credentials are for the local synthetic demo project only. Do not reuse them in real projects.
 
-The small seed command creates a richer synthetic dataset for each base facility, including multiple plans, members, status histories, subscriptions, six months of billing documents, varied billing lines, payment outcomes, marketing campaigns, lead funnel rows, locations, staff shifts, session types, scheduled sessions, bookings/attendance, and support tickets. Medium/large profiles use bulk-created synthetic rows over the same domain tables to validate AskLens behavior on larger tenant and row counts.
+The small seed command creates a richer synthetic dataset for each base facility, including role groups, staff assignments/grants, multiple plans, members, status histories, subscriptions, six months of billing documents, varied billing lines, payment outcomes, marketing campaigns, lead funnel rows, locations, staff shifts, session types, scheduled sessions, bookings/attendance, and support tickets. Medium/large profiles use bulk-created synthetic rows over the same domain tables to validate AskLens behavior on larger tenant and row counts.
 
 The local database file is `.asklens-test-project.sqlite3` and is ignored by git.
 
@@ -174,7 +174,7 @@ DJANGO_ASKLENS = {
 }
 ```
 
-Synthetic staff grants are tenant-scoped through `StaffAssignment` and `StaffGrant` records. Base querysets for reporting resources only include facilities where the request user has the required grant. The seeded `admin` superuser can query all demo facilities for local exploration. The AskLens catalog includes operational resources for facilities, members, member contacts, member statuses, subscriptions, billing lines, payment attempts, marketing campaigns, leads, staff shifts, schedule sessions, session bookings, and support tickets. Capabilities are still permission-scoped, so each user sees only the resources they can query.
+Synthetic staff grants are tenant-scoped through `StaffAssignment` and `StaffGrant` records. The seed command also creates Django auth groups named `AskLens Demo Owners`, `AskLens Demo Staff`, `AskLens Demo Support`, and `AskLens Demo Members` so role membership is visible in admin. Base querysets for reporting resources only include facilities where the request user has the required grant. The seeded `admin` superuser can query all demo facilities for local exploration. The AskLens catalog includes operational resources for facilities, facility staff assignments, members, member contacts, member statuses, subscriptions, billing lines, payment attempts, marketing campaigns, leads, staff shifts, schedule sessions, session bookings, and support tickets. Capabilities are still permission-scoped, so each user sees only the resources they can query.
 
 ## Demo dummy questions
 

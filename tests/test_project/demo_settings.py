@@ -95,6 +95,18 @@ DUMMY_PLANS = {
             "y": "payment_amount",
         },
     },
+    "List facilities, facility name titles and facility owner full name as a table.": {
+        "resource": "facility_staff_assignments",
+        "intent": "list",
+        "filters": [
+            {"field": "role", "op": "eq", "value": "owner"},
+            {"field": "is_active", "op": "eq", "value": True},
+        ],
+        "select": ["facility.name", "user.first_name", "user.last_name"],
+        "order_by": [{"field": "facility.name", "direction": "asc"}],
+        "limit": 20,
+        "visualization": {"type": "table"},
+    },
     "List member contact emails": {
         "resource": "member_contacts",
         "intent": "list",

@@ -5,6 +5,7 @@ from dataclasses import dataclass, replace
 from datetime import datetime, time, timedelta
 
 from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Group
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 
@@ -31,6 +32,25 @@ from tests.test_project.models import (
 
 DEMO_PASSWORD = "12admin34"
 SCALED_FACILITY_SLUG_PREFIX = "demo-tenant-"
+ROLE_GROUP_NAMES = {
+    StaffAssignment.Role.OWNER: "AskLens Demo Owners",
+    StaffAssignment.Role.STAFF: "AskLens Demo Staff",
+    StaffAssignment.Role.SUPPORT: "AskLens Demo Support",
+    StaffAssignment.Role.MEMBER: "AskLens Demo Members",
+}
+DEMO_USER_FULL_NAMES = {
+    "admin": ("Demo", "Admin"),
+    "facility-owner": ("Facility", "Owner"),
+    "north-billing": ("North", "Billing"),
+    "south-billing": ("South", "Billing"),
+    "mixed-reporter": ("Mixed", "Reporter"),
+    "schedule-reporter": ("Schedule", "Reporter"),
+    "support-reporter": ("Support", "Reporter"),
+    "no-report": ("No", "Report"),
+    "scaled-billing": ("Scaled", "Billing"),
+    "scaled-members": ("Scaled", "Members"),
+    "scaled-schedule": ("Scaled", "Schedule"),
+}
 
 
 @dataclass(frozen=True, slots=True)
@@ -366,9 +386,15 @@ class Command(BaseCommand):
         mixed_user = create_demo_user("mixed-reporter", is_staff=True)
         schedule_user = create_demo_user("schedule-reporter", is_staff=True)
         support_user = create_demo_user("support-reporter", is_staff=True)
-        create_demo_user("no-report", is_staff=True)
+        no_report_user = create_demo_user("no-report", is_staff=True)
 
-        create_assignment(owner, north, StaffAssignment.Role.OWNER)
+        create_assignment(
+            owner,
+            north,
+            StaffAssignment.Role.OWNER,
+            *all_staff_grant_names(),
+            is_primary=True,
+        )
         deactivate_assignment(owner, south, StaffAssignment.Role.OWNER)
         create_assignment(
             north_billing_user,
@@ -422,6 +448,16 @@ class Command(BaseCommand):
             StaffAssignment.Role.SUPPORT,
             StaffGrant.ANALYTICS_VIEW,
             can_access_all_facilities=True,
+            is_primary=True,
+        )
+        sync_demo_role_groups(
+            owner,
+            north_billing_user,
+            south_billing_user,
+            mixed_user,
+            schedule_user,
+            support_user,
+            no_report_user,
         )
 
         seed_facility_data(north, "North", amount_multiplier=1.0)
@@ -495,7 +531,10 @@ def create_demo_user(
         username=username,
         defaults={"email": f"{username}@example.test"},
     )
+    first_name, last_name = demo_user_full_name(username)
     user.email = f"{username}@example.test"
+    user.first_name = first_name
+    user.last_name = last_name
     user.is_staff = is_staff
     user.is_superuser = is_superuser
     user.is_active = True
@@ -503,6 +542,8 @@ def create_demo_user(
     user.save(
         update_fields=[
             "email",
+            "first_name",
+            "last_name",
             "is_staff",
             "is_superuser",
             "is_active",
@@ -510,6 +551,19 @@ def create_demo_user(
         ]
     )
     return user
+
+
+def demo_user_full_name(username: str) -> tuple[str, str]:
+    """Return a deterministic synthetic full name for a demo user."""
+
+    if username in DEMO_USER_FULL_NAMES:
+        return DEMO_USER_FULL_NAMES[username]
+    parts = [part.title() for part in username.split("-") if part]
+    if not parts:
+        return "Demo", "User"
+    if len(parts) == 1:
+        return parts[0], "User"
+    return " ".join(parts[:-1]), parts[-1]
 
 
 def create_facility(name: str, slug: str) -> Facility:
@@ -534,6 +588,7 @@ def create_assignment(
     role: str,
     *grants: str,
     can_access_all_facilities: bool = False,
+    is_primary: bool = False,
 ) -> StaffAssignment:
     """Create a synthetic staff assignment with grants."""
 
@@ -543,6 +598,7 @@ def create_assignment(
         role=role,
         defaults={
             "is_active": True,
+            "is_primary": is_primary,
             "can_access_all_facilities": can_access_all_facilities,
         },
     )
@@ -553,6 +609,37 @@ def create_assignment(
     for grant_name in desired_grants:
         StaffGrant.objects.get_or_create(assignment=assignment, name=grant_name)
     return assignment
+
+
+def all_staff_grant_names() -> tuple[str, ...]:
+    """Return all synthetic staff grant names for owner assignments."""
+
+    return tuple(name for name, _label in StaffGrant.GRANT_CHOICES)
+
+
+def ensure_role_groups() -> dict[str, Group]:
+    """Create deterministic Django groups for synthetic staff roles."""
+
+    return {
+        role: Group.objects.get_or_create(name=group_name)[0]
+        for role, group_name in ROLE_GROUP_NAMES.items()
+    }
+
+
+def sync_demo_role_groups(*users) -> None:
+    """Sync demo users into Django groups matching their active role rows."""
+
+    role_groups = ensure_role_groups()
+    for user in users:
+        active_roles = set(
+            StaffAssignment.objects.filter(user=user, is_active=True).values_list(
+                "role", flat=True
+            )
+        )
+        user.groups.remove(*role_groups.values())
+        user.groups.add(
+            *(role_groups[role] for role in sorted(active_roles) if role in role_groups)
+        )
 
 
 def deactivate_assignment(user, facility: Facility, role: str) -> None:
@@ -660,6 +747,11 @@ def seed_scaled_demo_data(profile: SeedProfile, *, stdout, style) -> None:
             StaffAssignment.Role.STAFF,
             StaffGrant.SCHEDULE_REPORTS_VIEW,
             StaffGrant.FACILITY_VIEW,
+        )
+        sync_demo_role_groups(
+            scaled_billing_user,
+            scaled_member_user,
+            scaled_schedule_user,
         )
         seed_scaled_facility_data(
             facility,
