@@ -32,4 +32,5 @@ htmlcov/
 
 # Local agent/prompt files not intended for the initial public repo
 AGENTS.md
+.agents/
 prompts/

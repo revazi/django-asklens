@@ -3,4 +3,3 @@ include CONTRIBUTING.md
 include SECURITY.md
 recursive-include django_asklens/templates *.html
 recursive-include docs *.md
-prune .agents

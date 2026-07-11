@@ -54,4 +54,4 @@ See also:
 
 ## Disclosure expectations
 
-Please allow time for validation and a fix before public disclosure. Security fixes should include tests when practical and should avoid introducing live-provider or private-data dependencies.
+Please allow time for validation and a fix before public disclosure. Security fixes should include tests when practical and should avoid introducing live-provider or sensitive-data dependencies.

@@ -83,7 +83,7 @@ jobs:
           with tarfile.open(sdists[0], "r:gz") as sdist:
               sdist_names = set(sdist.getnames())
 
-          forbidden_fragments = ("alpha-readiness-plan", "private-")
+          forbidden_fragments = (".agents/", "asklens-llm-io")
           for artifact_name, names in ((wheels[0].name, wheel_names), (sdists[0].name, sdist_names)):
               forbidden = [
                   name
@@ -91,7 +91,7 @@ jobs:
                   if any(fragment in name for fragment in forbidden_fragments)
               ]
               if forbidden:
-                  raise SystemExit(f"Forbidden local/private files in {artifact_name}: {forbidden}")
+                  raise SystemExit(f"Forbidden local-only files in {artifact_name}: {forbidden}")
 
           required_wheel_files = {
               "django_asklens/__init__.py",
