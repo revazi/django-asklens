@@ -138,3 +138,57 @@ def test_build_capabilities_adds_sanitized_single_scope_guidance() -> None:
     assert "facility:123" not in str(capabilities)
     assert all("Facility" not in example for example in resource["examples"])
     assert "Show Gross revenue by Product" in resource["examples"]
+
+
+def test_build_capabilities_omits_single_scope_resource_examples() -> None:
+    """Single-facility users should not get plural facility-list suggestions."""
+
+    capabilities = build_capabilities(
+        permissions={"facility:123:FacilityView"},
+        catalog={
+            "resources": [
+                {
+                    "name": "facilities",
+                    "label": "Facilities",
+                    "description": "Visible facilities.",
+                    "synonyms": [],
+                    "default_date_field": "created_at",
+                    "requires_permission": "FacilityView",
+                    "fields": [
+                        {
+                            "name": "name",
+                            "label": "Facility name",
+                            "type": "string",
+                            "relation_depth": 0,
+                        },
+                        {
+                            "name": "timezone",
+                            "label": "Timezone",
+                            "type": "string",
+                            "relation_depth": 0,
+                        },
+                        {
+                            "name": "is_active",
+                            "label": "Active status",
+                            "type": "boolean",
+                            "relation_depth": 0,
+                        },
+                    ],
+                    "metrics": [
+                        {
+                            "name": "facility_count",
+                            "label": "Facilities",
+                            "op": "count",
+                            "field": "name",
+                        }
+                    ],
+                }
+            ]
+        },
+    )
+
+    [resource] = capabilities["resources"]
+    assert resource["scope"]["level"] == "single"
+    assert resource["examples"] == []
+    assert capabilities["examples"] == []
+    assert "List Facilities with Facility name" not in str(capabilities)

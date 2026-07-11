@@ -477,11 +477,13 @@ def test_capability_help_for_single_facility_user_avoids_multi_facility_examples
     assert resources["billing_lines"]["scope"]["level"] == "single"
     assert resources["billing_lines"]["scope"]["kind"] == "facility"
     assert f"facility:{complex_tenant_data.north.id}" not in str(response.data)
+    capability_examples = response.data["capabilities"]["examples"]
     suggestion_questions = [
         suggestion["question"]
         for suggestion in response.data["query_help"]["suggestions"]
     ]
-    suggestion_text = "\n".join(suggestion_questions).lower()
+    suggestion_text = "\n".join([*capability_examples, *suggestion_questions]).lower()
+    assert "list facilities with facility name" not in suggestion_text
     assert "across facilities" not in suggestion_text
     assert "by facility" not in suggestion_text
 

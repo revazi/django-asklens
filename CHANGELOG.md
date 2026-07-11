@@ -34,6 +34,7 @@ The project is pre-alpha and APIs may change before the first public alpha.
 - Size profiles for the complex demo seed command, including medium/large bulk-generated tenant/member/billing datasets.
 - Additional realistic demo tables and AskLens resources for marketing campaigns, leads, bookings/attendance, staff shifts, and support tickets.
 - Sanitized capability scope guidance and validation so query-help suggestions do not imply multi-tenant access for single-scope users.
+- Suppressed single-scope entity examples such as plural facility-list suggestions for users scoped to one facility.
 
 ### Security
 

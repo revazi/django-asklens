@@ -193,6 +193,62 @@ def test_build_query_help_rejects_sql_or_mutation_suggestions() -> None:
         )
 
 
+def test_build_query_help_rejects_single_scope_resource_suggestions() -> None:
+    """Live help should not suggest plural scoped-entity questions."""
+
+    payload = capabilities_payload()
+    payload["resources"] = [
+        {
+            "name": "facilities",
+            "label": "Facilities",
+            "description": "Visible facilities.",
+            "synonyms": [],
+            "default_date_field": None,
+            "scope": {
+                "level": "single",
+                "kind": "facility",
+                "guidance": "Visible rows are scoped to one facility.",
+            },
+            "fields": [
+                {
+                    "name": "name",
+                    "label": "Facility name",
+                    "type": "string",
+                    "relation_depth": 0,
+                    "can_filter": True,
+                    "can_select": True,
+                    "can_group": True,
+                    "can_order": True,
+                    "can_date_bucket": False,
+                }
+            ],
+            "metrics": [],
+            "date_fields": [],
+            "examples": [],
+            "guidance": [],
+        }
+    ]
+    provider = HelpProvider(
+        {
+            "answer": "Try this.",
+            "suggestions": [
+                {
+                    "question": "List Facilities with Facility name",
+                    "resource_name": "facilities",
+                    "fields": ["name"],
+                }
+            ],
+        }
+    )
+
+    with pytest.raises(PlanValidationError, match="single visible facility"):
+        build_query_help(
+            "Help me write facility questions",
+            provider=provider,
+            capabilities=payload,
+        )
+
+
 def test_build_query_help_rejects_single_scope_comparison_wording() -> None:
     """Help suggestions must not imply multi-scope access for single scopes."""
 

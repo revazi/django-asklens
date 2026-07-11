@@ -387,6 +387,9 @@ def build_resource_examples(
     """Return deterministic example questions for one resource."""
 
     examples: list[str] = []
+    if is_single_scope_resource(resource, scope=scope):
+        return examples
+
     selectable_fields = filter_single_scope_dimension_fields(
         [field for field in fields if field["can_select"]],
         scope=scope,
@@ -407,6 +410,25 @@ def build_resource_examples(
         examples.append(build_metric_trend_example(metrics[0], date_fields[0]))
 
     return dedupe_preserve_order(examples)[:MAX_RESOURCE_EXAMPLES]
+
+
+def is_single_scope_resource(
+    resource: ResourceCatalogItem | CapabilityResource,
+    *,
+    scope: CapabilityScope,
+) -> bool:
+    """Return whether a resource represents the one visible scope itself."""
+
+    if scope["level"] != "single" or "kind" not in scope:
+        return False
+    kind = humanize_scope_kind(scope["kind"]).lower()
+    plural = pluralize_scope_kind(scope["kind"]).lower()
+    candidates = {
+        str(resource["name"]).replace("_", " ").replace("-", " ").lower(),
+        str(resource["label"]).lower(),
+    }
+    candidates.update(synonym.lower() for synonym in resource.get("synonyms", []))
+    return kind in candidates or plural in candidates
 
 
 def filter_single_scope_dimension_fields(

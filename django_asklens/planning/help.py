@@ -11,6 +11,7 @@ from django_asklens.catalog.capabilities import (
     CapabilityResource,
     humanize_scope_kind,
     is_scope_dimension_field,
+    is_single_scope_resource,
     pluralize_scope_kind,
 )
 from django_asklens.exceptions import PlanValidationError
@@ -269,12 +270,23 @@ def validate_suggestion_respects_scope(
         return
 
     scope_kind = scope["kind"]
+    if is_single_scope_resource(resource, scope=scope):
+        msg = (
+            f"QueryHelp suggestion for resource {suggestion.resource_name!r} "
+            f"targets the single visible {humanize_scope_kind(scope_kind)}. "
+            "Suggest questions over in-scope operational resources instead."
+        )
+        raise PlanValidationError(msg)
+
+    field_labels = {
+        field["name"]: field["label"] for field in resource.get("fields", [])
+    }
     blocked_fields = [
         field_name
         for field_name in suggestion.fields
         if is_scope_dimension_field(
             field_name=field_name,
-            field_label=field_name,
+            field_label=field_labels.get(field_name, field_name),
             scope_kind=scope_kind,
         )
     ]
