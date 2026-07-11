@@ -1,4 +1,6 @@
 include CHANGELOG.md
+include CONTRIBUTING.md
+include SECURITY.md
 recursive-include django_asklens/templates *.html
 recursive-include docs *.md
 exclude docs/alpha-readiness-plan.md

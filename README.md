@@ -230,6 +230,8 @@ Review the [security checklist](docs/security-checklist.md) and [production chec
 - [Custom UI guide](docs/custom-ui.md)
 - [Registration API](docs/registration.md)
 - [Provider configuration](docs/providers.md)
+- [Contributing](CONTRIBUTING.md)
+- [Security policy](SECURITY.md)
 - [Security checklist](docs/security-checklist.md)
 - [Production checklist](docs/production-checklist.md)
 - [Multi-tenant security](docs/multitenancy-security.md)
