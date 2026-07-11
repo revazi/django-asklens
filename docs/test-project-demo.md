@@ -1,6 +1,6 @@
 # Runnable complex test project
 
-The source repository includes a synthetic Django test project with complex tenant, role, member, subscription, billing, payment, and schedule models. It is designed for local AskLens integration testing without private project code or data. This guide is for a source checkout, not an installed package runtime.
+The source repository includes a synthetic Django test project with complex tenant, role, member, subscription, billing, payment, and schedule models. It is designed for local AskLens integration testing without host-application code or sensitive data. This guide is for a source checkout, not an installed package runtime.
 
 ## Start the admin/demo server
 

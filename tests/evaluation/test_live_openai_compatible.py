@@ -1,7 +1,7 @@
 """Opt-in live OpenAI-compatible provider evaluation tests.
 
-This module is skipped by default. It is intended for private integration checks,
-not normal CI.
+This module is skipped by default. It is intended for explicit local/live-provider
+checks, not normal CI.
 """
 
 import os

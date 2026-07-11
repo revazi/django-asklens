@@ -1,7 +1,7 @@
 """Opt-in live OpenAI-compatible API evaluation tests.
 
 These tests exercise the full DRF API path with a live provider. They are skipped
-by default and intended for private integration checks, not normal CI.
+by default and intended for explicit local/live-provider checks, not normal CI.
 """
 
 import os

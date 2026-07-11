@@ -39,7 +39,7 @@ Use this checklist before enabling AskLens outside local development.
 
 ## Deployment safety
 
-- [ ] Consider a read-only database role or replica as defense in depth once supported by a later phase.
+- [ ] Consider a read-only database role or replica as defense in depth if your deployment can enforce it outside AskLens.
 - [ ] Monitor query volume and slow queries using normal Django/database tooling.
 - [ ] Review logs to ensure errors do not include stack traces, secrets, raw credentials, provider payload dumps, or private row values.
 

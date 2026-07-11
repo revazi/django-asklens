@@ -220,7 +220,7 @@ Review the [security checklist](docs/security-checklist.md) and [production chec
 - Writes/mutations are not supported.
 - Server-side saved queries, dashboards, and a separate help endpoint are not first-class package features yet.
 - The packaged frontend is a reference/demo UI; custom product UIs should call the API directly.
-- Read-only replica/database routing is deferred.
+- Read-only replica/database routing is not currently supported.
 - Django 5.2 compatibility is intended but not yet covered by CI; current package metadata targets Django 6.x.
 
 ## Documentation
@@ -237,7 +237,6 @@ Review the [security checklist](docs/security-checklist.md) and [production chec
 - [Multi-tenant security](docs/multitenancy-security.md)
 - [Evaluation fixtures](docs/evaluation.md)
 - [Runnable complex test project](docs/test-project-demo.md)
-- [Test matrix plan](docs/test-matrix.md)
 - [Changelog](CHANGELOG.md)
 
 ## Development

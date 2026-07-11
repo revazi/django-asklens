@@ -32,7 +32,7 @@ Live LLM tests are opt-in and must not run by default.
 - Add or update tests for behavior changes.
 - Update docs when API behavior, settings, response shapes, or safety guidance changes.
 - Keep default tests offline and deterministic.
-- Do not commit `.env` files, API keys, provider payload dumps, local SQLite databases, or private project data.
+- Do not commit `.env` files, API keys, provider payload dumps, local SQLite databases, or sensitive project data.
 - For larger design changes, open an issue or discussion before implementation.
 
 ## Safety rules
@@ -59,7 +59,6 @@ Useful starting points:
 - [Registration API](docs/registration.md)
 - [Provider configuration](docs/providers.md)
 - [Security checklist](docs/security-checklist.md)
-- [Test matrix plan](docs/test-matrix.md)
 
 ## Typing note
 

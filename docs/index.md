@@ -14,7 +14,6 @@ Django AskLens is a pre-alpha reusable Django + DRF package for safe natural-lan
 - [Multi-tenant security](multitenancy-security.md)
 - [Evaluation fixtures](evaluation.md)
 - [Runnable complex test project](test-project-demo.md)
-- [Test matrix plan](test-matrix.md)
 - [Demo query ideas](demo-queries.md)
 
 ## Current scope

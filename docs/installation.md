@@ -84,4 +84,4 @@ Current development target:
 - Django REST Framework 3.17+
 - Pydantic v2
 
-Django 5.2 LTS compatibility is a future matrix target, not yet proven by CI.
+Django 5.2 LTS compatibility is not currently claimed because it is not yet covered by package metadata or CI.
