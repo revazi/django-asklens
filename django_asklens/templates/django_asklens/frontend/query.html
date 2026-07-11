@@ -1127,7 +1127,7 @@
 
           <section class="card" aria-label="Saved queries">
             <h2>Saved queries</h2>
-            <p class="small" id="saved-query-status">Saved locally in this browser.</p>
+            <p class="small" id="saved-query-status">Saved in this browser.</p>
             <ul class="resource-list" id="saved-query-list"></ul>
             <div class="action-row saved-query-controls">
               <button class="text-button" id="clear-saved-queries" type="button">Clear</button>
@@ -1136,7 +1136,7 @@
 
           <section class="card" id="pinned-card" aria-label="Pinned suggestions">
             <h2>Suggestions</h2>
-            <p class="small" id="suggestion-status">Ask for examples to pin reusable suggestions here.</p>
+            <p class="small" id="suggestion-status">Ask for examples to pin suggestions.</p>
             <ul class="chip-list" id="suggestion-list"></ul>
           </section>
 
@@ -1153,7 +1153,7 @@
             <div class="disclosure-content">
               <div class="disclosure-heading">
                 <h3>Queryable resources</h3>
-                <p class="small">Only resources visible to this session are listed here.</p>
+                <p class="small">Resources visible to you.</p>
               </div>
               <ul class="resource-list" id="capabilities-list"></ul>
             </div>
@@ -1164,27 +1164,25 @@
       <section class="chat" aria-label="AskLens chat workspace">
         <header class="chat-topbar">
           <div class="chat-title">
-            <h2>Ask AskLens</h2>
-            <p class="small">Natural-language questions become validated, read-only Django ORM queries.</p>
+            <h2>Ask</h2>
+            <p class="small">Read-only answers from approved data.</p>
           </div>
           <nav class="top-actions" aria-label="AskLens actions and API links">
             <button type="button" id="clear-chat-button">Clear chat</button>
-            <a href="{{ catalog_url }}">Catalog JSON</a>
-            <a href="{{ capabilities_url }}">Capabilities JSON</a>
+            <a href="{{ catalog_url }}">Catalog</a>
+            <a href="{{ capabilities_url }}">Capabilities</a>
           </nav>
         </header>
 
         <section class="thread" id="thread" aria-live="polite">
           <article class="message assistant">
             <div class="bubble welcome">
-              <h2>What would you like to know?</h2>
+              <h2>Ask a question.</h2>
               <p>
-                Ask about records, counts, totals, trends, or “show me query examples”.
-                AskLens validates every plan against the visible catalog before anything runs.
+                Ask for records, counts, totals, trends, or examples.
+                AskLens validates each plan before it runs.
               </p>
-              <p class="small">
-                Suggestions with validated local plans can be re-run without another planner call.
-              </p>
+              <p class="small">Saved suggestions can be reused.</p>
             </div>
           </article>
         </section>
@@ -1308,10 +1306,10 @@
       spinner.setAttribute("aria-hidden", "true");
       const copy = document.createElement("div");
       const title = document.createElement("strong");
-      title.textContent = "AskLens is working";
+      title.textContent = "Working…";
       const detail = document.createElement("p");
       detail.className = "small";
-      detail.textContent = "Planning, validating permissions, and executing safely…";
+      detail.textContent = "Planning and checking access…";
       copy.append(title, detail);
       loading.append(spinner, copy);
       bubble.appendChild(loading);
@@ -1328,7 +1326,7 @@
       input.value = question;
       input.focus();
       if (plan) {
-        setComposerStatus("Validated suggestion loaded. Send will execute it without another planner call.", "success");
+        setComposerStatus("Suggestion loaded. It can run without another planner call.", "success");
       } else {
         setComposerStatus("Question loaded.");
       }
@@ -1493,13 +1491,13 @@
       saveButton.addEventListener("click", () => {
         saveQuery(question, plan);
         saveButton.textContent = "Saved";
-        setComposerStatus("Query saved locally in this browser.", "success");
+        setComposerStatus("Saved in this browser.", "success");
       });
       const note = document.createElement("span");
       note.className = "small";
       note.textContent = plan
-        ? "Saved plans are revalidated before execution."
-        : "Saved question will run through normal planning.";
+        ? "Revalidated before running."
+        : "Runs through normal planning.";
       actions.append(saveButton, note);
       return actions;
     }
@@ -1572,14 +1570,14 @@
     function renderSavedQueries() {
       savedQueryList.replaceChildren();
       if (!savedQueries.length) {
-        savedQueryStatus.textContent = "Saved locally in this browser.";
+        savedQueryStatus.textContent = "Saved in this browser.";
         const empty = document.createElement("li");
         empty.className = "empty";
         empty.textContent = "No saved queries yet.";
         savedQueryList.appendChild(empty);
         return;
       }
-      savedQueryStatus.textContent = `${savedQueries.length} saved locally in this browser.`;
+      savedQueryStatus.textContent = `${savedQueries.length} saved in this browser.`;
       savedQueries.forEach((saved) => {
         savedQueryList.appendChild(renderSavedQueryItem(saved));
       });
@@ -1593,7 +1591,7 @@
       const detail = document.createElement("span");
       detail.className = "small";
       detail.textContent = saved.plan
-        ? "Saved with a revalidated execution plan."
+        ? "Saved with a plan."
         : "Saved as a question.";
       const actions = document.createElement("div");
       actions.className = "saved-query-actions";
@@ -1619,10 +1617,10 @@
     function renderPinnedSuggestions() {
       suggestionList.replaceChildren();
       if (!pinnedSuggestions.length) {
-        suggestionStatus.textContent = "Ask for examples to pin reusable suggestions here.";
+        suggestionStatus.textContent = "Ask for examples to pin suggestions.";
         return;
       }
-      suggestionStatus.textContent = `${pinnedSuggestions.length} reusable suggestions pinned.`;
+      suggestionStatus.textContent = `${pinnedSuggestions.length} suggestions pinned.`;
       pinnedSuggestions.forEach((suggestion) => {
         suggestionList.appendChild(renderSuggestionChip(suggestion));
       });

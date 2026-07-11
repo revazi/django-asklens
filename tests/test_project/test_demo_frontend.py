@@ -65,7 +65,7 @@ def test_packaged_frontend_defaults_to_authenticated_users() -> None:
     assert response.status_code == 200
     assert "AskLens" in content
     assert 'data-query-url="/asklens/query/"' in content
-    assert "Ask AskLens" in content
+    assert "Read-only answers from approved data." in content
 
 
 @override_settings(
@@ -125,18 +125,20 @@ def test_demo_frontend_renders_for_reporting_user() -> None:
     content = response.content.decode()
 
     assert response.status_code == 200
-    assert "Django AskLens Demo" in content
+    assert "AskLens" in content
+    assert "Django AskLens Demo" not in content
+    assert "Synthetic demo data." in content
     assert 'data-catalog-url="/asklens/catalog/"' in content
     assert 'data-capabilities-url="/asklens/capabilities/"' in content
     assert 'data-query-url="/asklens/query/"' in content
-    assert "Ask AskLens" in content
+    assert "Read-only answers from approved data." in content
     assert "Saved queries" in content
-    assert "Saved locally in this browser" in content
+    assert "Saved in this browser" in content
     assert "No saved queries yet" in content
     assert "Save query" in content
     assert ">Clear</button>" in content
     assert "Clear saved" not in content
-    assert "AskLens is working" in content
+    assert "Working…" in content
     assert 'id="clear-chat-button"' in content
     assert "Clear chat" in content
     assert 'aria-label="Send question"' in content
@@ -146,7 +148,7 @@ def test_demo_frontend_renders_for_reporting_user() -> None:
     assert "Starter questions" in content
     assert "Visible capabilities" in content
     assert "Queryable resources" in content
-    assert "Only resources visible to this session are listed here" in content
+    assert "Resources visible to you." in content
     assert "Offline dummy plans" in content
     assert "dummy" in content
     assert "Show paid billing revenue by product" in content

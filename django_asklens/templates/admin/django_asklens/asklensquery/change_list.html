@@ -14,7 +14,7 @@
   <form method="post" novalidate>
     {% csrf_token %}
     <fieldset class="module aligned">
-      <h2>{% translate "Run AskLens query" %}</h2>
+      <h2>{% translate "AskLens" %}</h2>
       <div class="form-row field-question">
         {{ form.question.errors }}
         {{ form.question.label_tag }}
@@ -25,8 +25,8 @@
       </div>
     </fieldset>
     <div class="submit-row">
-      <input type="submit" value="{% translate 'Run query' %}" class="default">
-      <a href="{{ audit_changelist_url }}" class="closelink">{% translate "View audit records" %}</a>
+      <input type="submit" value="{% translate 'Ask' %}" class="default">
+      <a href="{{ audit_changelist_url }}" class="closelink">{% translate "Audit records" %}</a>
     </div>
   </form>
 
@@ -44,46 +44,67 @@
           {% blocktranslate with run_id=run.pk %}View query run #{{ run_id }}{% endblocktranslate %}
         </a>
       </p>
-      {% if reused_existing_run %}
-        <p><strong>{% translate "Reused existing successful run; no duplicate audit row was created." %}</strong></p>
-      {% endif %}
     </div>
   {% endif %}
 
   {% if result %}
-    <div class="module">
-      <h2>{% translate "Result" %}</h2>
-      <p>
-        {% blocktranslate with row_count=result.row_count duration_ms=result.duration_ms %}
-          {{ row_count }} rows in {{ duration_ms }} ms
-        {% endblocktranslate %}
-      </p>
-      <table>
-        <thead>
-          <tr>
-            {% for column in result.columns %}
-              <th scope="col">{{ column.label }}</th>
-            {% endfor %}
-          </tr>
-        </thead>
-        <tbody>
-          {% for row in result.rows %}
+    {% if result.response_type == "capabilities" %}
+      <div class="module">
+        <h2>{% translate "Examples" %}</h2>
+        {% if result.answer %}<p>{{ result.answer }}</p>{% endif %}
+        {% if result.summary %}<p class="help">{{ result.summary }}</p>{% endif %}
+        {% if result.query_help_error %}
+          <p class="errornote">{% blocktranslate with reason=result.query_help_error %}Reason: {{ reason }}{% endblocktranslate %}</p>
+        {% endif %}
+        <ul>
+          {% for suggestion in result.suggestions %}
+            <li>
+              <strong>{{ suggestion.question }}</strong>
+              {% if suggestion.resource_name %}<span class="help">({{ suggestion.resource_name }})</span>{% endif %}
+              {% if suggestion.why %}<br><span class="help">{{ suggestion.why }}</span>{% endif %}
+            </li>
+          {% empty %}
+            <li>{% translate "No suggestions available." %}</li>
+          {% endfor %}
+        </ul>
+      </div>
+    {% else %}
+      <div class="module">
+        <h2>{% translate "Result" %}</h2>
+        <p>
+          {% blocktranslate with row_count=result.row_count duration_ms=result.duration_ms %}
+            {{ row_count }} rows in {{ duration_ms }} ms
+          {% endblocktranslate %}
+        </p>
+        <table>
+          <thead>
             <tr>
-              {% for cell in row.cells %}
-                <td>{{ cell }}</td>
+              {% for column in result.columns %}
+                <th scope="col">{{ column.label }}</th>
               {% endfor %}
             </tr>
-          {% empty %}
-            <tr><td colspan="{{ result.columns|length }}">{% translate "No rows" %}</td></tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
+          </thead>
+          <tbody>
+            {% for row in result.rows %}
+              <tr>
+                {% for cell in row.cells %}
+                  <td>{{ cell }}</td>
+                {% endfor %}
+              </tr>
+            {% empty %}
+              <tr><td colspan="{{ result.columns|length }}">{% translate "No rows" %}</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
 
-    <div class="module">
-      <h2>{% translate "Visualization" %}</h2>
-      <pre>{{ result.visualization }}</pre>
-    </div>
+      {% if result.visualization %}
+        <div class="module">
+          <h2>{% translate "Visualization" %}</h2>
+          <pre>{{ result.visualization }}</pre>
+        </div>
+      {% endif %}
+    {% endif %}
   {% endif %}
 </div>
 {% endblock %}

@@ -68,8 +68,8 @@ def asklens_demo(request):
     return render_asklens_frontend(
         request,
         extra_context={
-            "page_title": "Django AskLens Demo",
-            "page_subtitle": "Explore permission-scoped synthetic demo data.",
+            "page_title": "AskLens",
+            "page_subtitle": "Synthetic demo data.",
             "starter_questions": get_demo_questions(request),
             "scope_title": "Tenant row scope",
             "scope_labels": get_facility_scope_labels(request),

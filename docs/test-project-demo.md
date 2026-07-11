@@ -153,7 +153,7 @@ Open the separate AskLens query admin page:
 http://127.0.0.1:8000/admin/asklens/asklensquery/
 ```
 
-The normal admin search box only searches existing audit records. It does not execute a new query. Use the AskLens query page to run a question and see result rows inside the admin UI. Re-running the same successful question for the same admin user reuses the existing audit record instead of creating a duplicate.
+The normal admin search box only searches existing audit records. It does not execute a new query. Use the AskLens query page to ask a data question or a help question such as `show me example queries`. The admin query page uses the same shared planning/help orchestration as `/asklens/query/`, so help requests return examples instead of being forced through the data-query planner. Data questions create normal audit records; help responses do not create query-run audit rows because they do not execute a database query.
 
 ## AskLens endpoints
 
