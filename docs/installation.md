@@ -1,6 +1,6 @@
 # Installation
 
-Django AskLens is currently pre-alpha. Install it into a Django project once the package is available from your chosen source.
+Django AskLens is currently alpha. Install it into a Django project from your chosen source.
 
 ```bash
 python -m pip install django-asklens
@@ -84,4 +84,4 @@ Current development target:
 - Django REST Framework 3.17+
 - Pydantic v2
 
-Django 5.2 LTS compatibility is not currently claimed because it is not yet covered by package metadata or CI.
+Django 5.2 LTS compatibility is not currently claimed. Current package metadata and CI target Django 6.x.

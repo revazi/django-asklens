@@ -4,7 +4,7 @@ Django AskLens is a reusable Django + DRF package for safe natural-language quer
 
 AskLens does **not** let an LLM write SQL. It asks a provider for structured JSON, validates the plan against your registered catalog and permissions, compiles a read-only Django ORM query, executes with limits, and returns table/chart-ready JSON.
 
-Status: **pre-alpha**. APIs may still change before the first public alpha.
+Status: **alpha**. APIs may change before a stable release.
 
 ## What it provides
 
@@ -213,18 +213,18 @@ Live provider tests are opt-in and skipped by default. See [Provider configurati
 
 Review the [security checklist](docs/security-checklist.md) and [production checklist](docs/production-checklist.md) before enabling AskLens outside local development.
 
-## Current limitations
+## Alpha scope and safety boundaries
 
-- Pre-alpha APIs may change.
-- Supported query intents are list and aggregate.
-- Query planning depends on the quality of registered resources, fields, descriptions, and metrics.
-- Live provider quality varies by model and prompt complexity.
-- Raw SQL mode is not implemented.
-- Writes/mutations are not supported.
-- Server-side saved queries, dashboards, and a separate help endpoint are not first-class package features yet.
+- APIs may change before a stable release.
+- AskLens supports read-only list and aggregate questions over explicitly registered resources.
+- Query quality depends on clear resource, field, description, and metric registration.
+- Live provider behavior varies by model and prompt complexity; `DummyProvider` remains the deterministic default for tests and demos.
+- SQL generation/execution is intentionally out of scope. AskLens uses validated QueryPlan JSON and Django ORM compilation only.
+- Writes and mutations are intentionally out of scope.
+- Server-side saved queries, dashboard builders, and a dedicated help endpoint are not part of the alpha package surface.
 - The packaged frontend is a reference/demo UI; custom product UIs should call the API directly.
-- Read-only replica/database routing is not currently supported.
-- Django 5.2 compatibility is intended but not yet covered by CI; current package metadata targets Django 6.x.
+- Read-only replica/database routing is a host-project deployment concern in alpha.
+- Current package metadata and CI target Django 6.x.
 
 ## Documentation
 

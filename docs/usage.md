@@ -220,11 +220,11 @@ result = run_query_plan(planner_result.plan)
 payload = result.to_dict()
 ```
 
-## Limitations
+## Supported alpha scope
 
-- Only list and aggregate intents are supported.
+- AskLens supports read-only list and aggregate intents.
 - Only registered resources, fields, and metrics are queryable.
 - List responses are capped by `MAX_ROWS`; use filters, ordering, and explicit limits to narrow large result sets.
-- No raw SQL mode exists in AskLens.
-- No write/update/delete actions are supported.
+- SQL generation/execution is intentionally out of scope; AskLens compiles validated QueryPlan JSON to Django ORM queries only.
+- Write/update/delete actions are intentionally out of scope.
 - Live LLM providers are opt-in; the dummy provider remains the default.

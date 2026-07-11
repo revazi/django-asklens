@@ -1,6 +1,6 @@
 # Django AskLens docs
 
-Django AskLens is a pre-alpha reusable Django + DRF package for safe natural-language querying over explicitly registered Django models.
+Django AskLens is an alpha reusable Django + DRF package for safe natural-language querying over explicitly registered Django models.
 
 ## Guides
 

@@ -239,7 +239,7 @@ Use this for “view previous run” screens or audit links. The run endpoint st
 ## Safety reminders for custom UIs
 
 - Do not send database rows or sample values to LLM providers from your UI.
-- Do not build a raw SQL mode around AskLens plans.
+- Do not turn AskLens plans into SQL execution; AskLens is designed for validated Django ORM queries.
 - Do not hide API errors that indicate permission or validation failures.
 - Do not trust saved plans from the browser; submit them back to AskLens for revalidation.
 - Keep route permissions on the API even if the UI page has its own access gate.

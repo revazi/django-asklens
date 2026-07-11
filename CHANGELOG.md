@@ -2,7 +2,7 @@
 
 All notable changes to Django AskLens will be documented here.
 
-The project is pre-alpha and APIs may change before the first public alpha.
+The project is alpha and APIs may change before a stable release.
 
 ## 0.1.0a0 — Unreleased
 

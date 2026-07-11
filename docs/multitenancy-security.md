@@ -1,6 +1,6 @@
 # Multi-tenant security
 
-AskLens does not include a tenant policy engine yet. Current multi-tenant support is provided through host-project resource registration and Django/DRF permissions.
+AskLens does not include a separate tenant policy engine in the alpha package surface. Current multi-tenant support is provided through host-project resource registration and Django/DRF permissions.
 
 ## Tenant scoping with `base_queryset(request)`
 
@@ -88,8 +88,8 @@ DJANGO_ASKLENS = {
 }
 ```
 
-## Current limitations
+## Operational boundaries
 
 - Live LLM providers are opt-in and should be validated in a safe non-production environment before production use.
 - AskLens relies on host apps to define tenant membership and row-level queryset policy.
-- Read-only database replica routing is not currently supported by AskLens.
+- Read-only replica/database routing is a host-project deployment concern in alpha.
