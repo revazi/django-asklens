@@ -218,7 +218,8 @@ Review the [security checklist](docs/security-checklist.md) and [production chec
 - Live provider quality varies by model and prompt complexity.
 - Raw SQL mode is not implemented.
 - Writes/mutations are not supported.
-- Server-side saved queries and dashboards are not first-class package features yet.
+- Server-side saved queries, dashboards, and a separate help endpoint are not first-class package features yet.
+- The packaged frontend is a reference/demo UI; custom product UIs should call the API directly.
 - Read-only replica/database routing is deferred.
 - Django 5.2 compatibility is intended but not yet covered by CI; current package metadata targets Django 6.x.
 

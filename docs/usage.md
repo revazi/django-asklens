@@ -176,7 +176,25 @@ DJANGO_ASKLENS = {
 }
 ```
 
-## 6. Query from Python
+## 6. Alpha API and product contract
+
+For alpha, `/asklens/query/` is the single query/help entry point.
+
+- In live provider mode, `/asklens/query/` makes one unified provider call that chooses either a data `QueryPlan` or capability/help suggestions.
+- In dummy/offline mode, obvious help questions are handled deterministically and data questions use configured dummy plans.
+- Successful data responses return `response_type: "query"`.
+- Help/capability responses return `response_type: "capabilities"` and do not execute a database query.
+- AskLens does not expose a separate `/asklens/help/` endpoint in alpha. Clients should use `/asklens/capabilities/` for static guidance and `/asklens/query/` for natural-language help questions.
+
+Submitted plans are always revalidated. This applies to clicked suggestions, browser-saved plans, project-owned saved queries, and custom UI controls that modify filters, dates, ordering, or limits. A submitted plan is a latency/UX optimization, not a trust boundary or permission bypass.
+
+Server-side saved queries are out of scope for the package alpha. Projects may store their own saved-query records, but should submit saved plans back to `/asklens/query/` so AskLens can revalidate them for the current request before execution.
+
+The packaged frontend is a reference/demo UI for teams that want a zero-dependency starting point. It is not intended to be the supported product shell for every application. Production product experiences should generally build a custom UI on the AskLens API.
+
+The admin query page remains available in alpha as a staff/operator utility and demo surface. It uses the same shared query/help orchestration as `/asklens/query/`; data questions create audit records, while help responses do not query the database or create query-run audit rows. It is not a replacement for a product-specific end-user UI.
+
+## 7. Query from Python
 
 ```python
 from django_asklens.llms import DummyProvider

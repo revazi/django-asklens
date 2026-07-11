@@ -194,7 +194,7 @@ if (response.response_type === "capabilities") {
 
 ## Saving queries
 
-A custom UI can save useful questions in a database, local storage, bookmarks, or a project-owned saved-query model. A saved item can store:
+A custom UI can save useful questions in local storage, bookmarks, a project-owned database table, or another application-owned model. AskLens does not ship a first-class server-side saved-query model in alpha. A saved item can store:
 
 ```json
 {
@@ -215,9 +215,9 @@ Content-Type: application/json
 }
 ```
 
-AskLens always revalidates submitted plans against the current request's permissions, resource catalog, field rules, limits, and row scope before execution. A saved plan is an optimization and UX convenience, not a permission bypass.
+AskLens always revalidates submitted plans against the current request's permissions, resource catalog, field rules, limits, and row scope before execution. This applies to clicked suggestions, browser-saved plans, server-saved plans, and UI-edited plans with changed filters, date intervals, ordering, or limits. A saved plan is an optimization and UX convenience, not a permission bypass.
 
-If you build server-side saved queries, keep them project-owned until AskLens grows a first-class saved-query model. Suggested fields are:
+If you build server-side saved queries, keep them project-owned until AskLens grows a first-class saved-query model after alpha. Suggested fields are:
 
 - owner/user or team
 - title
