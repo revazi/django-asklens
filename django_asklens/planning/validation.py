@@ -61,6 +61,7 @@ def validate_query_plan(
     normalized_plan = normalize_visualization_date_trunc_aliases(normalized_plan)
 
     validate_plan_shape(normalized_plan)
+    normalized_plan = normalize_visualization_defaults(normalized_plan)
     validate_plan_limits(normalized_plan, limits=resolved_limits)
     validate_plan_fields(
         normalized_plan,
@@ -123,6 +124,34 @@ def validate_resource_permission(
         f"{resource.requires_permission!r}."
     )
     raise PermissionDeniedError(msg)
+
+
+def normalize_visualization_defaults(plan: QueryPlan) -> QueryPlan:
+    """Infer safe visualization defaults from unambiguous plan result keys."""
+
+    if plan.visualization.type == "table":
+        if plan.visualization.x is None and plan.visualization.y is None:
+            return plan
+        return plan.model_copy(
+            update={
+                "visualization": plan.visualization.model_copy(
+                    update={"x": None, "y": None}
+                )
+            }
+        )
+
+    if plan.visualization.type == "metric" and plan.visualization.y is None:
+        if len(plan.metrics) != 1:
+            return plan
+        return plan.model_copy(
+            update={
+                "visualization": plan.visualization.model_copy(
+                    update={"y": plan.metrics[0].name}
+                )
+            }
+        )
+
+    return plan
 
 
 def normalize_visualization_date_trunc_aliases(plan: QueryPlan) -> QueryPlan:

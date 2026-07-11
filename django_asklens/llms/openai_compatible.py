@@ -1,6 +1,7 @@
 """OpenAI-compatible LLM provider using Python stdlib HTTP."""
 
 import json
+import logging
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any
@@ -12,6 +13,8 @@ from django_asklens.llms.base import LLMMessage
 from django_asklens.settings import get_asklens_setting
 
 type UrlOpen = Callable[..., Any]
+
+logger = logging.getLogger("django_asklens.llms.openai_compatible")
 
 
 @dataclass(frozen=True, slots=True)
@@ -49,13 +52,78 @@ class OpenAICompatibleProvider:
             schema=schema,
             temperature=self.temperature,
         )
+        log_llm_request(request)
         response_payload = send_json_request(
             request,
             timeout_seconds=self.timeout_seconds,
             urlopen_func=self.urlopen_func,
         )
+        log_llm_response(response_payload)
         content = extract_message_content(response_payload)
-        return parse_json_content(content)
+        parsed_content = parse_json_content(content)
+        log_llm_parsed_content(parsed_content)
+        return parsed_content
+
+
+def log_llm_request(request: Request) -> None:
+    """Log the sanitized outbound provider request when explicitly enabled."""
+
+    if not should_log_llm_io():
+        return
+    logger.info(
+        "AskLens LLM request: %s",
+        json.dumps(sanitize_request_for_logging(request), indent=2, sort_keys=True),
+    )
+
+
+def log_llm_response(response_payload: Mapping[str, Any]) -> None:
+    """Log the raw provider response payload when explicitly enabled."""
+
+    if not should_log_llm_io():
+        return
+    logger.info(
+        "AskLens LLM response: %s",
+        json.dumps(response_payload, indent=2, sort_keys=True),
+    )
+
+
+def log_llm_parsed_content(parsed_content: Mapping[str, Any]) -> None:
+    """Log the parsed JSON content returned by the provider."""
+
+    if not should_log_llm_io():
+        return
+    logger.info(
+        "AskLens LLM parsed JSON: %s",
+        json.dumps(parsed_content, indent=2, sort_keys=True),
+    )
+
+
+def sanitize_request_for_logging(request: Request) -> dict[str, Any]:
+    """Return request details without credentials or authorization headers."""
+
+    headers = {
+        name: value
+        for name, value in request.header_items()
+        if name.lower() != "authorization"
+    }
+    body: Any = None
+    if request.data:
+        try:
+            body = json.loads(request.data.decode("utf-8"))
+        except (UnicodeDecodeError, json.JSONDecodeError):
+            body = "<non-json request body>"
+    return {
+        "method": request.get_method(),
+        "url": request.full_url,
+        "headers": headers,
+        "body": body,
+    }
+
+
+def should_log_llm_io() -> bool:
+    """Return whether provider request/response logging is enabled."""
+
+    return bool(get_asklens_setting("LOG_LLM_IO"))
 
 
 def get_openai_compatible_provider() -> OpenAICompatibleProvider:

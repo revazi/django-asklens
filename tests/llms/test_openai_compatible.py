@@ -1,6 +1,7 @@
 """Tests for the OpenAI-compatible provider."""
 
 import json
+import logging
 from collections.abc import Mapping
 from typing import Any
 from urllib.error import HTTPError
@@ -93,6 +94,48 @@ def test_openai_compatible_provider_sends_schema_request_and_parses_json() -> No
         "QueryPlan"
     )
     assert request_payload["response_format"]["json_schema"]["strict"] is True
+
+
+def test_openai_provider_logs_request_and_response_when_enabled(
+    settings, caplog
+) -> None:
+    """Opt-in logs expose provider I/O without API keys."""
+
+    settings.DJANGO_ASKLENS = {"LOG_LLM_IO": True}
+    recorder = RecordingUrlOpen(
+        provider_response(
+            {
+                "resource": "orders",
+                "intent": "aggregate",
+                "metrics": [{"name": "order_count", "op": "count", "field": "id"}],
+            }
+        )
+    )
+    provider = OpenAICompatibleProvider(
+        base_url="https://llm.example/v1/",
+        api_key="secret-test-key",
+        model="test-model",
+        timeout_seconds=12,
+        urlopen_func=recorder,
+    )
+
+    with caplog.at_level(
+        logging.INFO,
+        logger="django_asklens.llms.openai_compatible",
+    ):
+        provider.complete_json(
+            messages=({"role": "user", "content": "Show orders"},),
+            schema=get_query_plan_json_schema(),
+        )
+
+    log_text = caplog.text
+    assert "AskLens LLM request" in log_text
+    assert "AskLens LLM response" in log_text
+    assert "AskLens LLM parsed JSON" in log_text
+    assert "Show orders" in log_text
+    assert "order_count" in log_text
+    assert "secret-test-key" not in log_text
+    assert "Authorization" not in log_text
 
 
 def test_openai_provider_factory_uses_settings(settings) -> None:

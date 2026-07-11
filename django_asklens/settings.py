@@ -12,6 +12,7 @@ DEFAULTS: dict[str, Any] = {
     "LLM_API_KEY": None,
     "LLM_TIMEOUT_SECONDS": 30,
     "LLM_TEMPERATURE": 0,
+    "LOG_LLM_IO": False,
     "MAX_ROWS": 500,
     "MAX_JOINS": 2,
     "MAX_METRICS": 5,

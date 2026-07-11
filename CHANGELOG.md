@@ -39,6 +39,9 @@ The project is pre-alpha and APIs may change before the first public alpha.
 - Seeded demo role groups, user full names, explicit owner grants, and an owner-only facility owners resource for owner lookup questions.
 - Added a regression-tested demo permission/resource matrix; owners see all resources, mixed member reporters no longer receive billing resources, and owner email requires a staff-PII grant.
 - Added `examples_enabled=False` for queryable helper resources that should not dominate deterministic “what can I query?” suggestions, clarified LLM-vs-fallback help labels in the demo UI, allowed help requests such as “give me 10 examples” to return up to 10 validated suggestions, canonicalized provider resource/field/metric labels, and surfaced safe fallback reasons when live QueryHelp fails validation.
+- Tolerated missing `visualization.y` for unambiguous single-metric aggregate plans by inferring the requested metric, and ignored accidental table visualization axes, reducing live-LLM failures for generated metric/table questions.
+- QueryHelp provider suggestions now include locally validated QueryPlans; invalid suggestions are filtered before display, and the demo can execute clicked suggestions with the validated plan without making an extra planner LLM call.
+- Added opt-in `LOG_LLM_IO` provider logging for local live-LLM debugging; logs include sanitized provider request/response payloads without API keys or authorization headers.
 
 ### Security
 

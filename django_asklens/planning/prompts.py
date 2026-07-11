@@ -23,7 +23,9 @@ For date_trunc groupings, visualization axes and order_by fields must still
 reference the original group_by field name, for example x: "start_date".
 Never invent bucket aliases such as "start_date_month" or "paid_at_month".
 Treat visualization as an optional display hint over returned data; axes must
-reference result keys.
+reference result keys. For single-number aggregate answers, prefer
+visualization type "metric" with y set to the requested metric name; if you are
+uncertain, use visualization type "table".
 If a question asks for data outside the catalog, choose the safest valid plan
 or fail via validation by not inventing fields.
 """.strip()

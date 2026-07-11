@@ -44,6 +44,17 @@ DJANGO_ASKLENS = {
 
 Use environment variables or your deployment secret manager for `LLM_API_KEY`. Do not commit API keys or place them in docs, fixtures, or tests.
 
+For local prompt/provider tuning, you can temporarily enable provider I/O logging:
+
+```python
+DJANGO_ASKLENS = {
+    # ...
+    "LOG_LLM_IO": True,
+}
+```
+
+This logs the outbound chat-completions request body, raw provider response, and parsed JSON content to the `django_asklens.llms.openai_compatible` logger at `INFO` level. Authorization headers and API keys are excluded. Treat these logs as sensitive anyway: they can include user questions, permission-scoped schema/capabilities metadata, and provider-generated plans/help. Do not enable this in production unless your logging pipeline is approved for that data.
+
 The provider sends a request to:
 
 ```text
@@ -100,4 +111,4 @@ Live provider output must still pass the same strict QueryPlan parsing and catal
 - QueryPlan validation remains mandatory.
 - Never execute provider-generated SQL.
 - Do not send sample rows to providers by default.
-- Errors are raised as `LLMProviderError` without including API keys or raw credentials.
+- Errors and opt-in provider I/O logs exclude API keys and authorization headers.

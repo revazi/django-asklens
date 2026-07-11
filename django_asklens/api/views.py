@@ -33,6 +33,7 @@ from django_asklens.planning.intents import (
     filter_capabilities_for_intent,
     route_question_intent,
 )
+from django_asklens.planning.validation import parse_and_validate_query_plan
 from django_asklens.settings import get_asklens_setting
 
 
@@ -76,6 +77,7 @@ class QueryView(AskLensAPIView):
         question = serializer.validated_data["question"]
         debug = serializer.validated_data["debug"]
         include_visualization = serializer.validated_data["include_visualization"]
+        provided_plan = serializer.validated_data.get("plan")
         enforce_debug_permission(request, debug=debug)
         permissions = get_request_permissions(request)
 
@@ -93,6 +95,7 @@ class QueryView(AskLensAPIView):
                 ) = get_query_help_for_capabilities(
                     question,
                     capabilities=capabilities,
+                    permissions=permissions,
                 )
                 return Response(
                     build_capabilities_payload(
@@ -106,15 +109,22 @@ class QueryView(AskLensAPIView):
                     )
                 )
 
-            planner_result = plan_question(
-                question,
-                permissions=permissions,
-            )
-            query_result = run_query_plan(planner_result.plan, request=request)
+            if provided_plan is None:
+                planner_result = plan_question(
+                    question,
+                    permissions=permissions,
+                )
+                plan = planner_result.plan
+            else:
+                plan = parse_and_validate_query_plan(
+                    provided_plan,
+                    permissions=permissions,
+                )
+            query_result = run_query_plan(plan, request=request)
             run = create_query_run(
                 request=request,
                 question=question,
-                plan=planner_result.plan.model_dump(mode="json"),
+                plan=plan.model_dump(mode="json"),
                 status=SemanticQueryRun.Status.SUCCESS,
                 row_count=query_result.row_count,
                 duration_ms=query_result.duration_ms,
@@ -122,7 +132,7 @@ class QueryView(AskLensAPIView):
             payload = build_success_payload(
                 run=run,
                 question=question,
-                plan=planner_result.plan.model_dump(mode="json"),
+                plan=plan.model_dump(mode="json"),
                 query_result=query_result.to_dict(
                     include_visualization=include_visualization,
                 ),
@@ -206,6 +216,7 @@ def get_query_help_for_capabilities(
     question: str,
     *,
     capabilities: dict[str, Any],
+    permissions: frozenset[str] | None = None,
 ) -> tuple[QueryHelp, str, str]:
     """Return LLM-backed query help when live mode is enabled."""
 
@@ -220,7 +231,11 @@ def get_query_help_for_capabilities(
         )
     try:
         return (
-            build_query_help(question, capabilities=capabilities),
+            build_query_help(
+                question,
+                capabilities=capabilities,
+                permissions=tuple(permissions or ()),
+            ),
             "semantic_provider",
             "",
         )

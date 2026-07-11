@@ -5,6 +5,8 @@ from typing import Any
 
 import pytest
 
+from django_asklens import Metric
+from django_asklens.catalog.registry import default_registry
 from django_asklens.exceptions import PlanValidationError
 from django_asklens.llms import LLMMessage
 from django_asklens.planning.help import (
@@ -14,6 +16,27 @@ from django_asklens.planning.help import (
     parse_query_help,
     requested_suggestion_count,
 )
+from tests.test_project.models import Order
+
+
+@pytest.fixture(autouse=True)
+def registered_orders() -> None:
+    """Register the Order resource for executable help-plan validation."""
+
+    default_registry.clear()
+    default_registry.register(
+        model=Order,
+        name="orders",
+        label="Orders",
+        default_date_field="created_at",
+        fields={
+            "status": {"label": "Status"},
+            "created_at": {"label": "Created date"},
+        },
+        metrics=[Metric("order_count", op="count", field="status")],
+    )
+    yield
+    default_registry.clear()
 
 
 class HelpProvider:
@@ -102,6 +125,34 @@ def capabilities_payload() -> dict[str, Any]:
     }
 
 
+def aggregate_help_plan_payload(**updates: Any) -> dict[str, Any]:
+    """Return a valid aggregate plan for provider QueryHelp suggestions."""
+
+    payload: dict[str, Any] = {
+        "resource": "orders",
+        "intent": "aggregate",
+        "filters": [],
+        "group_by": [{"field": "status"}],
+        "metrics": [{"name": "order_count", "op": "count", "field": "status"}],
+        "select": [],
+        "order_by": [{"metric": "order_count", "direction": "desc"}],
+        "limit": 50,
+        "visualization": {"type": "bar", "x": "status", "y": "order_count"},
+    }
+    payload.update(updates)
+    return payload
+
+
+def trend_help_plan_payload() -> dict[str, Any]:
+    """Return a valid date-trend plan for provider QueryHelp suggestions."""
+
+    return aggregate_help_plan_payload(
+        group_by=[{"field": "created_at", "date_trunc": "month"}],
+        order_by=[{"field": "created_at", "direction": "asc"}],
+        visualization={"type": "line", "x": "created_at", "y": "order_count"},
+    )
+
+
 def many_examples_capabilities_payload() -> dict[str, Any]:
     """Return capabilities with enough examples for count-limit tests."""
 
@@ -145,6 +196,7 @@ def test_build_query_help_uses_provider_and_validates_references() -> None:
                     "fields": ["status"],
                     "metrics": ["order_count"],
                     "date_fields": [],
+                    "plan": aggregate_help_plan_payload(),
                     "why": "Groups the registered order count metric by status.",
                 },
                 {
@@ -153,6 +205,7 @@ def test_build_query_help_uses_provider_and_validates_references() -> None:
                     "fields": [],
                     "metrics": ["order_count"],
                     "date_fields": ["created_at"],
+                    "plan": trend_help_plan_payload(),
                 },
             ],
             "notes": ["Only visible fields are used."],
@@ -187,6 +240,7 @@ def test_build_query_help_allows_ten_provider_examples_when_requested() -> None:
             "resource_name": "orders",
             "fields": ["status"],
             "metrics": ["order_count"],
+            "plan": aggregate_help_plan_payload(),
         }
         for index in range(1, 11)
     ]
@@ -223,6 +277,7 @@ def test_build_query_help_limits_provider_examples_to_default_count() -> None:
                     "resource_name": "orders",
                     "fields": ["status"],
                     "metrics": ["order_count"],
+                    "plan": aggregate_help_plan_payload(),
                 }
                 for index in range(1, 11)
             ],
@@ -251,6 +306,7 @@ def test_build_query_help_canonicalizes_provider_labels() -> None:
                     "fields": ["Status"],
                     "metrics": ["Order count"],
                     "date_fields": ["Created date"],
+                    "plan": aggregate_help_plan_payload(),
                 }
             ],
         }
@@ -280,6 +336,7 @@ def test_build_query_help_keeps_valid_provider_suggestions() -> None:
                     "resource_name": "orders",
                     "fields": ["status"],
                     "metrics": ["order_count"],
+                    "plan": aggregate_help_plan_payload(),
                 },
                 {
                     "question": "List orders with private notes",
@@ -301,6 +358,31 @@ def test_build_query_help_keeps_valid_provider_suggestions() -> None:
     ]
 
 
+def test_build_query_help_rejects_missing_executable_plan() -> None:
+    """Provider suggestions must include locally validated plans."""
+
+    provider = HelpProvider(
+        {
+            "answer": "Try this.",
+            "suggestions": [
+                {
+                    "question": "Show order count by status",
+                    "resource_name": "orders",
+                    "fields": ["status"],
+                    "metrics": ["order_count"],
+                }
+            ],
+        }
+    )
+
+    with pytest.raises(PlanValidationError, match="must include"):
+        build_query_help(
+            "Help me write order questions",
+            provider=provider,
+            capabilities=capabilities_payload(),
+        )
+
+
 def test_build_query_help_rejects_unknown_references() -> None:
     """Provider suggestions cannot mention fields outside capabilities."""
 
@@ -318,6 +400,32 @@ def test_build_query_help_rejects_unknown_references() -> None:
     )
 
     with pytest.raises(PlanValidationError, match="private_notes"):
+        build_query_help(
+            "Help me write order questions",
+            provider=provider,
+            capabilities=capabilities_payload(),
+        )
+
+
+def test_build_query_help_rejects_quoted_sample_value_suggestions() -> None:
+    """Provider suggestions must not invent row/sample values."""
+
+    provider = HelpProvider(
+        {
+            "answer": "Try this.",
+            "suggestions": [
+                {
+                    "question": "Show order count for 'Premium Plan Product'",
+                    "resource_name": "orders",
+                    "fields": ["status"],
+                    "metrics": ["order_count"],
+                    "plan": aggregate_help_plan_payload(),
+                }
+            ],
+        }
+    )
+
+    with pytest.raises(PlanValidationError, match="sample values"):
         build_query_help(
             "Help me write order questions",
             provider=provider,

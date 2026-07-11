@@ -24,6 +24,7 @@ def test_demo_asklens_settings_can_enable_openai_compatible_backend() -> None:
             "DJANGO_ASKLENS_LIVE_LLM_MODEL": "test-model",
             "DJANGO_ASKLENS_LIVE_LLM_TIMEOUT_SECONDS": "12",
             "DJANGO_ASKLENS_LIVE_LLM_TEMPERATURE": "0.2",
+            "DJANGO_ASKLENS_LIVE_LLM_LOG_IO": "1",
         }
     )
 
@@ -33,6 +34,7 @@ def test_demo_asklens_settings_can_enable_openai_compatible_backend() -> None:
     assert settings["LLM_MODEL"] == "test-model"
     assert settings["LLM_TIMEOUT_SECONDS"] == 12
     assert settings["LLM_TEMPERATURE"] == 0.2
+    assert settings["LOG_LLM_IO"] is True
     assert settings["DUMMY_PLANS"]
 
 

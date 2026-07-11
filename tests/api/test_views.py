@@ -34,6 +34,7 @@ class QueryHelpProvider:
                     "resource_name": "orders",
                     "fields": ["status"],
                     "metrics": ["order_count"],
+                    "plan": valid_plan_payload(),
                 }
             ],
         }
@@ -235,6 +236,7 @@ def test_live_query_help_uses_provider(
     assert error == ""
     assert query_help.answer == "Provider-generated help."
     assert query_help.suggestions[0].question.startswith("Provider suggestion")
+    assert query_help.suggestions[0].plan is not None
 
 
 def test_query_help_fallback_returns_safe_error(
@@ -330,6 +332,64 @@ def test_query_endpoint_returns_result_and_records_successful_run(
     assert run.row_count == 2
     assert run.error == ""
     assert run.plan["resource"] == "orders"
+
+
+def test_query_endpoint_executes_provided_valid_plan_without_planner(
+    monkeypatch,
+    api_client: APIClient,
+    user,
+    order_data: None,
+    registered_orders: None,
+) -> None:
+    """Clicked QueryHelp suggestions can execute a revalidated plan directly."""
+
+    def fail_planner(*args, **kwargs):
+        raise AssertionError("planner should not be called for provided plans")
+
+    monkeypatch.setattr("django_asklens.api.views.plan_question", fail_planner)
+    api_client.force_authenticate(user=user)
+
+    response = api_client.post(
+        "/asklens/query/",
+        {"question": "Provider suggestion", "plan": valid_plan_payload()},
+        format="json",
+    )
+
+    assert response.status_code == 200
+    assert response.data["plan"]["resource"] == "orders"
+    assert response.data["data"] == [
+        {"status": "paid", "order_count": 2},
+        {"status": "pending", "order_count": 1},
+    ]
+
+
+def test_query_endpoint_ignores_table_visualization_axes(
+    settings,
+    api_client: APIClient,
+    user,
+    order_data: None,
+    registered_orders: None,
+) -> None:
+    """Provider plans should not fail only because table hints include axes."""
+
+    plan = valid_plan_payload()
+    plan["visualization"] = {"type": "table", "x": "status", "y": "order_count"}
+    configure_dummy_plan(settings, plan)
+    api_client.force_authenticate(user=user)
+
+    response = api_client.post(
+        "/asklens/query/",
+        {"question": QUESTION},
+        format="json",
+    )
+
+    assert response.status_code == 200
+    assert response.data["plan"]["visualization"] == {
+        "type": "table",
+        "x": None,
+        "y": None,
+    }
+    assert response.data["visualization"] == {"type": "table"}
 
 
 def test_query_endpoint_can_return_serialized_data_without_visualization_hint(

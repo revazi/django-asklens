@@ -508,6 +508,8 @@
     const capabilitiesList = document.getElementById("capabilities-list");
     const catalogStatus = document.getElementById("catalog-status");
     const catalogList = document.getElementById("catalog-list");
+    let pendingSuggestionQuestion = "";
+    let pendingSuggestionPlan = null;
     const chartColors = [
       "#276ef1",
       "#12b76a",
@@ -563,6 +565,8 @@
         button.className = "question-button";
         button.textContent = question;
         button.addEventListener("click", () => {
+          pendingSuggestionQuestion = "";
+          pendingSuggestionPlan = null;
           questionInput.value = question;
           questionInput.focus();
         });
@@ -652,6 +656,13 @@
       return item;
     }
 
+    questionInput.addEventListener("input", () => {
+      if (questionInput.value.trim() !== pendingSuggestionQuestion) {
+        pendingSuggestionQuestion = "";
+        pendingSuggestionPlan = null;
+      }
+    });
+
     queryForm.addEventListener("submit", async (event) => {
       event.preventDefault();
       const question = questionInput.value.trim();
@@ -663,13 +674,17 @@
       resultBox.replaceChildren();
       setStatus("Planning, validating, and executing query…", "info");
       try {
+        const requestBody = { question };
+        if (pendingSuggestionPlan && question === pendingSuggestionQuestion) {
+          requestBody.plan = pendingSuggestionPlan;
+        }
         const payload = await fetchJson(queryUrl, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
             "X-CSRFToken": csrfToken,
           },
-          body: JSON.stringify({ question }),
+          body: JSON.stringify(requestBody),
         });
         setStatus("Query completed successfully.", "success");
         renderResult(payload);
@@ -800,6 +815,8 @@
         button.className = "question-button";
         button.textContent = suggestion.question;
         button.addEventListener("click", () => {
+          pendingSuggestionQuestion = suggestion.question;
+          pendingSuggestionPlan = suggestion.plan || null;
           questionInput.value = suggestion.question;
           questionInput.focus();
         });

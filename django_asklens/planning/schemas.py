@@ -160,16 +160,9 @@ class VisualizationSpec(PlanBaseModel):
 
     @model_validator(mode="after")
     def validate_axes_for_type(self) -> "VisualizationSpec":
-        if self.type == "table" and (self.x is not None or self.y is not None):
-            msg = "visualization type 'table' must not define x or y."
+        if self.type == "metric" and self.x is not None:
+            msg = "visualization type 'metric' must not define x."
             raise ValueError(msg)
-        if self.type == "metric":
-            if self.x is not None:
-                msg = "visualization type 'metric' must not define x."
-                raise ValueError(msg)
-            if self.y is None:
-                msg = "visualization type 'metric' requires y."
-                raise ValueError(msg)
         if self.type in {"bar", "line", "pie"} and (self.x is None or self.y is None):
             msg = f"visualization type {self.type!r} requires x and y."
             raise ValueError(msg)

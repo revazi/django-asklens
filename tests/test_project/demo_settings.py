@@ -261,6 +261,7 @@ def build_demo_asklens_settings(environ=os.environ) -> dict:
             "LLM_TEMPERATURE": float(
                 environ.get("DJANGO_ASKLENS_LIVE_LLM_TEMPERATURE", "0")
             ),
+            "LOG_LLM_IO": environ.get("DJANGO_ASKLENS_LIVE_LLM_LOG_IO") == "1",
         }
     )
     return asklens_settings

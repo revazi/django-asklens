@@ -14,6 +14,7 @@ from django_asklens.catalog.capabilities import (
     is_single_scope_resource,
     pluralize_scope_kind,
 )
+from django_asklens.catalog.registry import CatalogRegistry, default_registry
 from django_asklens.exceptions import PlanValidationError
 from django_asklens.llms.base import LLMMessage, LLMProvider
 from django_asklens.llms.factory import get_llm_provider
@@ -21,10 +22,13 @@ from django_asklens.planning.prompts import stable_json_dumps
 from django_asklens.planning.schemas import (
     PLAN_MODEL_CONFIG,
     PlanBaseModel,
+    QueryPlan,
     format_pydantic_error,
+    get_query_plan_json_schema,
     parse_plan_payload,
     validate_non_empty_string,
 )
+from django_asklens.planning.validation import parse_and_validate_query_plan
 
 DEFAULT_HELP_SUGGESTIONS = 5
 MAX_HELP_SUGGESTIONS = 10
@@ -50,15 +54,20 @@ produce valid AskLens plans. For broad help questions like "what can I query?",
 provide fresh, diverse suggestions across useful visible resources; prefer
 analytical aggregate or trend questions over simple lookup/list questions unless
 the user asks about a specific lookup resource.
-For each suggestion, include the exact resource_name and referenced field,
-metric, and date_field names from the metadata. Do not simply copy generated
-examples from the metadata when better provider-generated suggestions are possible.
+For each suggestion, include the exact resource_name, referenced field,
+metric, and date_field names from the metadata, plus a full QueryPlan in the
+suggestion's plan field. The plan must answer the suggested question and must
+validate against the same visible capabilities metadata. Do not simply copy
+generated examples from the metadata when better provider-generated suggestions
+are possible.
 If a resource scope has level="single", suggestions must be phrased within
 that single visible scope. Do not suggest comparing, grouping, filtering, or
 trending across any scope dimension unless the resource scope allows multiple
 or all scopes and the scope-dimension field is visible.
 Do not suggest internal result-key aliases such as "start_date_month"; say
-"by month using start date" in the natural-language question instead.
+"by month using start date" in the natural-language question instead. For
+visualization, use table with no axes when a chart is not clearly needed; use
+metric with y set to the metric name for single-number aggregate answers.
 If the user asks for a number of examples, return up to the requested count,
 never more than the requested count from the additional instructions.
 Do not include SQL, code, database rows, sample values, secrets, credentials,
@@ -82,6 +91,10 @@ class QueryHelpSuggestion(PlanBaseModel):
     date_fields: tuple[str, ...] = Field(
         default_factory=tuple,
         max_length=MAX_REFERENCE_COUNT,
+    )
+    plan: dict[str, Any] | None = Field(
+        default=None,
+        description="A QueryPlan JSON object that answers this suggested question.",
     )
     why: str = ""
 
@@ -141,6 +154,8 @@ def build_query_help(
     *,
     capabilities: CapabilitiesSnapshot,
     provider: LLMProvider | None = None,
+    registry: CatalogRegistry = default_registry,
+    permissions: Sequence[str] | None = None,
 ) -> QueryHelp:
     """Ask a provider for safe query-writing help and validate the response."""
 
@@ -154,9 +169,13 @@ def build_query_help(
         ),
         schema=get_query_help_json_schema(),
     )
+    permission_set = tuple(permissions or ())
     help_result = validate_query_help(
         parse_query_help(payload),
         capabilities=capabilities,
+        registry=registry,
+        permissions=permission_set,
+        require_plans=True,
     )
     return limit_query_help_suggestions(
         help_result,
@@ -223,6 +242,11 @@ def build_query_help_messages(
         },
         {
             "role": "user",
+            "content": "Each suggestion.plan must match this QueryPlan schema:\n"
+            + stable_json_dumps(get_query_plan_json_schema()),
+        },
+        {
+            "role": "user",
             "content": "Visible capabilities metadata:\n"
             + stable_json_dumps(capabilities),
         },
@@ -250,10 +274,14 @@ def validate_query_help(
     help_result: QueryHelp,
     *,
     capabilities: CapabilitiesSnapshot,
+    registry: CatalogRegistry = default_registry,
+    permissions: Sequence[str] | None = None,
+    require_plans: bool = False,
 ) -> QueryHelp:
     """Validate provider help against visible capabilities metadata."""
 
     resource_index = index_resource_references(capabilities)
+    permission_set = tuple(permissions or ())
     valid_suggestions: list[QueryHelpSuggestion] = []
     errors: list[str] = []
     for suggestion in help_result.suggestions:
@@ -261,6 +289,9 @@ def validate_query_help(
             normalized_suggestion = validate_query_help_suggestion(
                 suggestion,
                 resource_index=resource_index,
+                registry=registry,
+                permissions=permission_set,
+                require_plan=require_plans,
             )
         except PlanValidationError as exc:
             errors.append(str(exc))
@@ -282,6 +313,9 @@ def validate_query_help_suggestion(
     suggestion: QueryHelpSuggestion,
     *,
     resource_index: Mapping[str, CapabilityResource],
+    registry: CatalogRegistry = default_registry,
+    permissions: Sequence[str] | None = None,
+    require_plan: bool = False,
 ) -> QueryHelpSuggestion:
     """Validate one provider suggestion against visible capabilities."""
 
@@ -314,7 +348,90 @@ def validate_query_help_suggestion(
         label="date field",
         resource_name=suggestion.resource_name,
     )
-    return suggestion
+    return validate_suggestion_plan(
+        suggestion,
+        resource=resource,
+        registry=registry,
+        permissions=permissions,
+        require_plan=require_plan,
+    )
+
+
+def validate_suggestion_plan(
+    suggestion: QueryHelpSuggestion,
+    *,
+    resource: CapabilityResource,
+    registry: CatalogRegistry,
+    permissions: Sequence[str] | None,
+    require_plan: bool,
+) -> QueryHelpSuggestion:
+    """Validate an optional executable plan attached to one help suggestion."""
+
+    if suggestion.plan is None:
+        if not require_plan:
+            return suggestion
+        msg = (
+            f"QueryHelp suggestion for resource {suggestion.resource_name!r} "
+            "must include a validated QueryPlan."
+        )
+        raise PlanValidationError(msg)
+
+    validated_plan = parse_and_validate_query_plan(
+        suggestion.plan,
+        registry=registry,
+        permissions=permissions,
+    )
+    if validated_plan.resource != resource["name"]:
+        msg = (
+            f"QueryHelp suggestion for resource {suggestion.resource_name!r} "
+            f"included a plan for resource {validated_plan.resource!r}."
+        )
+        raise PlanValidationError(msg)
+    validate_plan_uses_capabilities(validated_plan, resource=resource)
+
+    return suggestion.model_copy(
+        update={"plan": validated_plan.model_dump(mode="json")}
+    )
+
+
+def validate_plan_uses_capabilities(
+    plan: QueryPlan,
+    *,
+    resource: CapabilityResource,
+) -> None:
+    """Validate a suggestion plan against the visible capability resource."""
+
+    allowed_fields = {field["name"] for field in resource.get("fields", [])}
+    used_fields = set(plan.select)
+    used_fields.update(filter_spec.field for filter_spec in plan.filters)
+    used_fields.update(group.field for group in plan.group_by)
+    used_fields.update(
+        order_spec.field for order_spec in plan.order_by if order_spec.field is not None
+    )
+    validate_references(
+        tuple(sorted(used_fields)),
+        allowed=allowed_fields,
+        label="plan field",
+        resource_name=resource["name"],
+    )
+
+    date_bucket_fields = {
+        group.field for group in plan.group_by if group.date_trunc is not None
+    }
+    validate_references(
+        tuple(sorted(date_bucket_fields)),
+        allowed={field["name"] for field in resource.get("date_fields", [])},
+        label="plan date field",
+        resource_name=resource["name"],
+    )
+
+    metric_names = {metric.name for metric in plan.metrics}
+    validate_references(
+        tuple(sorted(metric_names)),
+        allowed={metric["name"] for metric in resource.get("metrics", [])},
+        label="plan metric",
+        resource_name=resource["name"],
+    )
 
 
 def normalize_suggestion_references(
@@ -338,6 +455,7 @@ def normalize_suggestion_references(
             suggestion.date_fields,
             items=resource.get("date_fields", []),
         ),
+        plan=suggestion.plan,
         why=suggestion.why,
     )
 
@@ -514,6 +632,10 @@ def validate_suggestion_question_is_safe(question: str) -> None:
     tokens = set(re.findall(r"[a-z0-9]+", question.lower()))
     if "sql" in tokens:
         raise PlanValidationError("QueryHelp suggestions must not mention SQL.")
+    if re.search(r"(?<!\w)(['\"])[^'\"]{2,}\1", question):
+        raise PlanValidationError(
+            "QueryHelp suggestions must not include literal sample values."
+        )
     if re.search(
         r"\b[a-z0-9]+(?:_[a-z0-9]+)+_(day|week|month|quarter|year)\b",
         question.lower(),

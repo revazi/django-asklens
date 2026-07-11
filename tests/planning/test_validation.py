@@ -325,6 +325,42 @@ def test_visualization_refs_must_exist_in_result_keys() -> None:
         validate_query_plan(metric_plan, registry=build_registry())
 
 
+def test_table_visualization_axes_are_ignored() -> None:
+    plan = parse_valid_plan(
+        visualization={"type": "table", "x": "status", "y": "order_count"}
+    )
+
+    validated = validate_query_plan(plan, registry=build_registry())
+
+    assert validated.visualization.x is None
+    assert validated.visualization.y is None
+
+
+def test_single_metric_visualization_y_is_inferred() -> None:
+    plan = parse_valid_plan(visualization={"type": "metric"})
+
+    validated = validate_query_plan(plan, registry=build_registry())
+
+    assert validated.visualization.y == "order_count"
+
+
+def test_metric_visualization_without_y_still_fails_when_ambiguous() -> None:
+    plan = parse_valid_plan(
+        metrics=[
+            {"name": "order_count", "op": "count", "field": "id"},
+            {"name": "revenue", "op": "sum", "field": "total"},
+        ],
+        visualization={"type": "metric"},
+    )
+
+    with pytest.raises(PlanValidationError, match="Metric visualization"):
+        validate_query_plan(
+            plan,
+            registry=build_registry(),
+            permissions={"shop.view_financials"},
+        )
+
+
 def test_date_trunc_visualization_alias_is_canonicalized() -> None:
     """Providers often invent date bucket aliases; normalize safe exact aliases."""
 

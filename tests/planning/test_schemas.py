@@ -108,10 +108,22 @@ def test_visualization_axes_are_strict_for_type() -> None:
     payload = valid_aggregate_plan_payload()
     payload["visualization"] = {"type": "table", "x": "status"}
 
-    with pytest.raises(PlanValidationError, match="must not define"):
-        parse_query_plan(payload)
+    plan = parse_query_plan(payload)
+
+    assert plan.visualization.type == "table"
+    assert plan.visualization.x == "status"
 
     payload["visualization"] = {"type": "metric", "x": "status", "y": "order_count"}
 
     with pytest.raises(PlanValidationError, match="must not define x"):
         parse_query_plan(payload)
+
+
+def test_metric_visualization_can_omit_y_for_semantic_inference() -> None:
+    payload = valid_aggregate_plan_payload()
+    payload["visualization"] = {"type": "metric"}
+
+    plan = parse_query_plan(payload)
+
+    assert plan.visualization.type == "metric"
+    assert plan.visualization.y is None

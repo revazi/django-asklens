@@ -59,7 +59,7 @@ Use the capabilities endpoint to show users what AskLens can answer for the curr
 GET /asklens/capabilities/
 ```
 
-A response includes visible resources, exposed fields, metrics, date fields, example questions, supported patterns, and limitations. Users can also ask capability/help questions through `/asklens/query/`; live/custom providers classify those semantically with a strict `QuestionIntent` schema, then generate suggested AskLens questions with a strict `QueryHelp` schema using only the visible capabilities metadata. Dummy/offline mode uses deterministic examples for obvious help questions such as `What can I query?`.
+A response includes visible resources, exposed fields, metrics, date fields, example questions, supported patterns, and limitations. Users can also ask capability/help questions through `/asklens/query/`; live/custom providers classify those semantically with a strict `QuestionIntent` schema, then generate suggested AskLens questions with a strict `QueryHelp` schema using only the visible capabilities metadata. Provider-backed suggestions must include a QueryPlan in the same response; AskLens validates that plan locally and filters invalid suggestions before returning help. Dummy/offline mode uses deterministic examples for obvious help questions such as `What can I query?`.
 
 ```json
 {
@@ -85,7 +85,7 @@ Content-Type: application/json
 {"question": "Show orders by status"}
 ```
 
-A successful data-query response includes the question, validated plan, column metadata, normalized rows, visualization hint, timing, and audit run id.
+A successful data-query response includes the question, validated plan, column metadata, normalized rows, visualization hint, timing, and audit run id. Advanced clients may submit a previously returned `query_help.suggestions[].plan` with the question; AskLens revalidates the plan against the current request permissions and executes it directly instead of making another planner LLM call.
 
 ```json
 {
@@ -102,7 +102,7 @@ A successful data-query response includes the question, validated plan, column m
 }
 ```
 
-Capability/help questions return a non-row response and do not execute a database query. In live mode, `query_help_source` is `semantic_provider` when suggestions came from the configured LLM and passed catalog-reference validation:
+Capability/help questions return a non-row response and do not execute a database query. In live mode, `query_help_source` is `semantic_provider` when suggestions came from the configured LLM and passed catalog-reference plus embedded-plan validation:
 
 ```json
 {
@@ -114,7 +114,11 @@ Capability/help questions return a non-row response and do not execute a databas
   "query_help": {
     "answer": "You can ask read-only list and aggregate questions over 1 resource.",
     "suggestions": [
-      {"question": "Show count of Orders by Status", "resource_name": "orders"}
+      {
+        "question": "Show count of Orders by Status",
+        "resource_name": "orders",
+        "plan": {"resource": "orders", "intent": "aggregate"}
+      }
     ]
   }
 }
