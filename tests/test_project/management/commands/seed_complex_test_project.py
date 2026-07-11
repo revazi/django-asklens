@@ -13,15 +13,20 @@ from tests.test_project.models import (
     BillingLine,
     Facility,
     FacilityLocation,
+    Lead,
+    MarketingCampaign,
     MemberProfile,
     MemberStatus,
     MemberSubscription,
     PaymentAttempt,
     ScheduleSession,
+    SessionBooking,
     SessionType,
     StaffAssignment,
     StaffGrant,
+    StaffShift,
     SubscriptionPlan,
+    SupportTicket,
 )
 
 DEMO_PASSWORD = "12admin34"
@@ -133,6 +138,33 @@ SCALED_GENDERS = (
     MemberProfile.Gender.MALE,
     MemberProfile.Gender.NON_BINARY,
     MemberProfile.Gender.NOT_PROVIDED,
+)
+SCALED_CAMPAIGN_CHANNELS = tuple(
+    choice for choice, _label in MarketingCampaign.Channel.choices
+)
+SCALED_CAMPAIGN_AUDIENCES = tuple(
+    choice for choice, _label in MarketingCampaign.Audience.choices
+)
+SCALED_LEAD_SOURCES = tuple(choice for choice, _label in Lead.Source.choices)
+SCALED_LEAD_STAGES = tuple(choice for choice, _label in Lead.Stage.choices)
+SCALED_BOOKING_STATUSES = tuple(
+    choice for choice, _label in SessionBooking.Status.choices
+)
+SCALED_BOOKING_SOURCES = tuple(
+    choice for choice, _label in SessionBooking.Source.choices
+)
+SCALED_SHIFT_ROLES = tuple(choice for choice, _label in StaffShift.Role.choices)
+SCALED_TICKET_CATEGORIES = tuple(
+    choice for choice, _label in SupportTicket.Category.choices
+)
+SCALED_TICKET_PRIORITIES = tuple(
+    choice for choice, _label in SupportTicket.Priority.choices
+)
+SCALED_TICKET_STATUSES = tuple(
+    choice for choice, _label in SupportTicket.Status.choices
+)
+SCALED_TICKET_CHANNELS = tuple(
+    choice for choice, _label in SupportTicket.Channel.choices
 )
 
 MEMBER_FIXTURES = (
@@ -572,7 +604,12 @@ def seed_facility_data(
         members=members,
         amount_multiplier=amount_multiplier,
     )
-    seed_schedule(facility, prefix)
+    campaigns = seed_marketing_campaigns(facility, prefix)
+    seed_leads(facility, prefix, campaigns=campaigns)
+    locations, sessions = seed_schedule(facility, prefix)
+    seed_session_bookings(facility, prefix, members=members, sessions=sessions)
+    seed_staff_shifts(facility, prefix, locations=locations)
+    seed_support_tickets(facility, prefix, members=members)
 
 
 def seed_scaled_demo_data(profile: SeedProfile, *, stdout, style) -> None:
@@ -649,6 +686,10 @@ def reset_scaled_facilities() -> None:
     if not facility_ids:
         return
 
+    SessionBooking.objects.filter(facility_id__in=facility_ids).delete()
+    StaffShift.objects.filter(facility_id__in=facility_ids).delete()
+    SupportTicket.objects.filter(facility_id__in=facility_ids).delete()
+    Lead.objects.filter(facility_id__in=facility_ids).delete()
     PaymentAttempt.objects.filter(facility_id__in=facility_ids).delete()
     BillingLine.objects.filter(facility_id__in=facility_ids).delete()
     BillingDocument.objects.filter(facility_id__in=facility_ids).delete()
@@ -658,10 +699,133 @@ def reset_scaled_facilities() -> None:
     SessionType.objects.filter(facility_id__in=facility_ids).delete()
     FacilityLocation.objects.filter(facility_id__in=facility_ids).delete()
     SubscriptionPlan.objects.filter(facility_id__in=facility_ids).delete()
+    MarketingCampaign.objects.filter(facility_id__in=facility_ids).delete()
     MemberProfile.objects.filter(facility_id__in=facility_ids).delete()
     StaffGrant.objects.filter(assignment__facility_id__in=facility_ids).delete()
     StaffAssignment.objects.filter(facility_id__in=facility_ids).delete()
     Facility.objects.filter(id__in=facility_ids).delete()
+
+
+def seed_scaled_campaigns(
+    facility: Facility,
+    prefix: str,
+    *,
+    batch_size: int,
+) -> list[MarketingCampaign]:
+    """Bulk-create marketing campaigns for one scaled tenant."""
+
+    campaigns = [
+        MarketingCampaign(
+            facility=facility,
+            name=f"{prefix} Campaign {index:02d}",
+            channel=SCALED_CAMPAIGN_CHANNELS[index % len(SCALED_CAMPAIGN_CHANNELS)],
+            audience=SCALED_CAMPAIGN_AUDIENCES[index % len(SCALED_CAMPAIGN_AUDIENCES)],
+            status=(
+                MarketingCampaign.Status.ACTIVE
+                if index % 4
+                else MarketingCampaign.Status.COMPLETED
+            ),
+            start_date=datetime(2026, 1 + (index % 12), 1).date(),
+            end_date=datetime(2026, 1 + (index % 12), 24).date(),
+            budget_cents=30_000 + (index * 5_000),
+            spend_cents=20_000 + (index * 4_000),
+            impressions=2_000 + (index * 900),
+            clicks=150 + (index * 55),
+            conversions=5 + (index * 4),
+        )
+        for index in range(1, 9)
+    ]
+    MarketingCampaign.objects.bulk_create(campaigns, batch_size=batch_size)
+    return campaigns
+
+
+def seed_scaled_leads(
+    facility: Facility,
+    prefix: str,
+    *,
+    campaigns: list[MarketingCampaign],
+    lead_count: int,
+    batch_size: int,
+) -> None:
+    """Bulk-create lead/prospect rows for one scaled tenant."""
+
+    leads: list[Lead] = []
+    for index in range(1, lead_count + 1):
+        stage = SCALED_LEAD_STAGES[index % len(SCALED_LEAD_STAGES)]
+        status = Lead.Status.WON if stage == Lead.Stage.CONVERTED else Lead.Status.OPEN
+        if stage == Lead.Stage.LOST:
+            status = Lead.Status.LOST
+        leads.append(
+            Lead(
+                facility=facility,
+                campaign=campaigns[index % len(campaigns)],
+                first_name=SCALED_FIRST_NAMES[index % len(SCALED_FIRST_NAMES)],
+                last_name=f"Prospect {index:06d}",
+                email=f"{facility.slug}-lead-{index:06d}@example.test",
+                phone=f"+1555888{index % 1_000_000:06d}",
+                source=SCALED_LEAD_SOURCES[index % len(SCALED_LEAD_SOURCES)],
+                stage=stage,
+                status=status,
+                inquiry_date=aware_datetime(2026, 1 + (index % 12), 1 + (index % 27)),
+                trial_date=aware_datetime(2026, 1 + (index % 12), 1 + (index % 27), 18)
+                if index % 4 == 0
+                else None,
+                converted_at=aware_datetime(
+                    2026, 1 + (index % 12), 1 + (index % 27), 19
+                )
+                if status == Lead.Status.WON
+                else None,
+                estimated_value_cents=10_000 + ((index % 100) * 250),
+                lost_reason="Synthetic scaled lead loss."
+                if status == Lead.Status.LOST
+                else "",
+            )
+        )
+    Lead.objects.bulk_create(leads, batch_size=batch_size)
+
+
+def seed_scaled_staff_shifts(
+    facility: Facility,
+    prefix: str,
+    *,
+    locations: list[FacilityLocation],
+    weeks: int,
+    batch_size: int,
+) -> None:
+    """Bulk-create staff shifts for one scaled tenant."""
+
+    staff_users = [
+        create_demo_user(f"{facility.slug}-coach", is_staff=True),
+        create_demo_user(f"{facility.slug}-front-desk", is_staff=True),
+        create_demo_user(f"{facility.slug}-manager", is_staff=True),
+    ]
+    shifts: list[StaffShift] = []
+    base_start = aware_datetime(2026, 1, 5, 6)
+    for week in range(weeks):
+        for shift_index in range(21):
+            start_at = base_start + timedelta(
+                days=week * 7 + (shift_index % 7), hours=(shift_index % 3) * 4
+            )
+            status = (
+                StaffShift.Status.COMPLETED
+                if shift_index % 8
+                else StaffShift.Status.SCHEDULED
+            )
+            shifts.append(
+                StaffShift(
+                    facility=facility,
+                    staff_user=staff_users[shift_index % len(staff_users)],
+                    location=locations[shift_index % len(locations)],
+                    role=SCALED_SHIFT_ROLES[shift_index % len(SCALED_SHIFT_ROLES)],
+                    status=status,
+                    start_at=start_at,
+                    end_at=start_at + timedelta(hours=4),
+                    planned_minutes=240,
+                    actual_minutes=240 if status == StaffShift.Status.COMPLETED else 0,
+                    labor_cost_cents=6_000 + ((shift_index % 4) * 1_000),
+                )
+            )
+    StaffShift.objects.bulk_create(shifts, batch_size=batch_size)
 
 
 def seed_scaled_facility_data(
@@ -674,6 +838,26 @@ def seed_scaled_facility_data(
     """Seed one larger tenant with bulk-generated operational rows."""
 
     plans = create_plan_catalog(facility, prefix)
+    campaigns = seed_scaled_campaigns(facility, prefix, batch_size=profile.batch_size)
+    locations, sessions = seed_scaled_schedule(
+        facility,
+        prefix,
+        weeks=profile.schedule_weeks,
+    )
+    seed_scaled_staff_shifts(
+        facility,
+        prefix,
+        locations=locations,
+        weeks=profile.schedule_weeks,
+        batch_size=profile.batch_size,
+    )
+    seed_scaled_leads(
+        facility,
+        prefix,
+        campaigns=campaigns,
+        lead_count=max(profile.members_per_tenant // 2, 1),
+        batch_size=profile.batch_size,
+    )
     for start_index in range(1, profile.members_per_tenant + 1, profile.batch_size):
         end_index = min(
             start_index + profile.batch_size - 1, profile.members_per_tenant
@@ -686,8 +870,8 @@ def seed_scaled_facility_data(
             end_index=end_index,
             profile=profile,
             amount_multiplier=amount_multiplier,
+            sessions=sessions,
         )
-    seed_scaled_schedule(facility, prefix, weeks=profile.schedule_weeks)
 
 
 def seed_scaled_member_batch(
@@ -699,6 +883,7 @@ def seed_scaled_member_batch(
     end_index: int,
     profile: SeedProfile,
     amount_multiplier: float,
+    sessions: list[ScheduleSession],
 ) -> None:
     """Bulk-create one batch of scaled members and related reporting rows."""
 
@@ -731,6 +916,112 @@ def seed_scaled_member_batch(
         profile=profile,
         amount_multiplier=amount_multiplier,
     )
+    seed_scaled_booking_batch(
+        facility,
+        subscriptions=subscriptions,
+        sessions=sessions,
+        batch_size=profile.batch_size,
+    )
+    seed_scaled_support_ticket_batch(
+        facility,
+        subscriptions=subscriptions,
+        batch_size=profile.batch_size,
+    )
+
+
+def seed_scaled_booking_batch(
+    facility: Facility,
+    *,
+    subscriptions: list[MemberSubscription],
+    sessions: list[ScheduleSession],
+    batch_size: int,
+) -> None:
+    """Bulk-create bookings for one scaled member batch."""
+
+    bookings: list[SessionBooking] = []
+    if not sessions:
+        return
+    for subscription in subscriptions:
+        member_index = extract_scaled_member_index(subscription.member.email)
+        session = sessions[member_index % len(sessions)]
+        status = SCALED_BOOKING_STATUSES[member_index % len(SCALED_BOOKING_STATUSES)]
+        bookings.append(
+            SessionBooking(
+                facility=facility,
+                session=session,
+                member=subscription.member,
+                status=status,
+                source=SCALED_BOOKING_SOURCES[
+                    member_index % len(SCALED_BOOKING_SOURCES)
+                ],
+                booked_at=aware_datetime(
+                    2026,
+                    1 + (member_index % 12),
+                    1 + (member_index % 27),
+                ),
+                checked_in_at=aware_datetime(2026, 3, 1 + (member_index % 27), 9)
+                if status == SessionBooking.Status.CHECKED_IN
+                else None,
+                canceled_at=aware_datetime(2026, 3, 1 + (member_index % 27), 8)
+                if status == SessionBooking.Status.CANCELED
+                else None,
+                party_size=1 + (member_index % 2),
+                price_cents=0 if member_index % 3 else 2_500,
+                internal_notes="Synthetic scaled booking note.",
+            )
+        )
+    SessionBooking.objects.bulk_create(bookings, batch_size=batch_size)
+
+
+def seed_scaled_support_ticket_batch(
+    facility: Facility,
+    *,
+    subscriptions: list[MemberSubscription],
+    batch_size: int,
+) -> None:
+    """Bulk-create support tickets for a subset of one scaled member batch."""
+
+    tickets: list[SupportTicket] = []
+    for subscription in subscriptions:
+        member_index = extract_scaled_member_index(subscription.member.email)
+        if member_index % 10 != 0:
+            continue
+        status = SCALED_TICKET_STATUSES[member_index % len(SCALED_TICKET_STATUSES)]
+        opened_at = aware_datetime(
+            2026,
+            1 + (member_index % 12),
+            1 + (member_index % 27),
+            10,
+        )
+        tickets.append(
+            SupportTicket(
+                facility=facility,
+                member=subscription.member,
+                category=SCALED_TICKET_CATEGORIES[
+                    member_index % len(SCALED_TICKET_CATEGORIES)
+                ],
+                priority=SCALED_TICKET_PRIORITIES[
+                    member_index % len(SCALED_TICKET_PRIORITIES)
+                ],
+                status=status,
+                channel=SCALED_TICKET_CHANNELS[
+                    member_index % len(SCALED_TICKET_CHANNELS)
+                ],
+                opened_at=opened_at,
+                first_response_at=opened_at + timedelta(hours=2),
+                resolved_at=opened_at + timedelta(days=2)
+                if status
+                in {SupportTicket.Status.RESOLVED, SupportTicket.Status.CLOSED}
+                else None,
+                satisfaction_score=3 + (member_index % 3)
+                if status
+                in {SupportTicket.Status.RESOLVED, SupportTicket.Status.CLOSED}
+                else None,
+                messages_count=1 + (member_index % 8),
+                private_notes="Synthetic scaled support note.",
+            )
+        )
+    SupportTicket.objects.bulk_create(tickets, batch_size=batch_size)
 
 
 def build_scaled_member(facility: Facility, prefix: str, index: int) -> MemberProfile:
@@ -1029,7 +1320,9 @@ def build_scaled_payment(
     )
 
 
-def seed_scaled_schedule(facility: Facility, prefix: str, *, weeks: int) -> None:
+def seed_scaled_schedule(
+    facility: Facility, prefix: str, *, weeks: int
+) -> tuple[list[FacilityLocation], list[ScheduleSession]]:
     """Create a larger schedule surface for a scaled tenant."""
 
     locations = [
@@ -1071,6 +1364,7 @@ def seed_scaled_schedule(facility: Facility, prefix: str, *, weeks: int) -> None
                     )
                 )
     ScheduleSession.objects.bulk_create(sessions, batch_size=1_000)
+    return locations, sessions
 
 
 def scaled_plan_key(index: int) -> str:
@@ -1561,7 +1855,211 @@ def create_payment(
     return payment
 
 
-def seed_schedule(facility: Facility, prefix: str) -> None:
+def seed_marketing_campaigns(
+    facility: Facility,
+    prefix: str,
+) -> list[MarketingCampaign]:
+    """Create representative marketing campaigns for one facility."""
+
+    campaigns = []
+    campaign_specs = (
+        (
+            "New Year Challenge",
+            MarketingCampaign.Channel.EMAIL,
+            MarketingCampaign.Audience.PROSPECTS,
+        ),
+        (
+            "Referral Booster",
+            MarketingCampaign.Channel.REFERRAL,
+            MarketingCampaign.Audience.MEMBERS,
+        ),
+        (
+            "Spring Open House",
+            MarketingCampaign.Channel.EVENT,
+            MarketingCampaign.Audience.PROSPECTS,
+        ),
+        (
+            "Winback Series",
+            MarketingCampaign.Channel.SMS,
+            MarketingCampaign.Audience.LAPSED,
+        ),
+    )
+    for index, (name, channel, audience) in enumerate(campaign_specs, start=1):
+        campaign, _created = MarketingCampaign.objects.update_or_create(
+            facility=facility,
+            name=f"{prefix} {name}",
+            defaults={
+                "channel": channel,
+                "audience": audience,
+                "status": (
+                    MarketingCampaign.Status.ACTIVE
+                    if index < 3
+                    else MarketingCampaign.Status.COMPLETED
+                ),
+                "start_date": datetime(2026, min(index + 1, 12), 1).date(),
+                "end_date": datetime(2026, min(index + 2, 12), 15).date(),
+                "budget_cents": 25_000 + (index * 8_000),
+                "spend_cents": 18_000 + (index * 6_500),
+                "impressions": 2_000 + (index * 750),
+                "clicks": 180 + (index * 45),
+                "conversions": 8 + (index * 3),
+            },
+        )
+        campaigns.append(campaign)
+    return campaigns
+
+
+def seed_leads(
+    facility: Facility,
+    prefix: str,
+    *,
+    campaigns: list[MarketingCampaign],
+) -> None:
+    """Create representative lead/prospect rows."""
+
+    for index in range(1, 17):
+        campaign = campaigns[index % len(campaigns)]
+        stage = SCALED_LEAD_STAGES[index % len(SCALED_LEAD_STAGES)]
+        status = Lead.Status.WON if stage == Lead.Stage.CONVERTED else Lead.Status.OPEN
+        if stage == Lead.Stage.LOST:
+            status = Lead.Status.LOST
+        Lead.objects.update_or_create(
+            facility=facility,
+            email=f"{prefix.lower()}-lead-{index:03d}@example.test",
+            defaults={
+                "campaign": campaign,
+                "first_name": SCALED_FIRST_NAMES[index % len(SCALED_FIRST_NAMES)],
+                "last_name": f"Lead {index:03d}",
+                "phone": f"+1555777{index:04d}",
+                "source": SCALED_LEAD_SOURCES[index % len(SCALED_LEAD_SOURCES)],
+                "stage": stage,
+                "status": status,
+                "inquiry_date": aware_datetime(2026, 1 + (index % 6), 1 + index),
+                "trial_date": aware_datetime(2026, 2 + (index % 4), 1 + index)
+                if index % 3 == 0
+                else None,
+                "converted_at": aware_datetime(2026, 3 + (index % 3), 1 + index)
+                if status == Lead.Status.WON
+                else None,
+                "estimated_value_cents": 12_000 + (index * 1_250),
+                "lost_reason": "Synthetic lead chose another option."
+                if status == Lead.Status.LOST
+                else "",
+            },
+        )
+
+
+def seed_session_bookings(
+    facility: Facility,
+    prefix: str,
+    *,
+    members: list[tuple[MemberProfile, MemberSubscription, dict]],
+    sessions: list[ScheduleSession],
+) -> None:
+    """Create representative booking and attendance rows."""
+
+    for index, session in enumerate(sessions, start=1):
+        member, _subscription, _fixture = members[(index - 1) % len(members)]
+        status = SCALED_BOOKING_STATUSES[index % len(SCALED_BOOKING_STATUSES)]
+        SessionBooking.objects.update_or_create(
+            facility=facility,
+            session=session,
+            member=member,
+            defaults={
+                "status": status,
+                "source": SCALED_BOOKING_SOURCES[index % len(SCALED_BOOKING_SOURCES)],
+                "booked_at": aware_datetime(2026, 1 + (index % 4), 1 + (index % 20)),
+                "checked_in_at": aware_datetime(2026, 3, min(index + 1, 27), 9)
+                if status == SessionBooking.Status.CHECKED_IN
+                else None,
+                "canceled_at": aware_datetime(2026, 3, min(index + 1, 27), 8)
+                if status == SessionBooking.Status.CANCELED
+                else None,
+                "party_size": 1 + (index % 2),
+                "price_cents": 0 if index % 3 else 2_500,
+                "internal_notes": "Synthetic booking note for sensitivity testing.",
+            },
+        )
+
+
+def seed_staff_shifts(
+    facility: Facility,
+    prefix: str,
+    *,
+    locations: list[FacilityLocation],
+) -> None:
+    """Create representative staff shift/labor rows."""
+
+    staff_users = [
+        create_demo_user(f"{facility.slug}-coach", is_staff=True),
+        create_demo_user(f"{facility.slug}-front-desk", is_staff=True),
+        create_demo_user(f"{facility.slug}-manager", is_staff=True),
+    ]
+    base_start = aware_datetime(2026, 3, 2, 6)
+    for index in range(18):
+        role = SCALED_SHIFT_ROLES[index % len(SCALED_SHIFT_ROLES)]
+        start_at = base_start + timedelta(days=index // 3, hours=(index % 3) * 4)
+        end_at = start_at + timedelta(hours=4)
+        status = (
+            StaffShift.Status.COMPLETED if index % 7 else StaffShift.Status.SCHEDULED
+        )
+        StaffShift.objects.update_or_create(
+            facility=facility,
+            staff_user=staff_users[index % len(staff_users)],
+            role=role,
+            start_at=start_at,
+            defaults={
+                "location": locations[index % len(locations)],
+                "status": status,
+                "end_at": end_at,
+                "planned_minutes": 240,
+                "actual_minutes": 240 if status == StaffShift.Status.COMPLETED else 0,
+                "labor_cost_cents": 6_000 + ((index % 4) * 1_000),
+            },
+        )
+
+
+def seed_support_tickets(
+    facility: Facility,
+    prefix: str,
+    *,
+    members: list[tuple[MemberProfile, MemberSubscription, dict]],
+) -> None:
+    """Create representative support ticket rows."""
+
+    for index in range(1, 19):
+        member, _subscription, _fixture = members[(index - 1) % len(members)]
+        status = SCALED_TICKET_STATUSES[index % len(SCALED_TICKET_STATUSES)]
+        opened_at = aware_datetime(2026, 1 + (index % 6), min(index + 1, 27), 10)
+        SupportTicket.objects.update_or_create(
+            facility=facility,
+            member=member,
+            category=SCALED_TICKET_CATEGORIES[index % len(SCALED_TICKET_CATEGORIES)],
+            opened_at=opened_at,
+            defaults={
+                "priority": SCALED_TICKET_PRIORITIES[
+                    index % len(SCALED_TICKET_PRIORITIES)
+                ],
+                "status": status,
+                "channel": SCALED_TICKET_CHANNELS[index % len(SCALED_TICKET_CHANNELS)],
+                "first_response_at": opened_at + timedelta(hours=2),
+                "resolved_at": opened_at + timedelta(days=2)
+                if status
+                in {SupportTicket.Status.RESOLVED, SupportTicket.Status.CLOSED}
+                else None,
+                "satisfaction_score": 3 + (index % 3)
+                if status
+                in {SupportTicket.Status.RESOLVED, SupportTicket.Status.CLOSED}
+                else None,
+                "messages_count": 1 + (index % 8),
+                "private_notes": "Synthetic support note for sensitivity testing.",
+            },
+        )
+
+
+def seed_schedule(
+    facility: Facility, prefix: str
+) -> tuple[list[FacilityLocation], list[ScheduleSession]]:
     """Create several rooms, session types, and scheduled sessions."""
 
     locations = [
@@ -1576,13 +2074,14 @@ def seed_schedule(facility: Facility, prefix: str) -> None:
         create_session_type(facility, f"{prefix} Foundations"),
     ]
 
+    sessions = []
     base_date = datetime(2026, 3, 2).date()
     for week in range(6):
         for type_index, session_type in enumerate(session_types):
             location = locations[(week + type_index) % len(locations)]
             start_date = base_date + timedelta(days=(week * 7) + type_index)
             start_hour = 6 + ((type_index + week) % 6)
-            ScheduleSession.objects.update_or_create(
+            session, _created = ScheduleSession.objects.update_or_create(
                 facility=facility,
                 session_type=session_type,
                 location=location,
@@ -1598,6 +2097,8 @@ def seed_schedule(facility: Facility, prefix: str) -> None:
                     },
                 },
             )
+            sessions.append(session)
+    return locations, sessions
 
 
 def create_location(

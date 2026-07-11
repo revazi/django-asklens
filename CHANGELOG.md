@@ -32,6 +32,7 @@ The project is pre-alpha and APIs may change before the first public alpha.
 - Planner guidance and validation normalization for date-bucket visualization aliases such as `start_date_month`.
 - Opt-in demo validation management command for live LLM smoke checks across seeded users/questions.
 - Size profiles for the complex demo seed command, including medium/large bulk-generated tenant/member/billing datasets.
+- Additional realistic demo tables and AskLens resources for marketing campaigns, leads, bookings/attendance, staff shifts, and support tickets.
 
 ### Security
 

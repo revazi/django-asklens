@@ -120,7 +120,7 @@ It also creates staff demo users with the same password and different synthetic 
 
 These credentials are for the local synthetic demo project only. Do not reuse them in real projects.
 
-The small seed command creates a richer synthetic dataset for each base facility, including multiple plans, members, status histories, subscriptions, six months of billing documents, varied billing lines, payment outcomes, locations, session types, and scheduled sessions. Medium/large profiles use bulk-created synthetic rows over the same domain tables to validate AskLens behavior on larger tenant and row counts.
+The small seed command creates a richer synthetic dataset for each base facility, including multiple plans, members, status histories, subscriptions, six months of billing documents, varied billing lines, payment outcomes, marketing campaigns, lead funnel rows, locations, staff shifts, session types, scheduled sessions, bookings/attendance, and support tickets. Medium/large profiles use bulk-created synthetic rows over the same domain tables to validate AskLens behavior on larger tenant and row counts.
 
 The local database file is `.asklens-test-project.sqlite3` and is ignored by git.
 
@@ -174,17 +174,22 @@ DJANGO_ASKLENS = {
 }
 ```
 
-Synthetic staff grants are tenant-scoped through `StaffAssignment` and `StaffGrant` records. Base querysets for reporting resources only include facilities where the request user has the required grant. The seeded `admin` superuser can query all demo facilities for local exploration.
+Synthetic staff grants are tenant-scoped through `StaffAssignment` and `StaffGrant` records. Base querysets for reporting resources only include facilities where the request user has the required grant. The seeded `admin` superuser can query all demo facilities for local exploration. The AskLens catalog includes operational resources for facilities, members, member contacts, member statuses, subscriptions, billing lines, payment attempts, marketing campaigns, leads, staff shifts, schedule sessions, session bookings, and support tickets. Capabilities are still permission-scoped, so each user sees only the resources they can query.
 
 ## Demo dummy questions
 
-The demo settings include five exact `DummyProvider` questions, so `/asklens/query/` can run without an API key or live LLM:
+The demo settings include exact `DummyProvider` questions, so `/asklens/query/` can run without an API key or live LLM:
 
 - `Show paid billing revenue by product`
 - `Show payment totals by status`
 - `List member contact emails`
 - `Count member subscriptions by plan and status`
 - `Show scheduled capacity by session type`
+- `Show campaign spend and conversions by channel`
+- `Count leads by source and stage`
+- `Show booking attendance by session type`
+- `Show staff labor minutes by role`
+- `Show support tickets by priority and status`
 
 In live mode, you can also ask free-form questions that map to the visible schema for your current demo user, for example:
 
@@ -194,6 +199,11 @@ In live mode, you can also ask free-form questions that map to the visible schem
 - `List member contact emails` for users with member PII grants
 - `Count member subscriptions by plan and status` for users with package-report grants
 - `Show scheduled capacity by session type` for users with schedule-report grants
+- `Show booking attendance by session type` for users with schedule-report grants
+- `Show staff labor minutes by role` for users with schedule-report grants
+- `Count leads by source and stage` for users with member-report grants
+- `Show campaign spend and conversions by channel` for users with analytics grants
+- `Show support tickets by priority and status` for users with analytics grants
 
 Example JSON request:
 

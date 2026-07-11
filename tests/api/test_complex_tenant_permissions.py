@@ -467,14 +467,14 @@ def test_complex_route_permission_blocks_users_without_reporting_grants(
     assert capabilities_response.status_code == 403
 
 
-def test_demo_settings_include_five_valid_dummy_plans(
+def test_demo_settings_include_valid_dummy_plans(
     registered_complex_resources: None,
 ) -> None:
     from tests.test_project.demo_settings import DJANGO_ASKLENS
     from tests.test_project.permissions import all_staff_grant_names
 
     dummy_plans = DJANGO_ASKLENS["DUMMY_PLANS"]
-    assert len(dummy_plans) == 5
+    assert len(dummy_plans) == 10
 
     for plan in dummy_plans.values():
         parse_and_validate_query_plan(plan, permissions=all_staff_grant_names())

@@ -35,6 +35,26 @@ DEMO_QUESTIONS = (
         "Show scheduled capacity by session type",
         StaffGrant.SCHEDULE_REPORTS_VIEW,
     ),
+    (
+        "Show campaign spend and conversions by channel",
+        StaffGrant.ANALYTICS_VIEW,
+    ),
+    (
+        "Count leads by source and stage",
+        StaffGrant.MEMBER_REPORTS_VIEW,
+    ),
+    (
+        "Show booking attendance by session type",
+        StaffGrant.SCHEDULE_REPORTS_VIEW,
+    ),
+    (
+        "Show staff labor minutes by role",
+        StaffGrant.SCHEDULE_REPORTS_VIEW,
+    ),
+    (
+        "Show support tickets by priority and status",
+        StaffGrant.ANALYTICS_VIEW,
+    ),
 )
 
 

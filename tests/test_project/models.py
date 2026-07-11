@@ -447,6 +447,107 @@ class PaymentAttempt(TimestampedModel):
         return f"{self.payment_id} — {self.status}"
 
 
+class MarketingCampaign(TimestampedModel):
+    """Tenant-scoped marketing campaign fixture."""
+
+    class Channel(models.TextChoices):
+        EMAIL = "email", "Email"
+        SOCIAL = "social", "Social"
+        REFERRAL = "referral", "Referral"
+        EVENT = "event", "Event"
+        PAID_SEARCH = "paid_search", "Paid search"
+        SMS = "sms", "SMS"
+
+    class Audience(models.TextChoices):
+        MEMBERS = "members", "Members"
+        PROSPECTS = "prospects", "Prospects"
+        LAPSED = "lapsed", "Lapsed members"
+        TRIAL = "trial", "Trial members"
+
+    class Status(models.TextChoices):
+        DRAFT = "draft", "Draft"
+        ACTIVE = "active", "Active"
+        PAUSED = "paused", "Paused"
+        COMPLETED = "completed", "Completed"
+
+    campaign_id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    facility = models.ForeignKey(
+        Facility, on_delete=models.CASCADE, related_name="marketing_campaigns"
+    )
+    name = models.CharField(max_length=150)
+    channel = models.CharField(max_length=32, choices=Channel.choices)
+    audience = models.CharField(max_length=32, choices=Audience.choices)
+    status = models.CharField(max_length=32, choices=Status.choices)
+    start_date = models.DateField()
+    end_date = models.DateField(null=True, blank=True)
+    budget_cents = models.IntegerField(default=0)
+    spend_cents = models.IntegerField(default=0)
+    impressions = models.IntegerField(default=0)
+    clicks = models.IntegerField(default=0)
+    conversions = models.IntegerField(default=0)
+
+    class Meta:
+        app_label = "test_project"
+        ordering = ["facility__name", "-start_date", "name"]
+
+    def __str__(self) -> str:
+        return self.name
+
+
+class Lead(TimestampedModel):
+    """Prospect/lead pipeline fixture with intentionally sensitive contact fields."""
+
+    class Source(models.TextChoices):
+        WEBSITE = "website", "Website"
+        REFERRAL = "referral", "Referral"
+        WALK_IN = "walk_in", "Walk-in"
+        EVENT = "event", "Event"
+        AD = "ad", "Advertisement"
+
+    class Stage(models.TextChoices):
+        NEW = "new", "New"
+        CONTACTED = "contacted", "Contacted"
+        TRIAL_BOOKED = "trial_booked", "Trial booked"
+        CONVERTED = "converted", "Converted"
+        LOST = "lost", "Lost"
+
+    class Status(models.TextChoices):
+        OPEN = "open", "Open"
+        WON = "won", "Won"
+        LOST = "lost", "Lost"
+
+    lead_id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    facility = models.ForeignKey(
+        Facility, on_delete=models.CASCADE, related_name="leads"
+    )
+    campaign = models.ForeignKey(
+        MarketingCampaign,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="leads",
+    )
+    first_name = models.CharField(max_length=150)
+    last_name = models.CharField(max_length=150)
+    email = models.EmailField()
+    phone = models.CharField(max_length=32, blank=True)
+    source = models.CharField(max_length=32, choices=Source.choices)
+    stage = models.CharField(max_length=32, choices=Stage.choices)
+    status = models.CharField(max_length=32, choices=Status.choices)
+    inquiry_date = models.DateTimeField()
+    trial_date = models.DateTimeField(null=True, blank=True)
+    converted_at = models.DateTimeField(null=True, blank=True)
+    estimated_value_cents = models.IntegerField(default=0)
+    lost_reason = models.CharField(max_length=150, blank=True)
+
+    class Meta:
+        app_label = "test_project"
+        ordering = ["facility__name", "-inquiry_date"]
+
+    def __str__(self) -> str:
+        return f"{self.first_name} {self.last_name} — {self.stage}"
+
+
 class FacilityLocation(TimestampedModel):
     """Physical location fixture for schedule/session joins."""
 
@@ -486,6 +587,49 @@ class SessionType(TimestampedModel):
         return self.name
 
 
+class StaffShift(TimestampedModel):
+    """Tenant-scoped staff schedule/labor fixture."""
+
+    class Role(models.TextChoices):
+        FRONT_DESK = "front_desk", "Front desk"
+        COACH = "coach", "Coach"
+        MANAGER = "manager", "Manager"
+        SUPPORT = "support", "Support"
+
+    class Status(models.TextChoices):
+        SCHEDULED = "scheduled", "Scheduled"
+        COMPLETED = "completed", "Completed"
+        MISSED = "missed", "Missed"
+        CANCELED = "canceled", "Canceled"
+
+    shift_id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    facility = models.ForeignKey(
+        Facility, on_delete=models.CASCADE, related_name="shifts"
+    )
+    staff_user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    location = models.ForeignKey(
+        FacilityLocation,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="staff_shifts",
+    )
+    role = models.CharField(max_length=32, choices=Role.choices)
+    status = models.CharField(max_length=32, choices=Status.choices)
+    start_at = models.DateTimeField()
+    end_at = models.DateTimeField()
+    planned_minutes = models.IntegerField(default=0)
+    actual_minutes = models.IntegerField(default=0)
+    labor_cost_cents = models.IntegerField(default=0)
+
+    class Meta:
+        app_label = "test_project"
+        ordering = ["facility__name", "start_at"]
+
+    def __str__(self) -> str:
+        return f"{self.facility} — {self.role} — {self.start_at}"
+
+
 class ScheduleSession(TimestampedModel):
     """Scheduled class/session fixture."""
 
@@ -512,3 +656,106 @@ class ScheduleSession(TimestampedModel):
 
     def __str__(self) -> str:
         return f"{self.session_type} — {self.start_date} {self.start_time}"
+
+
+class SessionBooking(TimestampedModel):
+    """Member booking/attendance fixture for scheduled sessions."""
+
+    class Status(models.TextChoices):
+        BOOKED = "booked", "Booked"
+        CHECKED_IN = "checked_in", "Checked in"
+        NO_SHOW = "no_show", "No show"
+        CANCELED = "canceled", "Canceled"
+        WAITLISTED = "waitlisted", "Waitlisted"
+
+    class Source(models.TextChoices):
+        WEB = "web", "Web"
+        MOBILE = "mobile", "Mobile"
+        STAFF = "staff", "Staff"
+        IMPORT = "import", "Import"
+
+    booking_id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    facility = models.ForeignKey(Facility, on_delete=models.CASCADE)
+    session = models.ForeignKey(
+        ScheduleSession,
+        on_delete=models.CASCADE,
+        related_name="bookings",
+    )
+    member = models.ForeignKey(
+        MemberProfile,
+        on_delete=models.CASCADE,
+        related_name="session_bookings",
+    )
+    status = models.CharField(max_length=32, choices=Status.choices)
+    source = models.CharField(max_length=32, choices=Source.choices)
+    booked_at = models.DateTimeField()
+    checked_in_at = models.DateTimeField(null=True, blank=True)
+    canceled_at = models.DateTimeField(null=True, blank=True)
+    party_size = models.IntegerField(default=1)
+    price_cents = models.IntegerField(default=0)
+    internal_notes = models.TextField(blank=True)
+
+    class Meta:
+        app_label = "test_project"
+        ordering = ["session__start_date", "session__start_time"]
+
+    def __str__(self) -> str:
+        return f"{self.session} — {self.member} — {self.status}"
+
+
+class SupportTicket(TimestampedModel):
+    """Tenant-scoped support ticket fixture."""
+
+    class Category(models.TextChoices):
+        BILLING = "billing", "Billing"
+        SCHEDULE = "schedule", "Schedule"
+        ACCOUNT = "account", "Account"
+        TECHNICAL = "technical", "Technical"
+        FACILITIES = "facilities", "Facilities"
+
+    class Priority(models.TextChoices):
+        LOW = "low", "Low"
+        NORMAL = "normal", "Normal"
+        HIGH = "high", "High"
+        URGENT = "urgent", "Urgent"
+
+    class Status(models.TextChoices):
+        OPEN = "open", "Open"
+        PENDING = "pending", "Pending"
+        RESOLVED = "resolved", "Resolved"
+        CLOSED = "closed", "Closed"
+
+    class Channel(models.TextChoices):
+        EMAIL = "email", "Email"
+        CHAT = "chat", "Chat"
+        PHONE = "phone", "Phone"
+        WEB = "web", "Web"
+
+    ticket_id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    facility = models.ForeignKey(
+        Facility, on_delete=models.CASCADE, related_name="tickets"
+    )
+    member = models.ForeignKey(
+        MemberProfile,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="support_tickets",
+    )
+    category = models.CharField(max_length=32, choices=Category.choices)
+    priority = models.CharField(max_length=32, choices=Priority.choices)
+    status = models.CharField(max_length=32, choices=Status.choices)
+    channel = models.CharField(max_length=32, choices=Channel.choices)
+    opened_at = models.DateTimeField()
+    first_response_at = models.DateTimeField(null=True, blank=True)
+    resolved_at = models.DateTimeField(null=True, blank=True)
+    satisfaction_score = models.IntegerField(null=True, blank=True)
+    messages_count = models.IntegerField(default=0)
+    private_notes = models.TextField(blank=True)
+
+    class Meta:
+        app_label = "test_project"
+        ordering = ["facility__name", "-opened_at"]
+
+    def __str__(self) -> str:
+        return f"{self.facility} — {self.category} — {self.status}"

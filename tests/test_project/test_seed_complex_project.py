@@ -16,11 +16,16 @@ from tests.test_project.models import (
     BillingDocument,
     BillingLine,
     Facility,
+    Lead,
+    MarketingCampaign,
     MemberProfile,
     PaymentAttempt,
     ScheduleSession,
+    SessionBooking,
     StaffAssignment,
     StaffGrant,
+    StaffShift,
+    SupportTicket,
 )
 from tests.test_project.permissions import (
     get_request_permissions,
@@ -146,7 +151,7 @@ def test_seed_size_medium_can_create_scaled_tenants_with_overrides() -> None:
         "seed_complex_test_project",
         size="medium",
         tenant_count=3,
-        members_per_tenant=5,
+        members_per_tenant=10,
         months=2,
         schedule_weeks=1,
         batch_size=4,
@@ -155,11 +160,18 @@ def test_seed_size_medium_can_create_scaled_tenants_with_overrides() -> None:
 
     scaled_facilities = Facility.objects.filter(slug__startswith="demo-tenant-")
     assert scaled_facilities.count() == 3
-    assert MemberProfile.objects.filter(facility__in=scaled_facilities).count() == 15
-    assert BillingDocument.objects.filter(facility__in=scaled_facilities).count() == 30
-    assert BillingLine.objects.filter(facility__in=scaled_facilities).count() > 30
+    assert MemberProfile.objects.filter(facility__in=scaled_facilities).count() == 30
+    assert (
+        MarketingCampaign.objects.filter(facility__in=scaled_facilities).count() == 24
+    )
+    assert Lead.objects.filter(facility__in=scaled_facilities).count() == 15
+    assert BillingDocument.objects.filter(facility__in=scaled_facilities).count() == 60
+    assert BillingLine.objects.filter(facility__in=scaled_facilities).count() > 60
     assert PaymentAttempt.objects.filter(facility__in=scaled_facilities).count() > 0
     assert ScheduleSession.objects.filter(facility__in=scaled_facilities).count() == 54
+    assert SessionBooking.objects.filter(facility__in=scaled_facilities).count() == 30
+    assert StaffShift.objects.filter(facility__in=scaled_facilities).count() == 63
+    assert SupportTicket.objects.filter(facility__in=scaled_facilities).count() == 3
 
     scaled_billing = get_user_model().objects.get(username="scaled-billing")
     assert facility_slugs_for(scaled_billing, StaffGrant.BILLING_REPORTS_VIEW) == [
@@ -194,7 +206,12 @@ def test_scaled_seed_rerun_resets_generated_tenants() -> None:
     scaled_facilities = Facility.objects.filter(slug__startswith="demo-tenant-")
     assert scaled_facilities.count() == 2
     assert MemberProfile.objects.filter(facility__in=scaled_facilities).count() == 8
+    assert (
+        MarketingCampaign.objects.filter(facility__in=scaled_facilities).count() == 16
+    )
+    assert Lead.objects.filter(facility__in=scaled_facilities).count() == 4
     assert BillingDocument.objects.filter(facility__in=scaled_facilities).count() == 8
+    assert SessionBooking.objects.filter(facility__in=scaled_facilities).count() == 8
 
 
 def test_seeded_permission_matrix_scopes_facilities_by_grant() -> None:
@@ -245,6 +262,26 @@ def test_seed_syncs_assignment_grants() -> None:
         assignment=assignment,
         name=StaffGrant.MEMBER_PII_VIEW,
     ).exists()
+
+
+def test_support_reporter_catalog_includes_analytics_resources(settings) -> None:
+    """Support analytics users should see analytics resources, not an empty catalog."""
+
+    configure_complex_query_settings(settings)
+    register_complex_resources()
+    call_command("seed_complex_test_project", verbosity=0)
+    support = get_user_model().objects.get(username="support-reporter")
+    client = APIClient()
+    client.force_authenticate(user=support)
+
+    response = client.get("/asklens/catalog/")
+
+    assert response.status_code == 200
+    catalog_text = str(response.data)
+    assert "marketing_campaigns" in catalog_text
+    assert "support_tickets" in catalog_text
+    assert "billing_lines" not in catalog_text
+    assert "member_contacts" not in catalog_text
 
 
 def test_facility_owner_query_returns_only_owned_facility(settings) -> None:

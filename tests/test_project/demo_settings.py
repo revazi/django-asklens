@@ -143,6 +143,64 @@ DUMMY_PLANS = {
             "y": "total_capacity",
         },
     },
+    "Show campaign spend and conversions by channel": {
+        "resource": "marketing_campaigns",
+        "intent": "aggregate",
+        "group_by": [{"field": "channel"}],
+        "metrics": [
+            {"name": "marketing_spend", "op": "sum", "field": "spend_cents"},
+            {"name": "total_conversions", "op": "sum", "field": "conversions"},
+        ],
+        "order_by": [{"metric": "marketing_spend", "direction": "desc"}],
+        "limit": 10,
+        "visualization": {"type": "bar", "x": "channel", "y": "marketing_spend"},
+    },
+    "Count leads by source and stage": {
+        "resource": "leads",
+        "intent": "aggregate",
+        "group_by": [{"field": "source"}, {"field": "stage"}],
+        "metrics": [{"name": "lead_count", "op": "count", "field": "status"}],
+        "order_by": [{"metric": "lead_count", "direction": "desc"}],
+        "limit": 20,
+        "visualization": {"type": "bar", "x": "source", "y": "lead_count"},
+    },
+    "Show booking attendance by session type": {
+        "resource": "session_bookings",
+        "intent": "aggregate",
+        "group_by": [{"field": "session.session_type.name"}, {"field": "status"}],
+        "metrics": [
+            {"name": "booking_count", "op": "count", "field": "status"},
+            {"name": "total_party_size", "op": "sum", "field": "party_size"},
+        ],
+        "order_by": [{"metric": "booking_count", "direction": "desc"}],
+        "limit": 20,
+        "visualization": {
+            "type": "bar",
+            "x": "session.session_type.name",
+            "y": "booking_count",
+        },
+    },
+    "Show staff labor minutes by role": {
+        "resource": "staff_shifts",
+        "intent": "aggregate",
+        "group_by": [{"field": "role"}],
+        "metrics": [
+            {"name": "shift_count", "op": "count", "field": "status"},
+            {"name": "actual_minutes", "op": "sum", "field": "actual_minutes"},
+        ],
+        "order_by": [{"metric": "actual_minutes", "direction": "desc"}],
+        "limit": 10,
+        "visualization": {"type": "bar", "x": "role", "y": "actual_minutes"},
+    },
+    "Show support tickets by priority and status": {
+        "resource": "support_tickets",
+        "intent": "aggregate",
+        "group_by": [{"field": "priority"}, {"field": "status"}],
+        "metrics": [{"name": "ticket_count", "op": "count", "field": "status"}],
+        "order_by": [{"metric": "ticket_count", "direction": "desc"}],
+        "limit": 20,
+        "visualization": {"type": "bar", "x": "priority", "y": "ticket_count"},
+    },
 }
 
 

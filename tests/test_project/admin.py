@@ -10,16 +10,21 @@ from tests.test_project.models import (
     Customer,
     Facility,
     FacilityLocation,
+    Lead,
+    MarketingCampaign,
     MemberProfile,
     MemberStatus,
     MemberSubscription,
     Order,
     PaymentAttempt,
     ScheduleSession,
+    SessionBooking,
     SessionType,
     StaffAssignment,
     StaffGrant,
+    StaffShift,
     SubscriptionPlan,
+    SupportTicket,
 )
 
 
@@ -163,6 +168,24 @@ class PaymentAttemptAdmin(admin.ModelAdmin):
     search_fields = ("payment_id", "billing_document__document_id", "member__email")
 
 
+@admin.register(MarketingCampaign)
+class MarketingCampaignAdmin(admin.ModelAdmin):
+    """Admin for marketing campaigns."""
+
+    list_display = ("name", "facility", "channel", "audience", "status", "start_date")
+    list_filter = ("facility", "channel", "audience", "status")
+    search_fields = ("name", "facility__name")
+
+
+@admin.register(Lead)
+class LeadAdmin(admin.ModelAdmin):
+    """Admin for synthetic lead pipeline rows."""
+
+    list_display = ("email", "facility", "source", "stage", "status", "inquiry_date")
+    list_filter = ("facility", "source", "stage", "status")
+    search_fields = ("first_name", "last_name", "email", "facility__name")
+
+
 @admin.register(FacilityLocation)
 class FacilityLocationAdmin(admin.ModelAdmin):
     """Admin for facility locations."""
@@ -181,6 +204,22 @@ class SessionTypeAdmin(admin.ModelAdmin):
     search_fields = ("name", "facility__name")
 
 
+@admin.register(StaffShift)
+class StaffShiftAdmin(admin.ModelAdmin):
+    """Admin for staff shifts."""
+
+    list_display = (
+        "staff_user",
+        "facility",
+        "role",
+        "status",
+        "start_at",
+        "actual_minutes",
+    )
+    list_filter = ("facility", "role", "status")
+    search_fields = ("staff_user__username", "facility__name", "location__name")
+
+
 @admin.register(ScheduleSession)
 class ScheduleSessionAdmin(admin.ModelAdmin):
     """Admin for scheduled sessions."""
@@ -195,6 +234,24 @@ class ScheduleSessionAdmin(admin.ModelAdmin):
     )
     list_filter = ("facility", "session_type", "location")
     search_fields = ("session_type__name", "location__name", "facility__name")
+
+
+@admin.register(SessionBooking)
+class SessionBookingAdmin(admin.ModelAdmin):
+    """Admin for session bookings and attendance."""
+
+    list_display = ("session", "member", "facility", "status", "source", "party_size")
+    list_filter = ("facility", "status", "source")
+    search_fields = ("member__first_name", "member__last_name", "member__email")
+
+
+@admin.register(SupportTicket)
+class SupportTicketAdmin(admin.ModelAdmin):
+    """Admin for support tickets."""
+
+    list_display = ("facility", "category", "priority", "status", "opened_at")
+    list_filter = ("facility", "category", "priority", "status", "channel")
+    search_fields = ("member__first_name", "member__last_name", "member__email")
 
 
 admin.site.register(Account)
