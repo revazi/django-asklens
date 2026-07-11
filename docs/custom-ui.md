@@ -74,13 +74,14 @@ Content-Type: application/json
 {"question": "Show orders by status"}
 ```
 
-A data-query response includes normalized rows and column metadata:
+A data-query response includes `response_type: "query"`, normalized rows, column metadata, and result limit metadata:
 
 ```json
 {
   "run_id": 42,
   "question": "Show orders by status",
-  "plan": {"resource": "orders", "intent": "aggregate"},
+  "response_type": "query",
+  "plan": {"resource": "orders", "intent": "aggregate", "limit": 10},
   "columns": [
     {"key": "status", "label": "Status", "type": "string"},
     {"key": "order_count", "label": "Orders", "type": "number"}
@@ -90,10 +91,17 @@ A data-query response includes normalized rows and column metadata:
     {"status": "pending", "order_count": 34}
   ],
   "row_count": 2,
+  "result_metadata": {
+    "limit": 10,
+    "limit_scope": "groups",
+    "limit_reached": false
+  },
   "duration_ms": 18,
   "visualization": {"type": "bar", "x": {"field": "status"}, "y": {"field": "order_count"}}
 }
 ```
+
+For aggregate/chart responses, `result_metadata.limit` caps returned groups or slices. For list/table responses, it caps returned rows. If `result_metadata.limit_reached` is true, show a non-blocking message such as “Showing top N results. Refine filters or increase limit.” Do not treat it as a definitive `has_more` flag in alpha.
 
 Render tables by iterating `columns` for headers and `data` for row values:
 

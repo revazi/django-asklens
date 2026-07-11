@@ -381,12 +381,52 @@ def test_live_query_endpoint_uses_one_unified_call_for_query(
 
     assert response.status_code == 200
     assert provider.calls == 1
+    assert response.data["response_type"] == "query"
     assert response.data["plan"]["resource"] == "orders"
     assert response.data["data"] == [
         {"status": "paid", "order_count": 2},
         {"status": "pending", "order_count": 1},
     ]
+    assert response.data["result_metadata"] == {
+        "limit": 10,
+        "limit_scope": "groups",
+        "limit_reached": False,
+    }
     assert SemanticQueryRun.objects.count() == 1
+
+
+def test_query_endpoint_reports_limit_reached_without_has_more_claim(
+    settings,
+    api_client: APIClient,
+    user,
+    order_data: None,
+    registered_orders: None,
+) -> None:
+    """Alpha metadata should flag reached limits without claiming truncation."""
+
+    plan = valid_plan_payload()
+    plan["limit"] = 1
+    configure_dummy_plan(settings, plan)
+    api_client.force_authenticate(user=user)
+
+    response = api_client.post(
+        "/asklens/query/",
+        {"question": QUESTION},
+        format="json",
+    )
+
+    assert response.status_code == 200
+    assert response.data["response_type"] == "query"
+    assert response.data["row_count"] == 1
+    assert response.data["result_metadata"]["limit"] == 1
+    assert response.data["result_metadata"]["limit_scope"] == "groups"
+    assert response.data["result_metadata"]["limit_reached"] is True
+    assert (
+        "There may be more matching groups"
+        in response.data["result_metadata"]["limit_warning"]
+    )
+    assert "has_more" not in response.data["result_metadata"]
+    assert "truncated" not in response.data["result_metadata"]
 
 
 def test_query_endpoint_intercepts_capabilities_question_without_provider_or_audit(

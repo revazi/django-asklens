@@ -85,14 +85,20 @@ Content-Type: application/json
 {"question": "Show orders by status"}
 ```
 
-A successful data-query response includes the question, validated plan, column metadata, normalized rows, visualization hint, timing, and audit run id. In live mode, deciding between data query and capability help plus producing the data `QueryPlan` happens in one provider call. Advanced clients may submit a previously returned `query_help.suggestions[].plan` with the question; AskLens revalidates the plan against the current request permissions and executes it directly instead of making another LLM call.
+A successful data-query response includes `response_type: "query"`, the question, validated plan, column metadata, normalized rows, limit metadata, visualization hint, timing, and audit run id. In live mode, deciding between data query and capability help plus producing the data `QueryPlan` happens in one provider call. Advanced clients may submit a previously returned `query_help.suggestions[].plan` with the question; AskLens revalidates the plan against the current request permissions and executes it directly instead of making another LLM call.
 
 ```json
 {
   "question": "Show orders by status",
-  "plan": {"resource": "orders", "intent": "aggregate"},
+  "response_type": "query",
+  "plan": {"resource": "orders", "intent": "aggregate", "limit": 10},
   "columns": [{"key": "status", "label": "Status", "type": "string"}],
   "data": [{"status": "paid", "order_count": 2}],
+  "result_metadata": {
+    "limit": 10,
+    "limit_scope": "groups",
+    "limit_reached": false
+  },
   "visualization": {
     "type": "bar",
     "x": {"field": "status", "label": "Status", "type": "string"},
@@ -101,6 +107,8 @@ A successful data-query response includes the question, validated plan, column m
   "run_id": 1
 }
 ```
+
+For aggregate/chart responses, `limit` caps returned groups/slices, not source rows. For list responses, `limit` caps returned rows. `result_metadata.limit_reached` means the returned row/group count reached the validated plan limit, so there may be more matching rows/groups; AskLens does not claim `has_more` or `truncated` in alpha because it does not fetch `limit + 1`.
 
 Capability/help questions return a non-row response and do not execute a database query. In live mode, `query_help_source` is `semantic_provider` when the unified provider response chose capability help and suggestions passed catalog-reference plus locally synthesized plan validation:
 

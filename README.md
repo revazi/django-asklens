@@ -123,10 +123,16 @@ Successful data responses include:
 {
   "run_id": 1,
   "question": "Show orders by status",
-  "plan": {"resource": "orders", "intent": "aggregate"},
+  "response_type": "query",
+  "plan": {"resource": "orders", "intent": "aggregate", "limit": 100},
   "columns": [{"key": "status", "label": "Status", "type": "string"}],
   "data": [{"status": "paid", "order_count": 12}],
   "row_count": 1,
+  "result_metadata": {
+    "limit": 100,
+    "limit_scope": "groups",
+    "limit_reached": false
+  },
   "visualization": {"type": "bar"}
 }
 ```
