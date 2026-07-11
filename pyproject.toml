@@ -62,6 +62,7 @@ dependencies = [
 
 [project.urls]
 Homepage = "https://github.com/revazi/django-asklens"
+PyPI = "https://pypi.org/project/django-asklens/"
 Documentation = "https://github.com/revazi/django-asklens/tree/main/docs"
 Repository = "https://github.com/revazi/django-asklens"
 Issues = "https://github.com/revazi/django-asklens/issues"

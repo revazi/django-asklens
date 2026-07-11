@@ -1,5 +1,8 @@
 # Django AskLens
 
+[![PyPI](https://img.shields.io/pypi/v/django-asklens.svg)](https://pypi.org/project/django-asklens/)
+[![Python](https://img.shields.io/pypi/pyversions/django-asklens.svg)](https://pypi.org/project/django-asklens/)
+
 Django AskLens is a reusable Django + DRF package for safe natural-language querying over explicitly registered Django models.
 
 AskLens does **not** let an LLM write SQL. It asks a provider for structured JSON, validates the plan against your registered catalog and permissions, compiles a read-only Django ORM query, executes with limits, and returns table/chart-ready JSON.
@@ -20,7 +23,7 @@ Status: **alpha**. APIs may change before a stable release.
 
 ## Quickstart
 
-Install:
+Install from [PyPI](https://pypi.org/project/django-asklens/):
 
 ```bash
 python -m pip install django-asklens
