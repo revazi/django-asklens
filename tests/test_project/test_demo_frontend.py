@@ -91,6 +91,10 @@ def test_demo_frontend_renders_for_reporting_user() -> None:
     assert "Count member subscriptions by plan and status" not in content
     assert "Show scheduled capacity by session type" not in content
     assert "What can I query?" in content
+    assert "LLM help" in content
+    assert "Deterministic fallback help" in content
+    assert "Reason:" in content
+    assert "Enable live LLM mode for provider-generated suggestions" in content
     assert "Tenant row scope" in content
     assert "North Studio" in content
     assert "Display as" in content

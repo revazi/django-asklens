@@ -26,7 +26,8 @@ from django_asklens.planning.schemas import (
     validate_non_empty_string,
 )
 
-MAX_HELP_SUGGESTIONS = 5
+DEFAULT_HELP_SUGGESTIONS = 5
+MAX_HELP_SUGGESTIONS = 10
 MAX_REFERENCE_COUNT = 8
 BLOCKED_SUGGESTION_ACTIONS = {
     "create",
@@ -44,15 +45,22 @@ Return only JSON matching the provided QueryHelp schema.
 Use only resources, fields, metrics, date fields, and scope guidance present
 in the visible capabilities metadata.
 Suggest natural-language questions that AskLens can plan as read-only list or
-aggregate queries.
+aggregate queries. Suggestions must be copy-pasteable user questions likely to
+produce valid AskLens plans. For broad help questions like "what can I query?",
+provide fresh, diverse suggestions across useful visible resources; prefer
+analytical aggregate or trend questions over simple lookup/list questions unless
+the user asks about a specific lookup resource.
 For each suggestion, include the exact resource_name and referenced field,
-metric, and date_field names from the metadata.
+metric, and date_field names from the metadata. Do not simply copy generated
+examples from the metadata when better provider-generated suggestions are possible.
 If a resource scope has level="single", suggestions must be phrased within
 that single visible scope. Do not suggest comparing, grouping, filtering, or
 trending across any scope dimension unless the resource scope allows multiple
 or all scopes and the scope-dimension field is visible.
 Do not suggest internal result-key aliases such as "start_date_month"; say
 "by month using start date" in the natural-language question instead.
+If the user asks for a number of examples, return up to the requested count,
+never more than the requested count from the additional instructions.
 Do not include SQL, code, database rows, sample values, secrets, credentials,
 mutation requests, or unavailable fields/resources.
 """.strip()
@@ -136,26 +144,83 @@ def build_query_help(
 ) -> QueryHelp:
     """Ask a provider for safe query-writing help and validate the response."""
 
+    suggestion_count = requested_suggestion_count(question)
     selected_provider = provider or get_llm_provider()
     payload = selected_provider.complete_json(
         messages=build_query_help_messages(
-            question=question, capabilities=capabilities
+            question=question,
+            capabilities=capabilities,
+            suggestion_count=suggestion_count,
         ),
         schema=get_query_help_json_schema(),
     )
-    return validate_query_help(parse_query_help(payload), capabilities=capabilities)
+    help_result = validate_query_help(
+        parse_query_help(payload),
+        capabilities=capabilities,
+    )
+    return limit_query_help_suggestions(
+        help_result,
+        suggestion_count=suggestion_count,
+    )
+
+
+def requested_suggestion_count(question: str) -> int:
+    """Return desired suggestion count parsed from a help question."""
+
+    count_patterns = (
+        r"\b(?:give|show|list|suggest|return)\s+me\s+(?P<count>\d{1,2})\b",
+        r"\b(?:give|show|list|suggest|return)\s+(?P<count>\d{1,2})\b",
+        r"\b(?P<count>\d{1,2})\s+(?:example|examples|question|questions|suggestion|suggestions)\b",
+    )
+    for pattern in count_patterns:
+        match = re.search(pattern, question.lower())
+        if match is not None:
+            return clamp_suggestion_count(int(match.group("count")))
+    return DEFAULT_HELP_SUGGESTIONS
+
+
+def clamp_suggestion_count(count: int) -> int:
+    """Clamp requested help suggestion counts to supported bounds."""
+
+    return max(1, min(count, MAX_HELP_SUGGESTIONS))
+
+
+def limit_query_help_suggestions(
+    help_result: QueryHelp,
+    *,
+    suggestion_count: int,
+) -> QueryHelp:
+    """Limit provider suggestions to the requested count."""
+
+    if len(help_result.suggestions) <= suggestion_count:
+        return help_result
+    return QueryHelp(
+        answer=help_result.answer,
+        suggestions=help_result.suggestions[:suggestion_count],
+        notes=help_result.notes,
+    )
 
 
 def build_query_help_messages(
     *,
     question: str,
     capabilities: CapabilitiesSnapshot,
+    suggestion_count: int | None = None,
 ) -> tuple[LLMMessage, ...]:
     """Build provider messages for strict query-help generation."""
 
+    desired_count = suggestion_count or DEFAULT_HELP_SUGGESTIONS
     return (
         {"role": "system", "content": QUERY_HELP_SYSTEM_PROMPT},
         {"role": "user", "content": question},
+        {
+            "role": "user",
+            "content": (
+                "Suggestion instructions:\n"
+                f"Return up to {desired_count} usable example questions. "
+                "Do not exceed this count."
+            ),
+        },
         {
             "role": "user",
             "content": "Visible capabilities metadata:\n"
@@ -188,44 +253,131 @@ def validate_query_help(
 ) -> QueryHelp:
     """Validate provider help against visible capabilities metadata."""
 
-    resource_index = index_resources(capabilities)
+    resource_index = index_resource_references(capabilities)
+    valid_suggestions: list[QueryHelpSuggestion] = []
+    errors: list[str] = []
     for suggestion in help_result.suggestions:
-        resource = resource_index.get(suggestion.resource_name)
-        if resource is None:
-            msg = (
-                "QueryHelp suggestion referenced unknown capabilities resource "
-                f"{suggestion.resource_name!r}."
+        try:
+            normalized_suggestion = validate_query_help_suggestion(
+                suggestion,
+                resource_index=resource_index,
             )
-            raise PlanValidationError(msg)
-        validate_suggestion_question_is_safe(suggestion.question)
-        validate_suggestion_respects_scope(suggestion, resource)
-        validate_references(
+        except PlanValidationError as exc:
+            errors.append(str(exc))
+            continue
+        valid_suggestions.append(normalized_suggestion)
+
+    if valid_suggestions or not help_result.suggestions:
+        return QueryHelp(
+            answer=help_result.answer,
+            suggestions=tuple(valid_suggestions),
+            notes=help_result.notes,
+        )
+
+    error_summary = "; ".join(errors[:3])
+    raise PlanValidationError(error_summary or "QueryHelp suggestions were invalid.")
+
+
+def validate_query_help_suggestion(
+    suggestion: QueryHelpSuggestion,
+    *,
+    resource_index: Mapping[str, CapabilityResource],
+) -> QueryHelpSuggestion:
+    """Validate one provider suggestion against visible capabilities."""
+
+    resource = resource_index.get(suggestion.resource_name.casefold())
+    if resource is None:
+        msg = (
+            "QueryHelp suggestion referenced unknown capabilities resource "
+            f"{suggestion.resource_name!r}."
+        )
+        raise PlanValidationError(msg)
+
+    suggestion = normalize_suggestion_references(suggestion, resource)
+    validate_suggestion_question_is_safe(suggestion.question)
+    validate_suggestion_respects_scope(suggestion, resource)
+    validate_references(
+        suggestion.fields,
+        allowed={field["name"] for field in resource.get("fields", [])},
+        label="field",
+        resource_name=suggestion.resource_name,
+    )
+    validate_references(
+        suggestion.metrics,
+        allowed={metric["name"] for metric in resource.get("metrics", [])},
+        label="metric",
+        resource_name=suggestion.resource_name,
+    )
+    validate_references(
+        suggestion.date_fields,
+        allowed={field["name"] for field in resource.get("date_fields", [])},
+        label="date field",
+        resource_name=suggestion.resource_name,
+    )
+    return suggestion
+
+
+def normalize_suggestion_references(
+    suggestion: QueryHelpSuggestion,
+    resource: CapabilityResource,
+) -> QueryHelpSuggestion:
+    """Canonicalize provider references from visible labels to exact names."""
+
+    return QueryHelpSuggestion(
+        question=suggestion.question,
+        resource_name=resource["name"],
+        fields=canonicalize_references(
             suggestion.fields,
-            allowed={field["name"] for field in resource.get("fields", [])},
-            label="field",
-            resource_name=suggestion.resource_name,
-        )
-        validate_references(
+            items=resource.get("fields", []),
+        ),
+        metrics=canonicalize_references(
             suggestion.metrics,
-            allowed={metric["name"] for metric in resource.get("metrics", [])},
-            label="metric",
-            resource_name=suggestion.resource_name,
-        )
-        validate_references(
+            items=resource.get("metrics", []),
+        ),
+        date_fields=canonicalize_references(
             suggestion.date_fields,
-            allowed={field["name"] for field in resource.get("date_fields", [])},
-            label="date field",
-            resource_name=suggestion.resource_name,
-        )
-    return help_result
+            items=resource.get("date_fields", []),
+        ),
+        why=suggestion.why,
+    )
+
+
+def canonicalize_references(
+    references: Sequence[str],
+    *,
+    items: Sequence[Mapping[str, Any]],
+) -> tuple[str, ...]:
+    """Map provider references by name or label while preserving order."""
+
+    canonical_index: dict[str, str] = {}
+    for item in items:
+        name = item.get("name")
+        label = item.get("label")
+        if isinstance(name, str):
+            canonical_index[name.casefold()] = name
+            if isinstance(label, str):
+                canonical_index[label.casefold()] = name
+
+    normalized: list[str] = []
+    seen: set[str] = set()
+    for reference in references:
+        canonical = canonical_index.get(reference.casefold(), reference)
+        if canonical in seen:
+            continue
+        seen.add(canonical)
+        normalized.append(canonical)
+    return tuple(normalized)
 
 
 def build_deterministic_query_help(
     *,
     capabilities: CapabilitiesSnapshot,
+    question: str | None = None,
+    suggestion_count: int | None = None,
 ) -> QueryHelp:
     """Build query-help suggestions from deterministic capabilities examples."""
 
+    desired_count = suggestion_count or requested_suggestion_count(question or "")
     suggestions: list[QueryHelpSuggestion] = []
     for resource in capabilities.get("resources", []):
         for example in resource.get("examples", []):
@@ -236,9 +388,9 @@ def build_deterministic_query_help(
                     why="Generated from registered AskLens capabilities metadata.",
                 )
             )
-            if len(suggestions) >= MAX_HELP_SUGGESTIONS:
+            if len(suggestions) >= desired_count:
                 break
-        if len(suggestions) >= MAX_HELP_SUGGESTIONS:
+        if len(suggestions) >= desired_count:
             break
 
     answer = capabilities.get("summary") or "AskLens query guidance is available."
@@ -249,14 +401,21 @@ def build_deterministic_query_help(
     return QueryHelp(answer=answer, suggestions=tuple(suggestions), notes=notes)
 
 
-def index_resources(
+def index_resource_references(
     capabilities: CapabilitiesSnapshot,
 ) -> dict[str, CapabilityResource]:
-    """Index visible capability resources by resource name."""
+    """Index visible resources by exact names, labels, and synonyms."""
 
-    return {
-        resource["name"]: resource for resource in capabilities.get("resources", [])
-    }
+    index: dict[str, CapabilityResource] = {}
+    for resource in capabilities.get("resources", []):
+        references = [
+            resource["name"],
+            resource["label"],
+            *resource.get("synonyms", []),
+        ]
+        for reference in references:
+            index[reference.casefold()] = resource
+    return index
 
 
 def validate_suggestion_respects_scope(

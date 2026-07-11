@@ -8,9 +8,11 @@ import pytest
 from django_asklens.exceptions import PlanValidationError
 from django_asklens.llms import LLMMessage
 from django_asklens.planning.help import (
+    MAX_HELP_SUGGESTIONS,
     build_deterministic_query_help,
     build_query_help,
     parse_query_help,
+    requested_suggestion_count,
 )
 
 
@@ -100,6 +102,36 @@ def capabilities_payload() -> dict[str, Any]:
     }
 
 
+def many_examples_capabilities_payload() -> dict[str, Any]:
+    """Return capabilities with enough examples for count-limit tests."""
+
+    payload = capabilities_payload()
+    resources = []
+    for index in range(1, 6):
+        resource = dict(payload["resources"][0])
+        resource["name"] = f"orders_{index}"
+        resource["label"] = f"Orders {index}"
+        resource["examples"] = [
+            f"Show count of Orders {index} by Status",
+            f"Trend Orders {index} by month using Created date",
+        ]
+        resources.append(resource)
+    payload["resources"] = resources
+    payload["examples"] = [
+        example for resource in resources for example in resource["examples"]
+    ]
+    return payload
+
+
+def test_requested_suggestion_count_parses_and_clamps_examples() -> None:
+    """Help questions can request up to the supported example count."""
+
+    assert requested_suggestion_count("What can I query?") == 5
+    assert requested_suggestion_count("Give me 10 examples") == 10
+    assert requested_suggestion_count("Can you suggest 7 query questions?") == 7
+    assert requested_suggestion_count("Give me 99 examples") == MAX_HELP_SUGGESTIONS
+
+
 def test_build_query_help_uses_provider_and_validates_references() -> None:
     """Provider-backed help returns validated suggestions from visible metadata."""
 
@@ -144,6 +176,129 @@ def test_build_query_help_uses_provider_and_validates_references() -> None:
     assert "Visible capabilities metadata" in prompt_text
     assert "orders" in prompt_text
     assert "facilities/accounts/tenants" not in prompt_text
+
+
+def test_build_query_help_allows_ten_provider_examples_when_requested() -> None:
+    """Provider-backed help can return ten validated example questions."""
+
+    suggestions = [
+        {
+            "question": f"Show order count by status example {index}",
+            "resource_name": "orders",
+            "fields": ["status"],
+            "metrics": ["order_count"],
+        }
+        for index in range(1, 11)
+    ]
+    provider = HelpProvider(
+        {
+            "answer": "Here are ten examples.",
+            "suggestions": suggestions,
+        }
+    )
+
+    result = build_query_help(
+        "Give me 10 examples of what I can query",
+        provider=provider,
+        capabilities=capabilities_payload(),
+    )
+
+    assert len(result.suggestions) == 10
+    assert provider.schema is not None
+    assert provider.schema["properties"]["suggestions"]["maxItems"] == 10
+    assert provider.messages is not None
+    prompt_text = "\n".join(message["content"] for message in provider.messages)
+    assert "Return up to 10 usable example questions" in prompt_text
+
+
+def test_build_query_help_limits_provider_examples_to_default_count() -> None:
+    """Provider help is capped to the requested/default suggestion count."""
+
+    provider = HelpProvider(
+        {
+            "answer": "Here are many examples.",
+            "suggestions": [
+                {
+                    "question": f"Show order count by status example {index}",
+                    "resource_name": "orders",
+                    "fields": ["status"],
+                    "metrics": ["order_count"],
+                }
+                for index in range(1, 11)
+            ],
+        }
+    )
+
+    result = build_query_help(
+        "What can I query?",
+        provider=provider,
+        capabilities=capabilities_payload(),
+    )
+
+    assert len(result.suggestions) == 5
+
+
+def test_build_query_help_canonicalizes_provider_labels() -> None:
+    """Provider references may use visible labels and still validate."""
+
+    provider = HelpProvider(
+        {
+            "answer": "Try this.",
+            "suggestions": [
+                {
+                    "question": "Show order count by status",
+                    "resource_name": "orders",
+                    "fields": ["Status"],
+                    "metrics": ["Order count"],
+                    "date_fields": ["Created date"],
+                }
+            ],
+        }
+    )
+
+    result = build_query_help(
+        "What can I query?",
+        provider=provider,
+        capabilities=capabilities_payload(),
+    )
+
+    [suggestion] = result.suggestions
+    assert suggestion.fields == ("status",)
+    assert suggestion.metrics == ("order_count",)
+    assert suggestion.date_fields == ("created_at",)
+
+
+def test_build_query_help_keeps_valid_provider_suggestions() -> None:
+    """One bad provider suggestion should not discard other valid suggestions."""
+
+    provider = HelpProvider(
+        {
+            "answer": "Try these.",
+            "suggestions": [
+                {
+                    "question": "Show order count by status",
+                    "resource_name": "orders",
+                    "fields": ["status"],
+                    "metrics": ["order_count"],
+                },
+                {
+                    "question": "List orders with private notes",
+                    "resource_name": "orders",
+                    "fields": ["private_notes"],
+                },
+            ],
+        }
+    )
+
+    result = build_query_help(
+        "What can I query?",
+        provider=provider,
+        capabilities=capabilities_payload(),
+    )
+
+    assert [suggestion.question for suggestion in result.suggestions] == [
+        "Show order count by status"
+    ]
 
 
 def test_build_query_help_rejects_unknown_references() -> None:
@@ -483,3 +638,18 @@ def test_deterministic_query_help_uses_capabilities_examples() -> None:
     assert result.answer == "You can query Orders."
     assert result.suggestions[0].question == "Show count of Orders by Status"
     assert result.suggestions[0].resource_name == "orders"
+
+
+def test_deterministic_query_help_honors_requested_example_count() -> None:
+    """Offline fallback can return up to ten examples when requested."""
+
+    result = build_deterministic_query_help(
+        capabilities=many_examples_capabilities_payload(),
+        question="Give me 10 examples",
+    )
+
+    assert len(result.suggestions) == 10
+    assert result.suggestions[0].question == "Show count of Orders 1 by Status"
+    assert result.suggestions[-1].question == (
+        "Trend Orders 5 by month using Created date"
+    )

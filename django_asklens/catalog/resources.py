@@ -58,6 +58,7 @@ class ResourceCatalogItem(TypedDict):
     metrics: list[MetricCatalogItem]
     requires_permission: NotRequired[str]
     scope_resource: NotRequired[bool]
+    examples_enabled: NotRequired[bool]
     model: NotRequired[str]
 
 
@@ -200,6 +201,7 @@ class SemanticResource:
     base_queryset: BaseQuerySetHook | None = None
     requires_permission: str | None = None
     scope_resource: bool = False
+    examples_enabled: bool = True
 
     def __post_init__(self) -> None:
         """Store resource metadata as effectively immutable mappings."""
@@ -222,6 +224,7 @@ class SemanticResource:
         base_queryset: BaseQuerySetHook | None = None,
         requires_permission: str | None = None,
         scope_resource: bool = False,
+        examples_enabled: bool = True,
     ) -> "SemanticResource":
         """Build and validate a semantic resource from developer configuration."""
 
@@ -229,6 +232,7 @@ class SemanticResource:
         validate_base_queryset(base_queryset)
         validate_requires_permission(requires_permission)
         validate_scope_resource(scope_resource)
+        validate_examples_enabled(examples_enabled)
 
         resource_label = label or str(model._meta.verbose_name_plural).title()
         resource_name = normalize_resource_name(name or resource_label)
@@ -256,6 +260,7 @@ class SemanticResource:
             base_queryset=base_queryset,
             requires_permission=requires_permission,
             scope_resource=scope_resource,
+            examples_enabled=examples_enabled,
         )
 
     def get_base_queryset(self, request: Any = None) -> QuerySet:
@@ -310,6 +315,8 @@ class SemanticResource:
             data["requires_permission"] = self.requires_permission
         if self.scope_resource:
             data["scope_resource"] = True
+        if not self.examples_enabled:
+            data["examples_enabled"] = False
         if include_internal:
             data["model"] = self.model._meta.label
         return data
@@ -376,6 +383,14 @@ def validate_scope_resource(scope_resource: bool) -> None:
 
     if not isinstance(scope_resource, bool):
         msg = "scope_resource must be a boolean when provided."
+        raise InvalidResourceError(msg)
+
+
+def validate_examples_enabled(examples_enabled: bool) -> None:
+    """Validate resource example-generation metadata."""
+
+    if not isinstance(examples_enabled, bool):
+        msg = "examples_enabled must be a boolean when provided."
         raise InvalidResourceError(msg)
 
 

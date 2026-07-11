@@ -9,6 +9,8 @@ from django.contrib.auth import get_user_model
 from rest_framework.test import APIClient
 
 from django_asklens import Metric
+from django_asklens.api.views import get_query_help_for_capabilities
+from django_asklens.catalog.capabilities import build_capabilities
 from django_asklens.catalog.registry import default_registry
 from django_asklens.models import SemanticQueryRun
 from tests.test_project.models import Customer, Order
@@ -16,6 +18,43 @@ from tests.test_project.models import Customer, Order
 pytestmark = pytest.mark.django_db
 
 QUESTION = "Show orders by status"
+
+
+class QueryHelpProvider:
+    """Provider double for API query-help source tests."""
+
+    def complete_json(self, *, messages, schema):
+        """Return provider-generated query-help JSON."""
+
+        return {
+            "answer": "Provider-generated help.",
+            "suggestions": [
+                {
+                    "question": "Provider suggestion: show order count by status",
+                    "resource_name": "orders",
+                    "fields": ["status"],
+                    "metrics": ["order_count"],
+                }
+            ],
+        }
+
+
+class InvalidQueryHelpProvider:
+    """Provider double returning invalid help suggestions."""
+
+    def complete_json(self, *, messages, schema):
+        """Return query-help JSON with an unavailable field."""
+
+        return {
+            "answer": "Invalid help.",
+            "suggestions": [
+                {
+                    "question": "List orders with private notes",
+                    "resource_name": "orders",
+                    "fields": ["private_notes"],
+                }
+            ],
+        }
 
 
 def aware_datetime(year: int, month: int, day: int) -> datetime:
@@ -176,6 +215,52 @@ def test_capabilities_endpoint_returns_permission_scoped_query_guidance(
     assert "customer.email" not in str(response.data)
 
 
+def test_live_query_help_uses_provider(
+    settings, monkeypatch, registered_orders: None
+) -> None:
+    """Non-dummy help should use the configured provider when it validates."""
+
+    settings.DJANGO_ASKLENS = {"LLM_BACKEND": "openai_compatible"}
+    monkeypatch.setattr(
+        "django_asklens.planning.help.get_llm_provider",
+        lambda: QueryHelpProvider(),
+    )
+
+    query_help, source, error = get_query_help_for_capabilities(
+        "What can I query?",
+        capabilities=build_capabilities(),
+    )
+
+    assert source == "semantic_provider"
+    assert error == ""
+    assert query_help.answer == "Provider-generated help."
+    assert query_help.suggestions[0].question.startswith("Provider suggestion")
+
+
+def test_query_help_fallback_returns_safe_error(
+    settings,
+    monkeypatch,
+    registered_orders: None,
+) -> None:
+    """Invalid live help should expose a safe fallback reason."""
+
+    settings.DJANGO_ASKLENS = {"LLM_BACKEND": "openai_compatible"}
+    monkeypatch.setattr(
+        "django_asklens.planning.help.get_llm_provider",
+        lambda: InvalidQueryHelpProvider(),
+    )
+
+    query_help, source, error = get_query_help_for_capabilities(
+        "What can I query?",
+        capabilities=build_capabilities(),
+    )
+
+    assert source == "deterministic_fallback"
+    assert query_help.suggestions
+    assert "private_notes" in error
+    assert "Traceback" not in error
+
+
 def test_query_endpoint_intercepts_capabilities_question_without_provider_or_audit(
     api_client: APIClient,
     registered_orders: None,
@@ -201,6 +286,7 @@ def test_query_endpoint_intercepts_capabilities_question_without_provider_or_aud
     assert response.data["routing_source"] == "fallback"
     assert response.data["capability_intent"]["intent"] == "capabilities"
     assert response.data["query_help_source"] == "deterministic"
+    assert "query_help_error" not in response.data
     assert response.data["query_help"]["suggestions"]
     assert response.data["query_help"]["suggestions"][0]["resource_name"] == "orders"
     assert "database query" in response.data["explanation"]

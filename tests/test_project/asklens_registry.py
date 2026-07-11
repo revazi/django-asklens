@@ -123,6 +123,7 @@ def register_staff_resources() -> None:
         ],
         base_queryset=owner_queryset_for_permission(StaffGrant.FACILITY_VIEW),
         requires_permission=StaffGrant.FACILITY_VIEW,
+        examples_enabled=False,
     )
 
 

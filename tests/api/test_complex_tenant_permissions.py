@@ -484,6 +484,8 @@ def test_capability_help_for_single_facility_user_avoids_multi_facility_examples
     ]
     suggestion_text = "\n".join([*capability_examples, *suggestion_questions]).lower()
     assert "list facilities with facility name" not in suggestion_text
+    assert "list facility owners" not in suggestion_text
+    assert "owner first name" not in suggestion_text
     assert "across facilities" not in suggestion_text
     assert "by facility" not in suggestion_text
 

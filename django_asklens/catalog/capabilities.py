@@ -71,6 +71,7 @@ class CapabilityResource(TypedDict):
     scope: CapabilityScope
     requires_permission: NotRequired[str]
     scope_resource: NotRequired[bool]
+    examples_enabled: NotRequired[bool]
 
 
 class CapabilitiesSnapshot(TypedDict):
@@ -214,6 +215,8 @@ def build_resource_capability(
         capability["requires_permission"] = resource["requires_permission"]
     if resource.get("scope_resource"):
         capability["scope_resource"] = True
+    if resource.get("examples_enabled") is False:
+        capability["examples_enabled"] = False
     return capability
 
 
@@ -394,6 +397,8 @@ def build_resource_examples(
     """Return deterministic example questions for one resource."""
 
     examples: list[str] = []
+    if resource.get("examples_enabled") is False:
+        return examples
     if is_single_scope_resource(resource, scope=scope):
         return examples
 

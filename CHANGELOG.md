@@ -38,6 +38,7 @@ The project is pre-alpha and APIs may change before the first public alpha.
 - Added schema-agnostic `scope_resource` and `scope_dimension` registration metadata so scope-aware help does not depend on tenant/facility/account naming.
 - Seeded demo role groups, user full names, explicit owner grants, and an owner-only facility owners resource for owner lookup questions.
 - Added a regression-tested demo permission/resource matrix; owners see all resources, mixed member reporters no longer receive billing resources, and owner email requires a staff-PII grant.
+- Added `examples_enabled=False` for queryable helper resources that should not dominate deterministic “what can I query?” suggestions, clarified LLM-vs-fallback help labels in the demo UI, allowed help requests such as “give me 10 examples” to return up to 10 validated suggestions, canonicalized provider resource/field/metric labels, and surfaced safe fallback reasons when live QueryHelp fails validation.
 
 ### Security
 

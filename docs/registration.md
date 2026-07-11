@@ -37,6 +37,7 @@ resource = register(
 - `metrics`: explicit aggregate metrics available to plans.
 - `base_queryset`: request-aware hook for tenant and row-level scoping.
 - `scope_resource`: optional boolean. Set `True` when this resource represents the scoped entity itself, regardless of what your project calls that entity.
+- `examples_enabled`: optional boolean, default `True`. Set `False` for helper/lookup resources that should remain queryable but should not generate deterministic “suggested question” examples.
 
 ## Field metadata
 

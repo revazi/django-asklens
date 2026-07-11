@@ -194,6 +194,40 @@ def test_build_capabilities_omits_single_scope_resource_examples() -> None:
     assert "List Facilities with Facility name" not in str(capabilities)
 
 
+def test_build_capabilities_honors_examples_enabled_flag() -> None:
+    """Utility resources can stay visible without generated question examples."""
+
+    capabilities = build_capabilities(
+        catalog={
+            "resources": [
+                {
+                    "name": "owner_lookup",
+                    "label": "Owner lookup",
+                    "description": "Owner lookup.",
+                    "synonyms": [],
+                    "default_date_field": None,
+                    "examples_enabled": False,
+                    "fields": [
+                        {
+                            "name": "owner_name",
+                            "label": "Owner name",
+                            "type": "string",
+                            "relation_depth": 0,
+                        }
+                    ],
+                    "metrics": [],
+                }
+            ]
+        }
+    )
+
+    [resource] = capabilities["resources"]
+    assert resource["name"] == "owner_lookup"
+    assert resource["examples_enabled"] is False
+    assert resource["examples"] == []
+    assert capabilities["examples"] == []
+
+
 def test_build_capabilities_uses_explicit_scope_metadata_for_arbitrary_names() -> None:
     """Scope help should not depend on facility/account/tenant naming."""
 

@@ -86,7 +86,11 @@ class QueryView(AskLensAPIView):
                     build_capabilities(permissions=permissions),
                     routing_result.intent,
                 )
-                query_help, query_help_source = get_query_help_for_capabilities(
+                (
+                    query_help,
+                    query_help_source,
+                    query_help_error,
+                ) = get_query_help_for_capabilities(
                     question,
                     capabilities=capabilities,
                 )
@@ -98,6 +102,7 @@ class QueryView(AskLensAPIView):
                         capabilities=capabilities,
                         query_help=query_help,
                         query_help_source=query_help_source,
+                        query_help_error=query_help_error,
                     )
                 )
 
@@ -201,21 +206,32 @@ def get_query_help_for_capabilities(
     question: str,
     *,
     capabilities: dict[str, Any],
-) -> tuple[QueryHelp, str]:
+) -> tuple[QueryHelp, str, str]:
     """Return LLM-backed query help when live mode is enabled."""
 
     if get_asklens_setting("LLM_BACKEND") == "dummy":
-        return build_deterministic_query_help(
-            capabilities=capabilities
-        ), "deterministic"
-    try:
-        return build_query_help(
-            question, capabilities=capabilities
-        ), "semantic_provider"
-    except AskLensError:
         return (
-            build_deterministic_query_help(capabilities=capabilities),
+            build_deterministic_query_help(
+                capabilities=capabilities,
+                question=question,
+            ),
+            "deterministic",
+            "",
+        )
+    try:
+        return (
+            build_query_help(question, capabilities=capabilities),
+            "semantic_provider",
+            "",
+        )
+    except AskLensError as exc:
+        return (
+            build_deterministic_query_help(
+                capabilities=capabilities,
+                question=question,
+            ),
             "deterministic_fallback",
+            safe_error_message(exc),
         )
 
 
@@ -227,10 +243,11 @@ def build_capabilities_payload(
     capabilities: dict[str, Any],
     query_help: QueryHelp,
     query_help_source: str,
+    query_help_error: str = "",
 ) -> dict[str, Any]:
     """Build a natural-language help response without executing a query."""
 
-    return {
+    payload = {
         "question": question,
         "response_type": "capabilities",
         "capability_intent": intent.model_dump(mode="json"),
@@ -243,6 +260,9 @@ def build_capabilities_payload(
             "help without executing a database query."
         ),
     }
+    if query_help_error:
+        payload["query_help_error"] = query_help_error
+    return payload
 
 
 def build_success_payload(

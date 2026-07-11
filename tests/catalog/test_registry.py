@@ -120,11 +120,13 @@ def test_scope_metadata_is_explicit_and_schema_agnostic() -> None:
         label="Locations",
         fields={"id": {}, "customer.email": {"scope_dimension": True}},
         scope_resource=True,
+        examples_enabled=False,
     )
 
     resource = registry.to_dict()["resources"][0]
     fields = {field["name"]: field for field in resource["fields"]}
     assert resource["scope_resource"] is True
+    assert resource["examples_enabled"] is False
     assert fields["customer.email"]["scope_dimension"] is True
 
 
@@ -287,6 +289,14 @@ def test_resource_config_validation() -> None:
             name="bad_scope_resource",
             fields={"id": {}},
             scope_resource=object(),
+        )
+
+    with pytest.raises(InvalidResourceError, match="examples_enabled"):
+        registry.register(
+            model=Order,
+            name="bad_examples_enabled",
+            fields={"id": {}},
+            examples_enabled=object(),
         )
 
 
