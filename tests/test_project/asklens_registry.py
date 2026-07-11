@@ -104,6 +104,12 @@ def register_staff_resources() -> None:
             "user.first_name": {"label": "Owner first name"},
             "user.last_name": {"label": "Owner last name"},
             "user.username": {"label": "Owner username"},
+            "user.email": {
+                "label": "Owner email",
+                "sensitive": True,
+                "result_visible": True,
+                "requires_permission": StaffGrant.STAFF_PII_VIEW,
+            },
             "is_primary": {"label": "Primary owner assignment"},
             "created_at": {"label": "Created date"},
         },

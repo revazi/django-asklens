@@ -138,6 +138,7 @@ class StaffGrant(models.Model):
     PAYMENT_REPORTS_VIEW = "PaymentReportsView"
     MEMBER_REPORTS_VIEW = "MemberReportsView"
     MEMBER_PII_VIEW = "MemberPIIView"
+    STAFF_PII_VIEW = "StaffPIIView"
     PACKAGE_REPORTS_VIEW = "PackageReportsView"
     SCHEDULE_REPORTS_VIEW = "ScheduleReportsView"
     FACILITY_VIEW = "FacilityView"
@@ -148,6 +149,7 @@ class StaffGrant(models.Model):
         (PAYMENT_REPORTS_VIEW, "Payment reports view"),
         (MEMBER_REPORTS_VIEW, "Member reports view"),
         (MEMBER_PII_VIEW, "Member PII view"),
+        (STAFF_PII_VIEW, "Staff PII view"),
         (PACKAGE_REPORTS_VIEW, "Package reports view"),
         (SCHEDULE_REPORTS_VIEW, "Schedule reports view"),
         (FACILITY_VIEW, "Facility view"),

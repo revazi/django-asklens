@@ -427,7 +427,6 @@ class Command(BaseCommand):
             StaffAssignment.Role.STAFF,
             StaffGrant.MEMBER_REPORTS_VIEW,
             StaffGrant.MEMBER_PII_VIEW,
-            StaffGrant.BILLING_REPORTS_VIEW,
             StaffGrant.FACILITY_VIEW,
         )
         create_assignment(

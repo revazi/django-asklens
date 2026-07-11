@@ -8,7 +8,7 @@ from django.contrib.auth.models import Group
 from django.core.management import call_command
 from rest_framework.test import APIClient
 
-from django_asklens.catalog.registry import default_registry
+from django_asklens.catalog.registry import default_registry, serialize_catalog
 from tests.test_project.asklens_registry import (
     permitted_facility_ids,
     register_complex_resources,
@@ -113,6 +113,32 @@ def facility_slugs_for(user, permission_name: str) -> list[str]:
         .order_by("slug")
         .values_list("slug", flat=True)
     )
+
+
+def catalog_resource_names_for(user) -> set[str]:
+    """Return permission-scoped AskLens resource names for a seeded user."""
+
+    permissions = get_request_permissions(type("Request", (), {"user": user})())
+    catalog = serialize_catalog(permissions=permissions)
+    return {resource["name"] for resource in catalog["resources"]}
+
+
+ALL_REPORTING_RESOURCES = {
+    "billing_lines",
+    "facilities",
+    "facility_owners",
+    "leads",
+    "marketing_campaigns",
+    "member_contacts",
+    "member_statuses",
+    "member_subscriptions",
+    "members",
+    "payment_attempts",
+    "schedule_sessions",
+    "session_bookings",
+    "staff_shifts",
+    "support_tickets",
+}
 
 
 def test_seed_scopes_facility_owners_to_one_facility_each() -> None:
@@ -305,6 +331,92 @@ def test_seeded_permission_matrix_scopes_facilities_by_grant() -> None:
         "north-studio",
         "south-studio",
     ]
+
+
+def test_seeded_asklens_catalog_matches_role_permission_matrix() -> None:
+    """Seeded users should see exactly the resources their role grants allow."""
+
+    register_complex_resources()
+    call_command("seed_complex_test_project", verbosity=0)
+    user_model = get_user_model()
+
+    assert (
+        catalog_resource_names_for(user_model.objects.get(username="facility-owner"))
+        == ALL_REPORTING_RESOURCES
+    )
+    assert (
+        catalog_resource_names_for(user_model.objects.get(username="south-owner"))
+        == ALL_REPORTING_RESOURCES
+    )
+    assert catalog_resource_names_for(
+        user_model.objects.get(username="north-billing")
+    ) == {
+        "billing_lines",
+        "facilities",
+        "facility_owners",
+        "payment_attempts",
+    }
+    assert catalog_resource_names_for(
+        user_model.objects.get(username="south-billing")
+    ) == {
+        "billing_lines",
+        "facilities",
+        "facility_owners",
+        "payment_attempts",
+    }
+    assert catalog_resource_names_for(
+        user_model.objects.get(username="mixed-reporter")
+    ) == {
+        "facilities",
+        "facility_owners",
+        "leads",
+        "member_contacts",
+        "member_statuses",
+        "members",
+    }
+    assert catalog_resource_names_for(
+        user_model.objects.get(username="schedule-reporter")
+    ) == {
+        "facilities",
+        "facility_owners",
+        "schedule_sessions",
+        "session_bookings",
+        "staff_shifts",
+    }
+    assert catalog_resource_names_for(
+        user_model.objects.get(username="support-reporter")
+    ) == {
+        "marketing_campaigns",
+        "support_tickets",
+    }
+    assert (
+        catalog_resource_names_for(user_model.objects.get(username="no-report"))
+        == set()
+    )
+
+
+def test_facility_owner_email_requires_staff_pii_grant() -> None:
+    """Owner email should not be exposed to every FacilityView user."""
+
+    register_complex_resources()
+    call_command("seed_complex_test_project", verbosity=0)
+    user_model = get_user_model()
+
+    def facility_owner_fields(username: str) -> set[str]:
+        user = user_model.objects.get(username=username)
+        permissions = get_request_permissions(type("Request", (), {"user": user})())
+        catalog = serialize_catalog(permissions=permissions)
+        [resource] = [
+            resource
+            for resource in catalog["resources"]
+            if resource["name"] == "facility_owners"
+        ]
+        return {field["name"] for field in resource["fields"]}
+
+    assert "user.email" in facility_owner_fields("facility-owner")
+    assert "user.email" in facility_owner_fields("south-owner")
+    assert "user.email" not in facility_owner_fields("north-billing")
+    assert "user.email" not in facility_owner_fields("mixed-reporter")
 
 
 def test_seed_syncs_assignment_grants() -> None:
