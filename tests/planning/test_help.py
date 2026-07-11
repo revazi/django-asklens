@@ -193,6 +193,96 @@ def test_build_query_help_rejects_sql_or_mutation_suggestions() -> None:
         )
 
 
+def test_build_query_help_rejects_single_scope_comparison_wording() -> None:
+    """Help suggestions must not imply multi-scope access for single scopes."""
+
+    payload = capabilities_payload()
+    resource = payload["resources"][0]
+    resource["scope"] = {
+        "level": "single",
+        "kind": "facility",
+        "guidance": "Visible rows are scoped to one facility.",
+    }
+    resource["fields"].append(
+        {
+            "name": "facility.name",
+            "label": "Facility",
+            "type": "string",
+            "relation_depth": 1,
+            "can_filter": True,
+            "can_select": True,
+            "can_group": True,
+            "can_order": True,
+            "can_date_bucket": False,
+        }
+    )
+    provider = HelpProvider(
+        {
+            "answer": "Try this.",
+            "suggestions": [
+                {
+                    "question": "Compare order count across facilities",
+                    "resource_name": "orders",
+                    "fields": [],
+                    "metrics": ["order_count"],
+                }
+            ],
+        }
+    )
+
+    with pytest.raises(PlanValidationError, match="single visible facility"):
+        build_query_help(
+            "Help me write order questions",
+            provider=provider,
+            capabilities=payload,
+        )
+
+
+def test_build_query_help_rejects_single_scope_dimension_fields() -> None:
+    """Provider suggestions cannot use facility dimensions for one facility."""
+
+    payload = capabilities_payload()
+    resource = payload["resources"][0]
+    resource["scope"] = {
+        "level": "single",
+        "kind": "facility",
+        "guidance": "Visible rows are scoped to one facility.",
+    }
+    resource["fields"].append(
+        {
+            "name": "facility.name",
+            "label": "Facility",
+            "type": "string",
+            "relation_depth": 1,
+            "can_filter": True,
+            "can_select": True,
+            "can_group": True,
+            "can_order": True,
+            "can_date_bucket": False,
+        }
+    )
+    provider = HelpProvider(
+        {
+            "answer": "Try this.",
+            "suggestions": [
+                {
+                    "question": "Show order count by facility",
+                    "resource_name": "orders",
+                    "fields": ["facility.name"],
+                    "metrics": ["order_count"],
+                }
+            ],
+        }
+    )
+
+    with pytest.raises(PlanValidationError, match="scope fields"):
+        build_query_help(
+            "Help me write order questions",
+            provider=provider,
+            capabilities=payload,
+        )
+
+
 def test_build_query_help_rejects_generated_date_bucket_aliases() -> None:
     """Help suggestions should not teach users invalid result-key aliases."""
 

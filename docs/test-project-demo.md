@@ -62,7 +62,7 @@ DJANGO_SETTINGS_MODULE=tests.test_project.demo_settings \
 uv run python -m django runserver 127.0.0.1:8000
 ```
 
-Live mode still sends only permission-scoped schema/catalog/capabilities metadata to the provider. It does not send database rows, sample values, secrets, credentials, or `.env` contents.
+Live mode still sends only permission-scoped schema/catalog/capabilities metadata to the provider. It does not send database rows, sample values, secrets, credentials, or `.env` contents. Capabilities include sanitized scope guidance such as whether a resource is visible for one facility or multiple facilities; tenant IDs and names are not sent to the provider. Query-help suggestions are validated so a single-facility user is not given examples that imply comparing or grouping across facilities.
 
 To run a repeatable live validation matrix through the same AskLens API without starting a browser, use the opt-in command after migrating/seeding:
 
@@ -134,7 +134,7 @@ http://127.0.0.1:8000/
 
 The page is a small dependency-free single page app served by the runnable test project. It shows whether AskLens is using offline dummy plans or a live LLM provider, shows the current user's tenant row scope, loads permission-scoped guidance from `/asklens/capabilities/`, loads permission-scoped schema metadata from `/asklens/catalog/`, posts natural-language questions to `/asklens/query/`, and lets you switch client-side between table, bar, line, pie, metric-card, and raw JSON views of the same returned `columns` and `data` payload. Help questions such as `What payment questions can I ask?` return capabilities plus suggested questions; live mode generates those suggestions with the configured LLM using only visible capabilities metadata.
 
-The capabilities and catalog panels are metadata only: resources, fields, metrics, date fields, generated examples, and limitations visible to the current request. They are not database rows or sample tenant data. Query results remain tenant-scoped by each resource `base_queryset(request)`. Resources and example questions are also filtered by the current user's reporting grants, so a billing-only user does not see or run package/subscription questions. The API visualization value is only a hint for consumers; applications can render the returned data however they prefer or send `"include_visualization": false` to receive serialized data without a visualization hint. The page uses the same login session and synthetic reporting grants as the API. Staff users without reporting grants cannot load it.
+The capabilities and catalog panels are metadata only: resources, fields, metrics, date fields, generated examples, scope guidance, and limitations visible to the current request. They are not database rows or sample tenant data. Query results remain tenant-scoped by each resource `base_queryset(request)`. Resources and example questions are also filtered by the current user's reporting grants and row-scope metadata, so a billing-only user does not see or run package/subscription questions, and a single-facility user is not prompted to compare facilities. The API visualization value is only a hint for consumers; applications can render the returned data however they prefer or send `"include_visualization": false` to receive serialized data without a visualization hint. The page uses the same login session and synthetic reporting grants as the API. Staff users without reporting grants cannot load it.
 
 ## AskLens in admin
 

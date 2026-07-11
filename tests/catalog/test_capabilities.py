@@ -83,3 +83,58 @@ def test_build_capabilities_describes_visible_fields_metrics_and_examples() -> N
     assert "Show count of Orders by Status" in resource["examples"]
     assert "Trend Order count by month using Created date" in resource["examples"]
     assert capabilities["examples"] == resource["examples"]
+
+
+def test_build_capabilities_adds_sanitized_single_scope_guidance() -> None:
+    """Capabilities can guide LLM help without leaking scope identifiers."""
+
+    capabilities = build_capabilities(
+        permissions={"facility:123:BillingReportsView"},
+        catalog={
+            "resources": [
+                {
+                    "name": "billing_lines",
+                    "label": "Billing lines",
+                    "description": "Billing facts.",
+                    "synonyms": [],
+                    "default_date_field": "created_at",
+                    "requires_permission": "BillingReportsView",
+                    "fields": [
+                        {
+                            "name": "facility.name",
+                            "label": "Facility",
+                            "type": "string",
+                            "relation_depth": 1,
+                        },
+                        {
+                            "name": "product_name",
+                            "label": "Product",
+                            "type": "string",
+                            "relation_depth": 0,
+                        },
+                        {
+                            "name": "created_at",
+                            "label": "Created date",
+                            "type": "datetime",
+                            "relation_depth": 0,
+                        },
+                    ],
+                    "metrics": [
+                        {
+                            "name": "gross_revenue",
+                            "label": "Gross revenue",
+                            "op": "sum",
+                            "field": "product_name",
+                        }
+                    ],
+                }
+            ]
+        },
+    )
+
+    [resource] = capabilities["resources"]
+    assert resource["scope"]["level"] == "single"
+    assert resource["scope"]["kind"] == "facility"
+    assert "facility:123" not in str(capabilities)
+    assert all("Facility" not in example for example in resource["examples"])
+    assert "Show Gross revenue by Product" in resource["examples"]

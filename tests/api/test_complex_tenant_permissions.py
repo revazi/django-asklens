@@ -451,6 +451,41 @@ def test_complex_crafted_plan_cannot_use_unregistered_tenant_field(
     assert run.plan == {}
 
 
+def test_capability_help_for_single_facility_user_avoids_multi_facility_examples(
+    settings,
+    api_client: APIClient,
+    complex_tenant_data: ComplexTenantData,
+    registered_complex_resources: None,
+) -> None:
+    """Capability help should not imply broader tenant access than granted."""
+
+    configure_complex_dummy_plans(settings, {})
+    api_client.force_authenticate(user=complex_tenant_data.north_billing_user)
+
+    response = api_client.post(
+        "/asklens/query/",
+        {"question": "What can I query?"},
+        format="json",
+    )
+
+    assert response.status_code == 200, response.data
+    assert response.data["response_type"] == "capabilities"
+    resources = {
+        resource["name"]: resource
+        for resource in response.data["capabilities"]["resources"]
+    }
+    assert resources["billing_lines"]["scope"]["level"] == "single"
+    assert resources["billing_lines"]["scope"]["kind"] == "facility"
+    assert f"facility:{complex_tenant_data.north.id}" not in str(response.data)
+    suggestion_questions = [
+        suggestion["question"]
+        for suggestion in response.data["query_help"]["suggestions"]
+    ]
+    suggestion_text = "\n".join(suggestion_questions).lower()
+    assert "across facilities" not in suggestion_text
+    assert "by facility" not in suggestion_text
+
+
 def test_complex_route_permission_blocks_users_without_reporting_grants(
     settings,
     api_client: APIClient,

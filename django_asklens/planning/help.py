@@ -6,7 +6,13 @@ from typing import Any
 
 from pydantic import Field, ValidationError, field_validator
 
-from django_asklens.catalog.capabilities import CapabilitiesSnapshot, CapabilityResource
+from django_asklens.catalog.capabilities import (
+    CapabilitiesSnapshot,
+    CapabilityResource,
+    humanize_scope_kind,
+    is_scope_dimension_field,
+    pluralize_scope_kind,
+)
 from django_asklens.exceptions import PlanValidationError
 from django_asklens.llms.base import LLMMessage, LLMProvider
 from django_asklens.llms.factory import get_llm_provider
@@ -34,12 +40,16 @@ BLOCKED_SUGGESTION_ACTIONS = {
 
 QUERY_HELP_SYSTEM_PROMPT = """You help users write safe Django AskLens questions.
 Return only JSON matching the provided QueryHelp schema.
-Use only resources, fields, metrics, and date fields present in the visible
-capabilities metadata.
+Use only resources, fields, metrics, date fields, and scope guidance present
+in the visible capabilities metadata.
 Suggest natural-language questions that AskLens can plan as read-only list or
 aggregate queries.
 For each suggestion, include the exact resource_name and referenced field,
 metric, and date_field names from the metadata.
+If a resource scope has level="single", suggestions must be phrased within
+that single visible scope. Do not suggest comparing, grouping, filtering, or
+trending across facilities/accounts/tenants/scopes unless the resource scope
+allows multiple or all scopes and the scope field is visible.
 Do not suggest internal result-key aliases such as "start_date_month"; say
 "by month using start date" in the natural-language question instead.
 Do not include SQL, code, database rows, sample values, secrets, credentials,
@@ -187,6 +197,7 @@ def validate_query_help(
             )
             raise PlanValidationError(msg)
         validate_suggestion_question_is_safe(suggestion.question)
+        validate_suggestion_respects_scope(suggestion, resource)
         validate_references(
             suggestion.fields,
             allowed={field["name"] for field in resource.get("fields", [])},
@@ -245,6 +256,67 @@ def index_resources(
     return {
         resource["name"]: resource for resource in capabilities.get("resources", [])
     }
+
+
+def validate_suggestion_respects_scope(
+    suggestion: QueryHelpSuggestion,
+    resource: CapabilityResource,
+) -> None:
+    """Reject help suggestions that imply access outside a single visible scope."""
+
+    scope = resource.get("scope")
+    if scope is None or scope["level"] != "single" or "kind" not in scope:
+        return
+
+    scope_kind = scope["kind"]
+    blocked_fields = [
+        field_name
+        for field_name in suggestion.fields
+        if is_scope_dimension_field(
+            field_name=field_name,
+            field_label=field_name,
+            scope_kind=scope_kind,
+        )
+    ]
+    if blocked_fields:
+        blocked_display = ", ".join(sorted(blocked_fields))
+        msg = (
+            f"QueryHelp suggestion for resource {suggestion.resource_name!r} "
+            f"references {humanize_scope_kind(scope_kind)} scope fields for a "
+            f"single visible {humanize_scope_kind(scope_kind)}: {blocked_display}."
+        )
+        raise PlanValidationError(msg)
+
+    if question_implies_multi_scope(suggestion.question, scope_kind=scope_kind):
+        msg = (
+            f"QueryHelp suggestion for resource {suggestion.resource_name!r} "
+            f"implies access across {pluralize_scope_kind(scope_kind)}, but this "
+            f"request is scoped to a single visible "
+            f"{humanize_scope_kind(scope_kind)}."
+        )
+        raise PlanValidationError(msg)
+
+
+def question_implies_multi_scope(question: str, *, scope_kind: str) -> bool:
+    """Return whether question wording implies cross-scope access."""
+
+    kind = re.escape(humanize_scope_kind(scope_kind).lower())
+    plural = re.escape(pluralize_scope_kind(scope_kind).lower())
+    lower_question = question.lower()
+    patterns = [
+        rf"\bacross\s+(?:all\s+)?{plural}\b",
+        rf"\bcompare\s+(?:all\s+)?{plural}\b",
+        rf"\bbetween\s+{plural}\b",
+        rf"\bby\s+{kind}\b",
+        rf"\bby\s+{plural}\b",
+        rf"\bper\s+{kind}\b",
+        rf"\bper\s+{plural}\b",
+        rf"\bgroup(?:ed|ing)?\s+by\s+{kind}\b",
+        rf"\bgroup(?:ed|ing)?\s+by\s+{plural}\b",
+        r"\bmulti[-\s]?tenant\b",
+        r"\bcross[-\s]?tenant\b",
+    ]
+    return any(re.search(pattern, lower_question) for pattern in patterns)
 
 
 def validate_references(
