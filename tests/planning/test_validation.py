@@ -18,7 +18,7 @@ from django_asklens.planning import (
     validate_query_plan,
 )
 from tests.planning.test_schemas import valid_aggregate_plan_payload
-from tests.test_project.models import Order
+from tests.test_project.models import BillingLine, Order
 
 
 def build_registry() -> CatalogRegistry:
@@ -64,6 +64,50 @@ def parse_valid_plan(**updates: object):
     return parse_query_plan(payload)
 
 
+def build_billing_registry() -> CatalogRegistry:
+    """Return a registry with a choice-backed billing status field."""
+
+    registry = CatalogRegistry()
+    registry.register(
+        model=BillingLine,
+        name="billing_lines",
+        label="Billing lines",
+        fields={
+            "billing_document.status": {"label": "Billing status"},
+            "product_name": {"label": "Product"},
+            "total_amount_cents": {"label": "Total amount in cents"},
+        },
+        metrics=[
+            Metric(
+                "gross_revenue",
+                op="sum",
+                field="total_amount_cents",
+                label="Gross revenue",
+            )
+        ],
+    )
+    return registry
+
+
+def valid_billing_revenue_payload(**updates: object) -> dict[str, object]:
+    """Return a valid billing aggregate payload with optional updates."""
+
+    payload: dict[str, object] = {
+        "resource": "billing_lines",
+        "intent": "aggregate",
+        "filters": [],
+        "group_by": [{"field": "product_name"}],
+        "metrics": [
+            {"name": "gross_revenue", "op": "sum", "field": "total_amount_cents"}
+        ],
+        "order_by": [{"metric": "gross_revenue", "direction": "desc"}],
+        "limit": 10,
+        "visualization": {"type": "bar", "x": "product_name", "y": "gross_revenue"},
+    }
+    payload.update(updates)
+    return payload
+
+
 def test_valid_query_plan_validates_against_catalog() -> None:
     plan = parse_valid_plan(resource="Orders")
 
@@ -79,6 +123,40 @@ def test_parse_and_validate_query_plan_combines_untrusted_payload_pipeline() -> 
     validated = parse_and_validate_query_plan(payload, registry=build_registry())
 
     assert validated.resource == "orders"
+
+
+def test_choice_filter_labels_are_canonicalized_to_stored_values() -> None:
+    """Choice labels from providers should match stored Django choice values."""
+
+    validated = parse_and_validate_query_plan(
+        valid_billing_revenue_payload(
+            filters=[{"field": "billing_document.status", "op": "eq", "value": "Paid"}],
+        ),
+        registry=build_billing_registry(),
+    )
+
+    [filter_spec] = validated.filters
+    assert filter_spec.value == "PAID"
+
+
+def test_choice_filter_value_case_and_in_lists_are_canonicalized() -> None:
+    """Choice values should accept common provider case/label variants."""
+
+    validated = parse_and_validate_query_plan(
+        valid_billing_revenue_payload(
+            filters=[
+                {
+                    "field": "billing_document.status",
+                    "op": "in",
+                    "value": ["paid", "Past due"],
+                }
+            ],
+        ),
+        registry=build_billing_registry(),
+    )
+
+    [filter_spec] = validated.filters
+    assert filter_spec.value == ["PAID", "PAST_DUE"]
 
 
 def test_unknown_resource_fails() -> None:

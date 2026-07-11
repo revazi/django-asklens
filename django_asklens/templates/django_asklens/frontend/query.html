@@ -568,6 +568,29 @@
       list-style: none;
     }
 
+    .session-content,
+    .session-section {
+      display: grid;
+      gap: 0.7rem;
+    }
+
+    .session-section h3,
+    .disclosure-heading h3 {
+      margin: 0;
+      color: #475467;
+      font-size: 0.76rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .disclosure-heading {
+      display: grid;
+      gap: 0.2rem;
+      margin-bottom: 0.7rem;
+    }
+
+    .disclosure-heading p { margin: 0; }
+
     .disclosure summary::-webkit-details-marker {
       display: none;
     }
@@ -585,7 +608,7 @@
 
     .disclosure-content {
       border-top: 1px solid var(--line);
-      padding: 0 0.9rem 0.9rem;
+      padding: 0.85rem 0.9rem 0.9rem;
     }
 
     .result-card details {
@@ -622,6 +645,416 @@
       font-size: 0.9rem;
     }
 
+    /* shadcn-inspired restyle: neutral, compact primitives without new deps. */
+    :root {
+      --bg: #fafafa;
+      --surface: #ffffff;
+      --surface-soft: #f4f4f5;
+      --surface-blue: #f4f4f5;
+      --line: #e4e4e7;
+      --line-strong: #d4d4d8;
+      --text: #09090b;
+      --muted: #71717a;
+      --accent: #09090b;
+      --accent-strong: #18181b;
+      --accent-soft: #f4f4f5;
+      --danger: #dc2626;
+      --success: #16a34a;
+      --warning: #d97706;
+      --shadow: none;
+      --soft-shadow: none;
+      --radius-lg: 0.75rem;
+      --radius-md: 0.625rem;
+      --ring: 0 0 0 3px rgba(24, 24, 27, 0.12);
+    }
+
+    body {
+      background: var(--bg);
+      font-size: 14px;
+    }
+
+    .app {
+      width: 100%;
+      max-width: 1440px;
+      padding: 1rem;
+    }
+
+    .app-grid {
+      grid-template-columns: 20rem minmax(0, 1fr);
+      gap: 0.75rem;
+    }
+
+    .side,
+    .chat {
+      border: 1px solid var(--line);
+      background: var(--surface);
+      box-shadow: none;
+      backdrop-filter: none;
+    }
+
+    .brand,
+    .chat-topbar,
+    .composer {
+      background: var(--surface);
+      border-color: var(--line);
+    }
+
+    .brand {
+      padding: 0.875rem;
+    }
+
+    .brand-row {
+      gap: 0.625rem;
+    }
+
+    .brand-mark {
+      width: 2rem;
+      height: 2rem;
+      border-radius: 0.5rem;
+      background: var(--text);
+      box-shadow: none;
+      font-size: 0.72rem;
+      letter-spacing: -0.04em;
+    }
+
+    h1 {
+      font-size: 0.98rem;
+      font-weight: 650;
+      letter-spacing: -0.025em;
+    }
+
+    .brand p,
+    .chat-title p,
+    .small {
+      color: var(--muted);
+    }
+
+    .side-scroll {
+      gap: 0.625rem;
+      padding: 0.75rem;
+    }
+
+    .card,
+    .bubble,
+    .table-wrap,
+    .chart,
+    .metric-card,
+    .result-card details,
+    .loading-card,
+    .resource-item {
+      border: 1px solid var(--line);
+      border-radius: var(--radius-md);
+      background: var(--surface);
+      box-shadow: none;
+    }
+
+    .card {
+      padding: 0.75rem;
+    }
+
+    .card h2,
+    .chat-title h2,
+    .chart h3,
+    .result-card h3 {
+      font-size: 0.875rem;
+      font-weight: 650;
+      letter-spacing: -0.01em;
+    }
+
+    .resource-item {
+      padding: 0.625rem;
+    }
+
+    .resource-item strong {
+      font-weight: 600;
+    }
+
+    .pill {
+      border-color: transparent;
+      border-radius: 0.375rem;
+      background: var(--surface-soft);
+      color: var(--text);
+      font-size: 0.75rem;
+      font-weight: 500;
+      padding: 0.18rem 0.5rem;
+    }
+
+    .pill.good {
+      border-color: #bbf7d0;
+      background: #f0fdf4;
+      color: #166534;
+    }
+
+    .pill.blue {
+      border-color: #bfdbfe;
+      background: #eff6ff;
+      color: #1d4ed8;
+    }
+
+    .chip,
+    .text-button,
+    .top-actions a,
+    .top-actions button {
+      display: inline-flex;
+      min-height: 2rem;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid var(--line-strong);
+      border-radius: 0.375rem;
+      background: var(--surface);
+      color: var(--text);
+      font-size: 0.8125rem;
+      font-weight: 500;
+      padding: 0.38rem 0.7rem;
+      text-decoration: none;
+      transition: background 0.12s ease, border-color 0.12s ease, color 0.12s ease;
+    }
+
+    .chip:hover,
+    .text-button:hover,
+    .top-actions a:hover,
+    .top-actions button:hover {
+      border-color: var(--line-strong);
+      background: var(--surface-soft);
+      color: var(--text);
+      transform: none;
+    }
+
+    .chip.danger {
+      color: var(--danger);
+    }
+
+    .chat {
+      grid-template-rows: auto minmax(0, 1fr) auto;
+    }
+
+    .chat-topbar {
+      padding: 0.75rem 1rem;
+    }
+
+    .thread {
+      gap: 0.75rem;
+      background: var(--bg);
+      padding: 1rem;
+    }
+
+    .message {
+      max-width: min(52rem, 100%);
+    }
+
+    .message.user {
+      max-width: min(42rem, 90%);
+    }
+
+    .bubble {
+      border-radius: 0.75rem;
+      padding: 0.75rem;
+    }
+
+    .message.user .bubble {
+      background: var(--text);
+      color: var(--surface);
+    }
+
+    .welcome {
+      max-width: min(36rem, 100%);
+    }
+
+    .welcome h2 {
+      margin-bottom: 0.5rem;
+      font-size: 1.25rem;
+      letter-spacing: -0.03em;
+      line-height: 1.2;
+    }
+
+    .composer {
+      gap: 0.5rem;
+      padding: 0.75rem;
+    }
+
+    .composer textarea {
+      min-height: 3rem;
+      border-radius: 0.5rem;
+      background: var(--surface);
+      font-size: 0.875rem;
+      padding: 0.7rem 0.8rem;
+    }
+
+    .composer textarea:focus {
+      border-color: var(--accent-strong);
+      background: var(--surface);
+      box-shadow: var(--ring);
+    }
+
+    .send {
+      display: inline-flex;
+      width: 2.5rem;
+      min-width: 2.5rem;
+      height: 2.5rem;
+      align-items: center;
+      justify-content: center;
+      border-radius: 0.5rem;
+      background: var(--text);
+      box-shadow: none;
+      padding: 0;
+    }
+
+    .send:hover:not(:disabled) {
+      background: var(--accent-strong);
+    }
+
+    .send svg {
+      width: 1rem;
+      height: 1rem;
+    }
+
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+    }
+
+    .loading-card {
+      color: var(--text);
+      padding: 0.75rem;
+    }
+
+    .spinner {
+      width: 1rem;
+      height: 1rem;
+      border-width: 0.14rem;
+      border-color: var(--line-strong);
+      border-top-color: var(--text);
+    }
+
+    .result-card {
+      gap: 0.75rem;
+    }
+
+    .result-meta {
+      margin-bottom: 0;
+    }
+
+    .metric-card {
+      background: var(--surface);
+      padding: 0.75rem;
+    }
+
+    .metric-value {
+      color: var(--text);
+      font-size: clamp(1.35rem, 3vw, 2rem);
+      font-weight: 700;
+    }
+
+    .chart {
+      background: var(--surface);
+      padding: 0.75rem;
+    }
+
+    .bar-track {
+      height: 0.6rem;
+      background: var(--surface-soft);
+    }
+
+    .bar-fill {
+      background: var(--text);
+    }
+
+    table {
+      font-size: 0.875rem;
+    }
+
+    th,
+    td {
+      border-color: var(--line);
+      padding: 0.55rem 0.65rem;
+    }
+
+    th {
+      background: var(--surface-soft);
+      color: var(--muted);
+      font-size: 0.72rem;
+      font-weight: 600;
+    }
+
+    .disclosure summary {
+      padding: 0.75rem;
+      font-size: 0.875rem;
+      font-weight: 650;
+    }
+
+    .disclosure summary::after {
+      content: "";
+      width: 0.42rem;
+      height: 0.42rem;
+      border-right: 1.5px solid currentColor;
+      border-bottom: 1.5px solid currentColor;
+      color: var(--muted);
+      transform: rotate(-45deg);
+      transition: none;
+    }
+
+    .disclosure[open] summary::after {
+      transform: rotate(45deg);
+    }
+
+    .disclosure-content {
+      border-color: var(--line);
+      padding: 0.75rem;
+    }
+
+    .saved-query-controls {
+      margin-top: 0.65rem;
+    }
+
+    #capabilities-list {
+      gap: 0.375rem;
+    }
+
+    #capabilities-list .resource-item {
+      border: 1px solid var(--line);
+      border-radius: 0.5rem;
+      background: var(--surface);
+      padding: 0.38rem 0.45rem;
+    }
+
+    #capabilities-list .resource-item strong {
+      font-size: 0.8125rem;
+      line-height: 1.2;
+    }
+
+    #capabilities-list .resource-item .small {
+      display: block;
+      margin-top: 0.1rem;
+      font-size: 0.75rem;
+      line-height: 1.25;
+    }
+
+    .session-section h3,
+    .disclosure-heading h3 {
+      color: var(--muted);
+      font-size: 0.7rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+    }
+
+    pre,
+    code {
+      border-radius: 0.375rem;
+    }
+
+    code {
+      background: var(--surface-soft);
+      color: var(--text);
+    }
+
+    pre {
+      background: #09090b;
+    }
+
     .hidden { display: none !important; }
 
     @media (max-width: 980px) {
@@ -638,7 +1071,12 @@
 
     @media (max-width: 680px) {
       .composer { grid-template-columns: 1fr; }
-      .send { min-height: 3rem; }
+      .send {
+        width: 2.5rem;
+        min-width: 2.5rem;
+        min-height: 2.5rem;
+        justify-self: end;
+      }
       .bar-row { grid-template-columns: 1fr; }
       .bubble,
       .message.user .bubble { border-radius: 1rem; }
@@ -665,27 +1103,34 @@
           </div>
         </section>
         <div class="side-scroll">
-          <section class="card" aria-label="Current session">
-            <h2>Session</h2>
-            <div class="pill-row">
-              <span class="pill blue">{{ user_label }}</span>
-              <span class="pill good">{{ llm_mode_label }}</span>
-              <span class="pill"><code>{{ llm_backend }}</code>{% if llm_model %} · <code>{{ llm_model }}</code>{% endif %}</span>
+          <details class="card disclosure session-disclosure" aria-label="Current session">
+            <summary>
+              <span>Session</span>
+            </summary>
+            <div class="disclosure-content session-content">
+              <section class="session-section" aria-label="Session runtime">
+                <h3>Runtime</h3>
+                <div class="pill-row">
+                  <span class="pill blue">{{ user_label }}</span>
+                  <span class="pill good">{{ llm_mode_label }}</span>
+                  <span class="pill"><code>{{ llm_backend }}</code></span>
+                  {% if llm_model %}<span class="pill"><code>{{ llm_model }}</code></span>{% endif %}
+                </div>
+              </section>
+              <section class="session-section {% if not scope_labels %}hidden{% endif %}" aria-label="{{ scope_title }}">
+                <h3>{{ scope_title }}</h3>
+                {{ scope_labels|json_script:"asklens-scope-labels" }}
+                <ul class="resource-list" id="scope-list"></ul>
+              </section>
             </div>
-          </section>
-
-          <section class="card {% if not scope_labels %}hidden{% endif %}" aria-label="{{ scope_title }}">
-            <h2>{{ scope_title }}</h2>
-            {{ scope_labels|json_script:"asklens-scope-labels" }}
-            <ul class="resource-list" id="scope-list"></ul>
-          </section>
+          </details>
 
           <section class="card" aria-label="Saved queries">
             <h2>Saved queries</h2>
             <p class="small" id="saved-query-status">Saved locally in this browser.</p>
             <ul class="resource-list" id="saved-query-list"></ul>
-            <div class="action-row">
-              <button class="text-button" id="clear-saved-queries" type="button">Clear saved</button>
+            <div class="action-row saved-query-controls">
+              <button class="text-button" id="clear-saved-queries" type="button">Clear</button>
             </div>
           </section>
 
@@ -704,9 +1149,12 @@
           <details class="card disclosure" aria-label="Visible capabilities">
             <summary>
               <span>Visible capabilities</span>
-              <span class="small" id="capabilities-status">Loading…</span>
             </summary>
             <div class="disclosure-content">
+              <div class="disclosure-heading">
+                <h3>Queryable resources</h3>
+                <p class="small">Only resources visible to this session are listed here.</p>
+              </div>
               <ul class="resource-list" id="capabilities-list"></ul>
             </div>
           </details>
@@ -719,7 +1167,8 @@
             <h2>Ask AskLens</h2>
             <p class="small">Natural-language questions become validated, read-only Django ORM queries.</p>
           </div>
-          <nav class="top-actions" aria-label="AskLens API links">
+          <nav class="top-actions" aria-label="AskLens actions and API links">
+            <button type="button" id="clear-chat-button">Clear chat</button>
             <a href="{{ catalog_url }}">Catalog JSON</a>
             <a href="{{ capabilities_url }}">Capabilities JSON</a>
           </nav>
@@ -743,7 +1192,13 @@
         <form class="composer" id="query-form">
           {% csrf_token %}
           <textarea id="question-input" name="question" required placeholder="Ask a question…">{{ starter_questions.0|default:"show me query examples" }}</textarea>
-          <button class="send" id="send-button" type="submit">Send</button>
+          <button class="send" id="send-button" type="submit" aria-label="Send question" title="Send question">
+            <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="m22 2-7 20-4-9-9-4Z"></path>
+              <path d="M22 2 11 13"></path>
+            </svg>
+            <span class="sr-only send-label">Send</span>
+          </button>
           <div class="composer-meta" id="composer-status"></div>
         </form>
       </section>
@@ -763,6 +1218,8 @@
     const form = document.getElementById("query-form");
     const input = document.getElementById("question-input");
     const sendButton = document.getElementById("send-button");
+    const sendButtonLabel = sendButton.querySelector(".send-label");
+    const clearChatButton = document.getElementById("clear-chat-button");
     const composerStatus = document.getElementById("composer-status");
     const starterList = document.getElementById("starter-list");
     const suggestionList = document.getElementById("suggestion-list");
@@ -771,10 +1228,11 @@
     const savedQueryStatus = document.getElementById("saved-query-status");
     const clearSavedQueriesButton = document.getElementById("clear-saved-queries");
     const scopeList = document.getElementById("scope-list");
-    const capabilitiesStatus = document.getElementById("capabilities-status");
     const capabilitiesList = document.getElementById("capabilities-list");
 
     const savedQueriesStorageKey = "django_asklens.saved_queries.v1";
+
+    const initialThreadMarkup = thread.innerHTML;
 
     let pendingSuggestionQuestion = "";
     let pendingSuggestionPlan = null;
@@ -787,8 +1245,13 @@
     }
 
     function setBusy(isBusy) {
+      const label = isBusy ? "Running query" : "Send question";
       sendButton.disabled = isBusy;
-      sendButton.textContent = isBusy ? "Running…" : "Send";
+      sendButton.setAttribute("aria-label", label);
+      sendButton.title = label;
+      if (sendButtonLabel) {
+        sendButtonLabel.textContent = label;
+      }
       form.setAttribute("aria-busy", String(isBusy));
       input.toggleAttribute("aria-busy", isBusy);
     }
@@ -876,6 +1339,12 @@
         pendingSuggestionQuestion = "";
         pendingSuggestionPlan = null;
       }
+    });
+
+    clearChatButton.addEventListener("click", () => {
+      thread.innerHTML = initialThreadMarkup;
+      setComposerStatus("Chat cleared.");
+      scrollThread();
     });
 
     form.addEventListener("submit", async (event) => {
@@ -1383,7 +1852,6 @@
       try {
         const capabilities = await fetchJson(capabilitiesUrl);
         const resources = capabilities.resources || [];
-        capabilitiesStatus.textContent = capabilities.summary || `${resources.length} resources visible.`;
         capabilitiesList.replaceChildren();
         resources.slice(0, 20).forEach((resource) => {
           const item = document.createElement("li");
@@ -1403,7 +1871,11 @@
           capabilitiesList.appendChild(item);
         }
       } catch (error) {
-        capabilitiesStatus.textContent = `Capabilities unavailable: ${error.message}`;
+        capabilitiesList.replaceChildren();
+        const item = document.createElement("li");
+        item.className = "empty";
+        item.textContent = `Capabilities unavailable: ${error.message}`;
+        capabilitiesList.appendChild(item);
       }
     }
 

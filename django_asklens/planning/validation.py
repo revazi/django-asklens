@@ -5,6 +5,7 @@ from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from typing import Any, Literal
 
+from django_asklens.catalog.introspection import resolve_field_path
 from django_asklens.catalog.registry import CatalogRegistry, default_registry
 from django_asklens.catalog.resources import (
     FieldSpec,
@@ -18,6 +19,7 @@ from django_asklens.exceptions import (
     UnknownMetricError,
 )
 from django_asklens.planning.schemas import (
+    FilterSpec,
     GroupBySpec,
     MetricSpec,
     OrderBySpec,
@@ -59,6 +61,7 @@ def validate_query_plan(
     validate_resource_permission(resource, permissions=permission_set)
     normalized_plan = plan.model_copy(update={"resource": resource.name})
     normalized_plan = normalize_visualization_date_trunc_aliases(normalized_plan)
+    normalized_plan = normalize_choice_filter_values(normalized_plan, resource=resource)
 
     validate_plan_shape(normalized_plan)
     normalized_plan = normalize_visualization_defaults(normalized_plan)
@@ -124,6 +127,108 @@ def validate_resource_permission(
         f"{resource.requires_permission!r}."
     )
     raise PermissionDeniedError(msg)
+
+
+def normalize_choice_filter_values(
+    plan: QueryPlan,
+    *,
+    resource: SemanticResource,
+) -> QueryPlan:
+    """Canonicalize filter values for registered Django choice fields.
+
+    LLM providers see field metadata, not database rows or sample values. For
+    Django ``choices`` fields, providers may naturally return the human label
+    (for example ``"Paid"``) or a case variant of the stored value
+    (``"paid"``) while the database stores the canonical choice value
+    (``"PAID"``). This normalization uses only model schema metadata and only
+    changes unambiguous choice-label/value matches.
+    """
+
+    filters = tuple(
+        normalize_choice_filter_value(filter_spec, resource=resource)
+        for filter_spec in plan.filters
+    )
+    if filters == plan.filters:
+        return plan
+    return plan.model_copy(update={"filters": filters})
+
+
+def normalize_choice_filter_value(
+    filter_spec: FilterSpec,
+    *,
+    resource: SemanticResource,
+) -> FilterSpec:
+    """Return a filter with canonical choice values when safely known."""
+
+    if filter_spec.op not in {"eq", "neq", "in"}:
+        return filter_spec
+    if filter_spec.field not in resource.fields:
+        return filter_spec
+
+    choice_lookup = build_choice_value_lookup(resource, filter_spec.field)
+    if not choice_lookup:
+        return filter_spec
+
+    if filter_spec.op == "in":
+        if not isinstance(filter_spec.value, list):
+            return filter_spec
+        normalized_value = [
+            normalize_choice_scalar(value, choice_lookup) for value in filter_spec.value
+        ]
+    else:
+        normalized_value = normalize_choice_scalar(filter_spec.value, choice_lookup)
+
+    if normalized_value == filter_spec.value:
+        return filter_spec
+    return filter_spec.model_copy(update={"value": normalized_value})
+
+
+def build_choice_value_lookup(
+    resource: SemanticResource,
+    field_name: str,
+) -> dict[str, object]:
+    """Return normalized choice label/value tokens for one field."""
+
+    field = resolve_field_path(resource.model, field_name).field
+    flat_choices = tuple(getattr(field, "flatchoices", ()) or ())
+    if not flat_choices:
+        return {}
+
+    lookup: dict[str, object] = {}
+    ambiguous: set[str] = set()
+    for choice_value, choice_label in flat_choices:
+        for candidate in (choice_value, choice_label):
+            token = choice_token(candidate)
+            if not token:
+                continue
+            existing = lookup.get(token)
+            if existing is not None and existing != choice_value:
+                ambiguous.add(token)
+                continue
+            lookup[token] = choice_value
+
+    for token in ambiguous:
+        lookup.pop(token, None)
+    return lookup
+
+
+def normalize_choice_scalar(
+    value: object, choice_lookup: Mapping[str, object]
+) -> object:
+    """Return the canonical choice value for a scalar when unambiguous."""
+
+    token = choice_token(value)
+    if not token:
+        return value
+    return choice_lookup.get(token, value)
+
+
+def choice_token(value: object) -> str:
+    """Return a conservative normalized token for a choice value/label."""
+
+    if not isinstance(value, str):
+        return ""
+    return re.sub(r"[\s_-]+", " ", value.strip().casefold())
 
 
 def normalize_visualization_defaults(plan: QueryPlan) -> QueryPlan:

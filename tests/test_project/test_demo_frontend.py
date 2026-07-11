@@ -134,11 +134,19 @@ def test_demo_frontend_renders_for_reporting_user() -> None:
     assert "Saved locally in this browser" in content
     assert "No saved queries yet" in content
     assert "Save query" in content
+    assert ">Clear</button>" in content
+    assert "Clear saved" not in content
     assert "AskLens is working" in content
-    assert "Running…" in content
+    assert 'id="clear-chat-button"' in content
+    assert "Clear chat" in content
+    assert 'aria-label="Send question"' in content
+    assert 'class="sr-only send-label"' in content
+    assert "Running…" not in content
     assert "Suggestions" in content
     assert "Starter questions" in content
     assert "Visible capabilities" in content
+    assert "Queryable resources" in content
+    assert "Only resources visible to this session are listed here" in content
     assert "Offline dummy plans" in content
     assert "dummy" in content
     assert "Show paid billing revenue by product" in content
@@ -150,6 +158,13 @@ def test_demo_frontend_renders_for_reporting_user() -> None:
     assert "Tenant row scope" in content
     assert "North Studio" in content
     assert "Raw response" in content
+    assert (
+        '<details class="card disclosure session-disclosure" '
+        'aria-label="Current session">' in content
+    )
+    assert 'class="tag-strip" aria-label="Session summary"' not in content
+    assert 'id="capabilities-status"' not in content
+    assert "capabilities.summary" not in content
     assert content.index("Session") < content.index("Tenant row scope")
     assert content.index("Tenant row scope") < content.index("Saved queries")
     assert content.index("Saved queries") < content.index("Suggestions")
@@ -196,4 +211,7 @@ def test_demo_frontend_renders_live_llm_status_without_secret() -> None:
     assert "Live LLM enabled" in content
     assert "openai_compatible" in content
     assert "test-model" in content
+    assert "<code>openai_compatible</code> · <code>test-model</code>" not in content
+    assert '<span class="pill"><code>openai_compatible</code></span>' in content
+    assert '<span class="pill"><code>test-model</code></span>' in content
     assert "secret-test-key" not in content

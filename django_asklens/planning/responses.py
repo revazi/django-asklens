@@ -43,9 +43,11 @@ model names, table names, permissions, SQL, code, or explanations.
 For response_type="query", return query_plan and omit query_help. QueryPlan
 must be read-only and use exact resource, field, metric, and date field names
 from capabilities. Use aggregate plans for counts, sums, averages, totals,
-trends, and "by ..." grouping questions. Use list plans only when the user asks
-to list records or fields. Result keys are exact select field names, group_by
-field names, and metric names. For date_trunc groupings, visualization axes and
+trends, and "by ..." grouping questions. Aggregate plans must put dimensions in
+group_by only and must not include select. Use list plans only when the user
+asks to list records or fields. List plans use select and must not include
+metrics or group_by. Result keys are exact select field names, group_by field
+names, and metric names. For date_trunc groupings, visualization axes and
 order_by fields must still reference the original group_by field name; never
 invent bucket aliases such as "start_date_month".
 
@@ -192,12 +194,63 @@ def parse_asklens_provider_response(
 ) -> AskLensProviderResponse:
     """Parse untrusted provider output into a strict unified response."""
 
-    payload = parse_plan_payload(raw_response)
+    payload = normalize_provider_response_payload(parse_plan_payload(raw_response))
     try:
         return AskLensProviderResponse.model_validate(payload)
     except ValidationError as exc:
         msg = format_pydantic_error(exc).replace("QueryPlan", "AskLensProviderResponse")
         raise PlanValidationError(msg) from exc
+
+
+def normalize_provider_response_payload(payload: Mapping[str, Any]) -> dict[str, Any]:
+    """Return a normalized copy of a compact provider response payload.
+
+    The compact live-provider schema cannot express conditional rules such as
+    "aggregate plans must not include select" without triggering provider schema
+    complexity limits. Some providers include group_by dimensions in select for
+    aggregate plans. That is redundant and not executable output shape, so we
+    drop only the safe duplicate case before normal QueryPlan validation. Any
+    aggregate select that is not already present in group_by is left intact and
+    rejected by the core validator.
+    """
+
+    normalized = dict(payload)
+    query_plan = normalized.get("query_plan")
+    if isinstance(query_plan, Mapping):
+        normalized["query_plan"] = normalize_compact_query_plan(query_plan)
+    return normalized
+
+
+def normalize_compact_query_plan(plan: Mapping[str, Any]) -> dict[str, Any]:
+    """Return a normalized copy of a compact provider query plan."""
+
+    normalized = dict(plan)
+    if normalized.get("intent") != "aggregate" or "select" not in normalized:
+        return normalized
+
+    select = normalized.get("select")
+    group_by = normalized.get("group_by")
+    if is_group_by_duplicate_select(select=select, group_by=group_by):
+        normalized.pop("select", None)
+    return normalized
+
+
+def is_group_by_duplicate_select(*, select: Any, group_by: Any) -> bool:
+    """Return whether aggregate select only repeats group_by result keys."""
+
+    if not isinstance(select, list):
+        return False
+    if not select:
+        return True
+    if not isinstance(group_by, list):
+        return False
+
+    group_fields = {
+        item.get("field")
+        for item in group_by
+        if isinstance(item, Mapping) and isinstance(item.get("field"), str)
+    }
+    return all(isinstance(item, str) and item in group_fields for item in select)
 
 
 def get_asklens_provider_response_json_schema() -> dict[str, Any]:

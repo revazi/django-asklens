@@ -188,7 +188,45 @@ def test_plan_asklens_response_validates_query_branch() -> None:
     assert provider.messages is not None
     prompt_text = "\n".join(message["content"] for message in provider.messages)
     assert "Visible capabilities metadata" in prompt_text
+    assert "Aggregate plans must put dimensions in" in prompt_text
+    assert "must not include select" in prompt_text
     assert "Catalog metadata" not in prompt_text
+
+
+def test_plan_asklens_response_drops_duplicate_aggregate_select() -> None:
+    """Live compact provider plans may repeat group_by fields in select."""
+
+    plan_payload = valid_query_plan_payload()
+    plan_payload["select"] = ["status"]
+    provider = UnifiedProvider({"response_type": "query", "query_plan": plan_payload})
+
+    result = plan_asklens_response(
+        "Show order count by status",
+        provider=provider,
+        registry=build_registry(),
+        capabilities=capabilities_payload(),
+    )
+
+    assert result.query_plan is not None
+    assert result.query_plan.intent == "aggregate"
+    assert result.query_plan.select == ()
+    assert result.query_plan.group_by[0].field == "status"
+
+
+def test_plan_asklens_response_rejects_non_duplicate_aggregate_select() -> None:
+    """Aggregate select remains invalid when it is not just group_by noise."""
+
+    plan_payload = valid_query_plan_payload()
+    plan_payload["select"] = ["created_at"]
+    provider = UnifiedProvider({"response_type": "query", "query_plan": plan_payload})
+
+    with pytest.raises(PlanValidationError, match="must not include select"):
+        plan_asklens_response(
+            "Show order count by status",
+            provider=provider,
+            registry=build_registry(),
+            capabilities=capabilities_payload(),
+        )
 
 
 def test_plan_asklens_response_synthesizes_help_suggestion_plans() -> None:
