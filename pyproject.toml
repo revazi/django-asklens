@@ -60,6 +60,14 @@ dependencies = [
     "pydantic>=2,<3",
 ]
 
+[project.urls]
+Homepage = "https://github.com/revazi/django-asklens"
+Documentation = "https://github.com/revazi/django-asklens/tree/main/docs"
+Repository = "https://github.com/revazi/django-asklens"
+Issues = "https://github.com/revazi/django-asklens/issues"
+Changelog = "https://github.com/revazi/django-asklens/blob/main/CHANGELOG.md"
+"Security Policy" = "https://github.com/revazi/django-asklens/security/policy"
+
 [dependency-groups]
 dev = [
     "build>=1",
