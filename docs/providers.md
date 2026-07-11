@@ -103,7 +103,7 @@ DJANGO_ASKLENS_LIVE_LLM_BASE_URL="https://api.openai.com/v1"
 
 The runnable complex demo project can also use the live provider by setting `DJANGO_ASKLENS_DEMO_LIVE_LLM=1` before starting `tests.test_project.demo_settings`. See [Runnable complex test project](test-project-demo.md).
 
-Live provider output must still pass strict schema parsing plus catalog/permission validation. Unified live query responses validate either the returned `QueryPlan` or the returned `QueryHelp` suggestions; help suggestions get executable plans synthesized and validated locally. Before public alpha, run the [private real-project integration](private-integration.md) plan against a real multi-tenant project.
+Live provider output must still pass strict schema parsing plus catalog/permission validation. Unified live query responses validate either the returned `QueryPlan` or the returned `QueryHelp` suggestions; help suggestions get executable plans synthesized and validated locally. Before production use, validate live provider behavior in a safe non-production environment that mirrors your permissions and tenant scoping.
 
 ## Safety notes
 

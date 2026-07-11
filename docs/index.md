@@ -13,11 +13,6 @@ Django AskLens is a pre-alpha reusable Django + DRF package for safe natural-lan
 - [Multi-tenant security](multitenancy-security.md)
 - [Evaluation fixtures](evaluation.md)
 - [Runnable complex test project](test-project-demo.md)
-- [Private real-project integration](private-integration.md)
-- [Private registration template](private-registration-template.md)
-- [Private permission matrix template](private-permission-matrix-template.md)
-- [Private evaluation plan](private-evaluation-plan.md)
-- [Private findings log](private-findings-log.md)
 - [Test matrix plan](test-matrix.md)
 - [Demo query ideas](demo-queries.md)
 
