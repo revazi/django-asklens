@@ -41,17 +41,117 @@ jobs:
       - name: Install dependencies
         run: uv sync --locked --group dev
 
-      - name: Run tests
-        run: uv run --no-sync pytest
-
       - name: Run Ruff lint
         run: uv run --no-sync ruff check .
 
       - name: Check formatting
         run: uv run --no-sync ruff format --check .
 
+      - name: Compile Python files
+        run: uv run --no-sync python -m compileall -q django_asklens tests
+
+      - name: Run Django system check
+        run: uv run --no-sync python -m django check --settings=tests.test_project.settings
+
+      - name: Check AskLens migrations are current
+        run: uv run --no-sync python -m django makemigrations asklens --check --dry-run --settings=tests.test_project.settings
+
+      - name: Run tests
+        run: uv run --no-sync pytest --strict-config --strict-markers
+
       - name: Build package
         run: uv run --no-sync python -m build
 
       - name: Check package metadata
         run: uv run --no-sync twine check dist/*
+
+      - name: Inspect package artifacts
+        run: |
+          uv run --no-sync python - <<'PY'
+          from pathlib import Path
+          import tarfile
+          import zipfile
+
+          dist = Path("dist")
+          wheels = sorted(dist.glob("django_asklens-*.whl"))
+          sdists = sorted(dist.glob("django_asklens-*.tar.gz"))
+          if len(wheels) != 1 or len(sdists) != 1:
+              raise SystemExit(f"Expected one wheel and one sdist, got {wheels=} {sdists=}")
+
+          with zipfile.ZipFile(wheels[0]) as wheel:
+              wheel_names = set(wheel.namelist())
+          with tarfile.open(sdists[0], "r:gz") as sdist:
+              sdist_names = set(sdist.getnames())
+
+          forbidden_fragments = ("alpha-readiness-plan", "private-")
+          for artifact_name, names in ((wheels[0].name, wheel_names), (sdists[0].name, sdist_names)):
+              forbidden = [
+                  name
+                  for name in names
+                  if any(fragment in name for fragment in forbidden_fragments)
+              ]
+              if forbidden:
+                  raise SystemExit(f"Forbidden local/private files in {artifact_name}: {forbidden}")
+
+          required_wheel_files = {
+              "django_asklens/__init__.py",
+              "django_asklens/api/views.py",
+              "django_asklens/templates/admin/django_asklens/asklensquery/change_list.html",
+              "django_asklens/templates/django_asklens/frontend/query.html",
+          }
+          missing_wheel_files = sorted(required_wheel_files - wheel_names)
+          if missing_wheel_files:
+              raise SystemExit(f"Missing expected wheel files: {missing_wheel_files}")
+
+          required_sdist_suffixes = {
+              "/README.md",
+              "/LICENSE",
+              "/docs/index.md",
+              "/docs/installation.md",
+              "/docs/providers.md",
+              "/docs/security-checklist.md",
+          }
+          missing_sdist_files = sorted(
+              suffix
+              for suffix in required_sdist_suffixes
+              if not any(name.endswith(suffix) for name in sdist_names)
+          )
+          if missing_sdist_files:
+              raise SystemExit(f"Missing expected sdist files: {missing_sdist_files}")
+          PY
+
+      - name: Smoke test wheel install
+        run: |
+          smoke_venv="$(mktemp -d)"
+          python -m venv "$smoke_venv"
+          "$smoke_venv/bin/python" -m pip install --upgrade pip
+          "$smoke_venv/bin/python" -m pip install dist/django_asklens-*.whl
+          "$smoke_venv/bin/python" - <<'PY'
+          import django
+          import django_asklens
+          from django.conf import settings
+          from django.core.management import call_command
+
+          assert django_asklens.__version__ == "0.1.0a0"
+
+          settings.configure(
+              SECRET_KEY="django-asklens-ci-smoke-test",
+              INSTALLED_APPS=[
+                  "django.contrib.auth",
+                  "django.contrib.contenttypes",
+                  "rest_framework",
+                  "django_asklens",
+              ],
+              DATABASES={
+                  "default": {
+                      "ENGINE": "django.db.backends.sqlite3",
+                      "NAME": ":memory:",
+                  }
+              },
+              MIDDLEWARE=[],
+              DEFAULT_AUTO_FIELD="django.db.models.BigAutoField",
+              USE_TZ=True,
+          )
+          django.setup()
+          call_command("check")
+          PY
