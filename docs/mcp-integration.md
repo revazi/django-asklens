@@ -1,6 +1,6 @@
 # MCP integration notes
 
-Status: AskLens ships dependency-free MCP adapter helpers and an `AskLensMCPToolSet` wrapper under `django_asklens.mcp`. Django AskLens does not currently ship a full MCP protocol transport, ASGI/SSE endpoint, or authentication layer. Host projects can register the wrapper with whichever MCP server implementation they choose.
+Status: AskLens ships dependency-free MCP adapter helpers, an `AskLensMCPToolSet` wrapper, and an optional FastMCP bridge under `django_asklens.mcp`. The repository also includes an opt-in ASGI/Uvicorn MCP endpoint for the runnable local test project. Django AskLens does not provide a production authentication layer; host projects remain responsible for authenticating MCP callers and mapping trusted server-side context to a Django request-like object.
 
 ## Why AskLens still matters with MCP
 
@@ -124,7 +124,9 @@ See [`examples/mcp/`](../examples/mcp/) for a generic registration sketch. The r
 
 ## Runnable test-project MCP endpoint
 
-The runnable test project can expose a real FastMCP Streamable HTTP endpoint for local testing with clients such as pi-codemcp. In this repository, FastMCP and Uvicorn are development dependencies installed by `uv sync --group dev`.
+The runnable test project can expose a real FastMCP Streamable HTTP endpoint for local testing with clients such as pi-codemcp. This ASGI/Uvicorn setup is a local one-port demo convenience: `/mcp` is served by FastMCP and normal Django routes, including admin, are mounted beside it.
+
+AskLens core does not require ASGI, Uvicorn, or FastMCP. Host projects may run their normal Django app/admin through `runserver`, WSGI, or their existing ASGI stack and expose MCP from a separate process or port. In this repository, FastMCP and Uvicorn are development dependencies installed by `uv sync --group dev`.
 
 Seed the demo database first:
 
@@ -133,7 +135,7 @@ uv run python -m django migrate --settings=tests.test_project.demo_settings
 uv run python -m django seed_complex_test_project --settings=tests.test_project.demo_settings
 ```
 
-Start the ASGI demo app with MCP enabled:
+Start the local ASGI demo app with MCP enabled:
 
 ```bash
 DJANGO_ASKLENS_MCP_ENABLED=1 \
@@ -147,7 +149,7 @@ The MCP endpoint is:
 http://127.0.0.1:8000/mcp
 ```
 
-The endpoint is mounted only when `DJANGO_ASKLENS_MCP_ENABLED=1` is set. The earlier local alias `DJANGO_ASKLENS_DEMO_MCP=1` is also accepted for compatibility.
+The endpoint is mounted only when `DJANGO_ASKLENS_MCP_ENABLED=1` is set. The earlier local alias `DJANGO_ASKLENS_DEMO_MCP=1` is also accepted for compatibility. If MCP is not enabled, use the normal Django development server described in the test-project demo guide.
 
 The demo MCP user is selected server-side by `DJANGO_ASKLENS_MCP_USERNAME`. Do not expose username or permission selection as MCP tool arguments. To expose the optional AskLens-managed question tool, set:
 
