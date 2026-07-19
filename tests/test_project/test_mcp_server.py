@@ -4,6 +4,7 @@ import asyncio
 from collections.abc import Iterator
 from datetime import UTC, datetime
 from decimal import Decimal
+from types import SimpleNamespace
 from typing import Any
 
 import pytest
@@ -12,6 +13,7 @@ from django.test import override_settings
 
 from django_asklens import Metric
 from django_asklens.catalog.registry import default_registry
+from django_asklens.mcp import AskLensMCPToolSet, create_fastmcp_server
 from tests.test_project.mcp_server import create_demo_asklens_mcp_server
 from tests.test_project.models import Customer, Order
 
@@ -123,6 +125,40 @@ def test_demo_fastmcp_server_registers_asklens_tools(
         "asklens_query_plan_schema",
         "asklens_validate_plan",
     ]
+
+
+def test_fastmcp_bridge_passes_context_to_toolset_request_factory(
+    mcp_server_settings: None,
+    registered_orders: None,
+    user,
+) -> None:
+    """FastMCP context reaches the host-provided request factory."""
+
+    seen_contexts: list[Any] = []
+
+    def request_factory(context: Any) -> Any:
+        seen_contexts.append(context)
+        return SimpleNamespace(
+            user=user,
+            asklens_permissions=frozenset(),
+            tenant_scope={},
+        )
+
+    async def run() -> dict[str, Any]:
+        toolset = AskLensMCPToolSet(
+            request_factory=request_factory,
+            include_query_plan_schema=False,
+            capabilities_resource_detail="summary",
+        )
+        server = create_fastmcp_server(toolset)
+        result = await server.call_tool("asklens_capabilities", {})
+        return result.structured_content
+
+    payload = asyncio.run(run())
+
+    assert payload["response_type"] == "capabilities"
+    assert len(seen_contexts) == 1
+    assert seen_contexts[0].__class__.__name__ == "Context"
 
 
 def test_demo_fastmcp_server_capabilities_are_compact_by_default(

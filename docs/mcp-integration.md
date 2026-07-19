@@ -118,6 +118,8 @@ If `expose_query_tool=True`, it also returns `asklens_query`. Keep this disabled
 
 The optional FastMCP bridge exposes compact capabilities by default: `asklens_capabilities()` omits the QueryPlan schema and summarizes each resource. MCP clients can then call `asklens_query_plan_schema()` and `asklens_describe_resource(resource)` only when they need those details.
 
+When using `create_fastmcp_server(toolset)`, FastMCP's injected `Context` is passed to `toolset.request_factory(context)`. Host projects can use that trusted server-side context to derive the Django user, tenant scope, or session metadata. Do not accept usernames or permission strings from client-controlled tool arguments.
+
 See [`examples/mcp/`](../examples/mcp/) for a generic registration sketch. The repository also includes a concrete, tested example in `tests/test_project/mcp.py` with coverage in `tests/test_project/test_mcp_example.py`; it uses an in-memory fake MCP server to demonstrate tool registration and calls without choosing a real transport dependency.
 
 ## Runnable test-project MCP endpoint
