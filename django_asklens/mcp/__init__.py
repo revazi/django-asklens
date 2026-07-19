@@ -12,14 +12,19 @@ from django_asklens.mcp.tools import (
     asklens_execute_plan,
     asklens_query,
     asklens_validate_plan,
+    mcp_row_return_allowed,
 )
+from django_asklens.mcp.wrappers import AskLensMCPToolSet, RequestFactory
 
 __all__ = [
     "DEFAULT_MCP_PLAN_QUESTION",
+    "AskLensMCPToolSet",
     "MCP_ROW_RETURN_POLICY",
+    "RequestFactory",
     "asklens_capabilities",
     "asklens_execute_plan",
     "asklens_query",
     "asklens_validate_plan",
     "apply_mcp_row_policy",
+    "mcp_row_return_allowed",
 ]
