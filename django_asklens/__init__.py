@@ -9,7 +9,7 @@ from django_asklens.catalog import (
     serialize_catalog,
 )
 
-__version__ = "0.1.0a0"
+__version__ = "0.1.0a1"
 
 __all__ = [
     "Metric",

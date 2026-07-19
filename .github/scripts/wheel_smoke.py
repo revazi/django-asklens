@@ -36,7 +36,7 @@ def smoke_core_install() -> None:
 
     import django_asklens
 
-    assert django_asklens.__version__ == "0.1.0a0"
+    assert django_asklens.__version__ == "0.1.0a1"
     configure_settings(installed_apps=["django_asklens"])
 
     from django_asklens.access import can_access_asklens

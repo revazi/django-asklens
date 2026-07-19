@@ -12,7 +12,7 @@ from django_asklens.settings import (
 
 
 def test_package_imports() -> None:
-    assert django_asklens.__version__ == "0.1.0a0"
+    assert django_asklens.__version__ == "0.1.0a1"
 
 
 def test_app_config_metadata() -> None:
