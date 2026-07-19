@@ -3,8 +3,8 @@
 from django.utils.module_loading import import_string
 from rest_framework.permissions import BasePermission
 
+from django_asklens.access import get_configured_permission_class_values
 from django_asklens.permissions import get_request_permissions
-from django_asklens.settings import get_asklens_setting
 
 __all__ = [
     "get_api_permission_classes",
@@ -16,12 +16,10 @@ __all__ = [
 def get_api_permission_classes() -> tuple[type[BasePermission], ...]:
     """Return configured DRF permission classes for AskLens API views."""
 
-    configured = get_asklens_setting("API_PERMISSION_CLASSES")
-    if not isinstance(configured, (list, tuple)):
-        msg = "DJANGO_ASKLENS['API_PERMISSION_CLASSES'] must be a list or tuple."
-        raise TypeError(msg)
-
-    return tuple(resolve_permission_class(value) for value in configured)
+    return tuple(
+        resolve_permission_class(value)
+        for value in get_configured_permission_class_values()
+    )
 
 
 def resolve_permission_class(value: str | type[BasePermission]) -> type[BasePermission]:

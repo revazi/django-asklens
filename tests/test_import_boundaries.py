@@ -16,6 +16,9 @@ settings.configure(
     INSTALLED_APPS=[
         "django.contrib.auth",
         "django.contrib.contenttypes",
+        "django.contrib.sessions",
+        "django.contrib.messages",
+        "django.contrib.admin",
         "django_asklens",
     ],
     DATABASES={{
@@ -51,6 +54,12 @@ if imported:
     assert result.returncode == 0, result.stderr or result.stdout
 
 
+def test_core_access_import_does_not_import_drf() -> None:
+    """Core access helpers should be independent of DRF imports."""
+
+    assert_import_does_not_import_drf("django_asklens.access")
+
+
 def test_core_permissions_import_does_not_import_drf() -> None:
     """Request permission helpers should be independent of DRF imports."""
 
@@ -61,3 +70,9 @@ def test_core_querying_import_does_not_import_drf() -> None:
     """Shared query orchestration should be independent of DRF imports."""
 
     assert_import_does_not_import_drf("django_asklens.querying")
+
+
+def test_admin_import_does_not_import_drf() -> None:
+    """Admin query helpers should not import DRF modules at import time."""
+
+    assert_import_does_not_import_drf("django_asklens.admin")

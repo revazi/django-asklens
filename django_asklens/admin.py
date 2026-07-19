@@ -10,8 +10,8 @@ from django.shortcuts import render
 from django.urls import reverse
 from django.utils.html import format_html
 
+from django_asklens.access import can_access_asklens
 from django_asklens.admin_querying import build_admin_result, execute_admin_query
-from django_asklens.api.permissions import get_api_permission_classes
 from django_asklens.models import AskLensQuery, SemanticQueryRun
 
 
@@ -93,8 +93,8 @@ class AskLensQueryAdmin(admin.ModelAdmin):
     def has_view_permission(self, request, obj=None) -> bool:
         """Allow staff users to open the query page.
 
-        Actual query execution is still checked against AskLens API permission
-        classes and request-derived field permissions.
+        Actual query execution is still checked against configured AskLens
+        permission gates and request-derived field permissions.
         """
 
         return bool(getattr(request.user, "is_staff", False))
@@ -144,12 +144,9 @@ class AskLensQueryAdmin(admin.ModelAdmin):
 
 
 def can_query_asklens_from_admin(request) -> bool:
-    """Return whether configured AskLens API permissions allow this request."""
+    """Return whether configured AskLens permission gates allow this request."""
 
-    return all(
-        permission_class().has_permission(request, None)
-        for permission_class in get_api_permission_classes()
-    )
+    return can_access_asklens(request)
 
 
 def admin_query_url(question: str = "") -> str:
