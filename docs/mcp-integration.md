@@ -32,7 +32,13 @@ Without AskLens, an MCP server that supports ad hoc analytics would still need t
 
 AskLens intentionally does not depend on a generic Django MCP package. Some generic implementations expose broad model/admin/DRF surfaces or depend on Django REST Framework, which conflicts with AskLens' optional-DRF core design and explicit semantic registration model.
 
-For now, MCP support lives in the main `django-asklens` package because it is AskLens-specific, lightweight, and dependency-free. A separate package such as `django-asklens-mcp` may make sense later if AskLens grows a full MCP transport/server integration with its own dependency cadence. It is not needed for the current wrapper layer.
+The dependency-free helpers live in the main `django-asklens` package. The optional FastMCP bridge is available through the `mcp` extra:
+
+```bash
+python -m pip install 'django-asklens[mcp]'
+```
+
+A separate package such as `django-asklens-mcp` may make sense later if AskLens grows a larger transport/server integration with its own dependency cadence. It is not needed for the current bridge layer.
 
 ## Adapter helpers
 
@@ -101,6 +107,62 @@ asklens_execute_plan
 If `expose_query_tool=True`, it also returns `asklens_query`. Keep this disabled unless you intentionally want a tool that may call the configured AskLens provider in non-dummy deployments.
 
 See [`examples/mcp/`](../examples/mcp/) for a generic registration sketch. The repository also includes a concrete, tested example in `tests/test_project/mcp.py` with coverage in `tests/test_project/test_mcp_example.py`; it uses an in-memory fake MCP server to demonstrate tool registration and calls without choosing a real transport dependency.
+
+## Runnable test-project MCP endpoint
+
+The runnable test project can expose a real FastMCP Streamable HTTP endpoint for local testing with clients such as pi-codemcp. In this repository, FastMCP and Uvicorn are development dependencies installed by `uv sync --group dev`.
+
+Seed the demo database first:
+
+```bash
+uv run python -m django migrate --settings=tests.test_project.demo_settings
+uv run python -m django seed_complex_test_project --settings=tests.test_project.demo_settings
+```
+
+Start the ASGI demo app with MCP enabled:
+
+```bash
+DJANGO_ASKLENS_MCP_ENABLED=1 \
+DJANGO_ASKLENS_MCP_USERNAME=facility-owner \
+uv run uvicorn tests.test_project.demo_asgi:application --reload --port 8000
+```
+
+The MCP endpoint is:
+
+```text
+http://127.0.0.1:8000/mcp
+```
+
+The endpoint is mounted only when `DJANGO_ASKLENS_MCP_ENABLED=1` is set. The earlier local alias `DJANGO_ASKLENS_DEMO_MCP=1` is also accepted for compatibility.
+
+The demo MCP user is selected server-side by `DJANGO_ASKLENS_MCP_USERNAME`. Do not expose username or permission selection as MCP tool arguments. To expose the optional AskLens-managed question tool, set:
+
+```bash
+DJANGO_ASKLENS_MCP_EXPOSE_QUERY=1
+```
+
+To allow row return through MCP, set:
+
+```bash
+DJANGO_ASKLENS_MCP_ALLOW_ROWS=1
+```
+
+Rows remain omitted unless both the tool call asks for rows and this environment flag enables `DJANGO_ASKLENS["MCP_ALLOW_ROW_RETURN"]`.
+
+For pi-codemcp, add a server like this to `~/.pi/agent/mcp.json`:
+
+```json
+{
+  "mcpServers": {
+    "asklens": {
+      "type": "http",
+      "url": "http://127.0.0.1:8000/mcp"
+    }
+  }
+}
+```
+
+Then reload CodeMCP in Pi with `/codemcp`, discover the `asklens` server, and search for AskLens tools.
 
 ## Planning modes
 

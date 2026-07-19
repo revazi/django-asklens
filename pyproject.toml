@@ -64,6 +64,9 @@ dependencies = [
 api = [
     "djangorestframework>=3.17,<4.0",
 ]
+mcp = [
+    "fastmcp>=3.4,<4",
+]
 
 [project.urls]
 Homepage = "https://github.com/revazi/django-asklens"
@@ -78,11 +81,13 @@ Changelog = "https://github.com/revazi/django-asklens/blob/main/CHANGELOG.md"
 dev = [
     "build>=1",
     "djangorestframework>=3.17,<4.0",
+    "fastmcp>=3.4,<4",
     "mypy>=1.13",
     "pytest>=8",
     "pytest-django>=4.9",
     "ruff>=0.8",
     "twine>=5",
+    "uvicorn>=0.35,<1",
 ]
 
 [tool.setuptools.packages.find]

@@ -10,6 +10,24 @@ BASE_DIR = Path(__file__).resolve().parents[2]
 ROOT_URLCONF = "tests.test_project.demo_urls"
 ALLOWED_HOSTS = ["127.0.0.1", "localhost", "[::1]", "testserver"]
 STATIC_URL = "static/"
+ASGI_APPLICATION = "tests.test_project.demo_asgi.application"
+
+
+def is_demo_mcp_enabled(environ=os.environ) -> bool:
+    """Return whether the local demo should mount its opt-in MCP endpoint."""
+
+    return (
+        environ.get("DJANGO_ASKLENS_MCP_ENABLED") == "1"
+        or environ.get("DJANGO_ASKLENS_DEMO_MCP") == "1"
+    )
+
+
+DJANGO_ASKLENS_MCP_ENABLED = is_demo_mcp_enabled()
+DJANGO_ASKLENS_MCP_USERNAME = os.environ.get("DJANGO_ASKLENS_MCP_USERNAME", "admin")
+DJANGO_ASKLENS_MCP_EXPOSE_QUERY = (
+    os.environ.get("DJANGO_ASKLENS_MCP_EXPOSE_QUERY") == "1"
+)
+DJANGO_ASKLENS_MCP_ALLOW_ROWS = os.environ.get("DJANGO_ASKLENS_MCP_ALLOW_ROWS") == "1"
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -268,6 +286,7 @@ def build_demo_asklens_settings(environ=os.environ) -> dict:
             "tests.test_project.permissions.get_request_permissions"
         ),
         "DUMMY_PLANS": DUMMY_PLANS,
+        "MCP_ALLOW_ROW_RETURN": environ.get("DJANGO_ASKLENS_MCP_ALLOW_ROWS") == "1",
     }
     if environ.get("DJANGO_ASKLENS_DEMO_LIVE_LLM") != "1":
         return asklens_settings

@@ -174,14 +174,73 @@ jobs:
 
           from django_asklens.access import can_access_asklens
           from django_asklens.catalog.registry import serialize_catalog
+          from django_asklens.mcp import AskLensMCPToolSet
           from django_asklens.planning import parse_query_plan
 
           request = SimpleNamespace(user=SimpleNamespace(is_authenticated=True))
           assert can_access_asklens(request) is True
           assert serialize_catalog()["resources"] == []
+          assert AskLensMCPToolSet(request_factory=lambda _context: request).tools()
           assert parse_query_plan(
               {"resource": "orders", "intent": "list", "select": [], "limit": 1}
           ).resource == "orders"
+          PY
+
+      - name: Smoke test MCP extra wheel install
+        run: |
+          smoke_venv="$(mktemp -d)"
+          python -m venv "$smoke_venv"
+          wheel="$(echo dist/django_asklens-*.whl)"
+          "$smoke_venv/bin/python" -m pip install --upgrade pip
+          "$smoke_venv/bin/python" -m pip install "${{ matrix.django-package }}"
+          "$smoke_venv/bin/python" -m pip install "${wheel}[mcp]"
+          DJANGO_VERSION_PREFIX="${{ matrix.django-version-prefix }}" "$smoke_venv/bin/python" - <<'PY'
+          import asyncio
+          import importlib.util
+          import os
+          from types import SimpleNamespace
+
+          import django
+          from django.conf import settings
+          from django.core.management import call_command
+
+          assert django.get_version().startswith(os.environ["DJANGO_VERSION_PREFIX"])
+          assert importlib.util.find_spec("fastmcp") is not None
+          assert importlib.util.find_spec("rest_framework") is None
+
+          settings.configure(
+              SECRET_KEY="django-asklens-ci-mcp-smoke-test",
+              INSTALLED_APPS=[
+                  "django.contrib.auth",
+                  "django.contrib.contenttypes",
+                  "django_asklens",
+              ],
+              DATABASES={
+                  "default": {
+                      "ENGINE": "django.db.backends.sqlite3",
+                      "NAME": ":memory:",
+                  }
+              },
+              MIDDLEWARE=[],
+              DEFAULT_AUTO_FIELD="django.db.models.BigAutoField",
+              USE_TZ=True,
+          )
+          django.setup()
+          call_command("check")
+
+          from django_asklens.mcp import AskLensMCPToolSet, create_fastmcp_server
+
+          request = SimpleNamespace(
+              user=SimpleNamespace(is_authenticated=True, get_all_permissions=lambda: set())
+          )
+          toolset = AskLensMCPToolSet(request_factory=lambda _context: request)
+          server = create_fastmcp_server(toolset)
+          tools = asyncio.run(server.list_tools())
+          assert {tool.name for tool in tools} == {
+              "asklens_capabilities",
+              "asklens_validate_plan",
+              "asklens_execute_plan",
+          }
           PY
 
       - name: Smoke test API extra wheel install

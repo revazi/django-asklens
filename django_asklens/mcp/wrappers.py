@@ -10,7 +10,7 @@ from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from typing import Any
 
-from django_asklens.mcp.tools import (
+from django_asklens.mcp.core import (
     DEFAULT_MCP_PLAN_QUESTION,
     asklens_capabilities,
     asklens_execute_plan,

@@ -4,7 +4,7 @@ This package intentionally does not import an MCP SDK. Host projects can wrap
 these functions with whichever Django-aware MCP server they use.
 """
 
-from django_asklens.mcp.tools import (
+from django_asklens.mcp.core import (
     DEFAULT_MCP_PLAN_QUESTION,
     MCP_ROW_RETURN_POLICY,
     apply_mcp_row_policy,
@@ -14,11 +14,13 @@ from django_asklens.mcp.tools import (
     asklens_validate_plan,
     mcp_row_return_allowed,
 )
+from django_asklens.mcp.fastmcp import create_fastmcp_server
 from django_asklens.mcp.wrappers import AskLensMCPToolSet, RequestFactory
 
 __all__ = [
     "DEFAULT_MCP_PLAN_QUESTION",
     "AskLensMCPToolSet",
+    "create_fastmcp_server",
     "MCP_ROW_RETURN_POLICY",
     "RequestFactory",
     "asklens_capabilities",
