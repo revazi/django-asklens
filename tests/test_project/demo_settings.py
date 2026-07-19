@@ -13,21 +13,28 @@ STATIC_URL = "static/"
 ASGI_APPLICATION = "tests.test_project.demo_asgi.application"
 
 
+def env_flag(environ, name: str) -> bool:
+    """Return whether a demo environment flag is explicitly enabled."""
+
+    return environ.get(name) == "1"
+
+
 def is_demo_mcp_enabled(environ=os.environ) -> bool:
     """Return whether the local demo should mount its opt-in MCP endpoint."""
 
-    return (
-        environ.get("DJANGO_ASKLENS_MCP_ENABLED") == "1"
-        or environ.get("DJANGO_ASKLENS_DEMO_MCP") == "1"
+    return env_flag(environ, "DJANGO_ASKLENS_MCP_ENABLED") or env_flag(
+        environ,
+        "DJANGO_ASKLENS_DEMO_MCP",
     )
 
 
 DJANGO_ASKLENS_MCP_ENABLED = is_demo_mcp_enabled()
 DJANGO_ASKLENS_MCP_USERNAME = os.environ.get("DJANGO_ASKLENS_MCP_USERNAME", "admin")
-DJANGO_ASKLENS_MCP_EXPOSE_QUERY = (
-    os.environ.get("DJANGO_ASKLENS_MCP_EXPOSE_QUERY") == "1"
+DJANGO_ASKLENS_MCP_EXPOSE_QUERY = env_flag(
+    os.environ,
+    "DJANGO_ASKLENS_MCP_EXPOSE_QUERY",
 )
-DJANGO_ASKLENS_MCP_ALLOW_ROWS = os.environ.get("DJANGO_ASKLENS_MCP_ALLOW_ROWS") == "1"
+DJANGO_ASKLENS_MCP_ALLOW_ROWS = env_flag(os.environ, "DJANGO_ASKLENS_MCP_ALLOW_ROWS")
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -286,9 +293,9 @@ def build_demo_asklens_settings(environ=os.environ) -> dict:
             "tests.test_project.permissions.get_request_permissions"
         ),
         "DUMMY_PLANS": DUMMY_PLANS,
-        "MCP_ALLOW_ROW_RETURN": environ.get("DJANGO_ASKLENS_MCP_ALLOW_ROWS") == "1",
+        "MCP_ALLOW_ROW_RETURN": env_flag(environ, "DJANGO_ASKLENS_MCP_ALLOW_ROWS"),
     }
-    if environ.get("DJANGO_ASKLENS_DEMO_LIVE_LLM") != "1":
+    if not env_flag(environ, "DJANGO_ASKLENS_DEMO_LIVE_LLM"):
         return asklens_settings
 
     asklens_settings.update(
@@ -307,7 +314,7 @@ def build_demo_asklens_settings(environ=os.environ) -> dict:
             "LLM_TEMPERATURE": float(
                 environ.get("DJANGO_ASKLENS_LIVE_LLM_TEMPERATURE", "0")
             ),
-            "LOG_LLM_IO": environ.get("DJANGO_ASKLENS_LIVE_LLM_LOG_IO") == "1",
+            "LOG_LLM_IO": env_flag(environ, "DJANGO_ASKLENS_LIVE_LLM_LOG_IO"),
         }
     )
     return asklens_settings
