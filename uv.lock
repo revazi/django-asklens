@@ -292,7 +292,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "django", specifier = ">=6.0,<7.0" },
+    { name = "django", specifier = ">=5.2,<7.0" },
     { name = "djangorestframework", marker = "extra == 'api'", specifier = ">=3.17,<4.0" },
     { name = "pydantic", specifier = ">=2,<3" },
 ]
