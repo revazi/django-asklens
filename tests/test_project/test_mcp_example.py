@@ -141,17 +141,27 @@ def test_test_project_registers_asklens_tools_on_mcp_server(
 
     assert sorted(server.tools) == [
         "asklens_capabilities",
+        "asklens_describe_resource",
         "asklens_execute_plan",
+        "asklens_query_plan_schema",
         "asklens_validate_plan",
     ]
 
     context = AskLensTestMCPContext(user=user)
     payload = server.call_tool("asklens_capabilities", context)
+    schema = server.call_tool("asklens_query_plan_schema", context)
+    resource_description = server.call_tool(
+        "asklens_describe_resource",
+        context,
+        resource="orders",
+    )
 
     assert payload["response_type"] == "capabilities"
     assert payload["executed"] is False
     assert payload["rows_omitted"] is True
     assert "query_plan_schema" in payload
+    assert schema["response_type"] == "query_plan_schema"
+    assert resource_description["valid"] is True
     [resource] = payload["capabilities"]["resources"]
     assert {field["name"] for field in resource["fields"]} == {
         "id",

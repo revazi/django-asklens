@@ -8,13 +8,13 @@ AskLens intentionally does not depend on a generic Django MCP package or Django 
 - authenticating the MCP caller;
 - mapping the caller to a Django user or request-like object;
 - deriving any tenant/role permission strings from trusted server-side context; and
-- deciding whether row return should be enabled with `DJANGO_ASKLENS["MCP_ALLOW_ROW_RETURN"]`.
+- deciding whether row return should be enabled with `DJANGO_ASKLENS["MCP_ALLOW_ROW_RETURN"]` and capped with `DJANGO_ASKLENS["MCP_MAX_RETURNED_ROWS"]`.
 
 Use `AskLensMCPToolSet` when your MCP library can register existing Python callables. Use the lower-level functions in `django_asklens.mcp` when your MCP framework has a different calling convention.
 
-For a runnable repository example, see `tests/test_project/mcp.py` and `tests/test_project/test_mcp_example.py`. They use an in-memory fake MCP server to show registration, context-to-request mapping, server-derived permissions, plan validation, execution, row omission, and the opt-in `asklens_query` tool.
+For a runnable repository example, see `tests/test_project/mcp.py` and `tests/test_project/test_mcp_example.py`. They use an in-memory fake MCP server to show registration, context-to-request mapping, server-derived permissions, compact capabilities, schema/resource-detail lookup, plan validation, execution, row omission, and the opt-in `asklens_query` tool.
 
-For a real local MCP endpoint, start the demo ASGI app with:
+For a real local MCP endpoint in this repository, start the demo ASGI app with MCP enabled. This is only a local one-port demo convenience; host projects can run MCP separately from their normal Django admin/web server.
 
 ```bash
 DJANGO_ASKLENS_MCP_ENABLED=1 \
@@ -22,4 +22,4 @@ DJANGO_ASKLENS_MCP_USERNAME=facility-owner \
 uv run uvicorn tests.test_project.demo_asgi:application --reload --port 8000
 ```
 
-Then point an MCP client at `http://127.0.0.1:8000/mcp` using Streamable HTTP.
+Then point an MCP client at `http://127.0.0.1:8000/mcp` using Streamable HTTP. If you are only testing the Django admin or demo frontend, use the normal Django `runserver` flow instead.

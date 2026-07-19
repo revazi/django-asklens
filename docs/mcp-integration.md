@@ -1,6 +1,6 @@
 # MCP integration notes
 
-Status: AskLens ships dependency-free MCP adapter helpers and an `AskLensMCPToolSet` wrapper under `django_asklens.mcp`. Django AskLens does not currently ship a full MCP protocol transport, ASGI/SSE endpoint, or authentication layer. Host projects can register the wrapper with whichever MCP server implementation they choose.
+Status: AskLens ships dependency-free MCP adapter helpers, an `AskLensMCPToolSet` wrapper, and an optional FastMCP bridge under `django_asklens.mcp`. The repository also includes an opt-in ASGI/Uvicorn MCP endpoint for the runnable local test project. Django AskLens does not provide a production authentication layer; host projects remain responsible for authenticating MCP callers and mapping trusted server-side context to a Django request-like object.
 
 ## Why AskLens still matters with MCP
 
@@ -47,8 +47,10 @@ AskLens provides lower-level helpers that can be wrapped as MCP tools:
 ```python
 from django_asklens.mcp import (
     asklens_capabilities,
+    asklens_describe_resource,
     asklens_execute_plan,
     asklens_query,
+    asklens_query_plan_schema,
     asklens_validate_plan,
 )
 ```
@@ -56,13 +58,19 @@ from django_asklens.mcp import (
 Suggested MCP tool mapping:
 
 ```text
-asklens_capabilities()
+asklens_capabilities(include_query_plan_schema=false, resource_detail="summary")
+asklens_query_plan_schema()
+asklens_describe_resource(resource)
 asklens_validate_plan(plan)
 asklens_execute_plan(plan, include_rows=false)
 asklens_query(question, include_rows=false)  # optional convenience tool
 ```
 
-`asklens_capabilities(request)` returns permission-scoped metadata only: visible resources, fields, metrics, supported patterns, limitations, example questions, and the `QueryPlan` JSON schema. It does not return database rows or sample values, execute a query, or call an LLM provider.
+`asklens_capabilities(request)` returns permission-scoped metadata only: visible resources, fields, metrics, supported patterns, limitations, example questions, and optionally the `QueryPlan` JSON schema. It does not return database rows or sample values, execute a query, or call an LLM provider. For MCP transports, prefer `resource_detail="summary"` and `include_query_plan_schema=False` during discovery to keep tool output compact.
+
+`asklens_query_plan_schema(request)` returns the QueryPlan JSON schema without repeating catalog capabilities.
+
+`asklens_describe_resource(request, resource)` returns full permission-scoped metadata for one visible resource. Use this after compact discovery and before constructing a QueryPlan for a specific resource.
 
 `asklens_validate_plan(request, plan)` validates a client-produced plan against the current catalog, permissions, settings, and safety rules without executing a database query or creating an audit row.
 
@@ -100,17 +108,25 @@ tools = toolset.tools()
 
 ```text
 asklens_capabilities
+asklens_query_plan_schema
+asklens_describe_resource
 asklens_validate_plan
 asklens_execute_plan
 ```
 
 If `expose_query_tool=True`, it also returns `asklens_query`. Keep this disabled unless you intentionally want a tool that may call the configured AskLens provider in non-dummy deployments.
 
+The optional FastMCP bridge exposes compact capabilities by default: `asklens_capabilities()` omits the QueryPlan schema and summarizes each resource. MCP clients can then call `asklens_query_plan_schema()` and `asklens_describe_resource(resource)` only when they need those details.
+
+When using `create_fastmcp_server(toolset)`, FastMCP's injected `Context` is passed to `toolset.request_factory(context)`. Host projects can use that trusted server-side context to derive the Django user, tenant scope, or session metadata. Do not accept usernames or permission strings from client-controlled tool arguments.
+
 See [`examples/mcp/`](../examples/mcp/) for a generic registration sketch. The repository also includes a concrete, tested example in `tests/test_project/mcp.py` with coverage in `tests/test_project/test_mcp_example.py`; it uses an in-memory fake MCP server to demonstrate tool registration and calls without choosing a real transport dependency.
 
 ## Runnable test-project MCP endpoint
 
-The runnable test project can expose a real FastMCP Streamable HTTP endpoint for local testing with clients such as pi-codemcp. In this repository, FastMCP and Uvicorn are development dependencies installed by `uv sync --group dev`.
+The runnable test project can expose a real FastMCP Streamable HTTP endpoint for local testing with clients such as pi-codemcp. This ASGI/Uvicorn setup is a local one-port demo convenience: `/mcp` is served by FastMCP and normal Django routes, including admin, are mounted beside it.
+
+AskLens core does not require ASGI, Uvicorn, or FastMCP. Host projects may run their normal Django app/admin through `runserver`, WSGI, or their existing ASGI stack and expose MCP from a separate process or port. In this repository, FastMCP and Uvicorn are development dependencies installed by `uv sync --group dev`.
 
 Seed the demo database first:
 
@@ -119,7 +135,7 @@ uv run python -m django migrate --settings=tests.test_project.demo_settings
 uv run python -m django seed_complex_test_project --settings=tests.test_project.demo_settings
 ```
 
-Start the ASGI demo app with MCP enabled:
+Start the local ASGI demo app with MCP enabled:
 
 ```bash
 DJANGO_ASKLENS_MCP_ENABLED=1 \
@@ -133,7 +149,7 @@ The MCP endpoint is:
 http://127.0.0.1:8000/mcp
 ```
 
-The endpoint is mounted only when `DJANGO_ASKLENS_MCP_ENABLED=1` is set. The earlier local alias `DJANGO_ASKLENS_DEMO_MCP=1` is also accepted for compatibility.
+The endpoint is mounted only when `DJANGO_ASKLENS_MCP_ENABLED=1` is set. The earlier local alias `DJANGO_ASKLENS_DEMO_MCP=1` is also accepted for compatibility. If MCP is not enabled, use the normal Django development server described in the test-project demo guide.
 
 The demo MCP user is selected server-side by `DJANGO_ASKLENS_MCP_USERNAME`. Do not expose username or permission selection as MCP tool arguments. To expose the optional AskLens-managed question tool, set:
 
@@ -223,10 +239,15 @@ There are two gates for row return:
 ```python
 DJANGO_ASKLENS = {
     "MCP_ALLOW_ROW_RETURN": True,
+    "MCP_MAX_RETURNED_ROWS": 100,
 }
 ```
 
 If `include_rows=True` is requested while `MCP_ALLOW_ROW_RETURN` is false, AskLens still omits rows and returns `row_return_denied: true`.
+
+When rows are allowed, `MCP_MAX_RETURNED_ROWS` caps only the MCP tool payload. AskLens still executes the validated query through its normal row limits and audit path, and `row_count` still describes the executed result. If the MCP payload is capped, the response includes `mcp_rows_truncated: true`, `mcp_row_limit`, and `mcp_returned_row_count`.
+
+`MCP_MAX_RETURNED_ROWS` is not pagination. Today, an MCP client that needs more rows should ask a narrower follow-up query, use exposed fields for stable filters such as “after this id/date” where appropriate, or the host project must intentionally raise the MCP row cap. First-class “next page” behavior should be added after AskLens core has safe pagination/cursor semantics.
 
 ## Request and permission mapping
 

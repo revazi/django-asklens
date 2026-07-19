@@ -4,6 +4,7 @@ import asyncio
 from collections.abc import Iterator
 from datetime import UTC, datetime
 from decimal import Decimal
+from types import SimpleNamespace
 from typing import Any
 
 import pytest
@@ -12,6 +13,7 @@ from django.test import override_settings
 
 from django_asklens import Metric
 from django_asklens.catalog.registry import default_registry
+from django_asklens.mcp import AskLensMCPToolSet, create_fastmcp_server
 from tests.test_project.mcp_server import create_demo_asklens_mcp_server
 from tests.test_project.models import Customer, Order
 
@@ -118,9 +120,97 @@ def test_demo_fastmcp_server_registers_asklens_tools(
 
     assert asyncio.run(run()) == [
         "asklens_capabilities",
+        "asklens_describe_resource",
         "asklens_execute_plan",
+        "asklens_query_plan_schema",
         "asklens_validate_plan",
     ]
+
+
+def test_fastmcp_bridge_passes_context_to_toolset_request_factory(
+    mcp_server_settings: None,
+    registered_orders: None,
+    user,
+) -> None:
+    """FastMCP context reaches the host-provided request factory."""
+
+    seen_contexts: list[Any] = []
+
+    def request_factory(context: Any) -> Any:
+        seen_contexts.append(context)
+        return SimpleNamespace(
+            user=user,
+            asklens_permissions=frozenset(),
+            tenant_scope={},
+        )
+
+    async def run() -> dict[str, Any]:
+        toolset = AskLensMCPToolSet(
+            request_factory=request_factory,
+            include_query_plan_schema=False,
+            capabilities_resource_detail="summary",
+        )
+        server = create_fastmcp_server(toolset)
+        result = await server.call_tool("asklens_capabilities", {})
+        return result.structured_content
+
+    payload = asyncio.run(run())
+
+    assert payload["response_type"] == "capabilities"
+    assert len(seen_contexts) == 1
+    assert seen_contexts[0].__class__.__name__ == "Context"
+
+
+def test_demo_fastmcp_server_capabilities_are_compact_by_default(
+    mcp_server_settings: None,
+    registered_orders: None,
+) -> None:
+    """FastMCP capability discovery stays compact for MCP clients."""
+
+    async def run() -> dict[str, Any]:
+        server = create_demo_asklens_mcp_server()
+        result = await server.call_tool("asklens_capabilities", {})
+        return result.structured_content
+
+    payload = asyncio.run(run())
+
+    assert payload["response_type"] == "capabilities"
+    assert "query_plan_schema" not in payload
+    [resource] = payload["capabilities"]["resources"]
+    assert resource["field_names"] == ["id", "status", "created_at"]
+    assert resource["metric_names"] == ["order_count"]
+    assert "fields" not in resource
+
+
+def test_demo_fastmcp_server_exposes_schema_and_resource_description_tools(
+    mcp_server_settings: None,
+    registered_orders: None,
+) -> None:
+    """FastMCP clients can fetch schema/resource details separately."""
+
+    async def run() -> dict[str, Any]:
+        server = create_demo_asklens_mcp_server()
+        schema = await server.call_tool("asklens_query_plan_schema", {})
+        resource = await server.call_tool(
+            "asklens_describe_resource",
+            {"resource": "orders"},
+        )
+        return {
+            "schema": schema.structured_content,
+            "resource": resource.structured_content,
+        }
+
+    payload = asyncio.run(run())
+
+    assert payload["schema"]["response_type"] == "query_plan_schema"
+    assert payload["schema"]["query_plan_schema"]["title"] == "QueryPlan"
+    assert payload["resource"]["response_type"] == "resource_description"
+    assert payload["resource"]["valid"] is True
+    assert {field["name"] for field in payload["resource"]["resource"]["fields"]} == {
+        "id",
+        "status",
+        "created_at",
+    }
 
 
 def test_demo_fastmcp_server_executes_asklens_plan_without_rows_by_default(

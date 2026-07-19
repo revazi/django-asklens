@@ -11,6 +11,15 @@ def test_demo_logging_routes_asklens_logs_to_console() -> None:
     assert demo_settings.LOGGING["loggers"]["django_asklens"]["handlers"] == ["console"]
 
 
+def test_demo_env_flag_requires_explicit_one() -> None:
+    """Demo boolean env helpers only treat string 1 as enabled."""
+
+    assert demo_settings.env_flag({}, "FEATURE") is False
+    assert demo_settings.env_flag({"FEATURE": "0"}, "FEATURE") is False
+    assert demo_settings.env_flag({"FEATURE": "true"}, "FEATURE") is False
+    assert demo_settings.env_flag({"FEATURE": "1"}, "FEATURE") is True
+
+
 def test_demo_asklens_settings_default_to_dummy_backend() -> None:
     """The runnable demo must not call live providers by default."""
 

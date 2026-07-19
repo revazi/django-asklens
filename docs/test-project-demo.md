@@ -4,7 +4,7 @@ The source repository includes a synthetic Django test project with complex tena
 
 ## Start the admin/demo server
 
-Use the demo settings module so admin, sessions, templates, and a local SQLite database are enabled.
+Use the demo settings module so admin, sessions, templates, and a local SQLite database are enabled. For normal admin/frontend testing, use Django's development server:
 
 ```bash
 DJANGO_SETTINGS_MODULE=tests.test_project.demo_settings \
@@ -126,6 +126,40 @@ These credentials are for the local synthetic demo project only. Do not reuse th
 The small seed command creates a richer synthetic dataset for each base facility, including role groups, staff assignments/grants, multiple plans, members, status histories, subscriptions, six months of billing documents, varied billing lines, payment outcomes, marketing campaigns, lead funnel rows, locations, staff shifts, session types, scheduled sessions, bookings/attendance, and support tickets. Medium/large profiles use bulk-created synthetic rows over the same domain tables to validate AskLens behavior on larger tenant and row counts.
 
 The local database file is `.asklens-test-project.sqlite3` and is ignored by git.
+
+## Optional local MCP endpoint
+
+The repository can also expose the runnable demo through a real FastMCP Streamable HTTP endpoint for local MCP-client testing. This uses Uvicorn/ASGI only as a local one-port convenience so `/mcp` and the normal Django demo/admin routes share `127.0.0.1:8000`.
+
+AskLens core and the normal admin/frontend demo do not require ASGI, Uvicorn, or FastMCP. If you are not testing MCP, prefer the `runserver` command above. Host projects can also run an MCP server separately from their normal Django web/admin process.
+
+After migrating and seeding, start the MCP-enabled demo app with:
+
+```bash
+DJANGO_ASKLENS_MCP_ENABLED=1 \
+DJANGO_ASKLENS_MCP_USERNAME=facility-owner \
+uv run uvicorn tests.test_project.demo_asgi:application --host 127.0.0.1 --port 8000
+```
+
+The MCP endpoint is:
+
+```text
+http://127.0.0.1:8000/mcp
+```
+
+Rows remain omitted from MCP tool results unless row return is explicitly enabled:
+
+```bash
+DJANGO_ASKLENS_MCP_ALLOW_ROWS=1
+```
+
+To expose the optional provider-backed `asklens_query` MCP tool, set:
+
+```bash
+DJANGO_ASKLENS_MCP_EXPOSE_QUERY=1
+```
+
+Keep the MCP username and permission mapping server-side; do not expose username or permission selection as MCP tool arguments.
 
 ## AskLens frontend demo
 

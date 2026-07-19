@@ -1,137 +1,19 @@
-"""Tests for framework-neutral MCP adapter helpers."""
-
-from collections.abc import Iterator
-from datetime import UTC, datetime
-from decimal import Decimal
-from types import SimpleNamespace
-from typing import Any
+"""Tests for framework-neutral MCP core helpers."""
 
 import pytest
-from django.contrib.auth import get_user_model
 
-from django_asklens import Metric
-from django_asklens.catalog.registry import default_registry
 from django_asklens.mcp import (
-    AskLensMCPToolSet,
     asklens_capabilities,
+    asklens_describe_resource,
     asklens_execute_plan,
     asklens_query,
+    asklens_query_plan_schema,
     asklens_validate_plan,
 )
 from django_asklens.models import SemanticQueryRun
-from tests.test_project.models import Customer, Order
+from tests.mcp._support import sensitive_list_plan, valid_aggregate_plan
 
 pytestmark = pytest.mark.django_db
-
-
-@pytest.fixture(autouse=True)
-def clear_default_registry() -> Iterator[None]:
-    """Keep MCP adapter tests isolated from global catalog state."""
-
-    default_registry.clear()
-    yield
-    default_registry.clear()
-
-
-@pytest.fixture
-def user():
-    """Return an authenticated user for request-like MCP contexts."""
-
-    return get_user_model().objects.create_user(username="mcp-user", password="pw")
-
-
-@pytest.fixture
-def mcp_request(settings, user):
-    """Return a request-like object with MCP-mapped permission strings."""
-
-    settings.DJANGO_ASKLENS = {
-        "REQUEST_PERMISSIONS_GETTER": lambda request: getattr(
-            request,
-            "asklens_permissions",
-            (),
-        ),
-        "DUMMY_PLANS": {"Show orders by status": valid_aggregate_plan()},
-    }
-    return SimpleNamespace(user=user, asklens_permissions=frozenset())
-
-
-@pytest.fixture
-def registered_orders() -> None:
-    """Register an order resource with a permission-gated sensitive field."""
-
-    default_registry.register(
-        model=Order,
-        name="orders",
-        label="Orders",
-        fields={
-            "id": {"label": "Order ID"},
-            "status": {"label": "Status"},
-            "created_at": {"label": "Created date"},
-            "customer.email": {
-                "label": "Customer email",
-                "sensitive": True,
-                "requires_permission": "shop.view_customer_pii",
-            },
-        },
-        metrics=[Metric("order_count", op="count", field="id")],
-    )
-
-
-@pytest.fixture
-def order_data() -> None:
-    """Create deterministic order rows for MCP execution tests."""
-
-    customer = Customer.objects.create(name="Alice", email="alice@example.com")
-    Order.objects.create(
-        customer=customer,
-        status="paid",
-        created_at=aware_datetime(2026, 1, 5),
-        total=Decimal("100.00"),
-    )
-    Order.objects.create(
-        customer=customer,
-        status="paid",
-        created_at=aware_datetime(2026, 1, 6),
-        total=Decimal("50.00"),
-    )
-    Order.objects.create(
-        customer=customer,
-        status="pending",
-        created_at=aware_datetime(2026, 1, 7),
-        total=Decimal("75.00"),
-    )
-
-
-def aware_datetime(year: int, month: int, day: int) -> datetime:
-    """Return a UTC-aware datetime for fixtures."""
-
-    return datetime(year, month, day, 12, 0, tzinfo=UTC)
-
-
-def valid_aggregate_plan() -> dict[str, Any]:
-    """Return a deterministic aggregate QueryPlan payload."""
-
-    return {
-        "resource": "orders",
-        "intent": "aggregate",
-        "group_by": [{"field": "status"}],
-        "metrics": [{"name": "order_count", "op": "count", "field": "id"}],
-        "order_by": [{"metric": "order_count", "direction": "desc"}],
-        "limit": 10,
-        "visualization": {"type": "bar", "x": "status", "y": "order_count"},
-    }
-
-
-def sensitive_list_plan() -> dict[str, Any]:
-    """Return a plan that requires the customer PII permission."""
-
-    return {
-        "resource": "orders",
-        "intent": "list",
-        "select": ["customer.email"],
-        "limit": 10,
-        "visualization": {"type": "table"},
-    }
 
 
 def test_mcp_capabilities_are_permission_scoped(
@@ -160,6 +42,103 @@ def test_mcp_capabilities_are_permission_scoped(
     [resource] = payload_with_pii_permission["capabilities"]["resources"]
     assert "customer.email" in {field["name"] for field in resource["fields"]}
     assert "alice@example.com" not in str(payload_with_pii_permission)
+
+
+def test_mcp_capabilities_can_return_compact_resource_summaries(
+    registered_orders: None,
+    mcp_request,
+) -> None:
+    """Compact capabilities keep MCP discovery payloads small."""
+
+    payload = asklens_capabilities(
+        mcp_request,
+        include_query_plan_schema=False,
+        resource_detail="summary",
+    )
+
+    assert payload["response_type"] == "capabilities"
+    assert "query_plan_schema" not in payload
+    [resource] = payload["capabilities"]["resources"]
+    assert resource["field_names"] == ["id", "status", "created_at"]
+    assert resource["metric_names"] == ["order_count"]
+    assert "fields" not in resource
+    assert payload["capabilities"]["resource_detail"] == "summary"
+
+
+def test_mcp_capabilities_reject_invalid_resource_detail(
+    registered_orders: None,
+    mcp_request,
+) -> None:
+    """Untrusted MCP capability arguments fail closed."""
+
+    payload = asklens_capabilities(mcp_request, resource_detail="verbose")
+
+    assert payload == {
+        "response_type": "error",
+        "executed": False,
+        "rows_omitted": True,
+        "error_category": "invalid_argument",
+        "error": "resource_detail must be either 'summary' or 'full'.",
+    }
+
+
+def test_mcp_query_plan_schema_is_available_without_capabilities(
+    registered_orders: None,
+    mcp_request,
+) -> None:
+    """MCP clients can fetch the QueryPlan schema separately."""
+
+    payload = asklens_query_plan_schema(mcp_request)
+
+    assert payload["response_type"] == "query_plan_schema"
+    assert payload["executed"] is False
+    assert payload["rows_omitted"] is True
+    assert payload["query_plan_schema"]["title"] == "QueryPlan"
+    assert payload["query_plan_schema"]["required"] == ["resource", "intent"]
+
+
+def test_mcp_describe_resource_returns_full_permission_scoped_metadata(
+    registered_orders: None,
+    mcp_request,
+) -> None:
+    """MCP clients can request full metadata for one visible resource."""
+
+    payload = asklens_describe_resource(mcp_request, "orders")
+
+    assert payload["response_type"] == "resource_description"
+    assert payload["valid"] is True
+    assert payload["executed"] is False
+    assert payload["rows_omitted"] is True
+    assert payload["resource"]["name"] == "orders"
+    assert {field["name"] for field in payload["resource"]["fields"]} == {
+        "id",
+        "status",
+        "created_at",
+    }
+
+    mcp_request.asklens_permissions = frozenset({"shop.view_customer_pii"})
+    payload_with_permission = asklens_describe_resource(mcp_request, "orders")
+    assert "customer.email" in {
+        field["name"] for field in payload_with_permission["resource"]["fields"]
+    }
+
+
+def test_mcp_describe_resource_returns_safe_unknown_resource_error(
+    registered_orders: None,
+    mcp_request,
+) -> None:
+    """Unknown or unauthorized resources are not described."""
+
+    payload = asklens_describe_resource(mcp_request, "missing")
+
+    assert payload == {
+        "response_type": "resource_description",
+        "valid": False,
+        "rows_omitted": True,
+        "executed": False,
+        "error_category": "unknown_resource",
+        "error": "Resource 'missing' is not queryable for this request.",
+    }
 
 
 def test_mcp_validate_plan_does_not_execute_or_audit(
@@ -294,91 +273,43 @@ def test_mcp_execute_plan_can_include_rows_when_setting_allows_it(
     )
 
     assert payload["rows_omitted"] is False
+    assert payload["mcp_row_limit"] == 100
+    assert payload["mcp_returned_row_count"] == 2
+    assert payload["mcp_rows_truncated"] is False
     assert payload["data"] == [
         {"status": "paid", "order_count": 2},
         {"status": "pending", "order_count": 1},
     ]
 
 
-def test_asklens_mcp_toolset_wraps_tools_with_context_factory(
+def test_mcp_execute_plan_caps_returned_rows_when_rows_are_allowed(
+    settings,
     registered_orders: None,
     order_data: None,
     mcp_request,
 ) -> None:
-    """AskLens-owned wrappers can be registered with generic MCP servers."""
+    """MCP row return has its own output cap beyond normal query limits."""
 
-    seen_contexts = []
-
-    def request_factory(context):
-        seen_contexts.append(context)
-        return mcp_request
-
-    toolset = AskLensMCPToolSet(request_factory=request_factory)
-    context = object()
-
-    capabilities = toolset.asklens_capabilities(context)
-    validation = toolset.asklens_validate_plan(context, valid_aggregate_plan())
-    execution = toolset.asklens_execute_plan(
-        context,
-        valid_aggregate_plan(),
-        include_rows=True,
-    )
-
-    assert seen_contexts == [context, context, context]
-    assert capabilities["response_type"] == "capabilities"
-    assert validation["valid"] is True
-    assert execution["response_type"] == "query"
-    assert execution["rows_omitted"] is True
-    assert execution["row_return_denied"] is True
-    assert sorted(toolset.tools()) == [
-        "asklens_capabilities",
-        "asklens_execute_plan",
-        "asklens_validate_plan",
-    ]
-
-
-def test_asklens_mcp_toolset_query_tool_is_disabled_by_default(
-    registered_orders: None,
-    order_data: None,
-    mcp_request,
-) -> None:
-    """The question wrapper is opt-in because it may call a provider."""
-
-    toolset = AskLensMCPToolSet(request_factory=lambda _context: mcp_request)
-
-    payload = toolset.asklens_query(object(), "Show orders by status")
-
-    assert payload == {
-        "response_type": "error",
-        "error_category": "tool_disabled",
-        "error": (
-            "The AskLens MCP query tool is disabled. Use asklens_capabilities, "
-            "asklens_validate_plan, and asklens_execute_plan, or construct the "
-            "toolset with expose_query_tool=True."
-        ),
+    settings.DJANGO_ASKLENS["MCP_ALLOW_ROW_RETURN"] = True
+    settings.DJANGO_ASKLENS["MCP_MAX_RETURNED_ROWS"] = 2
+    plan = {
+        "resource": "orders",
+        "intent": "list",
+        "select": ["id", "status"],
+        "order_by": [{"field": "id", "direction": "asc"}],
+        "limit": 10,
+        "visualization": {"type": "table"},
     }
-    assert "asklens_query" not in toolset.tools()
 
+    payload = asklens_execute_plan(mcp_request, plan, include_rows=True)
 
-def test_asklens_mcp_toolset_can_expose_query_tool_explicitly(
-    registered_orders: None,
-    order_data: None,
-    mcp_request,
-) -> None:
-    """The optional question wrapper still applies MCP row policy."""
-
-    toolset = AskLensMCPToolSet(
-        request_factory=lambda _context: mcp_request,
-        expose_query_tool=True,
-    )
-
-    payload = toolset.asklens_query(object(), "Show orders by status")
-
-    assert payload["response_type"] == "query"
-    assert payload["row_count"] == 2
-    assert payload["data"] == []
-    assert payload["rows_omitted"] is True
-    assert "asklens_query" in toolset.tools()
+    assert payload["row_count"] == 3
+    assert len(payload["data"]) == 2
+    assert payload["rows_omitted"] is False
+    assert payload["mcp_row_limit"] == 2
+    assert payload["mcp_returned_row_count"] == 2
+    assert payload["mcp_rows_truncated"] is True
+    assert "MCP_MAX_RETURNED_ROWS" in payload["mcp_row_limit_warning"]
 
 
 def test_mcp_query_wrapper_uses_existing_orchestration_and_row_policy(
