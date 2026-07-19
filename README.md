@@ -234,6 +234,7 @@ Review the [security checklist](docs/security-checklist.md) and [production chec
 
 - [Installation](docs/installation.md)
 - [Usage guide](docs/usage.md)
+- [Core Python API](docs/core-python-api.md)
 - [Custom UI guide](docs/custom-ui.md)
 - [Registration API](docs/registration.md)
 - [Provider configuration](docs/providers.md)

@@ -30,6 +30,8 @@ INSTALLED_APPS = [
 ]
 ```
 
+For Python-only usage without DRF, see the [Core Python API](core-python-api.md) guide.
+
 For the optional API integration, add DRF and AskLens to `INSTALLED_APPS`:
 
 ```python

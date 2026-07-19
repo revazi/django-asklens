@@ -209,14 +209,16 @@ The admin query page remains available in alpha as a staff/operator utility and 
 
 ## 7. Query from Python
 
-```python
-from django_asklens.llms import DummyProvider
-from django_asklens.planning import plan_question
-from django_asklens.execution import run_query_plan
+Core Python usage does not require DRF. See the [Core Python API](core-python-api.md) guide for core-only setup, permission-scoped capabilities, plan validation, execution, result serialization, and the shared query/help orchestration helper.
 
-provider = DummyProvider(plans={"Show orders by status": {...}})
-planner_result = plan_question("Show orders by status", provider=provider)
-result = run_query_plan(planner_result.plan)
+```python
+from django_asklens.execution import run_query_plan
+from django_asklens.permissions import get_request_permissions
+from django_asklens.planning import plan_question
+
+permissions = get_request_permissions(request)
+planner_result = plan_question("Show orders by status", permissions=permissions)
+result = run_query_plan(planner_result.plan, request=request)
 payload = result.to_dict()
 ```
 
