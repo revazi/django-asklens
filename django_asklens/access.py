@@ -7,11 +7,22 @@ from django.utils.module_loading import import_string
 from django_asklens.settings import get_asklens_setting
 
 __all__ = [
+    "IsAuthenticated",
     "can_access_asklens",
     "get_configured_permission_class_values",
     "get_permission_gate_classes",
     "resolve_permission_gate_class",
 ]
+
+
+class IsAuthenticated:
+    """Small DRF-compatible permission gate requiring an authenticated user."""
+
+    def has_permission(self, request: Any, view: Any = None) -> bool:
+        """Return whether the request has an authenticated user."""
+
+        user = getattr(request, "user", None)
+        return bool(user is not None and getattr(user, "is_authenticated", False))
 
 
 def can_access_asklens(request: Any, *, view: Any = None) -> bool:

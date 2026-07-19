@@ -25,8 +25,8 @@ Use this checklist before enabling AskLens outside local development.
 - [ ] Require authentication for `/asklens/catalog/`, `/asklens/query/`, and `/asklens/runs/<id>/`.
 - [ ] Restrict `debug=true` to staff users or a stronger permission gate.
 - [ ] Ensure run-detail access is scoped to the requesting user unless a staff/admin policy is intended.
-- [ ] Verify configured `DJANGO_ASKLENS["API_PERMISSION_CLASSES"]` gates every AskLens route.
-- [ ] Consider DRF throttling/rate limits in host projects.
+- [ ] If using the optional API integration, verify configured `DJANGO_ASKLENS["API_PERMISSION_CLASSES"]` gates every AskLens route.
+- [ ] If using the optional API integration, consider DRF throttling/rate limits in host projects.
 - [ ] Review audit retention requirements for your environment.
 
 ## Provider safety

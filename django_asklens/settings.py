@@ -21,7 +21,7 @@ DEFAULTS: dict[str, Any] = {
     "ALLOW_RAW_SQL": False,
     "SEND_SAMPLE_ROWS_TO_LLM": False,
     "DEFAULT_VISUALIZATION": "table",
-    "API_PERMISSION_CLASSES": ["rest_framework.permissions.IsAuthenticated"],
+    "API_PERMISSION_CLASSES": ["django_asklens.access.IsAuthenticated"],
     "REQUEST_PERMISSIONS_GETTER": None,
     "FRONTEND_PERMISSION_CHECK": None,
     "FRONTEND_TITLE": "AskLens",

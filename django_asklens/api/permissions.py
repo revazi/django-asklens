@@ -1,7 +1,8 @@
 """DRF permission helpers for the AskLens API."""
 
+from typing import Any
+
 from django.utils.module_loading import import_string
-from rest_framework.permissions import BasePermission
 
 from django_asklens.access import get_configured_permission_class_values
 from django_asklens.permissions import get_request_permissions
@@ -13,8 +14,8 @@ __all__ = [
 ]
 
 
-def get_api_permission_classes() -> tuple[type[BasePermission], ...]:
-    """Return configured DRF permission classes for AskLens API views."""
+def get_api_permission_classes() -> tuple[type[Any], ...]:
+    """Return configured permission classes for AskLens API views."""
 
     return tuple(
         resolve_permission_class(value)
@@ -22,12 +23,18 @@ def get_api_permission_classes() -> tuple[type[BasePermission], ...]:
     )
 
 
-def resolve_permission_class(value: str | type[BasePermission]) -> type[BasePermission]:
-    """Resolve one DRF permission class from a class object or import string."""
+def resolve_permission_class(value: str | type[Any]) -> type[Any]:
+    """Resolve one DRF-compatible permission class."""
 
     if isinstance(value, str):
         value = import_string(value)
-    if not isinstance(value, type) or not issubclass(value, BasePermission):
-        msg = "AskLens API permission entries must be DRF permission classes."
+    if not isinstance(value, type):
+        msg = "AskLens API permission entries must be permission classes."
+        raise TypeError(msg)
+    if not callable(getattr(value, "has_permission", None)):
+        msg = (
+            "AskLens API permission entries must define a "
+            "has_permission(request, view) method."
+        )
         raise TypeError(msg)
     return value

@@ -47,6 +47,7 @@ The project is alpha and APIs may change before a stable release.
 - Added deterministic offline help improvements: generated suggestions include catalog references and locally validated plans when possible.
 - Added safer provider-help fallback diagnostics that avoid exposing raw validation details or provider payloads.
 - Added GitHub Actions CI for Python 3.12 and 3.13 with tests, Ruff lint/format checks, Django checks, migration drift checks, package build/Twine checks, artifact guards, and wheel-install smoke testing.
+- Made Django REST Framework an optional `api` extra while keeping core catalog, planning, validation, compilation, execution, admin imports, and result serialization usable without importing DRF.
 
 ### Security
 

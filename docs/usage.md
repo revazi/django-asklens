@@ -66,7 +66,7 @@ DJANGO_ASKLENS = {
 
 ## 3. Discover what can be queried
 
-Use the capabilities endpoint to show users what AskLens can answer for the current request permissions. The response is generated from permission-scoped catalog metadata only; it does not include database rows or sample values.
+With the optional `api` extra installed, use the capabilities endpoint to show users what AskLens can answer for the current request permissions. The response is generated from permission-scoped catalog metadata only; it does not include database rows or sample values.
 
 ```http
 GET /asklens/capabilities/
@@ -89,7 +89,7 @@ A response includes visible resources, exposed fields, metrics, date fields, exa
 }
 ```
 
-## 4. Query through the API
+## 4. Query through the optional API
 
 ```http
 POST /asklens/query/
@@ -149,7 +149,7 @@ Capability/help questions return a non-row response and do not execute a databas
 
 Projects that want full control over layout, tables, charts, or saved-query UX can build a custom UI directly on the AskLens API; see [Building a custom AskLens UI](custom-ui.md).
 
-Projects that want a built-in reference/demo UI can mount the dependency-free AskLens frontend. It uses the same API endpoints and Django session authentication as the rest of AskLens. Users can save useful questions locally in their browser; saved plans are sent back only as normal query requests and are revalidated against current permissions before execution.
+Projects that want a built-in reference/demo UI can install the `api` extra and mount the dependency-free AskLens frontend. It uses the same API endpoints and Django session authentication as the rest of AskLens. Users can save useful questions locally in their browser; saved plans are sent back only as normal query requests and are revalidated against current permissions before execution.
 
 ```python
 # urls.py
@@ -191,7 +191,7 @@ DJANGO_ASKLENS = {
 
 ## 6. Alpha API and product contract
 
-For alpha, `/asklens/query/` is the single query/help entry point.
+For alpha, `/asklens/query/` is the single query/help entry point when the optional API integration is installed.
 
 - In live provider mode, `/asklens/query/` makes one unified provider call that chooses either a data `QueryPlan` or capability/help suggestions.
 - In dummy/offline mode, obvious help questions are handled deterministically and data questions use configured dummy plans.

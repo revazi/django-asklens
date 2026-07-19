@@ -80,11 +80,11 @@ For capabilities/help UX, AskLens can infer generic row-scope breadth from scope
 
 ## Route-level gates
 
-All AskLens API views use `DJANGO_ASKLENS["API_PERMISSION_CLASSES"]`. Configure DRF permission classes appropriate for your project, for example staff-only, role-based, or feature-flagged access.
+All AskLens API views use `DJANGO_ASKLENS["API_PERMISSION_CLASSES"]`. The default gate is `django_asklens.access.IsAuthenticated`. API projects can configure DRF permission classes or other DRF-compatible classes appropriate for the project, for example staff-only, role-based, or feature-flagged access.
 
 ```python
 DJANGO_ASKLENS = {
-    "API_PERMISSION_CLASSES": ["rest_framework.permissions.IsAuthenticated"],
+    "API_PERMISSION_CLASSES": ["django_asklens.access.IsAuthenticated"],
 }
 ```
 

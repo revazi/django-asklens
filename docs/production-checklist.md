@@ -6,6 +6,7 @@ AskLens is a data access surface. Configure it as carefully as any reporting, an
 
 ## Access gates
 
+- [ ] If using the optional API integration, install `django-asklens[api]` and include `rest_framework` in `INSTALLED_APPS`.
 - [ ] Set `DJANGO_ASKLENS["API_PERMISSION_CLASSES"]` to permission classes appropriate for your project.
 - [ ] Confirm every AskLens route is gated:
   - [ ] `GET /asklens/catalog/`
@@ -57,7 +58,7 @@ AskLens is a data access surface. Configure it as carefully as any reporting, an
   - [ ] `MAX_METRICS`
   - [ ] `MAX_GROUP_BY`
 - [ ] Test broad list queries and aggregate queries for acceptable latency.
-- [ ] Consider host-project DRF throttling/rate limits.
+- [ ] If using the optional API integration, consider host-project DRF throttling/rate limits.
 - [ ] Review database indexes for common filter/group/order fields.
 
 ## Live provider configuration

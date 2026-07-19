@@ -56,8 +56,12 @@ classifiers = [
 ]
 dependencies = [
     "Django>=6.0,<7.0",
-    "djangorestframework>=3.17,<4.0",
     "pydantic>=2,<3",
+]
+
+[project.optional-dependencies]
+api = [
+    "djangorestframework>=3.17,<4.0",
 ]
 
 [project.urls]
@@ -72,6 +76,7 @@ Changelog = "https://github.com/revazi/django-asklens/blob/main/CHANGELOG.md"
 [dependency-groups]
 dev = [
     "build>=1",
+    "djangorestframework>=3.17,<4.0",
     "mypy>=1.13",
     "pytest>=8",
     "pytest-django>=4.9",

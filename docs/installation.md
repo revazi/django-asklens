@@ -1,9 +1,15 @@
 # Installation
 
-Django AskLens is currently alpha. Install it into a Django project from your chosen source.
+Django AskLens is currently alpha. Install the core package into a Django project from your chosen source:
 
 ```bash
 python -m pip install django-asklens
+```
+
+Install the optional DRF API integration when you want the built-in HTTP endpoints or packaged reference frontend:
+
+```bash
+python -m pip install 'django-asklens[api]'
 ```
 
 For local development in this repository, use `uv`:
@@ -15,7 +21,16 @@ uv run pytest
 
 ## Django setup
 
-Add AskLens and DRF to `INSTALLED_APPS`:
+For core-only use, add AskLens to `INSTALLED_APPS`:
+
+```python
+INSTALLED_APPS = [
+    # ...
+    "django_asklens",
+]
+```
+
+For the optional API integration, add DRF and AskLens to `INSTALLED_APPS`:
 
 ```python
 INSTALLED_APPS = [
@@ -44,7 +59,7 @@ urlpatterns = [
 ]
 ```
 
-The packaged frontend is optional. Production projects can build custom UIs directly on the API; see [Building a custom AskLens UI](custom-ui.md).
+The packaged frontend is optional and calls the AskLens API routes, so it also requires the `api` extra and API URLs. Production projects can build custom UIs directly on the API; see [Building a custom AskLens UI](custom-ui.md).
 
 Run migrations for AskLens-owned audit models:
 
@@ -73,7 +88,7 @@ DJANGO_ASKLENS = {
 }
 ```
 
-The default API permission class is `rest_framework.permissions.IsAuthenticated`. Review the [production checklist](production-checklist.md) before enabling AskLens outside local development.
+The default permission gate is `django_asklens.access.IsAuthenticated`, a lightweight class compatible with DRF's `has_permission(request, view)` interface. API projects may set `API_PERMISSION_CLASSES` to DRF permission classes or other DRF-compatible classes. Review the [production checklist](production-checklist.md) before enabling AskLens outside local development.
 
 ## Compatibility
 
@@ -81,7 +96,7 @@ Current development target:
 
 - Python 3.12+
 - Django 6.x
-- Django REST Framework 3.17+
 - Pydantic v2
+- Optional API extra: Django REST Framework 3.17+
 
 Django 5.2 LTS compatibility is not currently claimed. Current package metadata and CI target Django 6.x.
