@@ -11,10 +11,10 @@ from rest_framework.test import APIClient
 
 from django_asklens import Metric
 from django_asklens.admin_querying import build_admin_result, execute_admin_query
-from django_asklens.api.views import get_query_help_for_capabilities
 from django_asklens.catalog.capabilities import build_capabilities
 from django_asklens.catalog.registry import default_registry
 from django_asklens.models import SemanticQueryRun
+from django_asklens.querying import get_query_help_for_capabilities
 from tests.test_project.models import Customer, Order
 
 pytestmark = pytest.mark.django_db
@@ -311,13 +311,13 @@ def test_live_query_endpoint_uses_one_unified_call_for_help(
         lambda: provider,
     )
     monkeypatch.setattr(
-        "django_asklens.api.querying.route_question_intent",
+        "django_asklens.querying.route_question_intent",
         lambda *args, **kwargs: (_ for _ in ()).throw(
             AssertionError("intent router should not be called in live mode")
         ),
     )
     monkeypatch.setattr(
-        "django_asklens.api.querying.plan_question",
+        "django_asklens.querying.plan_question",
         lambda *args, **kwargs: (_ for _ in ()).throw(
             AssertionError("planner should not be called for live help")
         ),
@@ -360,13 +360,13 @@ def test_live_query_endpoint_uses_one_unified_call_for_query(
         lambda: provider,
     )
     monkeypatch.setattr(
-        "django_asklens.api.querying.route_question_intent",
+        "django_asklens.querying.route_question_intent",
         lambda *args, **kwargs: (_ for _ in ()).throw(
             AssertionError("intent router should not be called in live mode")
         ),
     )
     monkeypatch.setattr(
-        "django_asklens.api.querying.plan_question",
+        "django_asklens.querying.plan_question",
         lambda *args, **kwargs: (_ for _ in ()).throw(
             AssertionError("legacy planner should not be called in live mode")
         ),
@@ -541,7 +541,7 @@ def test_query_endpoint_executes_provided_valid_plan_without_planner(
     def fail_planner(*args, **kwargs):
         raise AssertionError("planner should not be called for provided plans")
 
-    monkeypatch.setattr("django_asklens.api.querying.plan_question", fail_planner)
+    monkeypatch.setattr("django_asklens.querying.plan_question", fail_planner)
     api_client.force_authenticate(user=user)
 
     response = api_client.post(

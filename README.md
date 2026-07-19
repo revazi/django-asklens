@@ -3,7 +3,7 @@
 [![PyPI](https://img.shields.io/pypi/v/django-asklens.svg)](https://pypi.org/project/django-asklens/)
 [![Python](https://img.shields.io/pypi/pyversions/django-asklens.svg)](https://pypi.org/project/django-asklens/)
 
-Django AskLens is a reusable Django + DRF package for safe natural-language querying over explicitly registered Django models.
+Django AskLens is a reusable Django package for safe natural-language querying over explicitly registered Django models, with an optional Django REST Framework API integration.
 
 AskLens does **not** let an LLM write SQL. It asks a provider for structured JSON, validates the plan against your registered catalog and permissions, compiles a read-only Django ORM query, executes with limits, and returns table/chart-ready JSON.
 
@@ -12,7 +12,8 @@ Status: **alpha**. APIs may change before a stable release.
 ## What it provides
 
 - Explicit semantic resource registration.
-- Permission-scoped catalog and capabilities endpoints.
+- Permission-scoped catalog and capabilities metadata.
+- Optional DRF catalog, capabilities, query, and run-detail endpoints.
 - Strict Pydantic `QueryPlan` validation.
 - ORM-only list and aggregate query execution.
 - Dummy provider for deterministic tests and demos.
@@ -26,10 +27,10 @@ Status: **alpha**. APIs may change before a stable release.
 Install from [PyPI](https://pypi.org/project/django-asklens/):
 
 ```bash
-python -m pip install django-asklens
+python -m pip install 'django-asklens[api]'
 ```
 
-Add the app and DRF:
+Add DRF and the AskLens app:
 
 ```python
 INSTALLED_APPS = [
@@ -147,13 +148,13 @@ Help questions such as `show me example queries` return `response_type: "capabil
 
 ## Building a UI
 
-AskLens is API-first. Build your own UI with React, Vue, HTMX, Django templates, a mobile client, or any chart/table library by rendering the returned `columns` and `data` arrays.
+When installed with the `api` extra, AskLens is API-first. Build your own UI with React, Vue, HTMX, Django templates, a mobile client, or any chart/table library by rendering the returned `columns` and `data` arrays.
 
 The packaged frontend is optional and intended as a dependency-free demo/reference UI. Projects that need product-specific layout, charts, saved queries, or workflows should call the API directly. See [Building a custom AskLens UI](docs/custom-ui.md).
 
 ## Optional packaged frontend
 
-If you want the built-in reference UI:
+If you want the built-in reference UI, install the `api` extra and mount both API and frontend URLs:
 
 ```python
 urlpatterns = [
@@ -233,6 +234,7 @@ Review the [security checklist](docs/security-checklist.md) and [production chec
 
 - [Installation](docs/installation.md)
 - [Usage guide](docs/usage.md)
+- [Core Python API](docs/core-python-api.md)
 - [Custom UI guide](docs/custom-ui.md)
 - [Registration API](docs/registration.md)
 - [Provider configuration](docs/providers.md)
@@ -247,7 +249,7 @@ Review the [security checklist](docs/security-checklist.md) and [production chec
 
 ## Development
 
-Use Python 3.12 or newer and [`uv`](https://docs.astral.sh/uv/) for local development.
+Use Python 3.12 or newer and [`uv`](https://docs.astral.sh/uv/) for local development. The dev dependency group includes DRF so the API integration tests run locally.
 
 ```bash
 uv sync --group dev

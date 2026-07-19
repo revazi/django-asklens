@@ -2,8 +2,8 @@
 
 from typing import Any
 
-from django_asklens.api.querying import execute_asklens_query_request
 from django_asklens.models import SemanticQueryRun
+from django_asklens.querying import execute_asklens_query_request
 
 
 def execute_admin_query(

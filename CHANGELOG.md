@@ -4,7 +4,20 @@ All notable changes to Django AskLens will be documented here.
 
 The project is alpha and APIs may change before a stable release.
 
-## 0.1.0a0 — Unreleased
+## Unreleased
+
+Post-MVP work in this section is not intended to trigger a package release. Version bumping, tagging, and PyPI publishing are deferred until the broader post-MVP scope is complete.
+
+### Added
+
+- Core Python API guide for using AskLens without Django REST Framework.
+
+### Changed
+
+- Moved shared query/help orchestration, request permission helpers, and admin access checks out of DRF-coupled API modules.
+- Made Django REST Framework an optional `api` extra while keeping core catalog, planning, validation, compilation, execution, admin imports, and result serialization usable without importing DRF.
+
+## 0.1.0a0 — 2026-07-19
 
 ### Added
 

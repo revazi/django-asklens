@@ -120,26 +120,29 @@ jobs:
               raise SystemExit(f"Missing expected sdist files: {missing_sdist_files}")
           PY
 
-      - name: Smoke test wheel install
+      - name: Smoke test core wheel install without DRF
         run: |
           smoke_venv="$(mktemp -d)"
           python -m venv "$smoke_venv"
           "$smoke_venv/bin/python" -m pip install --upgrade pip
           "$smoke_venv/bin/python" -m pip install dist/django_asklens-*.whl
           "$smoke_venv/bin/python" - <<'PY'
+          import importlib.util
+          from types import SimpleNamespace
+
           import django
           import django_asklens
           from django.conf import settings
           from django.core.management import call_command
 
           assert django_asklens.__version__ == "0.1.0a0"
+          assert importlib.util.find_spec("rest_framework") is None
 
           settings.configure(
-              SECRET_KEY="django-asklens-ci-smoke-test",
+              SECRET_KEY="django-asklens-ci-core-smoke-test",
               INSTALLED_APPS=[
                   "django.contrib.auth",
                   "django.contrib.contenttypes",
-                  "rest_framework",
                   "django_asklens",
               ],
               DATABASES={
@@ -154,4 +157,58 @@ jobs:
           )
           django.setup()
           call_command("check")
+
+          from django_asklens.access import can_access_asklens
+          from django_asklens.catalog.registry import serialize_catalog
+          from django_asklens.planning import parse_query_plan
+
+          request = SimpleNamespace(user=SimpleNamespace(is_authenticated=True))
+          assert can_access_asklens(request) is True
+          assert serialize_catalog()["resources"] == []
+          assert parse_query_plan(
+              {"resource": "orders", "intent": "list", "select": [], "limit": 1}
+          ).resource == "orders"
+          PY
+
+      - name: Smoke test API extra wheel install
+        run: |
+          smoke_venv="$(mktemp -d)"
+          python -m venv "$smoke_venv"
+          wheel="$(echo dist/django_asklens-*.whl)"
+          "$smoke_venv/bin/python" -m pip install --upgrade pip
+          "$smoke_venv/bin/python" -m pip install "${wheel}[api]"
+          "$smoke_venv/bin/python" - <<'PY'
+          import importlib.util
+
+          import django
+          from django.conf import settings
+          from django.core.management import call_command
+
+          assert importlib.util.find_spec("rest_framework") is not None
+
+          settings.configure(
+              SECRET_KEY="django-asklens-ci-api-smoke-test",
+              INSTALLED_APPS=[
+                  "django.contrib.auth",
+                  "django.contrib.contenttypes",
+                  "rest_framework",
+                  "django_asklens",
+              ],
+              DATABASES={
+                  "default": {
+                      "ENGINE": "django.db.backends.sqlite3",
+                      "NAME": ":memory:",
+                  }
+              },
+              MIDDLEWARE=[],
+              ROOT_URLCONF="django_asklens.api.urls",
+              DEFAULT_AUTO_FIELD="django.db.models.BigAutoField",
+              USE_TZ=True,
+          )
+          django.setup()
+          call_command("check")
+
+          import django_asklens.api.urls
+
+          assert django_asklens.api.urls.urlpatterns
           PY

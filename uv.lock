@@ -271,13 +271,18 @@ version = "0.1.0a0"
 source = { editable = "." }
 dependencies = [
     { name = "django" },
-    { name = "djangorestframework" },
     { name = "pydantic" },
+]
+
+[package.optional-dependencies]
+api = [
+    { name = "djangorestframework" },
 ]
 
 [package.dev-dependencies]
 dev = [
     { name = "build" },
+    { name = "djangorestframework" },
     { name = "mypy" },
     { name = "pytest" },
     { name = "pytest-django" },
@@ -288,13 +293,15 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "django", specifier = ">=6.0,<7.0" },
-    { name = "djangorestframework", specifier = ">=3.17,<4.0" },
+    { name = "djangorestframework", marker = "extra == 'api'", specifier = ">=3.17,<4.0" },
     { name = "pydantic", specifier = ">=2,<3" },
 ]
+provides-extras = ["api"]
 
 [package.metadata.requires-dev]
 dev = [
     { name = "build", specifier = ">=1" },
+    { name = "djangorestframework", specifier = ">=3.17,<4.0" },
     { name = "mypy", specifier = ">=1.13" },
     { name = "pytest", specifier = ">=8" },
     { name = "pytest-django", specifier = ">=4.9" },

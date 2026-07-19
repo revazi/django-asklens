@@ -6,11 +6,16 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from django_asklens.api.permissions import (
-    get_api_permission_classes,
-    get_request_permissions,
+from django_asklens.api.permissions import get_api_permission_classes
+from django_asklens.api.serializers import (
+    QueryRequestSerializer,
+    SemanticQueryRunSerializer,
 )
-from django_asklens.api.querying import (
+from django_asklens.catalog.capabilities import build_capabilities
+from django_asklens.catalog.registry import serialize_catalog
+from django_asklens.models import SemanticQueryRun
+from django_asklens.permissions import get_request_permissions
+from django_asklens.querying import (
     build_capabilities_payload,
     build_success_payload,
     create_query_run,
@@ -22,13 +27,6 @@ from django_asklens.api.querying import (
     should_return_capabilities_fallback,
     should_use_unified_provider_response,
 )
-from django_asklens.api.serializers import (
-    QueryRequestSerializer,
-    SemanticQueryRunSerializer,
-)
-from django_asklens.catalog.capabilities import build_capabilities
-from django_asklens.catalog.registry import serialize_catalog
-from django_asklens.models import SemanticQueryRun
 
 __all__ = [
     "AskLensAPIView",
