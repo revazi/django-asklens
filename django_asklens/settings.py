@@ -28,6 +28,7 @@ DEFAULTS: dict[str, Any] = {
     "FRONTEND_SUBTITLE": "Ask read-only questions over approved Django data.",
     "FRONTEND_STARTER_QUESTIONS": (),
     "MCP_ALLOW_ROW_RETURN": False,
+    "MCP_MAX_RETURNED_ROWS": 100,
     "DUMMY_PLANS": {},
     "DUMMY_DEFAULT_PLAN": None,
 }

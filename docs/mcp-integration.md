@@ -239,10 +239,15 @@ There are two gates for row return:
 ```python
 DJANGO_ASKLENS = {
     "MCP_ALLOW_ROW_RETURN": True,
+    "MCP_MAX_RETURNED_ROWS": 100,
 }
 ```
 
 If `include_rows=True` is requested while `MCP_ALLOW_ROW_RETURN` is false, AskLens still omits rows and returns `row_return_denied: true`.
+
+When rows are allowed, `MCP_MAX_RETURNED_ROWS` caps only the MCP tool payload. AskLens still executes the validated query through its normal row limits and audit path, and `row_count` still describes the executed result. If the MCP payload is capped, the response includes `mcp_rows_truncated: true`, `mcp_row_limit`, and `mcp_returned_row_count`.
+
+`MCP_MAX_RETURNED_ROWS` is not pagination. Today, an MCP client that needs more rows should ask a narrower follow-up query, use exposed fields for stable filters such as “after this id/date” where appropriate, or the host project must intentionally raise the MCP row cap. First-class “next page” behavior should be added after AskLens core has safe pagination/cursor semantics.
 
 ## Request and permission mapping
 

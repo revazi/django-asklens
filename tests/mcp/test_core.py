@@ -273,10 +273,43 @@ def test_mcp_execute_plan_can_include_rows_when_setting_allows_it(
     )
 
     assert payload["rows_omitted"] is False
+    assert payload["mcp_row_limit"] == 100
+    assert payload["mcp_returned_row_count"] == 2
+    assert payload["mcp_rows_truncated"] is False
     assert payload["data"] == [
         {"status": "paid", "order_count": 2},
         {"status": "pending", "order_count": 1},
     ]
+
+
+def test_mcp_execute_plan_caps_returned_rows_when_rows_are_allowed(
+    settings,
+    registered_orders: None,
+    order_data: None,
+    mcp_request,
+) -> None:
+    """MCP row return has its own output cap beyond normal query limits."""
+
+    settings.DJANGO_ASKLENS["MCP_ALLOW_ROW_RETURN"] = True
+    settings.DJANGO_ASKLENS["MCP_MAX_RETURNED_ROWS"] = 2
+    plan = {
+        "resource": "orders",
+        "intent": "list",
+        "select": ["id", "status"],
+        "order_by": [{"field": "id", "direction": "asc"}],
+        "limit": 10,
+        "visualization": {"type": "table"},
+    }
+
+    payload = asklens_execute_plan(mcp_request, plan, include_rows=True)
+
+    assert payload["row_count"] == 3
+    assert len(payload["data"]) == 2
+    assert payload["rows_omitted"] is False
+    assert payload["mcp_row_limit"] == 2
+    assert payload["mcp_returned_row_count"] == 2
+    assert payload["mcp_rows_truncated"] is True
+    assert "MCP_MAX_RETURNED_ROWS" in payload["mcp_row_limit_warning"]
 
 
 def test_mcp_query_wrapper_uses_existing_orchestration_and_row_policy(

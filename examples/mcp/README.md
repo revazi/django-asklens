@@ -8,7 +8,7 @@ AskLens intentionally does not depend on a generic Django MCP package or Django 
 - authenticating the MCP caller;
 - mapping the caller to a Django user or request-like object;
 - deriving any tenant/role permission strings from trusted server-side context; and
-- deciding whether row return should be enabled with `DJANGO_ASKLENS["MCP_ALLOW_ROW_RETURN"]`.
+- deciding whether row return should be enabled with `DJANGO_ASKLENS["MCP_ALLOW_ROW_RETURN"]` and capped with `DJANGO_ASKLENS["MCP_MAX_RETURNED_ROWS"]`.
 
 Use `AskLensMCPToolSet` when your MCP library can register existing Python callables. Use the lower-level functions in `django_asklens.mcp` when your MCP framework has a different calling convention.
 

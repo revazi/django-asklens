@@ -93,6 +93,8 @@ DJANGO_ASKLENS = {
     "ALLOW_RAW_SQL": False,
     "SEND_SAMPLE_ROWS_TO_LLM": False,
     "DEFAULT_VISUALIZATION": "table",
+    "MCP_ALLOW_ROW_RETURN": False,
+    "MCP_MAX_RETURNED_ROWS": 100,
 }
 ```
 

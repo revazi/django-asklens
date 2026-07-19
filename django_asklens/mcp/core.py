@@ -43,6 +43,7 @@ __all__ = [
     "asklens_query_plan_schema",
     "asklens_validate_plan",
     "apply_mcp_row_policy",
+    "mcp_max_returned_rows",
     "mcp_row_return_allowed",
 ]
 
@@ -321,6 +322,38 @@ def mcp_row_return_allowed() -> bool:
     return bool(get_asklens_setting("MCP_ALLOW_ROW_RETURN"))
 
 
+def mcp_max_returned_rows() -> int:
+    """Return the maximum rows an MCP tool result may include."""
+
+    return max(0, int(get_asklens_setting("MCP_MAX_RETURNED_ROWS")))
+
+
+def apply_mcp_row_return_limit(payload: Mapping[str, Any]) -> dict[str, Any]:
+    """Return an MCP query payload capped by MCP_MAX_RETURNED_ROWS."""
+
+    mcp_payload = dict(payload)
+    rows = mcp_payload.get("data")
+    if not isinstance(rows, list):
+        mcp_payload["rows_omitted"] = False
+        return mcp_payload
+
+    max_rows = mcp_max_returned_rows()
+    returned_rows = rows[:max_rows]
+    mcp_payload["data"] = returned_rows
+    mcp_payload["rows_omitted"] = False
+    mcp_payload["mcp_row_limit"] = max_rows
+    mcp_payload["mcp_returned_row_count"] = len(returned_rows)
+    mcp_payload["mcp_rows_truncated"] = len(rows) > max_rows
+    if mcp_payload["mcp_rows_truncated"]:
+        mcp_payload["mcp_row_limit_warning"] = (
+            f"Returned {len(returned_rows)} rows in the MCP tool payload, "
+            f"capped by DJANGO_ASKLENS['MCP_MAX_RETURNED_ROWS']={max_rows}. "
+            "The executed query row_count may be higher. Narrow the query or "
+            "raise the MCP row cap intentionally to return more rows."
+        )
+    return mcp_payload
+
+
 def apply_mcp_row_policy(
     payload: Mapping[str, Any],
     *,
@@ -333,8 +366,7 @@ def apply_mcp_row_policy(
         return mcp_payload
 
     if include_rows and mcp_row_return_allowed():
-        mcp_payload["rows_omitted"] = False
-        return mcp_payload
+        return apply_mcp_row_return_limit(mcp_payload)
 
     if include_rows:
         mcp_payload["row_return_denied"] = True

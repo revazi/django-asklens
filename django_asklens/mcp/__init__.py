@@ -14,6 +14,7 @@ from django_asklens.mcp.core import (
     asklens_query,
     asklens_query_plan_schema,
     asklens_validate_plan,
+    mcp_max_returned_rows,
     mcp_row_return_allowed,
 )
 from django_asklens.mcp.fastmcp import create_fastmcp_server
@@ -32,5 +33,6 @@ __all__ = [
     "asklens_query_plan_schema",
     "asklens_validate_plan",
     "apply_mcp_row_policy",
+    "mcp_max_returned_rows",
     "mcp_row_return_allowed",
 ]
