@@ -97,8 +97,8 @@ The default permission gate is `django_asklens.access.IsAuthenticated`, a lightw
 Current development target:
 
 - Python 3.12+
-- Django 6.x
+- Django 5.2 LTS or Django 6.x
 - Pydantic v2
 - Optional API extra: Django REST Framework 3.17+
 
-Django 5.2 LTS compatibility is not currently claimed. Current package metadata and CI target Django 6.x.
+Current package metadata and CI target Django 5.2 LTS and Django 6.x.

@@ -17,6 +17,7 @@ Post-MVP work in this section is not intended to trigger a package release. Vers
 
 - Moved shared query/help orchestration, request permission helpers, and admin access checks out of DRF-coupled API modules.
 - Made Django REST Framework an optional `api` extra while keeping core catalog, planning, validation, compilation, execution, admin imports, and result serialization usable without importing DRF.
+- Expanded supported Django versions to include Django 5.2 LTS alongside Django 6.x, with CI coverage for both lines.
 
 ## 0.1.0a0 — 2026-07-19
 

@@ -11,13 +11,21 @@ permissions:
 
 jobs:
   test:
-    name: Python ${{ matrix.python-version }}
+    name: Python ${{ matrix.python-version }} / Django ${{ matrix.django-version }}
     runs-on: ubuntu-latest
 
     strategy:
       fail-fast: false
       matrix:
         python-version: ["3.12", "3.13"]
+        django-version: ["5.2", "6.x"]
+        include:
+          - django-version: "5.2"
+            django-package: "Django>=5.2,<6.0"
+            django-version-prefix: "5.2."
+          - django-version: "6.x"
+            django-package: "Django>=6.0,<7.0"
+            django-version-prefix: "6."
 
     env:
       DJANGO_ASKLENS_LIVE_LLM: "0"
@@ -40,6 +48,9 @@ jobs:
 
       - name: Install dependencies
         run: uv sync --locked --group dev
+
+      - name: Install Django matrix version
+        run: uv pip install --reinstall "${{ matrix.django-package }}"
 
       - name: Run Ruff lint
         run: uv run --no-sync ruff check .
@@ -125,9 +136,11 @@ jobs:
           smoke_venv="$(mktemp -d)"
           python -m venv "$smoke_venv"
           "$smoke_venv/bin/python" -m pip install --upgrade pip
+          "$smoke_venv/bin/python" -m pip install "${{ matrix.django-package }}"
           "$smoke_venv/bin/python" -m pip install dist/django_asklens-*.whl
-          "$smoke_venv/bin/python" - <<'PY'
+          DJANGO_VERSION_PREFIX="${{ matrix.django-version-prefix }}" "$smoke_venv/bin/python" - <<'PY'
           import importlib.util
+          import os
           from types import SimpleNamespace
 
           import django
@@ -136,6 +149,7 @@ jobs:
           from django.core.management import call_command
 
           assert django_asklens.__version__ == "0.1.0a0"
+          assert django.get_version().startswith(os.environ["DJANGO_VERSION_PREFIX"])
           assert importlib.util.find_spec("rest_framework") is None
 
           settings.configure(
@@ -176,14 +190,17 @@ jobs:
           python -m venv "$smoke_venv"
           wheel="$(echo dist/django_asklens-*.whl)"
           "$smoke_venv/bin/python" -m pip install --upgrade pip
+          "$smoke_venv/bin/python" -m pip install "${{ matrix.django-package }}"
           "$smoke_venv/bin/python" -m pip install "${wheel}[api]"
-          "$smoke_venv/bin/python" - <<'PY'
+          DJANGO_VERSION_PREFIX="${{ matrix.django-version-prefix }}" "$smoke_venv/bin/python" - <<'PY'
           import importlib.util
+          import os
 
           import django
           from django.conf import settings
           from django.core.management import call_command
 
+          assert django.get_version().startswith(os.environ["DJANGO_VERSION_PREFIX"])
           assert importlib.util.find_spec("rest_framework") is not None
 
           settings.configure(
