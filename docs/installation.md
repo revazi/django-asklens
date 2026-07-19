@@ -12,6 +12,12 @@ Install the optional DRF API integration when you want the built-in HTTP endpoin
 python -m pip install 'django-asklens[api]'
 ```
 
+Install the optional MCP integration when you want the FastMCP bridge helpers for exposing AskLens through a real MCP transport:
+
+```bash
+python -m pip install 'django-asklens[mcp]'
+```
+
 For local development in this repository, use `uv`:
 
 ```bash
@@ -100,5 +106,6 @@ Current development target:
 - Django 5.2 LTS or Django 6.x
 - Pydantic v2
 - Optional API extra: Django REST Framework 3.17+
+- Optional MCP extra: FastMCP 3.4+
 
 Current package metadata and CI target Django 5.2 LTS and Django 6.x.

@@ -18,6 +18,7 @@ def test_demo_asklens_settings_default_to_dummy_backend() -> None:
 
     assert settings["LLM_BACKEND"] == "dummy"
     assert settings["DUMMY_PLANS"]
+    assert settings["MCP_ALLOW_ROW_RETURN"] is False
     assert "LLM_API_KEY" not in settings
 
 
@@ -44,6 +45,24 @@ def test_demo_asklens_settings_can_enable_openai_compatible_backend() -> None:
     assert settings["LLM_TEMPERATURE"] == 0.2
     assert settings["LOG_LLM_IO"] is True
     assert settings["DUMMY_PLANS"]
+
+
+def test_demo_mcp_endpoint_flag_supports_primary_and_legacy_env_names() -> None:
+    """The runnable demo mounts MCP only when an explicit env flag is set."""
+
+    assert demo_settings.is_demo_mcp_enabled({}) is False
+    assert demo_settings.is_demo_mcp_enabled({"DJANGO_ASKLENS_MCP_ENABLED": "1"})
+    assert demo_settings.is_demo_mcp_enabled({"DJANGO_ASKLENS_DEMO_MCP": "1"})
+
+
+def test_demo_asklens_settings_can_enable_mcp_row_return() -> None:
+    """MCP row return remains an explicit opt-in demo setting."""
+
+    settings = build_demo_asklens_settings(
+        environ={"DJANGO_ASKLENS_MCP_ALLOW_ROWS": "1"}
+    )
+
+    assert settings["MCP_ALLOW_ROW_RETURN"] is True
 
 
 def test_demo_asklens_settings_can_use_openai_api_key_fallback() -> None:

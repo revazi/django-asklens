@@ -23,12 +23,14 @@ from django_asklens.querying import (
     execute_asklens_query_request,
     safe_error_message,
 )
+from django_asklens.settings import get_asklens_setting
 
 DEFAULT_MCP_PLAN_QUESTION = "MCP submitted QueryPlan"
 MCP_ROW_RETURN_POLICY = (
     "Rows are omitted by default for MCP tool results because MCP clients often "
-    "place tool output into an LLM context. Call with include_rows=True only in "
-    "trusted deployments or after explicit user approval."
+    "place tool output into an LLM context. To return rows, the tool call must "
+    "pass include_rows=True and the Django project must set "
+    "DJANGO_ASKLENS['MCP_ALLOW_ROW_RETURN'] = True."
 )
 
 __all__ = [
@@ -39,6 +41,7 @@ __all__ = [
     "asklens_query",
     "asklens_validate_plan",
     "apply_mcp_row_policy",
+    "mcp_row_return_allowed",
 ]
 
 
@@ -186,6 +189,12 @@ def safe_mcp_error_category(exc: AskLensError) -> str:
     return "asklens_error"
 
 
+def mcp_row_return_allowed() -> bool:
+    """Return whether MCP helpers may include result rows in tool payloads."""
+
+    return bool(get_asklens_setting("MCP_ALLOW_ROW_RETURN"))
+
+
 def apply_mcp_row_policy(
     payload: Mapping[str, Any],
     *,
@@ -197,9 +206,12 @@ def apply_mcp_row_policy(
     if mcp_payload.get("response_type") != "query":
         return mcp_payload
 
-    if include_rows:
+    if include_rows and mcp_row_return_allowed():
         mcp_payload["rows_omitted"] = False
         return mcp_payload
+
+    if include_rows:
+        mcp_payload["row_return_denied"] = True
 
     mcp_payload["data"] = []
     mcp_payload["rows_omitted"] = True

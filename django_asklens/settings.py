@@ -27,6 +27,7 @@ DEFAULTS: dict[str, Any] = {
     "FRONTEND_TITLE": "AskLens",
     "FRONTEND_SUBTITLE": "Ask read-only questions over approved Django data.",
     "FRONTEND_STARTER_QUESTIONS": (),
+    "MCP_ALLOW_ROW_RETURN": False,
     "DUMMY_PLANS": {},
     "DUMMY_DEFAULT_PLAN": None,
 }
