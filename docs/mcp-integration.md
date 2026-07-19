@@ -1,6 +1,6 @@
 # MCP integration notes
 
-Status: planned. Django AskLens does not currently ship an MCP server or `django_asklens.mcp` module. This page explains the intended integration model so teams can evaluate where AskLens fits when they already use an MCP-capable client.
+Status: framework-neutral adapter helpers are available under `django_asklens.mcp`. Django AskLens does not currently ship a full MCP SDK server, HTTP transport, or authentication layer. Host projects can wrap these helpers with whichever Django-aware MCP server they use.
 
 ## Why AskLens still matters with MCP
 
@@ -28,9 +28,20 @@ AskLens = semantic catalog, policy validation, safe ORM execution, and audit
 
 Without AskLens, an MCP server that supports ad hoc analytics would still need to implement those safety and semantic layers itself, or it would risk exposing raw database access, broad model introspection, or hand-written report tools only.
 
-## Possible MCP tools
+## Adapter helpers
 
-A future AskLens MCP adapter would likely expose a small set of tools around existing core helpers:
+AskLens provides dependency-free helpers that can be wrapped as MCP tools:
+
+```python
+from django_asklens.mcp import (
+    asklens_capabilities,
+    asklens_execute_plan,
+    asklens_query,
+    asklens_validate_plan,
+)
+```
+
+Suggested MCP tool mapping:
 
 ```text
 asklens_capabilities()
@@ -39,13 +50,15 @@ asklens_execute_plan(plan, include_rows=false)
 asklens_query(question, include_rows=false)  # optional convenience tool
 ```
 
-`asklens_capabilities()` would return permission-scoped metadata only: visible resources, fields, metrics, supported patterns, limitations, and example questions. It would not return database rows or sample values.
+`asklens_capabilities(request)` returns permission-scoped metadata only: visible resources, fields, metrics, supported patterns, limitations, example questions, and the `QueryPlan` JSON schema. It does not return database rows or sample values, execute a query, or call an LLM provider.
 
-`asklens_validate_plan(plan)` would validate a client-produced plan against the current catalog, permissions, settings, and safety rules without executing a database query.
+`asklens_validate_plan(request, plan)` validates a client-produced plan against the current catalog, permissions, settings, and safety rules without executing a database query or creating an audit row.
 
-`asklens_execute_plan(plan, include_rows=false)` would revalidate the plan, compile it to Django ORM, execute it through the resource `base_queryset(request)`, and return metadata such as columns, row count, visualization hints, and an audit/run id. Returning rows should be explicit because many MCP clients feed tool results back into an LLM context.
+`asklens_execute_plan(request, plan, include_rows=False)` revalidates the plan, compiles it to Django ORM, executes it through the resource `base_queryset(request)`, creates the normal AskLens audit record, and returns metadata such as columns, row count, visualization hints, and run id. Returning rows is explicit because many MCP clients feed tool results back into an LLM context.
 
-`asklens_query(question, include_rows=false)` could be a convenience wrapper around AskLens' existing query orchestration for deployments that still want AskLens to call its configured provider.
+`asklens_query(request, question, include_rows=False)` is a convenience wrapper around AskLens' existing query orchestration for deployments that still want AskLens to call its configured provider.
+
+These helpers do not import Django REST Framework or an MCP SDK.
 
 ## Planning modes
 
@@ -84,41 +97,55 @@ This is the preferred design when the goal is to avoid server-side LLM calls fro
 
 ## Row-return defaults
 
-MCP clients often place tool results into an LLM context. For that reason, a future MCP adapter should default to returning metadata rather than rows:
+MCP clients often place tool results into an LLM context. For that reason, the adapter defaults to returning metadata rather than rows:
 
 ```json
 {
   "response_type": "query",
   "run_id": 42,
   "columns": [{"key": "status", "label": "Status", "type": "string"}],
+  "data": [],
   "row_count": 2,
   "rows_omitted": true,
   "visualization": {"type": "bar"}
 }
 ```
 
-Projects could explicitly enable row return for trusted deployments or user-approved actions, but row return should not be the silent default.
+Projects can call `asklens_execute_plan(..., include_rows=True)` or `asklens_query(..., include_rows=True)` for trusted deployments or user-approved actions, but row return is not the silent default.
 
 ## Request and permission mapping
 
-An MCP adapter still needs a Django request-like context so existing AskLens hooks behave the same way as API/admin/core usage:
+The adapter expects a Django request-like context so existing AskLens hooks behave the same way as API/admin/core usage:
 
 - `request.user` for authentication and default Django permissions;
 - `REQUEST_PERMISSIONS_GETTER` for project-specific role or tenant permission strings;
 - resource `base_queryset(request)` hooks for tenant/row scope; and
-- configured `API_PERMISSION_CLASSES` or equivalent project gates where appropriate.
+- configured project gates around the MCP server/tool route.
 
-The MCP layer should map its authenticated principal to a real Django user or a request-like object with equivalent attributes. It should not bypass AskLens permission, validation, or row-scope checks.
+The MCP layer should map its authenticated principal to a real Django user or a request-like object with equivalent attributes before calling AskLens. It should not expose permission strings as client-controlled tool arguments, and it should not bypass AskLens permission, validation, or row-scope checks.
 
-## Non-goals for an MCP adapter
+Example wrapper shape:
 
-A future MCP adapter should not add:
+```python
+def asklens_execute_plan_tool(context, plan, include_rows=False):
+    request = build_django_request_from_mcp_context(context)
+    return asklens_execute_plan(
+        request,
+        plan,
+        include_rows=include_rows,
+    )
+```
+
+## Non-goals for the adapter
+
+The adapter does not add:
 
 - raw SQL generation or execution;
 - mutation/write tools;
 - automatic exposure of all Django models;
 - sample database rows in capabilities output;
-- permission bypasses for MCP clients; or
+- permission bypasses for MCP clients;
+- a mandatory MCP SDK dependency; or
 - mandatory server-side LLM calls.
 
 The intended integration is a transport adapter over AskLens core, not a replacement for AskLens' safety model.

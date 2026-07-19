@@ -72,6 +72,12 @@ def test_core_querying_import_does_not_import_drf() -> None:
     assert_import_does_not_import_drf("django_asklens.querying")
 
 
+def test_mcp_adapter_import_does_not_import_drf() -> None:
+    """Framework-neutral MCP helpers should be independent of DRF imports."""
+
+    assert_import_does_not_import_drf("django_asklens.mcp")
+
+
 def test_admin_import_does_not_import_drf() -> None:
     """Admin query helpers should not import DRF modules at import time."""
 
