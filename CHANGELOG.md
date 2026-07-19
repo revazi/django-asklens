@@ -11,7 +11,7 @@ Post-MVP work in this section is not intended to trigger a package release. Vers
 ### Added
 
 - Core Python API guide for using AskLens without Django REST Framework.
-- Planned MCP integration notes explaining AskLens' role as the semantic validation and safe ORM execution layer behind MCP tools.
+- Framework-neutral MCP adapter helpers for capabilities, plan validation, safe plan execution with rows omitted by default, and optional AskLens-managed question orchestration.
 
 ### Changed
 
