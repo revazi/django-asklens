@@ -100,7 +100,7 @@ asklens_execute_plan
 
 If `expose_query_tool=True`, it also returns `asklens_query`. Keep this disabled unless you intentionally want a tool that may call the configured AskLens provider in non-dummy deployments.
 
-See [`examples/mcp/`](../examples/mcp/) for a generic registration sketch.
+See [`examples/mcp/`](../examples/mcp/) for a generic registration sketch. The repository also includes a concrete, tested example in `tests/test_project/mcp.py` with coverage in `tests/test_project/test_mcp_example.py`; it uses an in-memory fake MCP server to demonstrate tool registration and calls without choosing a real transport dependency.
 
 ## Planning modes
 

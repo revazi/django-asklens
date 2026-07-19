@@ -12,7 +12,7 @@ Post-MVP work in this section is not intended to trigger a package release. Vers
 
 - Core Python API guide for using AskLens without Django REST Framework.
 - Framework-neutral MCP adapter helpers and `AskLensMCPToolSet` wrapper for capabilities, plan validation, safe plan execution, and optional AskLens-managed question orchestration.
-- MCP integration examples and a hardened `MCP_ALLOW_ROW_RETURN` setting that keeps result rows omitted unless the project explicitly enables row return.
+- MCP integration examples, including a concrete test-project fake MCP server flow, and a hardened `MCP_ALLOW_ROW_RETURN` setting that keeps result rows omitted unless the project explicitly enables row return.
 
 ### Changed
 
