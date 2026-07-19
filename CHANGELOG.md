@@ -6,19 +6,34 @@ The project is alpha and APIs may change before a stable release.
 
 ## Unreleased
 
-Post-MVP work in this section is not intended to trigger a package release. Version bumping, tagging, and PyPI publishing are deferred until the broader post-MVP scope is complete.
+No changes yet.
+
+## 0.1.0a1 — 2026-07-19
+
+This alpha collects the post-`0.1.0a0` core/API split, Django 5.2 compatibility work, and MCP integration surface.
 
 ### Added
 
 - Core Python API guide for using AskLens without Django REST Framework.
 - Framework-neutral MCP adapter helpers and `AskLensMCPToolSet` wrapper for capabilities, plan validation, safe plan execution, and optional AskLens-managed question orchestration.
-- MCP integration examples, including a concrete test-project fake MCP server flow, an optional `mcp` extra with a FastMCP bridge, compact MCP discovery helpers for QueryPlan schema and per-resource metadata, an opt-in local FastMCP HTTP endpoint for the runnable demo project, and hardened MCP row-return settings that keep result rows omitted unless the project explicitly enables row return and cap returned MCP rows with `MCP_MAX_RETURNED_ROWS`.
+- Optional `mcp` extra with a FastMCP bridge and local demo ASGI `/mcp` endpoint for source checkouts.
+- Compact MCP discovery helpers for QueryPlan schema and per-resource metadata.
+- MCP integration examples, including generic wrapper registration and a concrete test-project fake MCP server flow.
+- CI wheel smoke coverage for core, optional API, and optional MCP installs across the supported Django lines.
 
 ### Changed
 
 - Moved shared query/help orchestration, request permission helpers, and admin access checks out of DRF-coupled API modules.
 - Made Django REST Framework an optional `api` extra while keeping core catalog, planning, validation, compilation, execution, admin imports, and result serialization usable without importing DRF.
 - Expanded supported Django versions to include Django 5.2 LTS alongside Django 6.x, with CI coverage for both lines.
+- Clarified that the ASGI/Uvicorn MCP demo is a local one-port convenience, not a production deployment requirement.
+
+### Security
+
+- MCP plan validation and execution revalidate client-produced plans before ORM execution.
+- MCP result rows remain omitted by default and require both explicit tool input and `MCP_ALLOW_ROW_RETURN=True`.
+- MCP row-return payloads are capped with `MCP_MAX_RETURNED_ROWS` metadata.
+- MCP wrappers derive request context server-side instead of accepting client-controlled usernames or permission strings.
 
 ## 0.1.0a0 — 2026-07-19
 
