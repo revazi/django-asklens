@@ -12,7 +12,7 @@ AskLens intentionally does not depend on a generic Django MCP package or Django 
 
 Use `AskLensMCPToolSet` when your MCP library can register existing Python callables. Use the lower-level functions in `django_asklens.mcp` when your MCP framework has a different calling convention.
 
-For a runnable repository example, see `tests/test_project/mcp.py` and `tests/test_project/test_mcp_example.py`. They use an in-memory fake MCP server to show registration, context-to-request mapping, server-derived permissions, plan validation, execution, row omission, and the opt-in `asklens_query` tool.
+For a runnable repository example, see `tests/test_project/mcp.py` and `tests/test_project/test_mcp_example.py`. They use an in-memory fake MCP server to show registration, context-to-request mapping, server-derived permissions, compact capabilities, schema/resource-detail lookup, plan validation, execution, row omission, and the opt-in `asklens_query` tool.
 
 For a real local MCP endpoint, start the demo ASGI app with:
 

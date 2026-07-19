@@ -47,16 +47,37 @@ def create_fastmcp_server(
         or (
             "AskLens exposes permission-scoped analytics capabilities and "
             "validated read-only QueryPlan execution over registered Django "
-            "resources. Prefer asklens_capabilities, asklens_validate_plan, "
-            "and asklens_execute_plan for MCP-native planning."
+            "resources. Prefer compact asklens_capabilities, "
+            "asklens_describe_resource, asklens_query_plan_schema, "
+            "asklens_validate_plan, and asklens_execute_plan for "
+            "MCP-native planning."
         ),
     )
 
     @server.tool(name="asklens_capabilities")
-    def capabilities() -> dict[str, Any]:
-        """Return permission-scoped AskLens capabilities and QueryPlan schema."""
+    def capabilities(
+        include_query_plan_schema: bool = False,
+        resource_detail: str = "summary",
+    ) -> dict[str, Any]:
+        """Return permission-scoped AskLens capabilities."""
 
-        return toolset.asklens_capabilities(None)
+        return toolset.asklens_capabilities(
+            None,
+            include_query_plan_schema=include_query_plan_schema,
+            resource_detail=resource_detail,
+        )
+
+    @server.tool(name="asklens_query_plan_schema")
+    def query_plan_schema() -> dict[str, Any]:
+        """Return the AskLens QueryPlan JSON schema."""
+
+        return toolset.asklens_query_plan_schema(None)
+
+    @server.tool(name="asklens_describe_resource")
+    def describe_resource(resource: str) -> dict[str, Any]:
+        """Return full metadata for one permission-scoped AskLens resource."""
+
+        return toolset.asklens_describe_resource(None, resource)
 
     @server.tool(name="asklens_validate_plan")
     def validate_plan(plan: dict[str, Any]) -> dict[str, Any]:

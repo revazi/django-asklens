@@ -14,8 +14,10 @@ from django_asklens.catalog.registry import default_registry
 from django_asklens.mcp import (
     AskLensMCPToolSet,
     asklens_capabilities,
+    asklens_describe_resource,
     asklens_execute_plan,
     asklens_query,
+    asklens_query_plan_schema,
     asklens_validate_plan,
 )
 from django_asklens.models import SemanticQueryRun
@@ -160,6 +162,103 @@ def test_mcp_capabilities_are_permission_scoped(
     [resource] = payload_with_pii_permission["capabilities"]["resources"]
     assert "customer.email" in {field["name"] for field in resource["fields"]}
     assert "alice@example.com" not in str(payload_with_pii_permission)
+
+
+def test_mcp_capabilities_can_return_compact_resource_summaries(
+    registered_orders: None,
+    mcp_request,
+) -> None:
+    """Compact capabilities keep MCP discovery payloads small."""
+
+    payload = asklens_capabilities(
+        mcp_request,
+        include_query_plan_schema=False,
+        resource_detail="summary",
+    )
+
+    assert payload["response_type"] == "capabilities"
+    assert "query_plan_schema" not in payload
+    [resource] = payload["capabilities"]["resources"]
+    assert resource["field_names"] == ["id", "status", "created_at"]
+    assert resource["metric_names"] == ["order_count"]
+    assert "fields" not in resource
+    assert payload["capabilities"]["resource_detail"] == "summary"
+
+
+def test_mcp_capabilities_reject_invalid_resource_detail(
+    registered_orders: None,
+    mcp_request,
+) -> None:
+    """Untrusted MCP capability arguments fail closed."""
+
+    payload = asklens_capabilities(mcp_request, resource_detail="verbose")
+
+    assert payload == {
+        "response_type": "error",
+        "executed": False,
+        "rows_omitted": True,
+        "error_category": "invalid_argument",
+        "error": "resource_detail must be either 'summary' or 'full'.",
+    }
+
+
+def test_mcp_query_plan_schema_is_available_without_capabilities(
+    registered_orders: None,
+    mcp_request,
+) -> None:
+    """MCP clients can fetch the QueryPlan schema separately."""
+
+    payload = asklens_query_plan_schema(mcp_request)
+
+    assert payload["response_type"] == "query_plan_schema"
+    assert payload["executed"] is False
+    assert payload["rows_omitted"] is True
+    assert payload["query_plan_schema"]["title"] == "QueryPlan"
+    assert payload["query_plan_schema"]["required"] == ["resource", "intent"]
+
+
+def test_mcp_describe_resource_returns_full_permission_scoped_metadata(
+    registered_orders: None,
+    mcp_request,
+) -> None:
+    """MCP clients can request full metadata for one visible resource."""
+
+    payload = asklens_describe_resource(mcp_request, "orders")
+
+    assert payload["response_type"] == "resource_description"
+    assert payload["valid"] is True
+    assert payload["executed"] is False
+    assert payload["rows_omitted"] is True
+    assert payload["resource"]["name"] == "orders"
+    assert {field["name"] for field in payload["resource"]["fields"]} == {
+        "id",
+        "status",
+        "created_at",
+    }
+
+    mcp_request.asklens_permissions = frozenset({"shop.view_customer_pii"})
+    payload_with_permission = asklens_describe_resource(mcp_request, "orders")
+    assert "customer.email" in {
+        field["name"] for field in payload_with_permission["resource"]["fields"]
+    }
+
+
+def test_mcp_describe_resource_returns_safe_unknown_resource_error(
+    registered_orders: None,
+    mcp_request,
+) -> None:
+    """Unknown or unauthorized resources are not described."""
+
+    payload = asklens_describe_resource(mcp_request, "missing")
+
+    assert payload == {
+        "response_type": "resource_description",
+        "valid": False,
+        "rows_omitted": True,
+        "executed": False,
+        "error_category": "unknown_resource",
+        "error": "Resource 'missing' is not queryable for this request.",
+    }
 
 
 def test_mcp_validate_plan_does_not_execute_or_audit(
@@ -317,6 +416,8 @@ def test_asklens_mcp_toolset_wraps_tools_with_context_factory(
     context = object()
 
     capabilities = toolset.asklens_capabilities(context)
+    schema = toolset.asklens_query_plan_schema(context)
+    resource = toolset.asklens_describe_resource(context, "orders")
     validation = toolset.asklens_validate_plan(context, valid_aggregate_plan())
     execution = toolset.asklens_execute_plan(
         context,
@@ -324,15 +425,19 @@ def test_asklens_mcp_toolset_wraps_tools_with_context_factory(
         include_rows=True,
     )
 
-    assert seen_contexts == [context, context, context]
+    assert seen_contexts == [context, context, context, context, context]
     assert capabilities["response_type"] == "capabilities"
+    assert schema["response_type"] == "query_plan_schema"
+    assert resource["valid"] is True
     assert validation["valid"] is True
     assert execution["response_type"] == "query"
     assert execution["rows_omitted"] is True
     assert execution["row_return_denied"] is True
     assert sorted(toolset.tools()) == [
         "asklens_capabilities",
+        "asklens_describe_resource",
         "asklens_execute_plan",
+        "asklens_query_plan_schema",
         "asklens_validate_plan",
     ]
 

@@ -13,8 +13,10 @@ from typing import Any
 from django_asklens.mcp.core import (
     DEFAULT_MCP_PLAN_QUESTION,
     asklens_capabilities,
+    asklens_describe_resource,
     asklens_execute_plan,
     asklens_query,
+    asklens_query_plan_schema,
     asklens_validate_plan,
 )
 
@@ -37,14 +39,34 @@ class AskLensMCPToolSet:
     expose_query_tool: bool = False
     default_include_rows: bool = False
     include_query_plan_schema: bool = True
+    capabilities_resource_detail: str = "full"
 
-    def asklens_capabilities(self, context: Any) -> dict[str, Any]:
+    def asklens_capabilities(
+        self,
+        context: Any,
+        *,
+        include_query_plan_schema: bool | None = None,
+        resource_detail: str | None = None,
+    ) -> dict[str, Any]:
         """Return permission-scoped AskLens capabilities for one MCP context."""
 
         return asklens_capabilities(
             self.request_factory(context),
-            include_query_plan_schema=self.include_query_plan_schema,
+            include_query_plan_schema=self._resolve_include_query_plan_schema(
+                include_query_plan_schema
+            ),
+            resource_detail=self._resolve_capabilities_resource_detail(resource_detail),
         )
+
+    def asklens_query_plan_schema(self, context: Any) -> dict[str, Any]:
+        """Return the QueryPlan JSON schema for one MCP context."""
+
+        return asklens_query_plan_schema(self.request_factory(context))
+
+    def asklens_describe_resource(self, context: Any, resource: str) -> dict[str, Any]:
+        """Return full permission-scoped metadata for one visible resource."""
+
+        return asklens_describe_resource(self.request_factory(context), resource)
 
     def asklens_validate_plan(
         self,
@@ -114,6 +136,8 @@ class AskLensMCPToolSet:
 
         tool_map: dict[str, Callable[..., dict[str, Any]]] = {
             "asklens_capabilities": self.asklens_capabilities,
+            "asklens_query_plan_schema": self.asklens_query_plan_schema,
+            "asklens_describe_resource": self.asklens_describe_resource,
             "asklens_validate_plan": self.asklens_validate_plan,
             "asklens_execute_plan": self.asklens_execute_plan,
         }
@@ -127,3 +151,20 @@ class AskLensMCPToolSet:
         if include_rows is None:
             return self.default_include_rows
         return include_rows
+
+    def _resolve_include_query_plan_schema(
+        self,
+        include_query_plan_schema: bool | None,
+    ) -> bool:
+        """Resolve per-call schema inclusion preference."""
+
+        if include_query_plan_schema is None:
+            return self.include_query_plan_schema
+        return include_query_plan_schema
+
+    def _resolve_capabilities_resource_detail(self, resource_detail: str | None) -> str:
+        """Resolve per-call capabilities resource detail preference."""
+
+        if resource_detail is None:
+            return self.capabilities_resource_detail
+        return resource_detail

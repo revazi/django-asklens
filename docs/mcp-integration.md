@@ -47,8 +47,10 @@ AskLens provides lower-level helpers that can be wrapped as MCP tools:
 ```python
 from django_asklens.mcp import (
     asklens_capabilities,
+    asklens_describe_resource,
     asklens_execute_plan,
     asklens_query,
+    asklens_query_plan_schema,
     asklens_validate_plan,
 )
 ```
@@ -56,13 +58,19 @@ from django_asklens.mcp import (
 Suggested MCP tool mapping:
 
 ```text
-asklens_capabilities()
+asklens_capabilities(include_query_plan_schema=false, resource_detail="summary")
+asklens_query_plan_schema()
+asklens_describe_resource(resource)
 asklens_validate_plan(plan)
 asklens_execute_plan(plan, include_rows=false)
 asklens_query(question, include_rows=false)  # optional convenience tool
 ```
 
-`asklens_capabilities(request)` returns permission-scoped metadata only: visible resources, fields, metrics, supported patterns, limitations, example questions, and the `QueryPlan` JSON schema. It does not return database rows or sample values, execute a query, or call an LLM provider.
+`asklens_capabilities(request)` returns permission-scoped metadata only: visible resources, fields, metrics, supported patterns, limitations, example questions, and optionally the `QueryPlan` JSON schema. It does not return database rows or sample values, execute a query, or call an LLM provider. For MCP transports, prefer `resource_detail="summary"` and `include_query_plan_schema=False` during discovery to keep tool output compact.
+
+`asklens_query_plan_schema(request)` returns the QueryPlan JSON schema without repeating catalog capabilities.
+
+`asklens_describe_resource(request, resource)` returns full permission-scoped metadata for one visible resource. Use this after compact discovery and before constructing a QueryPlan for a specific resource.
 
 `asklens_validate_plan(request, plan)` validates a client-produced plan against the current catalog, permissions, settings, and safety rules without executing a database query or creating an audit row.
 
@@ -100,11 +108,15 @@ tools = toolset.tools()
 
 ```text
 asklens_capabilities
+asklens_query_plan_schema
+asklens_describe_resource
 asklens_validate_plan
 asklens_execute_plan
 ```
 
 If `expose_query_tool=True`, it also returns `asklens_query`. Keep this disabled unless you intentionally want a tool that may call the configured AskLens provider in non-dummy deployments.
+
+The optional FastMCP bridge exposes compact capabilities by default: `asklens_capabilities()` omits the QueryPlan schema and summarizes each resource. MCP clients can then call `asklens_query_plan_schema()` and `asklens_describe_resource(resource)` only when they need those details.
 
 See [`examples/mcp/`](../examples/mcp/) for a generic registration sketch. The repository also includes a concrete, tested example in `tests/test_project/mcp.py` with coverage in `tests/test_project/test_mcp_example.py`; it uses an in-memory fake MCP server to demonstrate tool registration and calls without choosing a real transport dependency.
 

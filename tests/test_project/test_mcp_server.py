@@ -118,9 +118,63 @@ def test_demo_fastmcp_server_registers_asklens_tools(
 
     assert asyncio.run(run()) == [
         "asklens_capabilities",
+        "asklens_describe_resource",
         "asklens_execute_plan",
+        "asklens_query_plan_schema",
         "asklens_validate_plan",
     ]
+
+
+def test_demo_fastmcp_server_capabilities_are_compact_by_default(
+    mcp_server_settings: None,
+    registered_orders: None,
+) -> None:
+    """FastMCP capability discovery stays compact for MCP clients."""
+
+    async def run() -> dict[str, Any]:
+        server = create_demo_asklens_mcp_server()
+        result = await server.call_tool("asklens_capabilities", {})
+        return result.structured_content
+
+    payload = asyncio.run(run())
+
+    assert payload["response_type"] == "capabilities"
+    assert "query_plan_schema" not in payload
+    [resource] = payload["capabilities"]["resources"]
+    assert resource["field_names"] == ["id", "status", "created_at"]
+    assert resource["metric_names"] == ["order_count"]
+    assert "fields" not in resource
+
+
+def test_demo_fastmcp_server_exposes_schema_and_resource_description_tools(
+    mcp_server_settings: None,
+    registered_orders: None,
+) -> None:
+    """FastMCP clients can fetch schema/resource details separately."""
+
+    async def run() -> dict[str, Any]:
+        server = create_demo_asklens_mcp_server()
+        schema = await server.call_tool("asklens_query_plan_schema", {})
+        resource = await server.call_tool(
+            "asklens_describe_resource",
+            {"resource": "orders"},
+        )
+        return {
+            "schema": schema.structured_content,
+            "resource": resource.structured_content,
+        }
+
+    payload = asyncio.run(run())
+
+    assert payload["schema"]["response_type"] == "query_plan_schema"
+    assert payload["schema"]["query_plan_schema"]["title"] == "QueryPlan"
+    assert payload["resource"]["response_type"] == "resource_description"
+    assert payload["resource"]["valid"] is True
+    assert {field["name"] for field in payload["resource"]["resource"]["fields"]} == {
+        "id",
+        "status",
+        "created_at",
+    }
 
 
 def test_demo_fastmcp_server_executes_asklens_plan_without_rows_by_default(
