@@ -5,12 +5,17 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import datetime
 from time import perf_counter
-from typing import Any
+from typing import Any, Never
 
 from django.utils import timezone
 
 from django_asklens.catalog.registry import CatalogRegistry, default_registry
-from django_asklens.compiler import CompiledQuery, ResultColumn, compile_query_plan
+from django_asklens.compiler import ResultColumn
+from django_asklens.compiler.orm import (
+    _compile_prepared_query,
+    _CompiledQuery,
+    _PreparedQueryPlan,
+)
 from django_asklens.exceptions import PlanValidationError
 from django_asklens.permissions import get_request_permissions
 from django_asklens.planning.schemas import QueryPlan
@@ -32,6 +37,12 @@ class _ExecutionContext:
     now: datetime
     audit_policy: str
     audit_sink: Any
+
+    def __reduce__(self) -> Never:
+        """Prevent current request state from being serialized or reused."""
+
+        msg = "AskLens execution context is short-lived and not serializable."
+        raise TypeError(msg)
 
 
 @dataclass(frozen=True, slots=True)
@@ -147,17 +158,41 @@ def _execute_untrusted_plan(
         registry=context.registry,
         permissions=context.permissions,
     )
-    compiled_query = compile_query_plan(
-        validated_plan,
-        registry=context.registry,
-        request=context.request,
+    prepared = _prepare_query_plan(validated_plan, context=context)
+    compiled_query = _compile_prepared_query(prepared)
+    return _execute_compiled_query(compiled_query, context=context)
+
+
+def _prepare_query_plan(
+    plan: QueryPlan,
+    *,
+    context: _ExecutionContext,
+) -> _PreparedQueryPlan:
+    """Bind a validated plan to current resource scope and request state."""
+
+    resource = context.registry.get(plan.resource)
+    return _PreparedQueryPlan(
+        plan=plan,
+        resource=resource,
+        queryset=resource.get_base_queryset(context.request),
         now=context.now,
+        context_binding=context,
     )
-    return execute_query(compiled_query)
 
 
-def execute_query(compiled_query: CompiledQuery) -> QueryResult:
-    """Execute a compiled ORM query and normalize row keys."""
+def _execute_compiled_query(
+    compiled_query: _CompiledQuery,
+    *,
+    context: _ExecutionContext,
+) -> QueryResult:
+    """Evaluate only a private query bound to this execution context."""
+
+    if not isinstance(compiled_query, _CompiledQuery):
+        msg = "AskLens executor requires an internal compiled query."
+        raise TypeError(msg)
+    if compiled_query.context_binding is not context:
+        msg = "AskLens compiled query is not bound to the current execution context."
+        raise TypeError(msg)
 
     started = perf_counter()
     rows = tuple(

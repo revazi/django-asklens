@@ -17,7 +17,7 @@ import pytest
 from django_asklens import Metric
 from django_asklens.catalog.registry import CatalogRegistry
 from django_asklens.exceptions import AskLensError
-from django_asklens.execution import QueryResult, run_query_plan
+from django_asklens.execution import QueryResult, execute_plan
 from django_asklens.llms import get_llm_provider
 from django_asklens.planning import PlannerResult, plan_question
 from tests.test_project.models import Account, AccountMembership, Customer, Order
@@ -262,7 +262,7 @@ def test_live_openai_compatible_provider_evaluation_case(
         registry=registry,
         permissions=request.user.get_all_permissions(),
     )
-    result = run_query_plan(planner_result.plan, registry=registry, request=request)
+    result = execute_plan(planner_result.plan, registry=registry, request=request)
     payload = result.to_dict()
 
     assert planner_result.plan.resource == "orders"

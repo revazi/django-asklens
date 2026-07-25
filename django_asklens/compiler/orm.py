@@ -1,13 +1,12 @@
-"""Compile validated QueryPlans into Django ORM querysets."""
+"""Privately compile prepared AskLens plans into Django ORM querysets."""
 
 from collections.abc import Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any
+from typing import Any, Never
 
 from django.db.models import IntegerField, QuerySet, Value
 
-from django_asklens.catalog.registry import CatalogRegistry, default_registry
 from django_asklens.catalog.resources import FieldSpec, Metric, SemanticResource
 from django_asklens.compiler.aggregations import build_aggregates
 from django_asklens.compiler.dates import build_date_trunc_expression, to_orm_path
@@ -26,44 +25,67 @@ class ResultColumn:
 
 
 @dataclass(frozen=True, slots=True)
-class CompiledQuery:
-    """A QueryPlan compiled to an ORM queryset plus result metadata."""
+class _PreparedQueryPlan:
+    """Short-lived query state bound to one trusted execution context."""
+
+    plan: QueryPlan
+    resource: SemanticResource
+    queryset: QuerySet
+    now: datetime
+    context_binding: object = field(repr=False, compare=False)
+
+    def __reduce__(self) -> Never:
+        """Prevent prepared state from becoming a reusable serialized token."""
+
+        msg = "AskLens prepared query state is short-lived and not serializable."
+        raise TypeError(msg)
+
+
+@dataclass(frozen=True, slots=True)
+class _CompiledQuery:
+    """Private context-bound ORM query and result metadata awaiting evaluation."""
 
     queryset: QuerySet
     columns: tuple[ResultColumn, ...]
     key_map: Mapping[str, str]
     visualization: dict[str, Any]
+    context_binding: object = field(repr=False, compare=False)
+
+    def __reduce__(self) -> Never:
+        """Prevent compiled state from becoming a reusable serialized token."""
+
+        msg = "AskLens compiled query state is short-lived and not serializable."
+        raise TypeError(msg)
 
 
-def compile_query_plan(
-    plan: QueryPlan,
-    *,
-    registry: CatalogRegistry = default_registry,
-    request: Any = None,
-    now: datetime | None = None,
-) -> CompiledQuery:
-    """Compile a validated QueryPlan into an ORM queryset."""
+def _compile_prepared_query(prepared: _PreparedQueryPlan) -> _CompiledQuery:
+    """Compile only state prepared by the trusted execution path."""
 
-    resource = registry.get(plan.resource)
-    queryset = apply_filters(resource.get_base_queryset(request), plan.filters, now=now)
+    if not isinstance(prepared, _PreparedQueryPlan):
+        msg = "AskLens compiler requires an internal prepared query plan."
+        raise TypeError(msg)
+
+    plan = prepared.plan
+    queryset = apply_filters(prepared.queryset, plan.filters, now=prepared.now)
 
     if plan.intent == "list":
-        return compile_list_query(plan=plan, resource=resource, queryset=queryset)
+        return _compile_list_query(prepared=prepared, queryset=queryset)
     if plan.intent == "aggregate":
-        return compile_aggregate_query(plan=plan, resource=resource, queryset=queryset)
+        return _compile_aggregate_query(prepared=prepared, queryset=queryset)
 
     msg = f"Unsupported query intent {plan.intent!r}."
     raise UnsupportedQueryError(msg)
 
 
-def compile_list_query(
+def _compile_list_query(
     *,
-    plan: QueryPlan,
-    resource: SemanticResource,
+    prepared: _PreparedQueryPlan,
     queryset: QuerySet,
-) -> CompiledQuery:
-    """Compile a list-style plan."""
+) -> _CompiledQuery:
+    """Compile a prepared list-style plan."""
 
+    plan = prepared.plan
+    resource = prepared.resource
     orm_fields = tuple(to_orm_path(field_name) for field_name in plan.select)
     key_map = {
         orm_field: field_name
@@ -77,24 +99,26 @@ def compile_list_query(
     )
     compiled = compiled[: plan.limit]
 
-    return CompiledQuery(
+    return _CompiledQuery(
         queryset=compiled,
         columns=tuple(
             field_column(resource.fields[field_name]) for field_name in plan.select
         ),
         key_map=key_map,
         visualization=plan.visualization.model_dump(exclude_none=True),
+        context_binding=prepared.context_binding,
     )
 
 
-def compile_aggregate_query(
+def _compile_aggregate_query(
     *,
-    plan: QueryPlan,
-    resource: SemanticResource,
+    prepared: _PreparedQueryPlan,
     queryset: QuerySet,
-) -> CompiledQuery:
-    """Compile an aggregate-style plan."""
+) -> _CompiledQuery:
+    """Compile a prepared aggregate-style plan."""
 
+    plan = prepared.plan
+    resource = prepared.resource
     group_aliases = build_group_aliases(plan.group_by)
     group_expressions = {
         alias: build_date_trunc_expression(group.field, group.date_trunc)
@@ -122,11 +146,12 @@ def compile_aggregate_query(
     key_map = {alias: group.field for alias, group in group_aliases.items()}
     key_map.update({metric.name: metric.name for metric in plan.metrics})
 
-    return CompiledQuery(
+    return _CompiledQuery(
         queryset=compiled,
         columns=build_aggregate_columns(resource, plan.group_by, plan.metrics),
         key_map=key_map,
         visualization=plan.visualization.model_dump(exclude_none=True),
+        context_binding=prepared.context_binding,
     )
 
 

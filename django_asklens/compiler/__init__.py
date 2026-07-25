@@ -1,9 +1,5 @@
-"""ORM compiler for validated AskLens QueryPlans."""
+"""Result metadata shared with AskLens serialization helpers."""
 
-from django_asklens.compiler.orm import CompiledQuery, ResultColumn, compile_query_plan
+from django_asklens.compiler.orm import ResultColumn
 
-__all__ = [
-    "CompiledQuery",
-    "ResultColumn",
-    "compile_query_plan",
-]
+__all__ = ["ResultColumn"]

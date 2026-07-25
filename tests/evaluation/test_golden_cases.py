@@ -3,13 +3,14 @@
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from decimal import Decimal
+from types import SimpleNamespace
 from typing import Any, Literal
 
 import pytest
 
 from django_asklens import Metric
 from django_asklens.catalog.registry import CatalogRegistry
-from django_asklens.execution import run_query_plan
+from django_asklens.execution import execute_plan
 from django_asklens.llms import DummyProvider
 from django_asklens.planning import PlanLimits
 from django_asklens.planning.planner import plan_question
@@ -225,7 +226,11 @@ def test_golden_evaluation_case(
         registry=registry,
         limits=PlanLimits(max_rows=100, max_joins=2, max_metrics=5, max_group_by=3),
     )
-    result = run_query_plan(planner_result.plan, registry=registry)
+    result = execute_plan(
+        planner_result.plan,
+        request=SimpleNamespace(user=None),
+        registry=registry,
+    )
     payload = result.to_dict()
 
     assert planner_result.question == case.question

@@ -14,6 +14,11 @@ The project is alpha and APIs may change before a stable release.
 
 - Shared API/admin/MCP/provider orchestration now delegates data execution to `execute_plan()`.
 - `run_query_plan()` is a deprecated compatibility wrapper that revalidates plans instead of trusting prior validation.
+- ORM compilation now consumes a private, non-serializable prepared representation bound to the current execution context and resolved resource queryset.
+
+### Removed
+
+- Removed `compile_query_plan`, `CompiledQuery`, and `execute_query` from public package exports. Python callers must use `execute_plan()`; there is no supported unsafe execution API.
 
 ### Security
 

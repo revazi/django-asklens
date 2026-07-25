@@ -2,14 +2,19 @@
 
 from datetime import UTC, datetime
 from decimal import Decimal
+from types import SimpleNamespace
 from typing import Any
 
 import pytest
 
 from django_asklens import Metric
 from django_asklens.catalog.registry import CatalogRegistry
-from django_asklens.compiler import compile_query_plan
-from django_asklens.execution import run_query_plan
+from django_asklens.compiler.orm import _compile_prepared_query
+from django_asklens.execution import execute_plan, run_query_plan
+from django_asklens.execution.runner import (
+    _build_execution_context,
+    _prepare_query_plan,
+)
 from django_asklens.planning import PlanLimits, parse_and_validate_query_plan
 from tests.test_project.models import Customer, Order
 
@@ -26,6 +31,16 @@ def month_start(year: int, month: int) -> datetime:
     """Return the UTC start of a month for date-trunc expectations."""
 
     return datetime(year, month, 1, 0, 0, tzinfo=UTC)
+
+
+def execute_test_plan(plan, *, registry: CatalogRegistry):
+    """Execute through the public facade with an anonymous request context."""
+
+    return execute_plan(
+        plan,
+        request=SimpleNamespace(user=None),
+        registry=registry,
+    )
 
 
 @pytest.fixture
@@ -121,7 +136,7 @@ def test_compile_list_query_returns_selected_public_keys(order_data: None) -> No
         registry=registry,
     )
 
-    result = run_query_plan(plan, registry=registry)
+    result = execute_test_plan(plan, registry=registry)
 
     assert [column.key for column in result.columns] == [
         "customer.name",
@@ -160,7 +175,12 @@ def test_filters_cover_in_contains_date_range_and_relative_dates(
         registry=registry,
     )
 
-    result = run_query_plan(plan, registry=registry, now=aware_datetime(2026, 3, 1))
+    with pytest.warns(DeprecationWarning, match="execute_plan"):
+        result = run_query_plan(
+            plan,
+            registry=registry,
+            now=aware_datetime(2026, 3, 1),
+        )
 
     assert result.rows == (
         {"customer.name": "Bob", "status": "paid"},
@@ -186,7 +206,7 @@ def test_group_by_status_with_count_sum_and_order_by_metric(order_data: None) ->
         registry=registry,
     )
 
-    result = run_query_plan(plan, registry=registry)
+    result = execute_test_plan(plan, registry=registry)
 
     assert [column.key for column in result.columns] == [
         "status",
@@ -219,7 +239,7 @@ def test_group_by_month_and_average_metric(order_data: None) -> None:
         registry=registry,
     )
 
-    result = run_query_plan(plan, registry=registry)
+    result = execute_test_plan(plan, registry=registry)
 
     assert result.rows == (
         {
@@ -249,7 +269,7 @@ def test_min_and_max_metrics(order_data: None) -> None:
         registry=registry,
     )
 
-    result = run_query_plan(plan, registry=registry)
+    result = execute_test_plan(plan, registry=registry)
 
     assert result.rows == (
         {
@@ -272,7 +292,7 @@ def test_metric_query_without_group_by_returns_single_row(order_data: None) -> N
         registry=registry,
     )
 
-    result = run_query_plan(plan, registry=registry)
+    result = execute_test_plan(plan, registry=registry)
 
     assert result.rows == ({"order_count": 4},)
 
@@ -292,7 +312,7 @@ def test_limit_is_applied_to_result_rows(order_data: None) -> None:
         registry=registry,
     )
 
-    result = run_query_plan(plan, registry=registry)
+    result = execute_test_plan(plan, registry=registry)
 
     assert result.row_count == 1
     assert result.rows == ({"status": "paid", "revenue": Decimal("150")},)
@@ -311,7 +331,7 @@ def test_compiler_starts_from_resource_base_queryset(order_data: None) -> None:
         registry=registry,
     )
 
-    result = run_query_plan(plan, registry=registry)
+    result = execute_test_plan(plan, registry=registry)
 
     assert result.rows == ({"order_count": 2},)
 
@@ -330,7 +350,14 @@ def test_compile_query_metadata_without_executing_result(order_data: None) -> No
         registry=registry,
     )
 
-    compiled = compile_query_plan(plan, registry=registry)
+    context = _build_execution_context(
+        request=None,
+        registry=registry,
+        now=None,
+        require_request=False,
+    )
+    prepared = _prepare_query_plan(plan, context=context)
+    compiled = _compile_prepared_query(prepared)
 
     assert [column.key for column in compiled.columns] == ["id", "status"]
     assert compiled.key_map == {"id": "id", "status": "status"}
