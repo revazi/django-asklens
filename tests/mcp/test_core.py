@@ -2,6 +2,8 @@
 
 import pytest
 
+from django_asklens import Metric
+from django_asklens.catalog.registry import default_registry
 from django_asklens.mcp import (
     asklens_capabilities,
     asklens_describe_resource,
@@ -12,6 +14,7 @@ from django_asklens.mcp import (
 )
 from django_asklens.models import SemanticQueryRun
 from tests.mcp._support import sensitive_list_plan, valid_aggregate_plan
+from tests.test_project.models import Order
 
 pytestmark = pytest.mark.django_db
 
@@ -219,6 +222,34 @@ def test_mcp_validate_plan_returns_stable_parse_code(
         "message": "The query plan could not be parsed.",
     }
     assert SemanticQueryRun.objects.count() == 0
+
+
+def test_mcp_execution_rejects_invalid_current_scope_before_sql(
+    settings,
+    mcp_request,
+    django_assert_num_queries,
+) -> None:
+    """MCP execution preserves fail-closed scope and the stable scope error."""
+
+    settings.DJANGO_ASKLENS["AUDIT_MODE"] = "disabled"
+    default_registry.register(
+        model=Order,
+        name="orders",
+        fields={"id": {}, "status": {}},
+        metrics=[Metric("order_count", op="count", field="id")],
+        scope_mode="context_scoped",
+        scope_provider=lambda _request: None,
+    )
+
+    with django_assert_num_queries(0):
+        payload = asklens_execute_plan(mcp_request, valid_aggregate_plan())
+
+    assert payload["response_type"] == "error"
+    assert payload["status_code"] == 400
+    assert payload["error"] == {
+        "code": "asklens.scope.unavailable",
+        "message": "A safe query scope is unavailable for this request.",
+    }
 
 
 def test_mcp_execution_reaches_trusted_facade(

@@ -123,7 +123,7 @@ def run_query_plan(
         request=request,
         registry=registry,
         now=now,
-        require_request=False,
+        require_request=True,
     )
     return _execute_public_plan(plan, context=context)
 
@@ -309,7 +309,7 @@ def _prepare_query_plan(
 
     resource = context.registry.get(plan.resource)
     try:
-        queryset = resource.get_base_queryset(context.request)
+        queryset = resource.get_scope_queryset(context.request)
     except AskLensError:
         raise
     except Exception as exc:

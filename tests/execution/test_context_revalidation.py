@@ -74,7 +74,8 @@ def test_previewed_plan_is_revalidated_against_current_catalog(
         name="orders",
         fields={"id": {"label": "Order ID"}},
         metrics=[Metric("order_count", op="count", field="id")],
-        base_queryset=lambda _request: Order.objects.all(),
+        scope_mode="context_scoped",
+        scope_provider=lambda _request: Order.objects.all(),
     )
 
     with (
@@ -134,7 +135,8 @@ def test_resource_and_metric_permissions_are_rechecked_before_sql(
             },
         },
         metrics=[Metric("revenue", op="sum", field="total")],
-        base_queryset=lambda _request: Order.objects.all(),
+        scope_mode="context_scoped",
+        scope_provider=lambda _request: Order.objects.all(),
     )
     metric_plan = parse_query_plan(
         {

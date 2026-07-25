@@ -1,6 +1,6 @@
 # MCP integration notes
 
-Status: AskLens ships dependency-free MCP adapter helpers, an `AskLensMCPToolSet` wrapper, and an optional FastMCP bridge under `django_asklens.mcp`. The repository also includes an opt-in ASGI/Uvicorn MCP endpoint for the runnable local test project. Django AskLens does not provide a production authentication layer; host projects remain responsible for authenticating MCP callers and mapping trusted server-side context to a Django request-like object. In `0.1`, host projects must also register and test `base_queryset(request)` for every tenant- or row-sensitive resource because a missing hook falls back to the model default manager.
+Status: AskLens ships dependency-free MCP adapter helpers, an `AskLensMCPToolSet` wrapper, and an optional FastMCP bridge under `django_asklens.mcp`. The repository also includes an opt-in ASGI/Uvicorn MCP endpoint for the runnable local test project. Django AskLens does not provide a production authentication layer; host projects remain responsible for authenticating MCP callers, mapping trusted server-side context to a Django request-like object, and testing each context-scoped resource provider. Resource registration fails when explicit scope policy is missing.
 
 ## Why AskLens still matters with MCP
 
@@ -13,7 +13,7 @@ That does not replace AskLens' core responsibilities:
 - hiding sensitive fields unless permissions allow them;
 - validating every `QueryPlan` as untrusted input;
 - enforcing resource and field permissions;
-- starting execution from each resource's `base_queryset(request)` tenant/row-scope hook;
+- starting execution from each resource's explicit global or context-scoped policy;
 - compiling to Django ORM only, not LLM-generated SQL;
 - applying configured limits;
 - returning table/chart-ready JSON; and
@@ -74,7 +74,7 @@ asklens_query(question, include_rows=false)  # optional convenience tool
 
 `asklens_validate_plan(request, plan)` validates a client-produced plan against the current catalog, permissions, settings, and safety rules without executing a database query or creating an audit row.
 
-`asklens_execute_plan(request, plan, include_rows=False)` revalidates the plan, compiles it to Django ORM, executes it through the resource `base_queryset(request)`, applies the configured audit mode, and returns metadata such as columns, row count, and visualization hints. Database audit mode also returns a run id. Default audit records omit the MCP question and complete plan; they retain operational resource/intent/status/error/row-count/duration metadata only.
+`asklens_execute_plan(request, plan, include_rows=False)` revalidates the plan, resolves the resource's explicit global/context scope, compiles it to Django ORM, applies the configured audit mode, and returns metadata such as columns, row count, and visualization hints. Database audit mode also returns a run id. Default audit records omit the MCP question and complete plan; they retain operational resource/intent/status/error/row-count/duration metadata only.
 
 `asklens_query(request, question, include_rows=False)` is a convenience wrapper around AskLens' existing query orchestration for deployments that still want AskLens to call its configured provider.
 
@@ -104,7 +104,7 @@ from django_asklens.mcp import AskLensMCPToolSet
 def build_request_from_mcp_context(context):
     # Host-project code: map the authenticated MCP context/session to a
     # Django request-like object with request.user and any tenant attributes
-    # used by REQUEST_PERMISSIONS_GETTER or base_queryset(request).
+    # used by REQUEST_PERMISSIONS_GETTER or scope_provider(request).
     ...
 
 
@@ -268,7 +268,7 @@ The adapter expects a Django request-like context so existing AskLens hooks beha
 
 - `request.user` for authentication and default Django permissions;
 - `REQUEST_PERMISSIONS_GETTER` for project-specific role or tenant permission strings;
-- resource `base_queryset(request)` hooks for tenant/row scope; and
+- trusted resource `scope_provider(request)` callables for context scope; and
 - configured project gates around the MCP server/tool route.
 
 The MCP layer should map its authenticated principal to a real Django user or a request-like object with equivalent attributes before calling AskLens. It should not expose permission strings as client-controlled tool arguments, and it should not bypass AskLens permission, validation, or row-scope checks.

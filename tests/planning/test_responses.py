@@ -47,6 +47,7 @@ def build_registry() -> CatalogRegistry:
         name="orders",
         label="Orders",
         default_date_field="created_at",
+        scope_mode="global",
         fields={
             "status": {"label": "Status"},
             "created_at": {"label": "Created date"},

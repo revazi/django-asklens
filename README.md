@@ -91,7 +91,8 @@ register(
         Metric("revenue", op="sum", field="total_cents", label="Revenue"),
     ],
     requires_permission="orders.view_reports",
-    base_queryset=visible_orders,
+    scope_mode="context_scoped",
+    scope_provider=visible_orders,
 )
 ```
 
@@ -206,10 +207,10 @@ Live provider tests are opt-in and skipped by default. See [Provider configurati
 ## Safety posture
 
 - Only explicitly registered resources and fields are queryable through the normal validated orchestration paths.
-- Normal API, admin, and MCP execution starts from `resource.get_base_queryset(request)`. In `0.1`, a resource without a `base_queryset` hook falls back to its model's default manager; tenant- or row-sensitive resources must provide and test that hook.
+- Every resource must explicitly declare `scope_mode="global"` or `scope_mode="context_scoped"`. Context-scoped resources require a trusted `scope_provider(request)`; omission, invalid provider results, and provider failures reject without falling back to the model manager.
 - Sensitive fields are hidden unless explicitly permissioned through the normal validation paths.
 - Provider and submitted-plan output is untrusted and validated by the normal API, admin, and MCP orchestration before execution.
-- Use `django_asklens.execution.execute_plan()` for Python execution; it revalidates mappings and existing `QueryPlan` objects for the current request. `run_query_plan()` is a deprecated safe wrapper. The compiler and compiled-query executor are internal and are not public exports.
+- Use `django_asklens.execution.execute_plan()` for Python execution; it revalidates mappings and existing `QueryPlan` objects for the current request. `run_query_plan()` is a deprecated wrapper that also requires the current request. The compiler and compiled-query executor are internal and are not public exports.
 - AskLens executes read-only Django ORM queries only.
 - AskLens does not execute LLM-generated SQL.
 - AskLens does not create, update, or delete application data; its own optional/default audit sink may write one `SemanticQueryRun` metadata record per query attempt.
@@ -222,7 +223,7 @@ Review the [security checklist](docs/security-checklist.md) and [production chec
 ## Alpha scope and safety boundaries
 
 - APIs may change before a stable release.
-- This alpha is not a production-security certification. Host applications remain responsible for authentication, correct queryset scope, database and request timeouts, rate/concurrency limits, read-only database defense where appropriate, and application-specific security testing.
+- This alpha is not a production-security certification. Host applications remain responsible for authentication, correct scope-provider policy, database and request timeouts, rate/concurrency limits, read-only database defense where appropriate, and application-specific security testing.
 - AskLens supports read-only list and aggregate questions over explicitly registered resources.
 - Query quality depends on clear resource, field, description, and metric registration.
 - Live provider behavior varies by model and prompt complexity; `DummyProvider` remains the deterministic default for tests and demos.

@@ -2,7 +2,7 @@
 
 Use this checklist before enabling AskLens in a production or production-like environment.
 
-AskLens is a data access surface. Configure it as carefully as any reporting, analytics, or admin feature. Supported Python execution now uses `execute_plan()` (with `run_query_plan()` temporarily retained as a deprecated safe wrapper), but the alpha does not yet enforce fail-closed resource scope. Production-like evaluation must follow the execution and scope warnings below.
+AskLens is a data access surface. Configure it as carefully as any reporting, analytics, or admin feature. Supported Python execution uses `execute_plan()` (with `run_query_plan()` temporarily retained as a deprecated safe wrapper), and every resource registration now requires an explicit fail-closed scope policy. Production-like evaluation must still test host scope providers and operational controls.
 
 ## Access gates
 
@@ -34,9 +34,11 @@ AskLens is a data access surface. Configure it as carefully as any reporting, an
 
 ## Tenant and row scope
 
-- [ ] Every tenant- or row-sensitive production resource has a tested `base_queryset(request)` hook. In `0.1`, omitting the hook falls back to the model default manager; an intentionally unrestricted resource must be reviewed as such.
-- [ ] `base_queryset(request)` returns no rows for anonymous/unauthorized users.
-- [ ] Tests prove users cannot see another tenant's rows.
+- [ ] Every resource explicitly declares `scope_mode="global"` or `scope_mode="context_scoped"`; no registration relies on omission.
+- [ ] Every `global` resource is deliberately reviewed as unrestricted across rows.
+- [ ] Every `context_scoped` resource has a trusted `scope_provider(request)` that returns an unevaluated queryset for the registered model.
+- [ ] Scope providers return `none()` for anonymous/unauthorized users unless host policy deliberately permits access.
+- [ ] Tests prove missing/invalid scope fails closed and users cannot see another tenant's rows.
 - [ ] Scope fields are marked with `scope_dimension=True` where useful for capabilities/help guidance.
 - [ ] Resources representing the scoped entity itself use `scope_resource=True` where useful.
 

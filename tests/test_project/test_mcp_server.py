@@ -59,6 +59,7 @@ def registered_orders() -> None:
         model=Order,
         name="orders",
         label="Orders",
+        scope_mode="global",
         fields={
             "id": {"label": "Order ID"},
             "status": {"label": "Status"},

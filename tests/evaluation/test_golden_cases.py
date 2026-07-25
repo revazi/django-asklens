@@ -189,6 +189,7 @@ def registry() -> CatalogRegistry:
         name="orders",
         label="Orders",
         default_date_field="created_at",
+        scope_mode="global",
         fields={
             "id": {"label": "Order ID"},
             "status": {"label": "Status"},

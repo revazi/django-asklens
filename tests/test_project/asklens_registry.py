@@ -76,7 +76,8 @@ def register_facilities() -> None:
         metrics=[
             Metric("facility_count", op="count", field="name", label="Facilities")
         ],
-        base_queryset=queryset_for_permission(Facility, StaffGrant.FACILITY_VIEW),
+        scope_mode="context_scoped",
+        scope_provider=queryset_for_permission(Facility, StaffGrant.FACILITY_VIEW),
         requires_permission=StaffGrant.FACILITY_VIEW,
         scope_resource=True,
     )
@@ -121,7 +122,8 @@ def register_staff_resources() -> None:
                 label="Facility owners",
             )
         ],
-        base_queryset=owner_queryset_for_permission(StaffGrant.FACILITY_VIEW),
+        scope_mode="context_scoped",
+        scope_provider=owner_queryset_for_permission(StaffGrant.FACILITY_VIEW),
         requires_permission=StaffGrant.FACILITY_VIEW,
         examples_enabled=False,
     )
@@ -149,7 +151,8 @@ def register_member_resources() -> None:
             "created_via_portal": {"label": "Created via portal"},
         },
         metrics=[Metric("member_count", op="count", field="gender", label="Members")],
-        base_queryset=queryset_for_permission(
+        scope_mode="context_scoped",
+        scope_provider=queryset_for_permission(
             MemberProfile, StaffGrant.MEMBER_REPORTS_VIEW
         ),
         requires_permission=StaffGrant.MEMBER_REPORTS_VIEW,
@@ -203,7 +206,8 @@ def register_member_resources() -> None:
         metrics=[
             Metric("contact_count", op="count", field="member_id", label="Contacts")
         ],
-        base_queryset=queryset_for_permission(
+        scope_mode="context_scoped",
+        scope_provider=queryset_for_permission(
             MemberProfile, StaffGrant.MEMBER_PII_VIEW
         ),
         requires_permission=StaffGrant.MEMBER_PII_VIEW,
@@ -223,7 +227,8 @@ def register_member_resources() -> None:
             "member.member_since": {"label": "Member since"},
         },
         metrics=[Metric("status_count", op="count", field="status", label="Statuses")],
-        base_queryset=queryset_for_permission(
+        scope_mode="context_scoped",
+        scope_provider=queryset_for_permission(
             MemberStatus, StaffGrant.MEMBER_REPORTS_VIEW
         ),
         requires_permission=StaffGrant.MEMBER_REPORTS_VIEW,
@@ -256,7 +261,8 @@ def register_member_resources() -> None:
                 label="Subscriptions",
             )
         ],
-        base_queryset=queryset_for_permission(
+        scope_mode="context_scoped",
+        scope_provider=queryset_for_permission(
             MemberSubscription,
             StaffGrant.PACKAGE_REPORTS_VIEW,
         ),
@@ -323,7 +329,8 @@ def register_billing_resources() -> None:
             ),
             Metric("tax_collected", op="sum", field="tax_cents", label="Tax collected"),
         ],
-        base_queryset=queryset_for_permission(
+        scope_mode="context_scoped",
+        scope_provider=queryset_for_permission(
             BillingLine, StaffGrant.BILLING_REPORTS_VIEW
         ),
         requires_permission=StaffGrant.BILLING_REPORTS_VIEW,
@@ -364,7 +371,8 @@ def register_billing_resources() -> None:
                 label="Refunded amount",
             ),
         ],
-        base_queryset=queryset_for_permission(
+        scope_mode="context_scoped",
+        scope_provider=queryset_for_permission(
             PaymentAttempt, StaffGrant.PAYMENT_REPORTS_VIEW
         ),
         requires_permission=StaffGrant.PAYMENT_REPORTS_VIEW,
@@ -421,7 +429,8 @@ def register_growth_resources() -> None:
                 "total_conversions", op="sum", field="conversions", label="Conversions"
             ),
         ],
-        base_queryset=queryset_for_permission(
+        scope_mode="context_scoped",
+        scope_provider=queryset_for_permission(
             MarketingCampaign, StaffGrant.ANALYTICS_VIEW
         ),
         requires_permission=StaffGrant.ANALYTICS_VIEW,
@@ -461,7 +470,8 @@ def register_growth_resources() -> None:
                 label="Pipeline value",
             ),
         ],
-        base_queryset=queryset_for_permission(Lead, StaffGrant.MEMBER_REPORTS_VIEW),
+        scope_mode="context_scoped",
+        scope_provider=queryset_for_permission(Lead, StaffGrant.MEMBER_REPORTS_VIEW),
         requires_permission=StaffGrant.MEMBER_REPORTS_VIEW,
     )
 
@@ -510,7 +520,8 @@ def register_schedule_resources() -> None:
                 "labor_cost", op="sum", field="labor_cost_cents", label="Labor cost"
             ),
         ],
-        base_queryset=queryset_for_permission(
+        scope_mode="context_scoped",
+        scope_provider=queryset_for_permission(
             StaffShift, StaffGrant.SCHEDULE_REPORTS_VIEW
         ),
         requires_permission=StaffGrant.SCHEDULE_REPORTS_VIEW,
@@ -544,7 +555,8 @@ def register_schedule_resources() -> None:
                 label="Average duration",
             ),
         ],
-        base_queryset=queryset_for_permission(
+        scope_mode="context_scoped",
+        scope_provider=queryset_for_permission(
             ScheduleSession, StaffGrant.SCHEDULE_REPORTS_VIEW
         ),
         requires_permission=StaffGrant.SCHEDULE_REPORTS_VIEW,
@@ -583,7 +595,8 @@ def register_schedule_resources() -> None:
                 label="Booking revenue",
             ),
         ],
-        base_queryset=queryset_for_permission(
+        scope_mode="context_scoped",
+        scope_provider=queryset_for_permission(
             SessionBooking, StaffGrant.SCHEDULE_REPORTS_VIEW
         ),
         requires_permission=StaffGrant.SCHEDULE_REPORTS_VIEW,
@@ -626,7 +639,10 @@ def register_support_resources() -> None:
                 label="Average satisfaction",
             ),
         ],
-        base_queryset=queryset_for_permission(SupportTicket, StaffGrant.ANALYTICS_VIEW),
+        scope_mode="context_scoped",
+        scope_provider=queryset_for_permission(
+            SupportTicket, StaffGrant.ANALYTICS_VIEW
+        ),
         requires_permission=StaffGrant.ANALYTICS_VIEW,
     )
 
@@ -634,7 +650,7 @@ def register_support_resources() -> None:
 def owner_queryset_for_permission(permission_name: str) -> Callable[[Any], QuerySet]:
     """Return active owner assignments scoped by a facility permission."""
 
-    def base_queryset(request: Any) -> QuerySet:
+    def scope_provider(request: Any) -> QuerySet:
         return queryset_for_permission(StaffAssignment, permission_name)(
             request
         ).filter(
@@ -642,16 +658,16 @@ def owner_queryset_for_permission(permission_name: str) -> Callable[[Any], Query
             is_active=True,
         )
 
-    return base_queryset
+    return scope_provider
 
 
 def queryset_for_permission(
     model: type[Model],
     permission_name: str,
 ) -> Callable[[Any], QuerySet]:
-    """Return a base queryset hook scoped to facilities granting a permission."""
+    """Return a scope provider limited to facilities granting a permission."""
 
-    def base_queryset(request: Any) -> QuerySet:
+    def scope_provider(request: Any) -> QuerySet:
         user = getattr(request, "user", None)
         if user is None or not getattr(user, "is_authenticated", False):
             return model.objects.none()
@@ -661,7 +677,7 @@ def queryset_for_permission(
         filter_key = "id__in" if model is Facility else "facility_id__in"
         return model.objects.filter(**{filter_key: facility_ids})
 
-    return base_queryset
+    return scope_provider
 
 
 def permitted_facility_ids(user: Any, permission_name: str) -> QuerySet:

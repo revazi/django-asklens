@@ -30,6 +30,7 @@ def build_registry() -> CatalogRegistry:
         name="orders",
         label="Orders",
         default_date_field="created_at",
+        scope_mode="global",
         fields={
             "id": {"label": "Order ID"},
             "status": {"label": "Status"},
@@ -72,6 +73,7 @@ def build_billing_registry() -> CatalogRegistry:
         model=BillingLine,
         name="billing_lines",
         label="Billing lines",
+        scope_mode="global",
         fields={
             "billing_document.status": {"label": "Billing status"},
             "product_name": {"label": "Product"},
@@ -171,6 +173,7 @@ def test_resource_permission_fails_without_matching_permission() -> None:
     registry.register(
         model=Order,
         name="orders",
+        scope_mode="global",
         fields={"id": {"label": "Order ID"}, "status": {"label": "Status"}},
         metrics=[Metric("order_count", op="count", field="id")],
         requires_permission="shop.view_orders",

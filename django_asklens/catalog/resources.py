@@ -13,12 +13,17 @@ from django_asklens.catalog.introspection import get_field_type, resolve_field_p
 from django_asklens.exceptions import (
     InvalidMetricError,
     InvalidResourceError,
+    ScopeUnavailableError,
     UnknownFieldError,
 )
 
 type MetricOp = Literal["count", "sum", "avg", "min", "max"]
 type FieldConfig = Mapping[str, str | bool | None]
+type ScopeMode = Literal["global", "context_scoped"]
+type ScopeProvider = Callable[[Any], QuerySet]
 type BaseQuerySetHook = Callable[[Any], QuerySet]
+
+_BASE_QUERYSET_UNSET = object()
 
 
 class MetricCatalogItem(TypedDict):
@@ -193,12 +198,13 @@ class SemanticResource:
     model: type[models.Model]
     name: str
     label: str
+    scope_mode: ScopeMode
     description: str = ""
     synonyms: tuple[str, ...] = ()
     default_date_field: str | None = None
     fields: Mapping[str, FieldSpec] = field(default_factory=dict)
     metrics: Mapping[str, Metric] = field(default_factory=dict)
-    base_queryset: BaseQuerySetHook | None = None
+    scope_provider: ScopeProvider | None = None
     requires_permission: str | None = None
     scope_resource: bool = False
     examples_enabled: bool = True
@@ -206,6 +212,10 @@ class SemanticResource:
     def __post_init__(self) -> None:
         """Store resource metadata as effectively immutable mappings."""
 
+        validate_scope_policy(
+            scope_mode=self.scope_mode,
+            scope_provider=self.scope_provider,
+        )
         object.__setattr__(self, "fields", MappingProxyType(dict(self.fields)))
         object.__setattr__(self, "metrics", MappingProxyType(dict(self.metrics)))
 
@@ -221,7 +231,9 @@ class SemanticResource:
         synonyms: Sequence[str] | None = None,
         default_date_field: str | None = None,
         metrics: Sequence[Metric] | None = None,
-        base_queryset: BaseQuerySetHook | None = None,
+        scope_mode: ScopeMode | None = None,
+        scope_provider: ScopeProvider | None = None,
+        base_queryset: BaseQuerySetHook | None | object = _BASE_QUERYSET_UNSET,
         requires_permission: str | None = None,
         scope_resource: bool = False,
         examples_enabled: bool = True,
@@ -229,7 +241,11 @@ class SemanticResource:
         """Build and validate a semantic resource from developer configuration."""
 
         validate_model(model)
-        validate_base_queryset(base_queryset)
+        validate_legacy_base_queryset(base_queryset)
+        validated_scope_mode = validate_scope_policy(
+            scope_mode=scope_mode,
+            scope_provider=scope_provider,
+        )
         validate_requires_permission(requires_permission)
         validate_scope_resource(scope_resource)
         validate_examples_enabled(examples_enabled)
@@ -252,23 +268,48 @@ class SemanticResource:
             model=model,
             name=resource_name,
             label=resource_label,
+            scope_mode=validated_scope_mode,
             description=description,
             synonyms=normalized_synonyms,
             default_date_field=default_date_field,
             fields=field_specs,
             metrics=metric_specs,
-            base_queryset=base_queryset,
+            scope_provider=scope_provider,
             requires_permission=requires_permission,
             scope_resource=scope_resource,
             examples_enabled=examples_enabled,
         )
 
-    def get_base_queryset(self, request: Any = None) -> QuerySet:
-        """Return the base queryset for this resource."""
+    def get_scope_queryset(self, request: Any) -> QuerySet:
+        """Resolve the explicitly declared resource scope without evaluating it."""
 
-        if self.base_queryset is not None:
-            return self.base_queryset(request)
-        return self.model._default_manager.all()
+        if self.scope_mode == "global":
+            return self.model._default_manager.all()
+        if request is None:
+            msg = "Context-scoped resources require the current request."
+            raise ScopeUnavailableError(msg)
+        if self.scope_provider is None:  # Defensive against invalid manual mutation.
+            msg = "The context-scoped resource has no scope provider."
+            raise ScopeUnavailableError(msg)
+
+        try:
+            queryset = self.scope_provider(request)
+        except Exception as exc:
+            msg = "The current resource scope provider failed."
+            raise ScopeUnavailableError(msg) from exc
+
+        if not isinstance(queryset, QuerySet):
+            msg = "The current resource scope provider must return a QuerySet."
+            raise ScopeUnavailableError(msg)
+        if queryset.model is not self.model:
+            msg = "The current resource scope QuerySet has the wrong registered model."
+            raise ScopeUnavailableError(msg)
+        # QuerySet exposes no public evaluated-state API; a populated result
+        # cache proves the provider did not return the required lazy scope.
+        if queryset._result_cache is not None:
+            msg = "The current resource scope provider returned an evaluated QuerySet."
+            raise ScopeUnavailableError(msg)
+        return queryset
 
     def is_catalog_visible(self, *, permissions: Iterable[str] | None = None) -> bool:
         """Return whether this resource belongs in permission-scoped catalog output."""
@@ -332,7 +373,7 @@ def permission_set_allows(
     shaped as ``<scope-kind>:<opaque-scope-id>:<required_permission>`` from a
     request-permission hook while AskLens still validates against the registered
     field permission name.
-    Row-level access must still be enforced by resource ``base_queryset`` hooks.
+    Row-level access must still be enforced by context-scoped resource providers.
     """
 
     if required_permission is None:
@@ -362,12 +403,44 @@ def validate_model(model: object) -> None:
         raise InvalidResourceError(msg)
 
 
-def validate_base_queryset(base_queryset: BaseQuerySetHook | None) -> None:
-    """Validate an optional base-queryset hook."""
+def validate_legacy_base_queryset(
+    base_queryset: BaseQuerySetHook | None | object,
+) -> None:
+    """Reject any use of the legacy scope hook with migration guidance."""
 
-    if base_queryset is not None and not callable(base_queryset):
-        msg = "base_queryset must be callable when provided."
+    if base_queryset is not _BASE_QUERYSET_UNSET:
+        msg = (
+            "base_queryset is no longer supported; use "
+            "scope_mode='context_scoped' and scope_provider=... instead."
+        )
         raise InvalidResourceError(msg)
+
+
+def validate_scope_policy(
+    *,
+    scope_mode: object,
+    scope_provider: object,
+) -> ScopeMode:
+    """Validate and normalize explicit fail-closed resource scope policy."""
+
+    if scope_mode is None:
+        msg = "scope_mode is required; choose 'global' or 'context_scoped'."
+        raise InvalidResourceError(msg)
+    if scope_mode not in ("global", "context_scoped"):
+        msg = "scope_mode must be 'global' or 'context_scoped'."
+        raise InvalidResourceError(msg)
+    if scope_mode == "global":
+        if scope_provider is not None:
+            msg = "A global resource must not define scope_provider."
+            raise InvalidResourceError(msg)
+        return "global"
+    if scope_provider is None:
+        msg = "A context_scoped resource requires scope_provider."
+        raise InvalidResourceError(msg)
+    if not callable(scope_provider):
+        msg = "scope_provider must be callable for a context_scoped resource."
+        raise InvalidResourceError(msg)
+    return "context_scoped"
 
 
 def validate_requires_permission(requires_permission: str | None) -> None:

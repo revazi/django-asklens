@@ -36,6 +36,7 @@ def build_registry() -> CatalogRegistry:
     registry.register(
         model=Order,
         name="orders",
+        scope_mode="global",
         fields={
             "id": {"label": "Order ID"},
             "status": {"label": "Status"},

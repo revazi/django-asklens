@@ -29,7 +29,7 @@ Do not include or import `django_asklens.api.urls` unless the `api` extra and `r
 
 ## Register resources
 
-Register only reviewed models and fields. Use `base_queryset(request)` to enforce tenant and row-level scope.
+Register only reviewed models and fields. Every resource must explicitly choose `scope_mode="global"` or `scope_mode="context_scoped"`; use a trusted `scope_provider(request)` for tenant and row-level scope.
 
 ```python
 from django_asklens import Metric, register
@@ -64,7 +64,8 @@ register(
         Metric("revenue", op="sum", field="total", label="Revenue"),
     ],
     requires_permission="orders.view_reports",
-    base_queryset=visible_orders,
+    scope_mode="context_scoped",
+    scope_provider=visible_orders,
 )
 ```
 
@@ -103,11 +104,13 @@ result = execute_plan(payload, request=request)
 response_payload = result.to_dict()
 ```
 
-`execute_plan(...)` repeats current semantic validation and then starts from `resource.get_base_queryset(request)`. Scope declaration is not yet fail-closed: a registered `base_queryset(request)` hook is used when present, while omission currently falls back to the model default manager. Tenant- or row-sensitive resources must register and test a scope hook until the R2 scope migration is implemented.
+`execute_plan(...)` repeats current semantic validation and then resolves the resource's explicit scope policy. `global` uses the registered model manager only when deliberately declared. `context_scoped` requires the current request and a trusted provider returning an unevaluated `QuerySet` for the registered model. Missing or invalid scope fails with `asklens.scope.unavailable` and never broadens to the default manager.
+
+The legacy `base_queryset=` registration argument is rejected. Migrate it to `scope_mode="context_scoped", scope_provider=...`; resources intentionally unrestricted across rows must declare `scope_mode="global"`.
 
 ### Migrating low-level alpha imports
 
-Replace `from django_asklens.compiler import compile_query_plan` and `from django_asklens.execution import execute_query` with `execute_plan()`. `CompiledQuery` is also internal. AskLens intentionally provides no public operation that executes a caller-supplied compiled or merely shape-valid plan. `run_query_plan()` remains available for one alpha cycle, emits `DeprecationWarning`, and revalidates its input.
+Replace `from django_asklens.compiler import compile_query_plan` and `from django_asklens.execution import execute_query` with `execute_plan()`. `CompiledQuery` is also internal. AskLens intentionally provides no public operation that executes a caller-supplied compiled or merely shape-valid plan. `run_query_plan()` remains available for one alpha cycle, emits `DeprecationWarning`, requires the current request, and revalidates its input.
 
 ### Stable execution errors
 
@@ -202,5 +205,5 @@ Core-only callers preserve the normal execution safety model by using `execute_p
 - do not add write/update/delete query intents;
 - do not auto-register every model or field;
 - do not send database rows or sample values to providers by default;
-- always pass the current request to execution when row scope depends on the user;
+- always pass the current request to execution and keep context scope providers server-owned;
 - submit saved or edited plan payloads through `execute_plan()` so they are revalidated before execution.

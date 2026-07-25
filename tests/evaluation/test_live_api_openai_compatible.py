@@ -149,7 +149,8 @@ def live_tenant_user():
             Metric("order_count", op="count", field="id", label="Number of orders"),
             Metric("revenue", op="sum", field="total", label="Revenue"),
         ],
-        base_queryset=tenant_scoped_orders,
+        scope_mode="context_scoped",
+        scope_provider=tenant_scoped_orders,
     )
     return user
 

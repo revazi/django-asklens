@@ -54,6 +54,8 @@ def registered_orders() -> None:
         model=Order,
         name="orders",
         label="Orders",
+        scope_mode="context_scoped",
+        scope_provider=lambda _request: Order.objects.all(),
         fields={
             "id": {"label": "Order ID"},
             "status": {"label": "Status"},

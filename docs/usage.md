@@ -37,11 +37,14 @@ register(
         Metric("revenue", op="sum", field="total", label="Revenue"),
     ],
     requires_permission="orders.view_reports",
-    base_queryset=visible_orders,
+    scope_mode="context_scoped",
+    scope_provider=visible_orders,
 )
 ```
 
 Resource-level `requires_permission` gates the whole resource. Field-level `requires_permission` gates individual fields. Sensitive fields are hidden from the default catalog serialization. Hidden fields and internal model names are not sent to the planner prompt by default.
+
+Every registration must explicitly choose `scope_mode="global"` or `scope_mode="context_scoped"`. Context-scoped resources require a trusted `scope_provider`; missing or invalid scope never falls back to the default manager.
 
 ## 2. Configure a provider
 
