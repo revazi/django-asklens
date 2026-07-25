@@ -7,6 +7,7 @@ from datetime import datetime
 from time import perf_counter
 from typing import Any, Never
 
+from django.core.exceptions import FieldError
 from django.utils import timezone
 
 from django_asklens.catalog.registry import CatalogRegistry, default_registry
@@ -16,7 +17,17 @@ from django_asklens.compiler.orm import (
     _CompiledQuery,
     _PreparedQueryPlan,
 )
-from django_asklens.exceptions import PlanValidationError
+from django_asklens.exceptions import (
+    AskLensError,
+    AuthorizationDeniedError,
+    BindingInvalidError,
+    CompilationError,
+    ExecutionError,
+    PlanValidationError,
+    PublicAskLensError,
+    ScopeUnavailableError,
+    normalize_public_error,
+)
 from django_asklens.permissions import get_request_permissions
 from django_asklens.planning.schemas import QueryPlan
 from django_asklens.planning.validation import parse_and_validate_query_plan
@@ -75,13 +86,13 @@ def execute_plan(
 ) -> QueryResult:
     """Revalidate and execute an untrusted plan for the current request."""
 
-    context = _build_execution_context(
+    context = _build_public_execution_context(
         request=request,
         registry=registry,
         now=None,
         require_request=True,
     )
-    return _execute_untrusted_plan(plan, context=context)
+    return _execute_public_plan(plan, context=context)
 
 
 def run_query_plan(
@@ -99,13 +110,35 @@ def run_query_plan(
         DeprecationWarning,
         stacklevel=2,
     )
-    context = _build_execution_context(
+    context = _build_public_execution_context(
         request=request,
         registry=registry,
         now=now,
         require_request=False,
     )
-    return _execute_untrusted_plan(plan, context=context)
+    return _execute_public_plan(plan, context=context)
+
+
+def _build_public_execution_context(
+    *,
+    request: Any,
+    registry: CatalogRegistry,
+    now: datetime | None,
+    require_request: bool,
+) -> _ExecutionContext:
+    """Build current context while exposing only a normalized safe error."""
+
+    try:
+        return _build_execution_context(
+            request=request,
+            registry=registry,
+            now=now,
+            require_request=require_request,
+        )
+    except PublicAskLensError:
+        raise
+    except AskLensError as exc:
+        raise normalize_public_error(exc) from None
 
 
 def _build_execution_context(
@@ -119,17 +152,23 @@ def _build_execution_context(
 
     if require_request and request is None:
         msg = "execute_plan() requires the current Django request."
-        raise PlanValidationError(msg)
+        raise AuthorizationDeniedError(msg)
 
     resolved_now = now or timezone.now()
     if timezone.is_naive(resolved_now):
         msg = "AskLens execution requires an aware request clock."
         raise PlanValidationError(msg)
 
+    try:
+        permissions = get_request_permissions(request)
+    except Exception as exc:
+        msg = "AskLens could not resolve current request permissions."
+        raise AuthorizationDeniedError(msg) from exc
+
     return _ExecutionContext(
         request=request,
         principal=getattr(request, "user", None),
-        permissions=get_request_permissions(request),
+        permissions=permissions,
         registry=registry,
         registry_revision=tuple(
             (resource.name, id(resource)) for resource in registry.all()
@@ -138,6 +177,21 @@ def _build_execution_context(
         audit_policy="delegated_legacy_database",
         audit_sink=None,
     )
+
+
+def _execute_public_plan(
+    plan: UntrustedPlan,
+    *,
+    context: _ExecutionContext,
+) -> QueryResult:
+    """Expose only safe error metadata from the trusted Python facade."""
+
+    try:
+        return _execute_untrusted_plan(plan, context=context)
+    except PublicAskLensError:
+        raise
+    except AskLensError as exc:
+        raise normalize_public_error(exc) from None
 
 
 def _execute_untrusted_plan(
@@ -159,8 +213,24 @@ def _execute_untrusted_plan(
         permissions=context.permissions,
     )
     prepared = _prepare_query_plan(validated_plan, context=context)
-    compiled_query = _compile_prepared_query(prepared)
-    return _execute_compiled_query(compiled_query, context=context)
+    try:
+        compiled_query = _compile_prepared_query(prepared)
+    except AskLensError:
+        raise
+    except (FieldError, KeyError) as exc:
+        msg = "AskLens could not resolve a private query binding."
+        raise BindingInvalidError(msg) from exc
+    except Exception as exc:
+        msg = "AskLens could not compile the prepared query."
+        raise CompilationError(msg) from exc
+
+    try:
+        return _execute_compiled_query(compiled_query, context=context)
+    except AskLensError:
+        raise
+    except Exception as exc:
+        msg = "AskLens could not evaluate the compiled query."
+        raise ExecutionError(msg) from exc
 
 
 def _prepare_query_plan(
@@ -171,10 +241,18 @@ def _prepare_query_plan(
     """Bind a validated plan to current resource scope and request state."""
 
     resource = context.registry.get(plan.resource)
+    try:
+        queryset = resource.get_base_queryset(context.request)
+    except AskLensError:
+        raise
+    except Exception as exc:
+        msg = "AskLens could not resolve the current resource scope."
+        raise ScopeUnavailableError(msg) from exc
+
     return _PreparedQueryPlan(
         plan=plan,
         resource=resource,
-        queryset=resource.get_base_queryset(context.request),
+        queryset=queryset,
         now=context.now,
         context_binding=context,
     )

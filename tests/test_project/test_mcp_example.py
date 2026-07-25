@@ -232,7 +232,10 @@ def test_test_project_mcp_context_permissions_are_server_derived(
     )
 
     assert denied["valid"] is False
-    assert denied["error_category"] == "permission_denied"
+    assert denied["error"] == {
+        "code": "asklens.member.unavailable",
+        "message": "A requested query member is unavailable.",
+    }
     assert allowed["valid"] is True
     assert allowed["plan"]["select"] == ["customer.email"]
 

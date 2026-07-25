@@ -115,13 +115,10 @@ class AskLensMCPToolSet:
         if not self.expose_query_tool:
             return {
                 "response_type": "error",
-                "error_category": "tool_disabled",
-                "error": (
-                    "The AskLens MCP query tool is disabled. Use "
-                    "asklens_capabilities, asklens_validate_plan, and "
-                    "asklens_execute_plan, or construct the toolset with "
-                    "expose_query_tool=True."
-                ),
+                "error": {
+                    "code": "asklens.authorization.denied",
+                    "message": "The AskLens MCP query tool is disabled.",
+                },
             }
         return asklens_query(
             self.request_factory(context),

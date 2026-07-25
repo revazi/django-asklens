@@ -13,6 +13,7 @@ from django_asklens.catalog.resources import (
     permission_set_allows,
 )
 from django_asklens.exceptions import (
+    BudgetExceededError,
     PermissionDeniedError,
     PlanValidationError,
     UnknownFieldError,
@@ -341,13 +342,13 @@ def validate_plan_limits(plan: QueryPlan, *, limits: PlanLimits) -> None:
 
     if plan.limit > limits.max_rows:
         msg = f"QueryPlan limit {plan.limit} exceeds MAX_ROWS {limits.max_rows}."
-        raise PlanValidationError(msg)
+        raise BudgetExceededError(msg)
     if len(plan.metrics) > limits.max_metrics:
         msg = f"QueryPlan requests more than {limits.max_metrics} metrics."
-        raise PlanValidationError(msg)
+        raise BudgetExceededError(msg)
     if len(plan.group_by) > limits.max_group_by:
         msg = f"QueryPlan requests more than {limits.max_group_by} group_by fields."
-        raise PlanValidationError(msg)
+        raise BudgetExceededError(msg)
 
 
 def validate_plan_fields(
@@ -560,7 +561,7 @@ def validate_field_usage(
         raise UnknownFieldError(msg)
     if field.relation_depth > limits.max_joins:
         msg = f"Field {field_name!r} exceeds MAX_JOINS {limits.max_joins}."
-        raise PlanValidationError(msg)
+        raise BudgetExceededError(msg)
     if field.filter_only and usage != "filter":
         msg = f"Field {field_name!r} can only be used in filters."
         raise PlanValidationError(msg)

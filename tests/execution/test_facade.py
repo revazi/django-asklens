@@ -8,7 +8,7 @@ import pytest
 
 from django_asklens import Metric
 from django_asklens.catalog.registry import CatalogRegistry
-from django_asklens.exceptions import PermissionDeniedError, PlanValidationError
+from django_asklens.exceptions import PublicAskLensError
 from django_asklens.execution import execute_plan, run_query_plan
 from django_asklens.planning import parse_query_plan
 from tests.test_project.models import Customer, Order
@@ -118,13 +118,15 @@ def test_execute_plan_revalidates_direct_query_plan_permissions(
 
     with (
         django_assert_num_queries(0),
-        pytest.raises(PermissionDeniedError, match="sensitive"),
+        pytest.raises(PublicAskLensError, match="requested query member") as caught,
     ):
         execute_plan(
             sensitive_plan(),
             request=request_with("shop.view_orders"),
             registry=build_registry(),
         )
+
+    assert caught.value.code == "asklens.member.unavailable"
 
 
 def test_execute_plan_revalidates_current_limits(
@@ -137,13 +139,15 @@ def test_execute_plan_revalidates_current_limits(
 
     with (
         django_assert_num_queries(0),
-        pytest.raises(PlanValidationError, match="MAX_ROWS"),
+        pytest.raises(PublicAskLensError, match="execution limit") as caught,
     ):
         execute_plan(
             status_plan(limit=2),
             request=request_with("shop.view_orders"),
             registry=build_registry(),
         )
+
+    assert caught.value.code == "asklens.budget.exceeded"
 
 
 def test_execute_plan_resolves_current_request_scope() -> None:
@@ -169,10 +173,12 @@ def test_deprecated_runner_revalidates_instead_of_trusting_query_plan(
     with (
         django_assert_num_queries(0),
         pytest.warns(DeprecationWarning, match="execute_plan"),
-        pytest.raises(PermissionDeniedError, match="sensitive"),
+        pytest.raises(PublicAskLensError, match="requested query member") as caught,
     ):
         run_query_plan(
             sensitive_plan(),
             request=request_with("shop.view_orders"),
             registry=build_registry(),
         )
+
+    assert caught.value.code == "asklens.member.unavailable"

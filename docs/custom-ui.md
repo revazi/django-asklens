@@ -240,6 +240,6 @@ Use this for “view previous run” screens or audit links. The run endpoint st
 
 - Do not send database rows or sample values to LLM providers from your UI.
 - Do not turn AskLens plans into SQL execution; AskLens is designed for validated Django ORM queries.
-- Do not hide API errors that indicate permission or validation failures.
+- Handle API failures through `error.code` and display only `error.message`. Unknown and unauthorized members intentionally share `asklens.member.unavailable`; do not attempt to infer hidden catalog membership.
 - Do not trust saved plans from the browser; submit them back to AskLens for revalidation.
 - Keep route permissions on the API even if the UI page has its own access gate.

@@ -109,6 +109,25 @@ response_payload = result.to_dict()
 
 Replace `from django_asklens.compiler import compile_query_plan` and `from django_asklens.execution import execute_query` with `execute_plan()`. `CompiledQuery` is also internal. AskLens intentionally provides no public operation that executes a caller-supplied compiled or merely shape-valid plan. `run_query_plan()` remains available for one alpha cycle, emits `DeprecationWarning`, and revalidates its input.
 
+### Stable execution errors
+
+`execute_plan()` raises `PublicAskLensError` with a namespaced `code` and safe string message. Internal member names, permission tokens, scope implementation details, compiler causes, and database causes are not copied into this public exception.
+
+```python
+from django_asklens.exceptions import PublicAskLensError, public_error_payload
+from django_asklens.execution import execute_plan
+
+try:
+    result = execute_plan(payload, request=request)
+except PublicAskLensError as exc:
+    error = public_error_payload(exc)
+    # {"code": "asklens.member.unavailable", "message": "..."}
+```
+
+AskLens query-plan failures in the API and MCP helpers use the same `error` object with `code`, safe `message`, and an optional safe JSON `pointer`. Transport-level authentication or request-serializer failures may still use their framework's response shape. Unknown and unauthorized resources, fields, and metrics deliberately return the same `asklens.member.unavailable` response.
+
+Current execution codes are `asklens.parse.invalid`, `asklens.member.unavailable`, `asklens.plan.invalid`, `asklens.authorization.denied`, `asklens.scope.unavailable`, `asklens.budget.exceeded`, `asklens.binding.invalid`, `asklens.compile.failed`, `asklens.execute.failed`, and `asklens.provider.failed`.
+
 ## Ask a provider, then execute
 
 The planner uses the configured backend by default. The default `dummy` backend is deterministic and makes no network calls.
@@ -144,7 +163,8 @@ if response.response_type == "capabilities":
 elif response.response_type == "query":
     rows = response.payload["data"]
 else:
-    error = response.payload["error"]
+    error_code = response.payload["error"]["code"]
+    error_message = response.payload["error"]["message"]
 ```
 
 This helper persists `SemanticQueryRun` audit records for data-query success and safe data-query failure. Capability/help responses do not create query-run records because they do not execute a database query.

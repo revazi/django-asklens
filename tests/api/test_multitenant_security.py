@@ -339,8 +339,12 @@ def test_crafted_plan_cannot_filter_by_sensitive_tenant_field_without_permission
     )
 
     assert response.status_code == 400
-    assert "sensitive" in response.data["error"]
-    assert "Traceback" not in response.data["error"]
+    assert response.data["error"] == {
+        "code": "asklens.member.unavailable",
+        "message": "A requested query member is unavailable.",
+    }
+    assert "customer.email" not in str(response.data)
+    assert "Traceback" not in str(response.data)
     run = SemanticQueryRun.objects.get(pk=response.data["run_id"])
     assert run.status == SemanticQueryRun.Status.FAILED
     assert run.plan == {}

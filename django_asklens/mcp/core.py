@@ -10,18 +10,14 @@ from collections.abc import Mapping
 from typing import Any
 
 from django_asklens.catalog.capabilities import build_capabilities
-from django_asklens.exceptions import (
-    AskLensError,
-    PermissionDeniedError,
-    PlanValidationError,
-)
+from django_asklens.exceptions import AskLensError
 from django_asklens.permissions import get_request_permissions
 from django_asklens.planning.schemas import get_query_plan_json_schema
 from django_asklens.planning.validation import parse_and_validate_query_plan
 from django_asklens.querying import (
     AskLensQueryResponse,
     execute_asklens_query_request,
-    safe_error_message,
+    safe_error_payload,
 )
 from django_asklens.settings import get_asklens_setting
 
@@ -125,8 +121,10 @@ def asklens_describe_resource(request: Any, resource: str) -> dict[str, Any]:
         "valid": False,
         "rows_omitted": True,
         "executed": False,
-        "error_category": "unknown_resource",
-        "error": f"Resource {resource!r} is not queryable for this request.",
+        "error": {
+            "code": "asklens.member.unavailable",
+            "message": "A requested query member is unavailable.",
+        },
     }
 
 
@@ -188,15 +186,17 @@ def names_from_capability_items(value: Any) -> list[str]:
     return names
 
 
-def invalid_mcp_argument(message: str) -> dict[str, Any]:
+def invalid_mcp_argument(_message: str) -> dict[str, Any]:
     """Return a safe MCP argument error payload."""
 
     return {
         "response_type": "error",
         "executed": False,
         "rows_omitted": True,
-        "error_category": "invalid_argument",
-        "error": message,
+        "error": {
+            "code": "asklens.plan.invalid",
+            "message": "The MCP tool arguments are invalid.",
+        },
     }
 
 
@@ -222,8 +222,7 @@ def asklens_validate_plan(
             "valid": False,
             "executed": False,
             "rows_omitted": True,
-            "error_category": safe_mcp_error_category(exc),
-            "error": safe_error_message(exc),
+            "error": safe_error_payload(exc),
         }
 
     return {
@@ -304,16 +303,6 @@ def apply_mcp_response_policy(
     if outcome.status_code != 200:
         payload.setdefault("status_code", outcome.status_code)
     return apply_mcp_row_policy(payload, include_rows=include_rows)
-
-
-def safe_mcp_error_category(exc: AskLensError) -> str:
-    """Return an MCP-oriented safe error category."""
-
-    if isinstance(exc, PermissionDeniedError):
-        return "permission_denied"
-    if isinstance(exc, PlanValidationError):
-        return "plan_validation_error"
-    return "asklens_error"
 
 
 def mcp_row_return_allowed() -> bool:

@@ -1,5 +1,6 @@
 """Helpers for the optional Django admin AskLens query page."""
 
+from collections.abc import Mapping
 from typing import Any
 
 from django_asklens.models import SemanticQueryRun
@@ -20,7 +21,11 @@ def execute_admin_query(
         include_visualization=True,
     )
     if outcome.response_type == "error":
-        return None, outcome.run, str(outcome.payload.get("error", "")), False
+        error = outcome.payload.get("error", {})
+        message = (
+            str(error.get("message", "")) if isinstance(error, Mapping) else str(error)
+        )
+        return None, outcome.run, message, False
     return outcome.payload, outcome.run, "", False
 
 

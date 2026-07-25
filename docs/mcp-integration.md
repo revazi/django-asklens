@@ -80,6 +80,19 @@ asklens_query(question, include_rows=false)  # optional convenience tool
 
 These helpers do not import Django REST Framework or an MCP SDK.
 
+MCP failures use the same stable error object as core Python and the API:
+
+```json
+{
+  "error": {
+    "code": "asklens.member.unavailable",
+    "message": "A requested query member is unavailable."
+  }
+}
+```
+
+The object contains only a namespaced `code`, safe `message`, and optional safe JSON `pointer`. Unknown and unauthorized resources, fields, and metrics are intentionally indistinguishable. Older transport-specific `error_category` values are removed.
+
 ## AskLens toolset wrapper
 
 When an MCP server can register existing Python callables, use `AskLensMCPToolSet`:
