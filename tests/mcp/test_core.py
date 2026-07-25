@@ -271,7 +271,9 @@ def test_mcp_execute_plan_omits_rows_by_default(
     assert "paid" not in str(payload)
     assert "pending" not in str(payload)
     assert SemanticQueryRun.objects.count() == 1
-    assert SemanticQueryRun.objects.get().question == "MCP submitted QueryPlan"
+    run = SemanticQueryRun.objects.get()
+    assert run.question == ""
+    assert run.plan == {"resource": "orders", "intent": "aggregate"}
 
 
 def test_mcp_execute_plan_returns_safe_error_for_rejected_plan(

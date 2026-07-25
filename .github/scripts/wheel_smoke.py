@@ -49,6 +49,7 @@ def smoke_core_install() -> None:
     from django_asklens.exceptions import PlanValidationError, public_error_payload
     from django_asklens.mcp import AskLensMCPToolSet
     from django_asklens.planning import parse_query_plan
+    from django_asklens.settings import get_asklens_setting
 
     request = SimpleNamespace(user=SimpleNamespace(is_authenticated=True))
     assert can_access_asklens(request) is True
@@ -57,6 +58,8 @@ def smoke_core_install() -> None:
         "code": "asklens.plan.invalid",
         "message": "The query plan is invalid.",
     }
+    assert get_asklens_setting("AUDIT_MODE") == "database"
+    assert get_asklens_setting("AUDIT_INCLUDE_CONTENT") is False
     assert AskLensMCPToolSet(request_factory=lambda _context: request).tools()
     assert (
         parse_query_plan(

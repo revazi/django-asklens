@@ -42,6 +42,8 @@ class PublicAskLensError(AskLensError):
     def __init__(self, source: AskLensError) -> None:
         self.code = source.code
         self.public_message = source.public_message
+        self._audit_record = None
+        self._audit_attempted = False
         super().__init__(
             source.public_message, pointer=safe_json_pointer(source.pointer)
         )
