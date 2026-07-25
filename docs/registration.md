@@ -24,9 +24,7 @@ resource = register(
     default_order=(("created_at", "desc"),),
     requires_permission="orders.view_reports",
     scope_mode="context_scoped",
-    scope_provider=lambda request: Order.objects.filter(
-        account=request.user.account
-    ),
+    scope_provider=lambda request: Order.objects.filter(account=request.user.account),
 )
 ```
 
@@ -79,16 +77,14 @@ register(
     fields={"id": {"label": "Order ID"}},
     requires_permission="orders.view_reports",
     scope_mode="context_scoped",
-    scope_provider=lambda request: Order.objects.filter(
-        account=request.user.account
-    ),
+    scope_provider=lambda request: Order.objects.filter(account=request.user.account),
 )
 ```
 
 Use field-level `requires_permission` for individual fields that need stronger access than the resource:
 
 ```python
-fields={
+fields = {
     "status": {"label": "Status"},
     "customer.email": {
         "label": "Customer email",
@@ -124,6 +120,7 @@ register(
     fields={"code": {}, "name": {}},
     scope_mode="global",
 )
+
 
 # Restricted using current server-owned request context.
 def visible_orders(request):

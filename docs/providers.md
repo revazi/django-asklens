@@ -88,8 +88,9 @@ Providers implement the `LLMProvider` protocol:
 
 ```python
 class LLMProvider(Protocol):
-    def complete_json(self, *, messages: Sequence[LLMMessage], schema: Mapping[str, Any]) -> Mapping[str, Any]:
-        ...
+    def complete_json(
+        self, *, messages: Sequence[LLMMessage], schema: Mapping[str, Any]
+    ) -> Mapping[str, Any]: ...
 ```
 
 AskLens sends:
