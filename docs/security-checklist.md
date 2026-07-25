@@ -19,7 +19,7 @@ Use this checklist before enabling AskLens outside local development.
 - [ ] Keep `SEND_SAMPLE_ROWS_TO_LLM` disabled.
 - [ ] Set conservative `MAX_ROWS`, `MAX_JOINS`, `MAX_METRICS`, and `MAX_GROUP_BY` values.
 - [ ] Confirm validation rejects unknown resources, fields, metrics, operators, mutation intents, and raw-SQL-like payloads.
-- [ ] Pass raw, parsed, saved, or caller-edited plans through `execute_plan()` with the current request. `run_query_plan()` is temporarily retained as a deprecated revalidating wrapper; do not call the low-level compiler as an untrusted-input API.
+- [ ] Pass raw, parsed, saved, or caller-edited plans through `execute_plan()` with the current request. `run_query_plan()` is temporarily retained as a deprecated revalidating wrapper. The compiler and compiled-query executor are internal and are not public APIs.
 - [ ] Confirm normal execution starts from the registered resource base queryset, and test the hook for the current request context.
 
 ## API safety

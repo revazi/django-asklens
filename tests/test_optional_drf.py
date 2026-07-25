@@ -7,7 +7,7 @@ import textwrap
 
 
 def test_core_package_works_without_importing_drf() -> None:
-    """Core catalog, planning, compiler, execution, and result helpers avoid DRF."""
+    """Core catalog, planning, execution, and result helpers avoid DRF."""
 
     code = r"""
 import importlib.abc
@@ -62,8 +62,7 @@ from django.core.management import call_command
 from django_asklens import Metric, register, serialize_catalog
 from django_asklens.access import can_access_asklens
 from django_asklens.catalog.registry import default_registry
-from django_asklens.compiler import compile_query_plan
-from django_asklens.execution import run_query_plan
+from django_asklens.execution import execute_plan
 from django_asklens.planning import parse_and_validate_query_plan, plan_question
 from django_asklens.results import serialize_query_result
 
@@ -81,7 +80,12 @@ register(
     metrics=[Metric("user_count", op="count", field="id")],
 )
 
-request = SimpleNamespace(user=SimpleNamespace(is_authenticated=True))
+request = SimpleNamespace(
+    user=SimpleNamespace(
+        is_authenticated=True,
+        get_all_permissions=lambda: set(),
+    )
+)
 assert can_access_asklens(request) is True
 catalog = serialize_catalog()
 assert catalog["resources"][0]["name"] == "users"
@@ -90,15 +94,13 @@ planner_result = plan_question("List users")
 validated_plan = parse_and_validate_query_plan(
     planner_result.plan.model_dump(mode="json")
 )
-compiled_query = compile_query_plan(validated_plan)
-query_result = run_query_plan(validated_plan)
+query_result = execute_plan(validated_plan, request=request)
 serialized = serialize_query_result(
     columns=query_result.columns,
     rows=query_result.rows,
     visualization=validated_plan.visualization.model_dump(mode="json"),
 )
 
-assert compiled_query.queryset is not None
 assert serialized["data"] == [{"username": "alice"}, {"username": "bob"}]
 assert "rest_framework" not in sys.modules
 """

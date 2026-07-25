@@ -209,7 +209,7 @@ Live provider tests are opt-in and skipped by default. See [Provider configurati
 - Normal API, admin, and MCP execution starts from `resource.get_base_queryset(request)`. In `0.1`, a resource without a `base_queryset` hook falls back to its model's default manager; tenant- or row-sensitive resources must provide and test that hook.
 - Sensitive fields are hidden unless explicitly permissioned through the normal validation paths.
 - Provider and submitted-plan output is untrusted and validated by the normal API, admin, and MCP orchestration before execution.
-- Use `django_asklens.execution.execute_plan()` for Python execution; it revalidates mappings and existing `QueryPlan` objects for the current request. `run_query_plan()` is a deprecated safe wrapper, while the low-level compiler is not an untrusted-input API.
+- Use `django_asklens.execution.execute_plan()` for Python execution; it revalidates mappings and existing `QueryPlan` objects for the current request. `run_query_plan()` is a deprecated safe wrapper. The compiler and compiled-query executor are internal and are not public exports.
 - AskLens executes read-only Django ORM queries only.
 - AskLens does not execute LLM-generated SQL.
 - AskLens does not create, update, or delete application data.

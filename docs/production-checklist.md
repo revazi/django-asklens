@@ -2,7 +2,7 @@
 
 Use this checklist before enabling AskLens in a production or production-like environment.
 
-AskLens is a data access surface. Configure it as carefully as any reporting, analytics, or admin feature. The `0.1` alpha does not yet enforce one mandatory trusted Python execution facade or fail-closed resource scope, so production-like evaluation must follow the low-level API and scope warnings below.
+AskLens is a data access surface. Configure it as carefully as any reporting, analytics, or admin feature. Supported Python execution now uses `execute_plan()` (with `run_query_plan()` temporarily retained as a deprecated safe wrapper), but the alpha does not yet enforce fail-closed resource scope. Production-like evaluation must follow the execution and scope warnings below.
 
 ## Access gates
 

@@ -35,8 +35,13 @@ def smoke_core_install() -> None:
     assert importlib.util.find_spec("fastmcp") is None
 
     import django_asklens
+    import django_asklens.compiler as compiler_package
+    import django_asklens.execution as execution_package
 
     assert django_asklens.__version__ == "0.1.0a1"
+    assert callable(execution_package.execute_plan)
+    assert not hasattr(execution_package, "execute_query")
+    assert not hasattr(compiler_package, "compile_query_plan")
     configure_settings(installed_apps=["django_asklens"])
 
     from django_asklens.access import can_access_asklens

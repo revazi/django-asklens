@@ -1,8 +1,8 @@
 # Core Python API
 
-Django AskLens can be used without Django REST Framework. Install the core package when you want to register semantic resources, ask a provider for catalog-validated `QueryPlan` JSON, compile read-only Django ORM queries, execute them, and serialize results from Python code.
+Django AskLens can be used without Django REST Framework. Install the core package when you want to register semantic resources, ask a provider for catalog-validated `QueryPlan` JSON, execute read-only Django ORM queries, and serialize results from Python code.
 
-> **Alpha trust-boundary warning:** `parse_query_plan()` establishes structure only. Use `execute_plan(plan, request=request)` for execution: it treats mappings and existing `QueryPlan` objects as untrusted and repeats current catalog, permission, limit, and request-scope validation. `run_query_plan()` remains temporarily as a deprecated safe wrapper. Do not call the low-level compiler directly or treat a previously validated `QueryPlan` as a reusable authorization token.
+> **Alpha trust-boundary warning:** `parse_query_plan()` establishes structure only. Use `execute_plan(plan, request=request)` for execution: it treats mappings and existing `QueryPlan` objects as untrusted and repeats current catalog, permission, limit, and request-scope validation. `run_query_plan()` remains temporarily as a deprecated safe wrapper. The compiler and compiled-query executor are internal and no longer public exports. Never treat a previously validated `QueryPlan` as a reusable authorization token.
 
 ```bash
 python -m pip install django-asklens
@@ -104,6 +104,10 @@ response_payload = result.to_dict()
 ```
 
 `execute_plan(...)` repeats current semantic validation and then starts from `resource.get_base_queryset(request)`. Scope declaration is not yet fail-closed: a registered `base_queryset(request)` hook is used when present, while omission currently falls back to the model default manager. Tenant- or row-sensitive resources must register and test a scope hook until the R2 scope migration is implemented.
+
+### Migrating low-level alpha imports
+
+Replace `from django_asklens.compiler import compile_query_plan` and `from django_asklens.execution import execute_query` with `execute_plan()`. `CompiledQuery` is also internal. AskLens intentionally provides no public operation that executes a caller-supplied compiled or merely shape-valid plan. `run_query_plan()` remains available for one alpha cycle, emits `DeprecationWarning`, and revalidates its input.
 
 ## Ask a provider, then execute
 
