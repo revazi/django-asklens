@@ -183,6 +183,27 @@ def configure_dummy_plan(settings, plan: dict[str, Any]) -> None:
     }
 
 
+def test_query_endpoint_normalizes_transport_parse_errors(
+    api_client: APIClient,
+    user,
+) -> None:
+    """Invalid API request shape uses the shared stable parse code."""
+
+    api_client.force_authenticate(user=user)
+
+    response = api_client.post("/asklens/query/", {}, format="json")
+
+    assert response.status_code == 400
+    assert response.data == {
+        "response_type": "error",
+        "error": {
+            "code": "asklens.parse.invalid",
+            "message": "The query request could not be parsed.",
+        },
+    }
+    assert SemanticQueryRun.objects.count() == 0
+
+
 def test_catalog_endpoint_requires_authentication(
     api_client: APIClient,
     registered_orders: None,
@@ -463,6 +484,46 @@ def test_query_endpoint_intercepts_capabilities_question_without_provider_or_aud
     assert SemanticQueryRun.objects.count() == 0
 
 
+def test_admin_execution_reaches_trusted_facade(
+    settings,
+    monkeypatch,
+    staff_user,
+    order_data: None,
+    registered_orders: None,
+) -> None:
+    """The admin adapter executes provider plans through `execute_plan()`."""
+
+    from django_asklens.execution import execute_plan as real_execute_plan
+
+    configure_dummy_plan(settings, valid_plan_payload())
+    calls = []
+
+    def recording_execute_plan(plan, *, request, registry=default_registry):
+        calls.append((plan, request, registry))
+        return real_execute_plan(plan, request=request, registry=registry)
+
+    monkeypatch.setattr(
+        "django_asklens.querying.execute_plan",
+        recording_execute_plan,
+    )
+    request = RequestFactory().post(
+        "/admin/asklens/asklensquery/",
+        {"question": QUESTION},
+    )
+    request.user = staff_user
+
+    result, run, error, reused_existing_run = execute_admin_query(
+        request,
+        question=QUESTION,
+    )
+
+    assert result is not None
+    assert run is not None
+    assert error == ""
+    assert reused_existing_run is False
+    assert len(calls) == 1
+
+
 def test_admin_query_page_uses_shared_capabilities_flow(
     registered_orders: None,
     staff_user,
@@ -556,6 +617,39 @@ def test_query_endpoint_executes_provided_valid_plan_without_planner(
         {"status": "paid", "order_count": 2},
         {"status": "pending", "order_count": 1},
     ]
+
+
+def test_api_execution_reaches_trusted_facade(
+    monkeypatch,
+    api_client: APIClient,
+    user,
+    order_data: None,
+    registered_orders: None,
+) -> None:
+    """The API adapter executes submitted plans through `execute_plan()`."""
+
+    from django_asklens.execution import execute_plan as real_execute_plan
+
+    calls = []
+
+    def recording_execute_plan(plan, *, request, registry=default_registry):
+        calls.append((plan, request, registry))
+        return real_execute_plan(plan, request=request, registry=registry)
+
+    monkeypatch.setattr(
+        "django_asklens.querying.execute_plan",
+        recording_execute_plan,
+    )
+    api_client.force_authenticate(user=user)
+
+    response = api_client.post(
+        "/asklens/query/",
+        {"question": "Submitted plan", "plan": valid_plan_payload()},
+        format="json",
+    )
+
+    assert response.status_code == 200
+    assert len(calls) == 1
 
 
 def test_query_endpoint_ignores_table_visualization_axes(

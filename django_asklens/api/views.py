@@ -83,7 +83,17 @@ class QueryView(AskLensAPIView):
         """Execute one AskLens query request."""
 
         serializer = QueryRequestSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
+        if not serializer.is_valid():
+            return Response(
+                {
+                    "response_type": "error",
+                    "error": {
+                        "code": "asklens.parse.invalid",
+                        "message": "The query request could not be parsed.",
+                    },
+                },
+                status=400,
+            )
         outcome = execute_asklens_query_request(
             request,
             question=serializer.validated_data["question"],

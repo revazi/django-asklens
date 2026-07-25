@@ -124,7 +124,7 @@ except PublicAskLensError as exc:
     # {"code": "asklens.member.unavailable", "message": "..."}
 ```
 
-AskLens query-plan failures in the API and MCP helpers use the same `error` object with `code`, safe `message`, and an optional safe JSON `pointer`. Transport-level authentication or request-serializer failures may still use their framework's response shape. Unknown and unauthorized resources, fields, and metrics deliberately return the same `asklens.member.unavailable` response.
+AskLens query-plan failures in the API and MCP helpers use the same `error` object with `code`, safe `message`, and an optional safe JSON `pointer`. Invalid `/asklens/query/` request bodies use `asklens.parse.invalid`; transport-level authentication failures may still use the host framework's response shape. Unknown and unauthorized resources, fields, and metrics deliberately return the same `asklens.member.unavailable` response.
 
 Current execution codes are `asklens.parse.invalid`, `asklens.member.unavailable`, `asklens.plan.invalid`, `asklens.authorization.denied`, `asklens.scope.unavailable`, `asklens.budget.exceeded`, `asklens.binding.invalid`, `asklens.compile.failed`, `asklens.execute.failed`, and `asklens.provider.failed`.
 
