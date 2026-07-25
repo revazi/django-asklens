@@ -215,7 +215,7 @@ Content-Type: application/json
 }
 ```
 
-AskLens always revalidates submitted plans against the current request's permissions, resource catalog, field rules, limits, and row scope before execution. This applies to clicked suggestions, browser-saved plans, server-saved plans, and UI-edited plans with changed filters, date intervals, ordering, or limits. A saved plan is an optimization and UX convenience, not a permission bypass.
+The normal AskLens API revalidates submitted plans against the current request's permissions, resource catalog, field rules, and current plan limits before execution. Execution then uses `resource.get_base_queryset(request)` for host-defined row scope. In `0.1`, resources without a `base_queryset` hook fall back to the model default manager, so tenant- or row-sensitive registrations must supply and test that hook. This applies to clicked suggestions, browser-saved plans, server-saved plans, and UI-edited plans with changed filters, date intervals, ordering, or limits. A saved plan is an optimization and UX convenience, not a permission bypass.
 
 If you build server-side saved queries, keep them project-owned until AskLens grows a first-class saved-query model after alpha. Suggested fields are:
 

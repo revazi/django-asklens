@@ -2,7 +2,7 @@
 
 Use this checklist before enabling AskLens in a production or production-like environment.
 
-AskLens is a data access surface. Configure it as carefully as any reporting, analytics, or admin feature.
+AskLens is a data access surface. Configure it as carefully as any reporting, analytics, or admin feature. The `0.1` alpha does not yet enforce one mandatory trusted Python execution facade or fail-closed resource scope, so production-like evaluation must follow the low-level API and scope warnings below.
 
 ## Access gates
 
@@ -34,7 +34,7 @@ AskLens is a data access surface. Configure it as carefully as any reporting, an
 
 ## Tenant and row scope
 
-- [ ] Every production resource has a `base_queryset(request)` hook or another reviewed row-scope strategy.
+- [ ] Every tenant- or row-sensitive production resource has a tested `base_queryset(request)` hook. In `0.1`, omitting the hook falls back to the model default manager; an intentionally unrestricted resource must be reviewed as such.
 - [ ] `base_queryset(request)` returns no rows for anonymous/unauthorized users.
 - [ ] Tests prove users cannot see another tenant's rows.
 - [ ] Scope fields are marked with `scope_dimension=True` where useful for capabilities/help guidance.
@@ -90,6 +90,7 @@ AskLens is a data access surface. Configure it as carefully as any reporting, an
 - [ ] Confirm successful data queries create audit records.
 - [ ] Confirm safe failures create audit records.
 - [ ] Confirm help/capabilities responses do not create query-run audit records because they do not query the database.
+- [ ] Treat stored questions, plans, filter values, and errors in `SemanticQueryRun` as potentially sensitive; define access and retention appropriate to the deployment.
 - [ ] Monitor slow queries and row counts with normal Django/database tooling.
 
 ## Final go/no-go

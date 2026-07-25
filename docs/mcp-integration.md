@@ -1,6 +1,6 @@
 # MCP integration notes
 
-Status: AskLens ships dependency-free MCP adapter helpers, an `AskLensMCPToolSet` wrapper, and an optional FastMCP bridge under `django_asklens.mcp`. The repository also includes an opt-in ASGI/Uvicorn MCP endpoint for the runnable local test project. Django AskLens does not provide a production authentication layer; host projects remain responsible for authenticating MCP callers and mapping trusted server-side context to a Django request-like object.
+Status: AskLens ships dependency-free MCP adapter helpers, an `AskLensMCPToolSet` wrapper, and an optional FastMCP bridge under `django_asklens.mcp`. The repository also includes an opt-in ASGI/Uvicorn MCP endpoint for the runnable local test project. Django AskLens does not provide a production authentication layer; host projects remain responsible for authenticating MCP callers and mapping trusted server-side context to a Django request-like object. In `0.1`, host projects must also register and test `base_queryset(request)` for every tenant- or row-sensitive resource because a missing hook falls back to the model default manager.
 
 ## Why AskLens still matters with MCP
 
