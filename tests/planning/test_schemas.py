@@ -55,6 +55,13 @@ def test_invalid_json_fails_safely() -> None:
         parse_query_plan("{")
 
 
+def test_invalid_utf8_bytes_fail_with_typed_parse_error() -> None:
+    """Malformed byte payloads never leak a raw UnicodeDecodeError."""
+
+    with pytest.raises(PlanValidationError, match="valid UTF-8 JSON"):
+        parse_query_plan(b"\xff")
+
+
 def test_raw_sql_payload_extra_key_fails_closed() -> None:
     payload = valid_aggregate_plan_payload()
     payload["raw_sql"] = "select * from orders"

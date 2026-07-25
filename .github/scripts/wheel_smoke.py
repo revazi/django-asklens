@@ -66,6 +66,14 @@ def smoke_core_install() -> None:
     }
     assert get_asklens_setting("AUDIT_MODE") == "database"
     assert get_asklens_setting("AUDIT_INCLUDE_CONTENT") is False
+    assert get_asklens_setting("MAX_PLAN_BYTES") == 65_536
+    assert get_asklens_setting("MAX_FILTERS") == 20
+    assert get_asklens_setting("MAX_SELECTED_FIELDS") == 25
+    assert get_asklens_setting("MAX_ORDER_BY") == 5
+    assert get_asklens_setting("MAX_RELATIONSHIP_EDGES") == 8
+    assert get_asklens_setting("MAX_IN_VALUES") == 100
+    assert get_asklens_setting("MAX_FILTER_VALUES") == 200
+    assert get_asklens_setting("DEFAULT_LIMIT") == 100
     assert AskLensMCPToolSet(request_factory=lambda _context: request).tools()
 
     registry = CatalogRegistry()

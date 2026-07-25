@@ -54,14 +54,26 @@ AskLens is a data access surface. Configure it as carefully as any reporting, an
 
 - [ ] Keep `ALLOW_RAW_SQL` disabled. AskLens has no raw SQL execution path.
 - [ ] Keep `SEND_SAMPLE_ROWS_TO_LLM` disabled.
-- [ ] Set conservative values for:
-  - [ ] `MAX_ROWS`
-  - [ ] `MAX_JOINS`
-  - [ ] `MAX_METRICS`
+- [ ] Set conservative values for every structural budget:
+  - [ ] `MAX_PLAN_BYTES`
+  - [ ] `MAX_FILTERS`
+  - [ ] `MAX_SELECTED_FIELDS`
+  - [ ] `MAX_ORDER_BY`
   - [ ] `MAX_GROUP_BY`
+  - [ ] `MAX_METRICS`
+  - [ ] `MAX_JOINS` (maximum relationship-hop depth)
+  - [ ] `MAX_RELATIONSHIP_EDGES`
+  - [ ] `MAX_IN_VALUES`
+  - [ ] `MAX_FILTER_VALUES`
+  - [ ] `MAX_ROWS`
+  - [ ] `DEFAULT_LIMIT`
 - [ ] Test broad list queries and aggregate queries for acceptable latency.
-- [ ] If using the optional API integration, consider host-project DRF throttling/rate limits.
+- [ ] Configure a database statement timeout appropriate to reporting queries.
+- [ ] Configure an end-to-end request timeout.
+- [ ] Apply host/API rate and concurrency limits; structural budgets do not bound request volume.
+- [ ] Use read-only database credentials or equivalent database policy where practical.
 - [ ] Review database indexes for common filter/group/order fields.
+- [ ] Monitor duration, errors, rejected budgets, and row/group counts.
 
 ## Live provider configuration
 

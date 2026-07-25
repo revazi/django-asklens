@@ -209,6 +209,7 @@ Live provider tests are opt-in and skipped by default. See [Provider configurati
 - Only explicitly registered resources and fields are queryable through the normal validated orchestration paths.
 - Every resource must explicitly declare `scope_mode="global"` or `scope_mode="context_scoped"`. Context-scoped resources require a trusted `scope_provider(request)`; omission, invalid provider results, and provider failures reject without falling back to the model manager.
 - Sensitive fields are hidden unless explicitly permissioned through the normal validation paths.
+- Plans are bounded before ORM compilation by UTF-8 bytes, filters, selected/order/group/metric terms, relationship depth and unique edges, `in`/total filter values, and returned rows/groups.
 - Provider and submitted-plan output is untrusted and validated by the normal API, admin, and MCP orchestration before execution.
 - Use `django_asklens.execution.execute_plan()` for Python execution; it revalidates mappings and existing `QueryPlan` objects for the current request. `run_query_plan()` is a deprecated wrapper that also requires the current request. The compiler and compiled-query executor are internal and are not public exports.
 - AskLens executes read-only Django ORM queries only.

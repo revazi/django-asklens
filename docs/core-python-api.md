@@ -108,6 +108,31 @@ response_payload = result.to_dict()
 
 The legacy `base_queryset=` registration argument is rejected. Migrate it to `scope_mode="context_scoped", scope_provider=...`; resources intentionally unrestricted across rows must declare `scope_mode="global"`.
 
+### Structural budgets
+
+Before scope resolution or ORM compilation, execution bounds UTF-8 plan bytes, filters, selected fields, order terms, groups, metrics, relationship-hop depth, unique relationship edges across the complete plan, values in each `in` filter, total scalar filter values, and returned rows/groups. Repeated meaningless select/filter/group/order/`in` references are rejected rather than used to evade counting.
+
+Defaults are configurable implementation settings:
+
+```python
+DJANGO_ASKLENS = {
+    "MAX_PLAN_BYTES": 65_536,
+    "MAX_FILTERS": 20,
+    "MAX_SELECTED_FIELDS": 25,
+    "MAX_ORDER_BY": 5,
+    "MAX_GROUP_BY": 3,
+    "MAX_METRICS": 5,
+    "MAX_JOINS": 2,
+    "MAX_RELATIONSHIP_EDGES": 8,
+    "MAX_IN_VALUES": 100,
+    "MAX_FILTER_VALUES": 200,
+    "MAX_ROWS": 500,
+    "DEFAULT_LIMIT": 100,
+}
+```
+
+`MAX_JOINS` is the maximum hop depth of any field reference; `MAX_RELATIONSHIP_EDGES` counts unique traversed relationship prefixes across all plan positions. `DEFAULT_LIMIT` is capped by `MAX_ROWS`. Structural budgets do not replace database statement/request timeouts, rate/concurrency limits, read-only credentials, indexes, or monitoring.
+
 ### Migrating low-level alpha imports
 
 Replace `from django_asklens.compiler import compile_query_plan` and `from django_asklens.execution import execute_query` with `execute_plan()`. `CompiledQuery` is also internal. AskLens intentionally provides no public operation that executes a caller-supplied compiled or merely shape-valid plan. `run_query_plan()` remains available for one alpha cycle, emits `DeprecationWarning`, requires the current request, and revalidates its input.

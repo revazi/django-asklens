@@ -234,7 +234,7 @@ def _validate_untrusted_plan(
 
     raw_plan: str | bytes | Mapping[str, Any]
     if isinstance(plan, QueryPlan):
-        raw_plan = plan.model_dump(mode="json")
+        raw_plan = plan.model_dump(mode="json", exclude_unset=True)
     else:
         raw_plan = plan
 
