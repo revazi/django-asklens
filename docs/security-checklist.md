@@ -39,6 +39,13 @@ Use this checklist before enabling AskLens outside local development.
 - [ ] Treat all provider output as untrusted and require QueryPlan validation before execution.
 - [ ] Keep `LOG_LLM_IO` disabled in production unless an approved logging policy covers user questions and permission-scoped schema metadata.
 
+## Audit safety
+
+- [ ] Select `AUDIT_MODE` deliberately and keep `AUDIT_INCLUDE_CONTENT=False` by default.
+- [ ] If full content is enabled, define retention, access, redaction, and deletion policy for questions, filters, and plans.
+- [ ] Prove rejected plans issue no application-data query; allow at most one metadata insert only in database audit mode.
+- [ ] Monitor custom/database sink failures without retrying query execution.
+
 ## Deployment safety
 
 - [ ] Consider a read-only database role or replica as defense in depth if your deployment can enforce it outside AskLens.

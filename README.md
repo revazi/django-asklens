@@ -212,7 +212,8 @@ Live provider tests are opt-in and skipped by default. See [Provider configurati
 - Use `django_asklens.execution.execute_plan()` for Python execution; it revalidates mappings and existing `QueryPlan` objects for the current request. `run_query_plan()` is a deprecated safe wrapper. The compiler and compiled-query executor are internal and are not public exports.
 - AskLens executes read-only Django ORM queries only.
 - AskLens does not execute LLM-generated SQL.
-- AskLens does not create, update, or delete application data.
+- AskLens does not create, update, or delete application data; its own optional/default audit sink may write one `SemanticQueryRun` metadata record per query attempt.
+- Default audit records omit questions, filter values, and complete plans unless `AUDIT_INCLUDE_CONTENT=True` is explicitly configured.
 - AskLens does not send database rows, sample values, secrets, credentials, or `.env` content to providers by default.
 - Query runs are audited.
 

@@ -16,6 +16,13 @@ from tests.test_project.models import Customer, Order
 pytestmark = pytest.mark.django_db
 
 
+@pytest.fixture(autouse=True)
+def disable_audit(settings) -> None:
+    """Keep facade authorization tests in accepted zero-total-SQL mode."""
+
+    settings.DJANGO_ASKLENS = {"AUDIT_MODE": "disabled"}
+
+
 @dataclass(frozen=True, slots=True)
 class RequestUser:
     """Minimal authenticated user with deterministic permission strings."""
@@ -135,7 +142,7 @@ def test_execute_plan_revalidates_current_limits(
 ) -> None:
     """A caller-constructed QueryPlan must not bypass current plan limits."""
 
-    settings.DJANGO_ASKLENS = {"MAX_ROWS": 1}
+    settings.DJANGO_ASKLENS = {"MAX_ROWS": 1, "AUDIT_MODE": "disabled"}
 
     with (
         django_assert_num_queries(0),

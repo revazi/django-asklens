@@ -10,6 +10,7 @@ The project is alpha and APIs may change before a stable release.
 
 - Began the R1 trusted-execution boundary with public `execute_plan(plan, *, request, registry=...)`, which treats mappings and existing `QueryPlan` objects as untrusted and repeats current permission, catalog, limit, and request-scope validation before ORM execution.
 - Added stable namespaced public errors for parse, unavailable-member, plan, authorization, scope, budget, binding, compilation, execution, and provider failures.
+- Added server-owned audit modes: `database` (default), `disabled`, and `custom`, with an optional callable `AUDIT_SINK` for non-database operational events.
 
 ### Changed
 
@@ -18,10 +19,12 @@ The project is alpha and APIs may change before a stable release.
 - ORM compilation now consumes a private, non-serializable prepared representation bound to the current execution context and resolved resource queryset.
 - AskLens query-plan failures in the API and MCP helpers now expose an `error` object containing only `code`, safe `message`, and an optional safe JSON `pointer`, replacing raw diagnostic strings and transport-specific `error_category` values.
 - Invalid `/asklens/query/` request bodies now return `asklens.parse.invalid` without exposing DRF serializer field details.
+- Database auditing now stores operational resource/intent/status/error/row-count/duration metadata by default; questions, filter values, and complete plans require explicit `AUDIT_INCLUDE_CONTENT=True` opt-in.
 
 ### Removed
 
 - Removed `compile_query_plan`, `CompiledQuery`, and `execute_query` from public package exports. Python callers must use `execute_plan()`; there is no supported unsafe execution API.
+- Removed the standalone `create_query_run` compatibility export so supported execution cannot bypass the configured privacy-aware audit policy/sink.
 
 ### Security
 
@@ -29,6 +32,7 @@ The project is alpha and APIs may change before a stable release.
 - Unknown and unauthorized resources, fields, and metrics now share the same public `asklens.member.unavailable` code and message; internal member names, permission tokens, scope failures, compiler causes, and database causes are not included in public execution errors.
 - Added regression evidence that preview validation cannot authorize later execution and that ordinary plans are revalidated against current resource, field, metric, policy, catalog, identity, and request scope.
 - Added adapter-convergence evidence for core provider orchestration, API, admin, and MCP execution through `execute_plan()`; the packaged frontend remains an API client rather than an independent execution path.
+- Rejected plans perform zero application-data queries. Database audit mode performs at most one metadata-only insert; disabled/custom non-database modes add zero SQL. Audit-sink failure cannot trigger rejected-plan execution or hide a successful result.
 
 ## 0.1.0a1 — 2026-07-19
 

@@ -74,7 +74,7 @@ asklens_query(question, include_rows=false)  # optional convenience tool
 
 `asklens_validate_plan(request, plan)` validates a client-produced plan against the current catalog, permissions, settings, and safety rules without executing a database query or creating an audit row.
 
-`asklens_execute_plan(request, plan, include_rows=False)` revalidates the plan, compiles it to Django ORM, executes it through the resource `base_queryset(request)`, creates the normal AskLens audit record, and returns metadata such as columns, row count, visualization hints, and run id.
+`asklens_execute_plan(request, plan, include_rows=False)` revalidates the plan, compiles it to Django ORM, executes it through the resource `base_queryset(request)`, applies the configured audit mode, and returns metadata such as columns, row count, and visualization hints. Database audit mode also returns a run id. Default audit records omit the MCP question and complete plan; they retain operational resource/intent/status/error/row-count/duration metadata only.
 
 `asklens_query(request, question, include_rows=False)` is a convenience wrapper around AskLens' existing query orchestration for deployments that still want AskLens to call its configured provider.
 

@@ -167,7 +167,19 @@ else:
     error_message = response.payload["error"]["message"]
 ```
 
-This helper persists `SemanticQueryRun` audit records for data-query success and safe data-query failure. Capability/help responses do not create query-run records because they do not execute a database query.
+By default, execution writes one `SemanticQueryRun` containing operational metadata only. `question` is blank and `plan` contains only validated resource/intent metadata; rejected raw plans are not stored. Capability/help responses do not create query-run records because they do not execute a database query.
+
+Audit settings are server-owned:
+
+```python
+DJANGO_ASKLENS = {
+    "AUDIT_MODE": "database",  # "database", "disabled", or "custom"
+    "AUDIT_INCLUDE_CONTENT": False,
+    "AUDIT_SINK": None,  # callable/import path required for "custom"
+}
+```
+
+A custom sink receives a safe operational event mapping and adds no database SQL unless the host sink chooses to do so. Disabled mode adds no audit SQL. Setting `AUDIT_INCLUDE_CONTENT=True` adds the question and complete validated plan to database/custom events; enable it only with an explicit retention, access, redaction, and deletion policy. Audit-sink failure is logged server-side and does not trigger rejected-plan execution or replace a successful query result.
 
 ## Optional access gate helper
 

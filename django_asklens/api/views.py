@@ -18,7 +18,6 @@ from django_asklens.permissions import get_request_permissions
 from django_asklens.querying import (
     build_capabilities_payload,
     build_success_payload,
-    create_query_run,
     enforce_debug_permission,
     execute_asklens_query_request,
     get_query_help_for_capabilities,
@@ -37,7 +36,6 @@ __all__ = [
     "build_capabilities_payload",
     "build_success_payload",
     "can_view_run",
-    "create_query_run",
     "enforce_debug_permission",
     "get_query_help_for_capabilities",
     "get_user_permissions",

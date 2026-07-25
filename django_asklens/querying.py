@@ -12,6 +12,10 @@ from django_asklens.exceptions import (
     public_error_payload,
 )
 from django_asklens.execution import execute_plan
+from django_asklens.execution.audit import (
+    _audit_external_rejection,
+    _execution_audit_content,
+)
 from django_asklens.models import SemanticQueryRun
 from django_asklens.permissions import get_request_permissions
 from django_asklens.planning import plan_asklens_response, plan_question
@@ -27,7 +31,6 @@ from django_asklens.planning.intents import (
     is_capabilities_fallback_question,
     route_question_intent,
 )
-from django_asklens.planning.validation import parse_and_validate_query_plan
 from django_asklens.settings import get_asklens_setting
 
 QueryResponseType = Literal["query", "capabilities", "error"]
@@ -38,7 +41,6 @@ __all__ = [
     "build_capabilities_payload",
     "build_result_metadata",
     "build_success_payload",
-    "create_query_run",
     "enforce_debug_permission",
     "execute_asklens_query_request",
     "get_query_help_for_capabilities",
@@ -68,7 +70,7 @@ def execute_asklens_query_request(
     question: str,
     debug: bool = False,
     include_visualization: bool = True,
-    provided_plan: dict[str, Any] | None = None,
+    provided_plan: str | bytes | dict[str, Any] | None = None,
 ) -> AskLensQueryResponse:
     """Plan, execute, help, and audit one AskLens request.
 
@@ -81,84 +83,84 @@ def execute_asklens_query_request(
     permissions = get_request_permissions(request)
 
     try:
-        if provided_plan is not None:
-            plan = parse_and_validate_query_plan(
-                provided_plan,
-                permissions=permissions,
-            )
-        elif should_use_unified_provider_response():
-            capabilities = build_capabilities(permissions=permissions)
-            provider_result = plan_asklens_response(
-                question,
-                capabilities=capabilities,
-                permissions=permissions,
-            )
-            if provider_result.response_type == "capabilities":
-                assert provider_result.query_help is not None
-                return AskLensQueryResponse(
-                    response_type="capabilities",
-                    payload=build_capabilities_payload(
-                        question,
-                        intent=capabilities_intent(),
-                        source="semantic_provider",
-                        capabilities=capabilities,
-                        query_help=provider_result.query_help,
-                        query_help_source="semantic_provider",
-                    ),
-                )
-            assert provider_result.query_plan is not None
-            plan = provider_result.query_plan
-        else:
-            routing_result = route_question_intent(question, permissions=permissions)
-            if routing_result.intent.intent == "capabilities":
-                capabilities = filter_capabilities_for_intent(
-                    build_capabilities(permissions=permissions),
-                    routing_result.intent,
-                )
-                (
-                    query_help,
-                    query_help_source,
-                    query_help_error,
-                ) = get_query_help_for_capabilities(
+        with _execution_audit_content(question=question):
+            if provided_plan is not None:
+                untrusted_plan = provided_plan
+            elif should_use_unified_provider_response():
+                capabilities = build_capabilities(permissions=permissions)
+                provider_result = plan_asklens_response(
                     question,
                     capabilities=capabilities,
                     permissions=permissions,
                 )
-                return AskLensQueryResponse(
-                    response_type="capabilities",
-                    payload=build_capabilities_payload(
-                        question,
-                        intent=routing_result.intent,
-                        source=routing_result.source,
-                        capabilities=capabilities,
-                        query_help=query_help,
-                        query_help_source=query_help_source,
-                        query_help_error=query_help_error,
-                    ),
+                if provider_result.response_type == "capabilities":
+                    assert provider_result.query_help is not None
+                    return AskLensQueryResponse(
+                        response_type="capabilities",
+                        payload=build_capabilities_payload(
+                            question,
+                            intent=capabilities_intent(),
+                            source="semantic_provider",
+                            capabilities=capabilities,
+                            query_help=provider_result.query_help,
+                            query_help_source="semantic_provider",
+                        ),
+                    )
+                assert provider_result.query_plan is not None
+                untrusted_plan = provider_result.query_plan
+            else:
+                routing_result = route_question_intent(
+                    question,
+                    permissions=permissions,
                 )
+                if routing_result.intent.intent == "capabilities":
+                    capabilities = filter_capabilities_for_intent(
+                        build_capabilities(permissions=permissions),
+                        routing_result.intent,
+                    )
+                    (
+                        query_help,
+                        query_help_source,
+                        query_help_error,
+                    ) = get_query_help_for_capabilities(
+                        question,
+                        capabilities=capabilities,
+                        permissions=permissions,
+                    )
+                    return AskLensQueryResponse(
+                        response_type="capabilities",
+                        payload=build_capabilities_payload(
+                            question,
+                            intent=routing_result.intent,
+                            source=routing_result.source,
+                            capabilities=capabilities,
+                            query_help=query_help,
+                            query_help_source=query_help_source,
+                            query_help_error=query_help_error,
+                        ),
+                    )
 
-            planner_result = plan_question(question, permissions=permissions)
-            plan = planner_result.plan
+                planner_result = plan_question(question, permissions=permissions)
+                untrusted_plan = planner_result.plan
 
-        query_result = execute_plan(plan, request=request)
-        run = create_query_run(
-            request=request,
-            question=question,
-            plan=plan.model_dump(mode="json"),
-            status=SemanticQueryRun.Status.SUCCESS,
-            row_count=query_result.row_count,
-            duration_ms=query_result.duration_ms,
-        )
-        payload = build_success_payload(
-            run=run,
-            question=question,
-            plan=plan.model_dump(mode="json"),
-            query_result=query_result.to_dict(
-                include_visualization=include_visualization,
-            ),
-            debug=debug,
-        )
-        return AskLensQueryResponse(response_type="query", payload=payload, run=run)
+            query_result = execute_plan(untrusted_plan, request=request)
+            plan = query_result._validated_plan
+            assert plan is not None
+            run = _database_audit_record(query_result._audit_record)
+            payload = build_success_payload(
+                run=run,
+                question=question,
+                plan=plan.model_dump(mode="json"),
+                query_result=query_result.to_dict(
+                    include_visualization=include_visualization,
+                ),
+                debug=debug,
+            )
+            return AskLensQueryResponse(
+                response_type="query",
+                payload=payload,
+                run=run,
+            )
     except AskLensError as exc:
         if should_return_capabilities_fallback(
             question,
@@ -182,26 +184,26 @@ def execute_asklens_query_request(
                 ),
             )
 
+        run = _database_audit_record(getattr(exc, "_audit_record", None))
+        if not getattr(exc, "_audit_attempted", False):
+            with _execution_audit_content(question=question):
+                run = _database_audit_record(
+                    _audit_external_rejection(request=request, error=exc)
+                )
+
         error_payload = safe_error_payload(exc)
-        run = create_query_run(
-            request=request,
-            question=question,
-            plan={},
-            status=SemanticQueryRun.Status.FAILED,
-            row_count=0,
-            duration_ms=None,
-            error=f"{error_payload['code']}: {error_payload['message']}",
-        )
+        payload: dict[str, Any] = {
+            "question": question,
+            "status": SemanticQueryRun.Status.FAILED,
+            "error": error_payload,
+        }
+        if run is not None:
+            payload["run_id"] = run.pk
         return AskLensQueryResponse(
             response_type="error",
             status_code=400,
             run=run,
-            payload={
-                "run_id": run.pk,
-                "question": question,
-                "status": SemanticQueryRun.Status.FAILED,
-                "error": error_payload,
-            },
+            payload=payload,
         )
 
 
@@ -238,28 +240,10 @@ def get_user_permissions(request: Any) -> frozenset[str]:
     return get_request_permissions(request)
 
 
-def create_query_run(
-    *,
-    request: Any,
-    question: str,
-    plan: dict[str, Any],
-    status: str,
-    row_count: int,
-    duration_ms: int | None = None,
-    error: str = "",
-) -> SemanticQueryRun:
-    """Persist one safe query-run audit record."""
+def _database_audit_record(value: Any) -> SemanticQueryRun | None:
+    """Return a database audit record and ignore custom-sink return values."""
 
-    user = request.user if getattr(request.user, "is_authenticated", False) else None
-    return SemanticQueryRun.objects.create(
-        user=user,
-        question=question,
-        plan=plan,
-        status=status,
-        row_count=row_count,
-        duration_ms=duration_ms,
-        error=error,
-    )
+    return value if isinstance(value, SemanticQueryRun) else None
 
 
 def get_query_help_for_capabilities(
@@ -334,7 +318,7 @@ def build_capabilities_payload(
 
 def build_success_payload(
     *,
-    run: SemanticQueryRun,
+    run: SemanticQueryRun | None,
     question: str,
     plan: dict[str, Any],
     query_result: dict[str, Any],
@@ -343,7 +327,6 @@ def build_success_payload(
     """Build a user-facing successful query response."""
 
     payload = {
-        "run_id": run.pk,
         "question": question,
         "response_type": "query",
         "plan": plan,
@@ -357,6 +340,8 @@ def build_success_payload(
         ),
         "explanation": "Executed a validated read-only AskLens query plan.",
     }
+    if run is not None:
+        payload["run_id"] = run.pk
     if "visualization" in query_result:
         payload["visualization"] = query_result["visualization"]
     if debug:

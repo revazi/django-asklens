@@ -2,7 +2,7 @@
 
 import warnings
 from collections.abc import Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field, replace
 from datetime import datetime
 from time import perf_counter
 from typing import Any, Never
@@ -28,6 +28,13 @@ from django_asklens.exceptions import (
     ScopeUnavailableError,
     normalize_public_error,
 )
+from django_asklens.execution.audit import (
+    _AuditPolicy,
+    _AuditSink,
+    _build_audit_event,
+    _emit_audit_event,
+    _resolve_audit_policy_and_sink,
+)
 from django_asklens.permissions import get_request_permissions
 from django_asklens.planning.schemas import QueryPlan
 from django_asklens.planning.validation import parse_and_validate_query_plan
@@ -46,8 +53,8 @@ class _ExecutionContext:
     registry: CatalogRegistry
     registry_revision: tuple[tuple[str, int], ...]
     now: datetime
-    audit_policy: str
-    audit_sink: Any
+    audit_policy: _AuditPolicy
+    audit_sink: _AuditSink | None
 
     def __reduce__(self) -> Never:
         """Prevent current request state from being serialized or reused."""
@@ -65,6 +72,8 @@ class QueryResult:
     row_count: int
     duration_ms: int
     visualization: dict[str, Any]
+    _validated_plan: QueryPlan | None = field(default=None, repr=False, compare=False)
+    _audit_record: Any = field(default=None, repr=False, compare=False)
 
     def to_dict(self, *, include_visualization: bool = True) -> dict[str, Any]:
         """Serialize the result to JSON-safe primitives plus optional hints."""
@@ -165,6 +174,7 @@ def _build_execution_context(
         msg = "AskLens could not resolve current request permissions."
         raise AuthorizationDeniedError(msg) from exc
 
+    audit_policy, audit_sink = _resolve_audit_policy_and_sink(request=request)
     return _ExecutionContext(
         request=request,
         principal=getattr(request, "user", None),
@@ -174,8 +184,8 @@ def _build_execution_context(
             (resource.name, id(resource)) for resource in registry.all()
         ),
         now=resolved_now,
-        audit_policy="delegated_legacy_database",
-        audit_sink=None,
+        audit_policy=audit_policy,
+        audit_sink=audit_sink,
     )
 
 
@@ -184,22 +194,43 @@ def _execute_public_plan(
     *,
     context: _ExecutionContext,
 ) -> QueryResult:
-    """Expose only safe error metadata from the trusted Python facade."""
+    """Execute and audit while exposing only safe public error metadata."""
 
+    validated_plan: QueryPlan | None = None
     try:
-        return _execute_untrusted_plan(plan, context=context)
-    except PublicAskLensError:
-        raise
+        validated_plan = _validate_untrusted_plan(plan, context=context)
+        result = _execute_validated_plan(validated_plan, context=context)
     except AskLensError as exc:
-        raise normalize_public_error(exc) from None
+        public_error = normalize_public_error(exc)
+        audit_record = _audit_execution(
+            context=context,
+            validated_plan=validated_plan,
+            result=None,
+            error=public_error,
+        )
+        public_error._audit_record = audit_record
+        public_error._audit_attempted = True
+        raise public_error from None
+
+    audit_record = _audit_execution(
+        context=context,
+        validated_plan=validated_plan,
+        result=result,
+        error=None,
+    )
+    return replace(
+        result,
+        _validated_plan=validated_plan,
+        _audit_record=audit_record,
+    )
 
 
-def _execute_untrusted_plan(
+def _validate_untrusted_plan(
     plan: UntrustedPlan,
     *,
     context: _ExecutionContext,
-) -> QueryResult:
-    """Parse, revalidate, compile, and execute within one current context."""
+) -> QueryPlan:
+    """Reparse and validate ordinary plan input for the current context."""
 
     raw_plan: str | bytes | Mapping[str, Any]
     if isinstance(plan, QueryPlan):
@@ -207,11 +238,20 @@ def _execute_untrusted_plan(
     else:
         raw_plan = plan
 
-    validated_plan = parse_and_validate_query_plan(
+    return parse_and_validate_query_plan(
         raw_plan,
         registry=context.registry,
         permissions=context.permissions,
     )
+
+
+def _execute_validated_plan(
+    validated_plan: QueryPlan,
+    *,
+    context: _ExecutionContext,
+) -> QueryResult:
+    """Prepare, compile, and execute one currently validated plan."""
+
     prepared = _prepare_query_plan(validated_plan, context=context)
     try:
         compiled_query = _compile_prepared_query(prepared)
@@ -231,6 +271,33 @@ def _execute_untrusted_plan(
     except Exception as exc:
         msg = "AskLens could not evaluate the compiled query."
         raise ExecutionError(msg) from exc
+
+
+def _audit_execution(
+    *,
+    context: _ExecutionContext,
+    validated_plan: QueryPlan | None,
+    result: QueryResult | None,
+    error: AskLensError | None,
+) -> Any:
+    """Emit one privacy-aware event for a success or safe rejection."""
+
+    plan_payload = (
+        validated_plan.model_dump(mode="json") if validated_plan is not None else None
+    )
+    event = _build_audit_event(
+        policy=context.audit_policy,
+        timestamp=context.now,
+        principal=context.principal,
+        resource=validated_plan.resource if validated_plan is not None else None,
+        intent=validated_plan.intent if validated_plan is not None else None,
+        status="failed" if error is not None else "success",
+        row_count=result.row_count if result is not None else 0,
+        duration_ms=result.duration_ms if result is not None else None,
+        error=error,
+        validated_plan=plan_payload,
+    )
+    return _emit_audit_event(sink=context.audit_sink, event=event)
 
 
 def _prepare_query_plan(

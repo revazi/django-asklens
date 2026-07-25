@@ -18,6 +18,14 @@ from tests.test_project.models import Order
 
 pytestmark = pytest.mark.django_db
 
+
+@pytest.fixture(autouse=True)
+def disable_audit(settings) -> None:
+    """Assert current-context rejection in zero-total-SQL audit mode."""
+
+    settings.DJANGO_ASKLENS = {"AUDIT_MODE": "disabled"}
+
+
 MEMBER_ERROR = {
     "code": "asklens.member.unavailable",
     "message": "A requested query member is unavailable.",

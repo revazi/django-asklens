@@ -32,6 +32,14 @@ from tests.test_project.models import Order
 
 pytestmark = pytest.mark.django_db
 
+
+@pytest.fixture(autouse=True)
+def disable_audit(settings) -> None:
+    """Keep public-error stage tests in zero-total-SQL audit mode."""
+
+    settings.DJANGO_ASKLENS = {"AUDIT_MODE": "disabled"}
+
+
 MEMBER_ERROR = {
     "code": "asklens.member.unavailable",
     "message": "A requested query member is unavailable.",
@@ -90,7 +98,7 @@ def test_parse_and_budget_failures_use_stable_codes(
 
     registry = build_registry()
     request = request_with("shop.view_orders")
-    settings.DJANGO_ASKLENS = {"MAX_ROWS": 1}
+    settings.DJANGO_ASKLENS = {"MAX_ROWS": 1, "AUDIT_MODE": "disabled"}
 
     with django_assert_num_queries(0):
         parse_error = capture_public_error(
