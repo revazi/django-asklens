@@ -157,7 +157,8 @@ def registered_multitenant_orders() -> None:
             Metric("order_count", op="count", field="id"),
             Metric("tenant_count", op="count", field="account.slug"),
         ],
-        base_queryset=tenant_scoped_orders,
+        scope_mode="context_scoped",
+        scope_provider=tenant_scoped_orders,
     )
 
 
@@ -286,7 +287,7 @@ def test_planner_prompt_scopes_fields_and_metrics_to_user_permissions(
     assert "beta" not in permissioned_prompt
 
 
-def test_query_endpoint_applies_base_queryset_for_tenant_isolation(
+def test_query_endpoint_applies_scope_provider_for_tenant_isolation(
     settings,
     api_client: APIClient,
     tenant_data: TenantData,
@@ -350,7 +351,7 @@ def test_crafted_plan_cannot_filter_by_sensitive_tenant_field_without_permission
     assert run.plan == {}
 
 
-def test_permissioned_sensitive_field_still_respects_tenant_base_queryset(
+def test_permissioned_sensitive_field_still_respects_tenant_scope_provider(
     settings,
     api_client: APIClient,
     tenant_data: TenantData,

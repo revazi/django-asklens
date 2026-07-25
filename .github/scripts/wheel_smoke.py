@@ -44,9 +44,15 @@ def smoke_core_install() -> None:
     assert not hasattr(compiler_package, "compile_query_plan")
     configure_settings(installed_apps=["django_asklens"])
 
+    from django.contrib.auth import get_user_model
+
     from django_asklens.access import can_access_asklens
-    from django_asklens.catalog.registry import serialize_catalog
-    from django_asklens.exceptions import PlanValidationError, public_error_payload
+    from django_asklens.catalog.registry import CatalogRegistry, serialize_catalog
+    from django_asklens.exceptions import (
+        InvalidResourceError,
+        PlanValidationError,
+        public_error_payload,
+    )
     from django_asklens.mcp import AskLensMCPToolSet
     from django_asklens.planning import parse_query_plan
     from django_asklens.settings import get_asklens_setting
@@ -61,6 +67,23 @@ def smoke_core_install() -> None:
     assert get_asklens_setting("AUDIT_MODE") == "database"
     assert get_asklens_setting("AUDIT_INCLUDE_CONTENT") is False
     assert AskLensMCPToolSet(request_factory=lambda _context: request).tools()
+
+    registry = CatalogRegistry()
+    user_model = get_user_model()
+    try:
+        registry.register(model=user_model, fields={"id": {}})
+    except InvalidResourceError as exc:
+        assert "scope_mode is required" in str(exc)
+    else:
+        raise AssertionError("Resource registration accepted missing scope_mode")
+    resource = registry.register(
+        model=user_model,
+        name="users",
+        fields={"id": {}},
+        scope_mode="global",
+    )
+    assert resource.get_scope_queryset(request).model is user_model
+
     assert (
         parse_query_plan(
             {"resource": "orders", "intent": "list", "select": [], "limit": 1}

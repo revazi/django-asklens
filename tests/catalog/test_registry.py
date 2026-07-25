@@ -58,7 +58,8 @@ def test_public_register_api_registers_resource() -> None:
             Metric("order_count", op="count", field="id", label="Number of orders"),
             Metric("revenue", op="sum", field="total", label="Revenue"),
         ],
-        base_queryset=scoped_orders,
+        scope_mode="context_scoped",
+        scope_provider=scoped_orders,
     )
 
     assert resource.name == "orders"
@@ -67,7 +68,7 @@ def test_public_register_api_registers_resource() -> None:
     assert resource.synonyms == ("sales", "purchases", "transactions")
     assert get_resource("orders") is resource
     assert get_resource("Orders") is resource
-    assert resource.get_base_queryset(object()).model is Order
+    assert resource.get_scope_queryset(object()).model is Order
 
     catalog = serialize_catalog()
     assert catalog["resources"][0]["name"] == "orders"
@@ -79,29 +80,47 @@ def test_public_register_api_registers_resource() -> None:
 
 def test_duplicate_resource_name_fails_loudly() -> None:
     registry = CatalogRegistry()
-    registry.register(model=Order, name="orders", fields={"id": {}})
+    registry.register(
+        model=Order, name="orders", scope_mode="global", fields={"id": {}}
+    )
 
     with pytest.raises(DuplicateResourceError, match="orders"):
-        registry.register(model=Order, name="orders", fields={"id": {}})
+        registry.register(
+            model=Order, name="orders", scope_mode="global", fields={"id": {}}
+        )
 
 
 def test_field_allowlist_is_explicit_and_validated() -> None:
     registry = CatalogRegistry()
-    resource = registry.register(model=Order, fields={"id": {}, "status": {}})
+    resource = registry.register(
+        model=Order, scope_mode="global", fields={"id": {}, "status": {}}
+    )
 
     assert set(resource.fields) == {"id", "status"}
     assert "total" not in resource.fields
 
     with pytest.raises(UnknownFieldError, match="does_not_exist"):
-        registry.register(model=Order, name="bad_field", fields={"does_not_exist": {}})
+        registry.register(
+            model=Order,
+            name="bad_field",
+            scope_mode="global",
+            fields={"does_not_exist": {}},
+        )
 
     with pytest.raises(UnknownFieldError, match="non-relation"):
-        registry.register(model=Order, name="bad_path", fields={"status.code": {}})
+        registry.register(
+            model=Order,
+            name="bad_path",
+            scope_mode="global",
+            fields={"status.code": {}},
+        )
 
 
 def test_registered_resource_metadata_is_effectively_immutable() -> None:
     registry = CatalogRegistry()
-    resource = registry.register(model=Order, fields={"id": {}, "status": {}})
+    resource = registry.register(
+        model=Order, scope_mode="global", fields={"id": {}, "status": {}}
+    )
 
     with pytest.raises(FrozenInstanceError):
         resource.name = "other"
@@ -118,6 +137,7 @@ def test_scope_metadata_is_explicit_and_schema_agnostic() -> None:
         model=Order,
         name="locations",
         label="Locations",
+        scope_mode="global",
         fields={"id": {}, "customer.email": {"scope_dimension": True}},
         scope_resource=True,
         examples_enabled=False,
@@ -135,6 +155,7 @@ def test_resource_permission_scopes_catalog_visibility() -> None:
     registry.register(
         model=Order,
         name="orders",
+        scope_mode="global",
         fields={"id": {}, "status": {}},
         requires_permission="shop.view_orders",
     )
@@ -157,6 +178,7 @@ def test_sensitive_and_hidden_fields_are_excluded_from_default_catalog() -> None
     registry.register(
         model=Order,
         label="Orders",
+        scope_mode="global",
         fields=order_fields(),
         metrics=[
             Metric("revenue", op="sum", field="total"),
@@ -187,7 +209,9 @@ def test_sensitive_and_hidden_fields_are_excluded_from_default_catalog() -> None
 
 def test_relation_depth_is_tracked_for_relation_paths() -> None:
     registry = CatalogRegistry()
-    resource = registry.register(model=Order, fields=order_fields())
+    resource = registry.register(
+        model=Order, scope_mode="global", fields=order_fields()
+    )
 
     assert resource.fields["id"].relation_depth == 0
     assert resource.fields["customer.email"].relation_depth == 1
@@ -200,6 +224,7 @@ def test_field_config_validation_catches_typos_and_bad_types() -> None:
         registry.register(
             model=Order,
             name="typo",
+            scope_mode="global",
             fields={"customer.email": {"sensitve": True}},
         )
 
@@ -207,6 +232,7 @@ def test_field_config_validation_catches_typos_and_bad_types() -> None:
         registry.register(
             model=Order,
             name="bad_bool",
+            scope_mode="global",
             fields={"customer.email": {"llm_visible": "no"}},
         )
 
@@ -214,6 +240,7 @@ def test_field_config_validation_catches_typos_and_bad_types() -> None:
         registry.register(
             model=Order,
             name="bad_permission",
+            scope_mode="global",
             fields={"customer.email": {"requires_permission": object()}},
         )
 
@@ -221,6 +248,7 @@ def test_field_config_validation_catches_typos_and_bad_types() -> None:
         registry.register(
             model=Order,
             name="bad_scope_dimension",
+            scope_mode="global",
             fields={"customer.email": {"scope_dimension": "yes"}},
         )
 
@@ -234,7 +262,9 @@ def test_prebuilt_field_specs_are_still_validated_against_model_paths() -> None:
         relation_depth=0,
     )
 
-    resource = registry.register(model=Order, fields={"status": field_spec})
+    resource = registry.register(
+        model=Order, scope_mode="global", fields={"status": field_spec}
+    )
 
     assert resource.fields["status"] is field_spec
 
@@ -242,6 +272,7 @@ def test_prebuilt_field_specs_are_still_validated_against_model_paths() -> None:
         registry.register(
             model=Order,
             name="mismatch",
+            scope_mode="global",
             fields={"status": FieldSpec("total", "Total", "number", 0)},
         )
 
@@ -249,6 +280,7 @@ def test_prebuilt_field_specs_are_still_validated_against_model_paths() -> None:
         registry.register(
             model=Order,
             name="missing_spec",
+            scope_mode="global",
             fields={"missing": FieldSpec("missing", "Missing", "string", 0)},
         )
 
@@ -257,28 +289,33 @@ def test_resource_config_validation() -> None:
     registry = CatalogRegistry()
 
     with pytest.raises(InvalidResourceError, match="Django model class"):
-        registry.register(model=object, name="bad_model", fields={"id": {}})
+        registry.register(
+            model=object, name="bad_model", scope_mode="global", fields={"id": {}}
+        )
 
     with pytest.raises(InvalidResourceError, match="synonyms"):
         registry.register(
             model=Order,
             name="bad_synonyms",
+            scope_mode="global",
             fields={"id": {}},
             synonyms="sales",
         )
 
-    with pytest.raises(InvalidResourceError, match="base_queryset"):
+    with pytest.raises(InvalidResourceError, match="scope_provider"):
         registry.register(
             model=Order,
-            name="bad_queryset",
+            name="bad_scope_provider",
             fields={"id": {}},
-            base_queryset=object(),
+            scope_mode="context_scoped",
+            scope_provider=object(),
         )
 
     with pytest.raises(InvalidResourceError, match="requires_permission"):
         registry.register(
             model=Order,
             name="bad_resource_permission",
+            scope_mode="global",
             fields={"id": {}},
             requires_permission=object(),
         )
@@ -287,6 +324,7 @@ def test_resource_config_validation() -> None:
         registry.register(
             model=Order,
             name="bad_scope_resource",
+            scope_mode="global",
             fields={"id": {}},
             scope_resource=object(),
         )
@@ -295,6 +333,7 @@ def test_resource_config_validation() -> None:
         registry.register(
             model=Order,
             name="bad_examples_enabled",
+            scope_mode="global",
             fields={"id": {}},
             examples_enabled=object(),
         )
@@ -304,6 +343,7 @@ def test_metric_registration_is_validated() -> None:
     registry = CatalogRegistry()
     resource = registry.register(
         model=Order,
+        scope_mode="global",
         fields={"id": {}, "total": {}},
         metrics=[Metric("revenue", op="sum", field="total")],
     )
@@ -319,6 +359,7 @@ def test_metric_registration_is_validated() -> None:
         registry.register(
             model=Order,
             name="bad_metric_field",
+            scope_mode="global",
             fields={"id": {}},
             metrics=[Metric("bad", op="count", field="missing")],
         )
@@ -333,6 +374,7 @@ def test_default_date_field_must_be_allowlisted_and_date_like() -> None:
     with pytest.raises(UnknownFieldError, match="Default date field"):
         registry.register(
             model=Order,
+            scope_mode="global",
             fields={"id": {}},
             default_date_field="created_at",
         )
@@ -341,6 +383,7 @@ def test_default_date_field_must_be_allowlisted_and_date_like() -> None:
         registry.register(
             model=Order,
             name="bad_default_date_type",
+            scope_mode="global",
             fields={"id": {}, "status": {}},
             default_date_field="status",
         )
@@ -349,6 +392,7 @@ def test_default_date_field_must_be_allowlisted_and_date_like() -> None:
         registry.register(
             model=Order,
             name="bad_default_date_override",
+            scope_mode="global",
             fields={"id": {}, "status": {"type": "date"}},
             default_date_field="status",
         )

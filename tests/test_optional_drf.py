@@ -76,6 +76,7 @@ register(
     model=User,
     name="users",
     label="Users",
+    scope_mode="global",
     fields={"id": {"label": "ID"}, "username": {"label": "Username"}},
     metrics=[Metric("user_count", op="count", field="id")],
 )

@@ -79,7 +79,7 @@ def order_data() -> None:
 def build_registry(*, paid_only: bool = False) -> CatalogRegistry:
     """Return a registry configured for Order query tests."""
 
-    def base_queryset(_request: object):
+    def scope_provider(_request: object):
         if paid_only:
             return Order.objects.filter(status="paid")
         return Order.objects.all()
@@ -106,7 +106,8 @@ def build_registry(*, paid_only: bool = False) -> CatalogRegistry:
             Metric("min_order_total", op="min", field="total", label="Minimum order"),
             Metric("max_order_total", op="max", field="total", label="Maximum order"),
         ],
-        base_queryset=base_queryset,
+        scope_mode="context_scoped",
+        scope_provider=scope_provider,
     )
     return registry
 
@@ -179,6 +180,7 @@ def test_filters_cover_in_contains_date_range_and_relative_dates(
         result = run_query_plan(
             plan,
             registry=registry,
+            request=SimpleNamespace(user=None),
             now=aware_datetime(2026, 3, 1),
         )
 
@@ -318,7 +320,7 @@ def test_limit_is_applied_to_result_rows(order_data: None) -> None:
     assert result.rows == ({"status": "paid", "revenue": Decimal("150")},)
 
 
-def test_compiler_starts_from_resource_base_queryset(order_data: None) -> None:
+def test_compiler_starts_from_context_scope_provider(order_data: None) -> None:
     registry = build_registry(paid_only=True)
     plan = validate_payload(
         {
@@ -351,7 +353,7 @@ def test_compile_query_metadata_without_executing_result(order_data: None) -> No
     )
 
     context = _build_execution_context(
-        request=None,
+        request=SimpleNamespace(user=None),
         registry=registry,
         now=None,
         require_request=False,

@@ -1,10 +1,10 @@
 # Multi-tenant security
 
-AskLens does not include a separate tenant policy engine in the alpha package surface. Current multi-tenant support is provided through host-project resource registration and Django/DRF permissions.
+AskLens does not include a separate tenant policy engine in the alpha package surface. Current multi-tenant support is provided through explicit host-project scope providers and Django/DRF permissions.
 
-## Tenant scoping with `base_queryset(request)`
+## Tenant scoping with `scope_provider(request)`
 
-Every registered resource can define a request-aware base queryset. AskLens compiles and executes plans from this queryset.
+Every resource must declare `scope_mode="global"` or `scope_mode="context_scoped"`. Context-scoped resources require a trusted request-aware provider, and AskLens compiles and executes plans from the returned queryset.
 
 ```python
 from django_asklens import Metric, register
@@ -33,11 +33,12 @@ register(
     },
     metrics=[Metric("order_count", op="count", field="id")],
     requires_permission="orders.view_reports",
-    base_queryset=visible_orders,
+    scope_mode="context_scoped",
+    scope_provider=visible_orders,
 )
 ```
 
-Use this hook for tenant isolation and row-level visibility. Do not register resources with unrestricted querysets in multi-tenant apps. In `0.1`, omitting `base_queryset` does not fail closed: execution falls back to the model default manager.
+Use this provider for tenant isolation and row-level visibility. It must return an unevaluated `QuerySet` for the registered model; `none()` is valid. Missing request context, missing/invalid provider results, evaluated querysets, wrong models, and provider failures reject rather than falling back to the default manager. Use `scope_mode="global"` only for resources intentionally reviewed as unrestricted across rows.
 
 ## Resource and field permissions
 
@@ -91,5 +92,5 @@ DJANGO_ASKLENS = {
 ## Operational boundaries
 
 - Live LLM providers are opt-in and should be validated in a safe non-production environment before production use.
-- AskLens relies on host apps to define tenant membership and row-level queryset policy.
+- AskLens relies on host apps to define tenant membership and correct server-owned scope-provider policy.
 - Read-only replica/database routing is a host-project deployment concern in alpha.

@@ -156,7 +156,8 @@ def test_scope_compilation_and_execution_failures_hide_internal_causes(
         name="orders",
         fields={"id": {"label": "ID"}, "status": {"label": "Status"}},
         metrics=[Metric("order_count", op="count", field="id")],
-        base_queryset=unavailable_scope,
+        scope_mode="context_scoped",
+        scope_provider=unavailable_scope,
     )
     request = request_with()
 

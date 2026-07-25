@@ -63,7 +63,8 @@ def build_registry() -> CatalogRegistry:
         },
         metrics=[Metric("order_count", op="count", field="id")],
         requires_permission="shop.view_orders",
-        base_queryset=lambda request: Order.objects.filter(
+        scope_mode="context_scoped",
+        scope_provider=lambda request: Order.objects.filter(
             status=request.visible_status
         ),
     )

@@ -147,6 +147,7 @@ def registered_orders() -> None:
         model=Order,
         name="orders",
         label="Orders",
+        scope_mode="global",
         fields={
             "id": {"label": "Order ID"},
             "status": {"label": "Status"},
@@ -617,6 +618,40 @@ def test_query_endpoint_executes_provided_valid_plan_without_planner(
         {"status": "paid", "order_count": 2},
         {"status": "pending", "order_count": 1},
     ]
+
+
+def test_api_execution_rejects_invalid_current_scope_before_sql(
+    settings,
+    api_client: APIClient,
+    user,
+    django_assert_num_queries,
+) -> None:
+    """The API preserves fail-closed scope and the stable scope error."""
+
+    settings.DJANGO_ASKLENS = {"AUDIT_MODE": "disabled"}
+    default_registry.register(
+        model=Order,
+        name="orders",
+        fields={"id": {}, "status": {}},
+        metrics=[Metric("order_count", op="count", field="id")],
+        scope_mode="context_scoped",
+        scope_provider=lambda _request: None,
+    )
+    api_client.force_authenticate(user=user)
+    assert user.get_all_permissions() == set()
+
+    with django_assert_num_queries(0):
+        response = api_client.post(
+            "/asklens/query/",
+            {"question": "Submitted plan", "plan": valid_plan_payload()},
+            format="json",
+        )
+
+    assert response.status_code == 400
+    assert response.data["error"] == {
+        "code": "asklens.scope.unavailable",
+        "message": "A safe query scope is unavailable for this request.",
+    }
 
 
 def test_api_execution_reaches_trusted_facade(

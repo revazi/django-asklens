@@ -1,6 +1,6 @@
 # Registration API
 
-The catalog is AskLens' source of truth. It defines which Django models, fields, metrics, and base querysets are available to planning, validation, compilation, and API responses.
+The catalog is AskLens' source of truth. It defines which Django models, fields, metrics, and explicit resource scope policies are available to planning, validation, compilation, and API responses.
 
 ## `register()`
 
@@ -22,7 +22,10 @@ resource = register(
     },
     metrics=[Metric("order_count", op="count", field="id")],
     requires_permission="orders.view_reports",
-    base_queryset=lambda request: Order.objects.filter(account=request.user.account),
+    scope_mode="context_scoped",
+    scope_provider=lambda request: Order.objects.filter(
+        account=request.user.account
+    ),
 )
 ```
 
@@ -37,8 +40,9 @@ resource = register(
 - `default_date_field`: registered date/datetime field used by date-oriented planning.
 - `metrics`: explicit aggregate metrics available to plans.
 - `requires_permission`: optional permission string required to see and query the whole resource.
-- `base_queryset`: request-aware hook for tenant and row-level scoping.
-- `scope_resource`: optional boolean. Set `True` when this resource represents the scoped entity itself, regardless of what your project calls that entity.
+- `scope_mode`: required scope policy: `"global"` or `"context_scoped"`. There is no default.
+- `scope_provider`: trusted request-aware queryset provider required for `context_scoped`; forbidden for `global`.
+- `scope_resource`: optional capabilities/help metadata. Set `True` when this resource represents the scoped entity itself, regardless of what your project calls that entity.
 - `examples_enabled`: optional boolean, default `True`. Set `False` for helper/lookup resources that should remain queryable but should not generate deterministic “suggested question” examples.
 
 ## Field metadata
@@ -71,7 +75,10 @@ register(
     name="orders",
     fields={"id": {"label": "Order ID"}},
     requires_permission="orders.view_reports",
-    base_queryset=lambda request: Order.objects.filter(account=request.user.account),
+    scope_mode="context_scoped",
+    scope_provider=lambda request: Order.objects.filter(
+        account=request.user.account
+    ),
 )
 ```
 
@@ -90,7 +97,7 @@ fields={
 
 By default, AskLens checks `request.user.get_all_permissions()` in the API flow. If your project uses role tables, tenant-scoped grants, or another permission system, configure `DJANGO_ASKLENS["REQUEST_PERMISSIONS_GETTER"]`; see [Multi-tenant security](multitenancy-security.md).
 
-Use `scope_dimension=True` for any field that identifies the user's row scope, whatever your schema calls it, such as `account.name`, `organization.title`, `gym.label`, or another project-specific relation. Use `scope_resource=True` when the whole resource represents the scoped entity. These flags only shape capabilities/help examples; row access must still be enforced by `base_queryset(request)`.
+Use `scope_dimension=True` for any field that identifies the user's row scope, whatever your schema calls it, such as `account.name`, `organization.title`, `gym.label`, or another project-specific relation. Use `scope_resource=True` when the whole resource represents the scoped entity. These flags only shape capabilities/help examples; row access is enforced by the resource's explicit `scope_mode` and trusted `scope_provider(request)`.
 
 ## Metrics
 
@@ -103,13 +110,33 @@ Metric("avg_order_value", op="avg", field="total")
 
 Supported metric operations are `count`, `sum`, `avg`, `min`, and `max`.
 
-## Base querysets
+## Explicit resource scope
 
-Use `base_queryset(request)` for tenant scoping and row-level access rules. When provided, AskLens compilation starts from this queryset rather than constructing a new unrestricted query. In `0.1`, the hook is optional and omission falls back to the model default manager; therefore every tenant- or row-sensitive resource must provide and test the hook explicitly.
+Every registration must choose one mode:
 
 ```python
+# Reviewed as intentionally unrestricted across rows.
+register(
+    model=Currency,
+    fields={"code": {}, "name": {}},
+    scope_mode="global",
+)
+
+# Restricted using current server-owned request context.
 def visible_orders(request):
     return Order.objects.filter(account=request.user.account)
+
+
+register(
+    model=Order,
+    fields={"id": {}, "status": {}},
+    scope_mode="context_scoped",
+    scope_provider=visible_orders,
+)
 ```
 
-Do not rely on AskLens as the only tenant boundary; keep normal Django permissions and queryset scoping in place.
+A context scope provider must return an unevaluated Django `QuerySet` for the registered model. `Model.objects.none()` is valid. Returning `None`, a list, an evaluated queryset, or a queryset for another model fails with `asklens.scope.unavailable`; missing request context and provider exceptions also fail closed. AskLens never accepts client-provided tenant IDs or scope tokens as trusted scope.
+
+The legacy `base_queryset=` argument is rejected with migration guidance. Replace it with `scope_mode="context_scoped"` and `scope_provider=...`. Intentionally unrestricted resources must explicitly use `scope_mode="global"`; omission never falls back to the default manager.
+
+Do not rely on AskLens as the only tenant boundary; keep normal Django authentication, permissions, read-only database defense, and application-specific scope tests in place.

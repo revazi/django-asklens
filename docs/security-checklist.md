@@ -9,9 +9,10 @@ Use this checklist before enabling AskLens outside local development.
 - [ ] Mark PII/secrets/internal fields as `sensitive=True` or hide them with `llm_visible=False` / `result_visible=False`.
 - [ ] Use `requires_permission` for fields that need explicit permissions.
 - [ ] Review every registered metric for business meaning and data sensitivity.
-- [ ] Keep tenant and row-level restrictions in `base_queryset(request)`.
-- [ ] Confirm every tenant- or row-sensitive resource actually registers that hook. In `0.1`, omission falls back to the model default manager rather than failing closed.
-- [ ] Add tests proving each tenant/user only sees rows from the registered resource base queryset.
+- [ ] Require every resource to declare `scope_mode="global"` or `scope_mode="context_scoped"`.
+- [ ] Review every `global` resource as intentionally unrestricted across rows.
+- [ ] Keep tenant and row-level restrictions in trusted `scope_provider(request)` callables for `context_scoped` resources.
+- [ ] Add tests proving missing/invalid scope fails closed and each tenant/user sees only rows from the registered scope queryset.
 
 ## Query safety
 
@@ -20,7 +21,7 @@ Use this checklist before enabling AskLens outside local development.
 - [ ] Set conservative `MAX_ROWS`, `MAX_JOINS`, `MAX_METRICS`, and `MAX_GROUP_BY` values.
 - [ ] Confirm validation rejects unknown resources, fields, metrics, operators, mutation intents, and raw-SQL-like payloads.
 - [ ] Pass raw, parsed, saved, or caller-edited plans through `execute_plan()` with the current request. `run_query_plan()` is temporarily retained as a deprecated revalidating wrapper. The compiler and compiled-query executor are internal and are not public APIs.
-- [ ] Confirm normal execution starts from the registered resource base queryset, and test the hook for the current request context.
+- [ ] Confirm normal execution starts from the explicitly declared resource scope and test each provider for the current request context.
 
 ## API safety
 

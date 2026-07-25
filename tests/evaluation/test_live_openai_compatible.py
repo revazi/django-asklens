@@ -159,7 +159,8 @@ def tenant_order_context():
                 "avg_order_value", op="avg", field="total", label="Average order value"
             ),
         ],
-        base_queryset=tenant_scoped_orders,
+        scope_mode="context_scoped",
+        scope_provider=tenant_scoped_orders,
     )
     return registry, SimpleNamespace(user=user)
 
