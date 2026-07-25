@@ -1,5 +1,6 @@
 """Semantic validation for parsed QueryPlan objects."""
 
+import json
 import re
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
@@ -15,6 +16,7 @@ from django_asklens.catalog.resources import (
 from django_asklens.exceptions import (
     BudgetExceededError,
     PermissionDeniedError,
+    PlanParseError,
     PlanValidationError,
     UnknownFieldError,
     UnknownMetricError,
@@ -43,6 +45,14 @@ class PlanLimits:
     max_joins: int
     max_metrics: int
     max_group_by: int
+    max_plan_bytes: int = 65_536
+    max_filters: int = 20
+    max_selected_fields: int = 25
+    max_order_by: int = 5
+    max_relationship_edges: int = 8
+    max_in_values: int = 100
+    max_filter_values: int = 200
+    default_limit: int = 100
 
 
 def validate_query_plan(
@@ -57,20 +67,53 @@ def validate_query_plan(
     """Validate a parsed QueryPlan against catalog metadata and safety limits."""
 
     resolved_limits = limits or get_plan_limits()
+    validate_plan_payload_size(
+        plan.model_dump(mode="json", exclude_unset=True),
+        max_bytes=resolved_limits.max_plan_bytes,
+    )
+    return _validate_query_plan(
+        plan,
+        registry=registry,
+        limits=resolved_limits,
+        allow_sensitive_fields=allow_sensitive_fields,
+        allow_hidden_fields=allow_hidden_fields,
+        permissions=permissions,
+    )
+
+
+def _validate_query_plan(
+    plan: QueryPlan,
+    *,
+    registry: CatalogRegistry,
+    limits: PlanLimits,
+    allow_sensitive_fields: bool,
+    allow_hidden_fields: bool,
+    permissions: Iterable[str] | None,
+) -> QueryPlan:
+    """Validate one parsed plan after its serialized size has been bounded."""
+
     permission_set = frozenset(permissions or ())
     resource = registry.get(plan.resource)
     validate_resource_permission(resource, permissions=permission_set)
-    normalized_plan = plan.model_copy(update={"resource": resource.name})
+    normalized_plan = plan.model_copy(
+        update={
+            "resource": resource.name,
+            "limit": (
+                plan.limit if "limit" in plan.model_fields_set else limits.default_limit
+            ),
+        }
+    )
+    validate_plan_shape(normalized_plan)
+    validate_plan_limits(normalized_plan, resource=resource, limits=limits)
+
     normalized_plan = normalize_visualization_date_trunc_aliases(normalized_plan)
     normalized_plan = normalize_choice_filter_values(normalized_plan, resource=resource)
-
-    validate_plan_shape(normalized_plan)
     normalized_plan = normalize_visualization_defaults(normalized_plan)
-    validate_plan_limits(normalized_plan, limits=resolved_limits)
+    validate_no_meaningless_duplicates(normalized_plan)
     validate_plan_fields(
         normalized_plan,
         resource=resource,
-        limits=resolved_limits,
+        limits=limits,
         allow_sensitive_fields=allow_sensitive_fields,
         allow_hidden_fields=allow_hidden_fields,
         permissions=permission_set,
@@ -89,10 +132,12 @@ def parse_and_validate_query_plan(
 ) -> QueryPlan:
     """Parse untrusted input and validate it against the semantic catalog."""
 
-    return validate_query_plan(
+    resolved_limits = limits or get_plan_limits()
+    validate_plan_payload_size(raw_plan, max_bytes=resolved_limits.max_plan_bytes)
+    return _validate_query_plan(
         parse_query_plan(raw_plan),
         registry=registry,
-        limits=limits,
+        limits=resolved_limits,
         allow_sensitive_fields=allow_sensitive_fields,
         allow_hidden_fields=allow_hidden_fields,
         permissions=permissions,
@@ -106,12 +151,62 @@ def get_plan_limits(settings_overrides: Mapping[str, Any] | None = None) -> Plan
     if settings_overrides is not None:
         configured = {**configured, **settings_overrides}
 
-    return PlanLimits(
-        max_rows=get_positive_int(configured, "MAX_ROWS"),
+    max_rows = get_positive_int(configured, "MAX_ROWS")
+    limits = PlanLimits(
+        max_rows=max_rows,
         max_joins=get_non_negative_int(configured, "MAX_JOINS"),
-        max_metrics=get_positive_int(configured, "MAX_METRICS"),
-        max_group_by=get_positive_int(configured, "MAX_GROUP_BY"),
+        max_metrics=get_non_negative_int(configured, "MAX_METRICS"),
+        max_group_by=get_non_negative_int(configured, "MAX_GROUP_BY"),
+        max_plan_bytes=get_positive_int(configured, "MAX_PLAN_BYTES"),
+        max_filters=get_non_negative_int(configured, "MAX_FILTERS"),
+        max_selected_fields=get_non_negative_int(configured, "MAX_SELECTED_FIELDS"),
+        max_order_by=get_non_negative_int(configured, "MAX_ORDER_BY"),
+        max_relationship_edges=get_non_negative_int(
+            configured, "MAX_RELATIONSHIP_EDGES"
+        ),
+        max_in_values=get_non_negative_int(configured, "MAX_IN_VALUES"),
+        max_filter_values=get_non_negative_int(configured, "MAX_FILTER_VALUES"),
+        default_limit=min(
+            get_positive_int(configured, "DEFAULT_LIMIT"),
+            max_rows,
+        ),
     )
+    return limits
+
+
+def validate_plan_payload_size(
+    raw_plan: str | bytes | Mapping[str, Any],
+    *,
+    max_bytes: int,
+) -> None:
+    """Reject a serialized plan above its UTF-8 byte budget before parsing."""
+
+    if isinstance(raw_plan, bytes):
+        byte_count = len(raw_plan)
+    elif isinstance(raw_plan, str):
+        try:
+            byte_count = len(raw_plan.encode("utf-8"))
+        except UnicodeEncodeError as exc:
+            msg = "QueryPlan text must be valid UTF-8."
+            raise PlanParseError(msg) from exc
+    else:
+        try:
+            serialized = json.dumps(
+                dict(raw_plan),
+                ensure_ascii=False,
+                separators=(",", ":"),
+            )
+            byte_count = len(serialized.encode("utf-8"))
+        except UnicodeEncodeError as exc:
+            msg = "QueryPlan text values must be valid UTF-8."
+            raise PlanParseError(msg) from exc
+        except (TypeError, ValueError, OverflowError) as exc:
+            msg = "QueryPlan mappings must contain only JSON-serializable values."
+            raise PlanParseError(msg) from exc
+
+    if byte_count > max_bytes:
+        msg = f"QueryPlan payload exceeds MAX_PLAN_BYTES {max_bytes}."
+        raise BudgetExceededError(msg)
 
 
 def validate_resource_permission(
@@ -337,18 +432,140 @@ def validate_plan_shape(plan: QueryPlan) -> None:
     raise PlanValidationError(msg)
 
 
-def validate_plan_limits(plan: QueryPlan, *, limits: PlanLimits) -> None:
-    """Validate count/row limits before compilation."""
+def validate_plan_limits(
+    plan: QueryPlan,
+    *,
+    resource: SemanticResource,
+    limits: PlanLimits,
+) -> None:
+    """Validate every accepted structural dimension before compilation."""
+
+    count_limits = (
+        (len(plan.filters), limits.max_filters, "filters"),
+        (len(plan.select), limits.max_selected_fields, "selected fields"),
+        (len(plan.order_by), limits.max_order_by, "order_by terms"),
+        (len(plan.metrics), limits.max_metrics, "metrics"),
+        (len(plan.group_by), limits.max_group_by, "group_by fields"),
+    )
+    for actual, maximum, label in count_limits:
+        if actual > maximum:
+            msg = f"QueryPlan requests more than {maximum} {label}."
+            raise BudgetExceededError(msg)
 
     if plan.limit > limits.max_rows:
         msg = f"QueryPlan limit {plan.limit} exceeds MAX_ROWS {limits.max_rows}."
         raise BudgetExceededError(msg)
-    if len(plan.metrics) > limits.max_metrics:
-        msg = f"QueryPlan requests more than {limits.max_metrics} metrics."
+
+    for filter_spec in plan.filters:
+        if filter_spec.op == "in" and isinstance(filter_spec.value, list):
+            if len(filter_spec.value) > limits.max_in_values:
+                msg = (
+                    "QueryPlan in filter requests more than "
+                    f"{limits.max_in_values} values."
+                )
+                raise BudgetExceededError(msg)
+
+    filter_value_count = sum(filter_scalar_count(item) for item in plan.filters)
+    if filter_value_count > limits.max_filter_values:
+        msg = (
+            "QueryPlan filters request more than "
+            f"{limits.max_filter_values} scalar values."
+        )
         raise BudgetExceededError(msg)
-    if len(plan.group_by) > limits.max_group_by:
-        msg = f"QueryPlan requests more than {limits.max_group_by} group_by fields."
+
+    relationship_edges = collect_relationship_edges(plan, resource=resource)
+    if len(relationship_edges) > limits.max_relationship_edges:
+        msg = (
+            "QueryPlan traverses more than "
+            f"{limits.max_relationship_edges} unique relationship edges."
+        )
         raise BudgetExceededError(msg)
+
+    validate_no_meaningless_duplicates(plan)
+
+
+def filter_scalar_count(filter_spec: FilterSpec) -> int:
+    """Count scalar filter values per occurrence."""
+
+    if isinstance(filter_spec.value, list):
+        return len(filter_spec.value)
+    return 1
+
+
+def iter_plan_field_references(plan: QueryPlan) -> Iterable[str]:
+    """Yield every field reference occurrence across the complete plan."""
+
+    yield from plan.select
+    yield from (item.field for item in plan.filters)
+    yield from (item.field for item in plan.group_by)
+    yield from (item.field for item in plan.metrics)
+    yield from (item.field for item in plan.order_by if item.field is not None)
+
+
+def collect_relationship_edges(
+    plan: QueryPlan,
+    *,
+    resource: SemanticResource,
+) -> set[str]:
+    """Return unique trusted relationship prefixes traversed by the plan."""
+
+    edges: set[str] = set()
+    for field_name in iter_plan_field_references(plan):
+        field = resource.fields.get(field_name)
+        if field is None:
+            continue
+        parts = field_name.split(".")
+        edges.update(
+            ".".join(parts[: index + 1]) for index in range(field.relation_depth)
+        )
+    return edges
+
+
+def validate_no_meaningless_duplicates(plan: QueryPlan) -> None:
+    """Reject repeated references that add no well-defined query meaning."""
+
+    reject_duplicate_keys(plan.select, label="select field")
+    reject_duplicate_keys(
+        (item.field for item in plan.group_by),
+        label="group_by field",
+    )
+    reject_duplicate_keys(
+        (
+            ("field", item.field) if item.field is not None else ("metric", item.metric)
+            for item in plan.order_by
+        ),
+        label="order_by target",
+    )
+    reject_duplicate_keys(
+        ((item.field, item.op, json_value_key(item.value)) for item in plan.filters),
+        label="filter",
+    )
+    for item in plan.filters:
+        if item.op == "in" and isinstance(item.value, list):
+            reject_duplicate_keys(
+                (json_value_key(value) for value in item.value),
+                label="in filter value",
+            )
+
+
+def json_value_key(value: object) -> tuple[str, str]:
+    """Return a type-aware stable key for one JSON value."""
+
+    return (
+        type(value).__name__,
+        json.dumps(value, ensure_ascii=False, separators=(",", ":")),
+    )
+
+
+def reject_duplicate_keys(keys: Iterable[object], *, label: str) -> None:
+    """Raise when an iterable contains a repeated hashable key."""
+
+    seen: set[object] = set()
+    for key in keys:
+        if key in seen:
+            msg = f"Duplicate {label} requested."
+            raise PlanValidationError(msg)
+        seen.add(key)
 
 
 def validate_plan_fields(

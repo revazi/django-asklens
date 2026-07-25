@@ -18,7 +18,7 @@ Use this checklist before enabling AskLens outside local development.
 
 - [ ] Keep `ALLOW_RAW_SQL` disabled. AskLens has no raw SQL execution path.
 - [ ] Keep `SEND_SAMPLE_ROWS_TO_LLM` disabled.
-- [ ] Set conservative `MAX_ROWS`, `MAX_JOINS`, `MAX_METRICS`, and `MAX_GROUP_BY` values.
+- [ ] Set conservative values for plan bytes, filters, selected fields, ordering, groups, metrics, relationship depth/edges, `in` values, total filter values, returned rows/groups, and the default limit. See the complete setting list in the production checklist.
 - [ ] Confirm validation rejects unknown resources, fields, metrics, operators, mutation intents, and raw-SQL-like payloads.
 - [ ] Pass raw, parsed, saved, or caller-edited plans through `execute_plan()` with the current request. `run_query_plan()` is temporarily retained as a deprecated revalidating wrapper. The compiler and compiled-query executor are internal and are not public APIs.
 - [ ] Confirm normal execution starts from the explicitly declared resource scope and test each provider for the current request context.
@@ -49,8 +49,9 @@ Use this checklist before enabling AskLens outside local development.
 
 ## Deployment safety
 
-- [ ] Consider a read-only database role or replica as defense in depth if your deployment can enforce it outside AskLens.
-- [ ] Monitor query volume and slow queries using normal Django/database tooling.
+- [ ] Configure database statement and request timeouts plus host rate/concurrency limits; structural budgets do not bound scans, runtime, or request volume completely.
+- [ ] Use a read-only database role or replica as defense in depth if your deployment can enforce it outside AskLens.
+- [ ] Monitor query volume, budget rejections, and slow queries using normal Django/database tooling.
 - [ ] Consume stable failures through `error.code` and `error.message`; confirm unknown and unauthorized members both return `asklens.member.unavailable` without catalog or permission detail.
 - [ ] Review logs to ensure errors do not include stack traces, secrets, raw credentials, provider payload dumps, or sensitive row values.
 

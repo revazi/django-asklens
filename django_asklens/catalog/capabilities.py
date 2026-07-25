@@ -176,8 +176,8 @@ def build_limitations(*, max_rows: int) -> list[str]:
             "large result sets."
         ),
         (
-            "Row-level scope still depends on each resource base queryset "
-            "for the current request."
+            "Row-level scope follows each resource's explicit global or "
+            "current-request scope-provider policy."
         ),
     ]
 
@@ -248,8 +248,8 @@ def infer_capability_scope(
         return {
             "level": "unknown",
             "guidance": (
-                "Use only rows visible through the resource base queryset; do "
-                "not imply broader access than this request has."
+                "Use only rows visible through the resource's explicit scope; "
+                "do not imply broader access than this request has."
             ),
         }
 
@@ -259,7 +259,7 @@ def infer_capability_scope(
             "level": "all",
             "guidance": (
                 "This request has an unscoped permission token for this "
-                "resource; the resource base queryset still controls rows."
+                "resource; the resource scope provider still controls rows."
             ),
         }
 
@@ -283,7 +283,7 @@ def infer_capability_scope(
             "kind": kind,
             "guidance": (
                 f"This request may query all visible {pluralize_scope_kind(kind)} "
-                "for this resource, subject to the resource base queryset."
+                "for this resource, subject to the resource scope provider."
             ),
         }
 
@@ -314,8 +314,8 @@ def infer_capability_scope(
     return {
         "level": "unknown",
         "guidance": (
-            "Use only rows visible through the resource base queryset; do not "
-            "imply broader access than this request has."
+            "Use only rows visible through the resource's explicit scope; do "
+            "not imply broader access than this request has."
         ),
     }
 

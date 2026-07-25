@@ -227,7 +227,11 @@ def parse_plan_payload(raw_plan: str | bytes | Mapping[str, Any]) -> Mapping[str
     if isinstance(raw_plan, Mapping):
         return raw_plan
     if isinstance(raw_plan, bytes):
-        raw_plan = raw_plan.decode()
+        try:
+            raw_plan = raw_plan.decode("utf-8")
+        except UnicodeDecodeError as exc:
+            msg = "QueryPlan bytes must contain valid UTF-8 JSON."
+            raise PlanParseError(msg) from exc
     if isinstance(raw_plan, str):
         try:
             parsed = json.loads(raw_plan)

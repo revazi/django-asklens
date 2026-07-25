@@ -12,6 +12,7 @@ The project is alpha and APIs may change before a stable release.
 - Added stable namespaced public errors for parse, unavailable-member, plan, authorization, scope, budget, binding, compilation, execution, and provider failures.
 - Added server-owned audit modes: `database` (default), `disabled`, and `custom`, with an optional callable `AUDIT_SINK` for non-database operational events.
 - Added required resource `scope_mode="global" | "context_scoped"` registration and trusted `scope_provider=...` support.
+- Added configurable structural budgets for 64 KiB plan payloads, filters, selected/order/group/metric terms, relationship depth and unique edges, per-`in` and total filter values, returned rows/groups, and the default result limit.
 
 ### Changed
 
@@ -20,6 +21,7 @@ The project is alpha and APIs may change before a stable release.
 - ORM compilation now consumes a private, non-serializable prepared representation bound to the current execution context and resolved resource queryset.
 - AskLens query-plan failures in the API and MCP helpers now expose an `error` object containing only `code`, safe `message`, and an optional safe JSON `pointer`, replacing raw diagnostic strings and transport-specific `error_category` values.
 - Invalid `/asklens/query/` request bodies now return `asklens.parse.invalid` without exposing DRF serializer field details.
+- Omitted plan limits now use the current `DEFAULT_LIMIT` (capped by `MAX_ROWS`) instead of acting as a fixed protocol constant; repeated meaningless structural references are rejected.
 - Database auditing now stores operational resource/intent/status/error/row-count/duration metadata by default; questions, filter values, and complete plans require explicit `AUDIT_INCLUDE_CONTENT=True` opt-in.
 - Resource registration no longer has an implicit default-manager scope. Migrate `base_queryset=visible_rows` to `scope_mode="context_scoped", scope_provider=visible_rows`; intentionally unrestricted resources must declare `scope_mode="global"`.
 
@@ -36,6 +38,7 @@ The project is alpha and APIs may change before a stable release.
 - Added adapter-convergence evidence for core provider orchestration, API, admin, and MCP execution through `execute_plan()`; the packaged frontend remains an API client rather than an independent execution path.
 - Rejected plans perform zero application-data queries. Database audit mode performs at most one metadata-only insert; disabled/custom non-database modes add zero SQL. Audit-sink failure cannot trigger rejected-plan execution or hide a successful result.
 - Missing scope declarations fail registration. Missing request context, absent/invalid/evaluated/wrong-model scope results, and scope-provider failures reject with `asklens.scope.unavailable` instead of broadening to the default manager.
+- Every over-budget structural dimension rejects with `asklens.budget.exceeded` before scope resolution or application-data SQL; malformed UTF-8 byte plans return a typed parse error.
 
 ## 0.1.0a1 — 2026-07-19
 
