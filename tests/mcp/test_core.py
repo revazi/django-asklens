@@ -221,6 +221,35 @@ def test_mcp_validate_plan_returns_stable_parse_code(
     assert SemanticQueryRun.objects.count() == 0
 
 
+def test_mcp_execution_reaches_trusted_facade(
+    monkeypatch,
+    registered_orders: None,
+    order_data: None,
+    mcp_request,
+) -> None:
+    """The MCP adapter executes submitted plans through `execute_plan()`."""
+
+    from django_asklens.execution import execute_plan as real_execute_plan
+
+    calls = []
+
+    def recording_execute_plan(plan, *, request, registry=None):
+        calls.append((plan, request, registry))
+        if registry is None:
+            return real_execute_plan(plan, request=request)
+        return real_execute_plan(plan, request=request, registry=registry)
+
+    monkeypatch.setattr(
+        "django_asklens.querying.execute_plan",
+        recording_execute_plan,
+    )
+
+    payload = asklens_execute_plan(mcp_request, valid_aggregate_plan())
+
+    assert payload["response_type"] == "query"
+    assert len(calls) == 1
+
+
 def test_mcp_execute_plan_omits_rows_by_default(
     registered_orders: None,
     order_data: None,

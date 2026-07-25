@@ -17,6 +17,7 @@ The project is alpha and APIs may change before a stable release.
 - `run_query_plan()` is a deprecated compatibility wrapper that revalidates plans instead of trusting prior validation.
 - ORM compilation now consumes a private, non-serializable prepared representation bound to the current execution context and resolved resource queryset.
 - AskLens query-plan failures in the API and MCP helpers now expose an `error` object containing only `code`, safe `message`, and an optional safe JSON `pointer`, replacing raw diagnostic strings and transport-specific `error_category` values.
+- Invalid `/asklens/query/` request bodies now return `asklens.parse.invalid` without exposing DRF serializer field details.
 
 ### Removed
 
@@ -26,6 +27,8 @@ The project is alpha and APIs may change before a stable release.
 
 - Directly constructed `QueryPlan` objects can no longer bypass current field permissions or configured plan limits through the public facade or compatibility runner.
 - Unknown and unauthorized resources, fields, and metrics now share the same public `asklens.member.unavailable` code and message; internal member names, permission tokens, scope failures, compiler causes, and database causes are not included in public execution errors.
+- Added regression evidence that preview validation cannot authorize later execution and that ordinary plans are revalidated against current resource, field, metric, policy, catalog, identity, and request scope.
+- Added adapter-convergence evidence for core provider orchestration, API, admin, and MCP execution through `execute_plan()`; the packaged frontend remains an API client rather than an independent execution path.
 
 ## 0.1.0a1 — 2026-07-19
 
