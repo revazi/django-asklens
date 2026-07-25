@@ -11,7 +11,7 @@ from django_asklens.exceptions import (
     LLMProviderError,
     PlanValidationError,
 )
-from django_asklens.execution import run_query_plan
+from django_asklens.execution import execute_plan
 from django_asklens.models import SemanticQueryRun
 from django_asklens.permissions import get_request_permissions
 from django_asklens.planning import plan_asklens_response, plan_question
@@ -139,7 +139,7 @@ def execute_asklens_query_request(
             planner_result = plan_question(question, permissions=permissions)
             plan = planner_result.plan
 
-        query_result = run_query_plan(plan, request=request)
+        query_result = execute_plan(plan, request=request)
         run = create_query_run(
             request=request,
             question=question,

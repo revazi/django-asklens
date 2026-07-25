@@ -212,15 +212,17 @@ The admin query page remains available in alpha as a staff/operator utility and 
 Core Python usage does not require DRF. See the [Core Python API](core-python-api.md) guide for core-only setup, permission-scoped capabilities, plan validation, execution, result serialization, and the shared query/help orchestration helper.
 
 ```python
-from django_asklens.execution import run_query_plan
+from django_asklens.execution import execute_plan
 from django_asklens.permissions import get_request_permissions
 from django_asklens.planning import plan_question
 
 permissions = get_request_permissions(request)
 planner_result = plan_question("Show orders by status", permissions=permissions)
-result = run_query_plan(planner_result.plan, request=request)
+result = execute_plan(planner_result.plan, request=request)
 payload = result.to_dict()
 ```
+
+`execute_plan()` treats the returned `QueryPlan` as untrusted and validates it again for the current request. Do not treat planner, saved, or edited plans as authorization tokens. See the [Core Python API](core-python-api.md) trust-boundary guidance.
 
 ## Supported alpha scope
 

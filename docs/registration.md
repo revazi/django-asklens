@@ -105,7 +105,7 @@ Supported metric operations are `count`, `sum`, `avg`, `min`, and `max`.
 
 ## Base querysets
 
-Use `base_queryset(request)` for tenant scoping and row-level access rules. AskLens compilation starts from this queryset, not from a new unrestricted query.
+Use `base_queryset(request)` for tenant scoping and row-level access rules. When provided, AskLens compilation starts from this queryset rather than constructing a new unrestricted query. In `0.1`, the hook is optional and omission falls back to the model default manager; therefore every tenant- or row-sensitive resource must provide and test the hook explicitly.
 
 ```python
 def visible_orders(request):

@@ -10,6 +10,7 @@ Use this checklist before enabling AskLens outside local development.
 - [ ] Use `requires_permission` for fields that need explicit permissions.
 - [ ] Review every registered metric for business meaning and data sensitivity.
 - [ ] Keep tenant and row-level restrictions in `base_queryset(request)`.
+- [ ] Confirm every tenant- or row-sensitive resource actually registers that hook. In `0.1`, omission falls back to the model default manager rather than failing closed.
 - [ ] Add tests proving each tenant/user only sees rows from the registered resource base queryset.
 
 ## Query safety
@@ -18,7 +19,8 @@ Use this checklist before enabling AskLens outside local development.
 - [ ] Keep `SEND_SAMPLE_ROWS_TO_LLM` disabled.
 - [ ] Set conservative `MAX_ROWS`, `MAX_JOINS`, `MAX_METRICS`, and `MAX_GROUP_BY` values.
 - [ ] Confirm validation rejects unknown resources, fields, metrics, operators, mutation intents, and raw-SQL-like payloads.
-- [ ] Confirm all query execution starts from the registered resource base queryset.
+- [ ] Pass raw, parsed, saved, or caller-edited plans through `execute_plan()` with the current request. `run_query_plan()` is temporarily retained as a deprecated revalidating wrapper; do not call the low-level compiler as an untrusted-input API.
+- [ ] Confirm normal execution starts from the registered resource base queryset, and test the hook for the current request context.
 
 ## API safety
 

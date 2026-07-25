@@ -37,7 +37,7 @@ register(
 )
 ```
 
-Use this hook for tenant isolation and row-level visibility. Do not register resources with unrestricted querysets in multi-tenant apps.
+Use this hook for tenant isolation and row-level visibility. Do not register resources with unrestricted querysets in multi-tenant apps. In `0.1`, omitting `base_queryset` does not fail closed: execution falls back to the model default manager.
 
 ## Resource and field permissions
 

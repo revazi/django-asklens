@@ -1,6 +1,8 @@
 # Core Python API
 
-Django AskLens can be used without Django REST Framework. Install the core package when you want to register semantic resources, ask a provider for validated `QueryPlan` JSON, compile safe Django ORM queries, execute them, and serialize results from Python code.
+Django AskLens can be used without Django REST Framework. Install the core package when you want to register semantic resources, ask a provider for catalog-validated `QueryPlan` JSON, compile read-only Django ORM queries, execute them, and serialize results from Python code.
+
+> **Alpha trust-boundary warning:** `parse_query_plan()` establishes structure only. Use `execute_plan(plan, request=request)` for execution: it treats mappings and existing `QueryPlan` objects as untrusted and repeats current catalog, permission, limit, and request-scope validation. `run_query_plan()` remains temporarily as a deprecated safe wrapper. Do not call the low-level compiler directly or treat a previously validated `QueryPlan` as a reusable authorization token.
 
 ```bash
 python -m pip install django-asklens
@@ -82,12 +84,10 @@ By default, AskLens reads `request.user.get_all_permissions()` for authenticated
 
 ## Validate and execute a known plan
 
-If your application already has a plan payload, parse and validate it before execution. Validation checks the registered catalog, allowed fields, permissions, limits, relation depth, raw-SQL-like payloads, and read-only intent.
+If your application already has a plan payload, pass the untrusted mapping directly to `execute_plan()`. The facade parses it and checks the current registered catalog, allowed fields, permissions, limits, relation depth, and read-only intent before compilation.
 
 ```python
-from django_asklens.execution import run_query_plan
-from django_asklens.permissions import get_request_permissions
-from django_asklens.planning import parse_and_validate_query_plan
+from django_asklens.execution import execute_plan
 
 payload = {
     "resource": "orders",
@@ -99,30 +99,28 @@ payload = {
     "visualization": {"type": "bar", "x": "status", "y": "order_count"},
 }
 
-permissions = get_request_permissions(request)
-plan = parse_and_validate_query_plan(payload, permissions=permissions)
-result = run_query_plan(plan, request=request)
+result = execute_plan(payload, request=request)
 response_payload = result.to_dict()
 ```
 
-`run_query_plan(...)` always starts from the resource `base_queryset(request)` hook, so row-level scoping stays in the host project.
+`execute_plan(...)` repeats current semantic validation and then starts from `resource.get_base_queryset(request)`. Scope declaration is not yet fail-closed: a registered `base_queryset(request)` hook is used when present, while omission currently falls back to the model default manager. Tenant- or row-sensitive resources must register and test a scope hook until the R2 scope migration is implemented.
 
 ## Ask a provider, then execute
 
 The planner uses the configured backend by default. The default `dummy` backend is deterministic and makes no network calls.
 
 ```python
-from django_asklens.execution import run_query_plan
+from django_asklens.execution import execute_plan
 from django_asklens.permissions import get_request_permissions
 from django_asklens.planning import plan_question
 
 permissions = get_request_permissions(request)
 planner_result = plan_question("Show orders by status", permissions=permissions)
-result = run_query_plan(planner_result.plan, request=request)
+result = execute_plan(planner_result.plan, request=request)
 payload = result.to_dict()
 ```
 
-The provider result is still untrusted: `plan_question(...)` validates provider output before returning a plan. If validation fails, AskLens raises a safe AskLens exception instead of executing anything.
+The provider result is still untrusted: `plan_question(...)` validates provider output before returning a plan, and `execute_plan(...)` deliberately validates it again for the current request. The returned object remains an ordinary `QueryPlan`, not an authorization token.
 
 ## Shared query/help orchestration
 
@@ -162,11 +160,11 @@ The default configured gate is `django_asklens.access.IsAuthenticated`. Projects
 
 ## Safety boundaries
 
-Core-only usage has the same safety model as the optional API:
+Core-only callers preserve the normal execution safety model by using `execute_plan()` with the current request. In particular:
 
 - do not execute LLM-generated SQL;
 - do not add write/update/delete query intents;
 - do not auto-register every model or field;
 - do not send database rows or sample values to providers by default;
 - always pass the current request to execution when row scope depends on the user;
-- always revalidate saved or edited plan payloads before execution.
+- submit saved or edited plan payloads through `execute_plan()` so they are revalidated before execution.

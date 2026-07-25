@@ -6,7 +6,18 @@ The project is alpha and APIs may change before a stable release.
 
 ## Unreleased
 
-No changes yet.
+### Added
+
+- Began the R1 trusted-execution boundary with public `execute_plan(plan, *, request, registry=...)`, which treats mappings and existing `QueryPlan` objects as untrusted and repeats current permission, catalog, limit, and request-scope validation before ORM execution.
+
+### Changed
+
+- Shared API/admin/MCP/provider orchestration now delegates data execution to `execute_plan()`.
+- `run_query_plan()` is a deprecated compatibility wrapper that revalidates plans instead of trusting prior validation.
+
+### Security
+
+- Directly constructed `QueryPlan` objects can no longer bypass current field permissions or configured plan limits through the public facade or compatibility runner.
 
 ## 0.1.0a1 — 2026-07-19
 
