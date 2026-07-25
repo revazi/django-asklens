@@ -13,6 +13,7 @@ from django.utils import timezone
 from django_asklens.catalog.registry import CatalogRegistry, default_registry
 from django_asklens.compiler import ResultColumn
 from django_asklens.compiler.orm import (
+    LimitScope,
     _compile_prepared_query,
     _CompiledQuery,
     _PreparedQueryPlan,
@@ -72,6 +73,9 @@ class QueryResult:
     row_count: int
     duration_ms: int
     visualization: dict[str, Any]
+    limit: int
+    limit_scope: LimitScope
+    truncated: bool
     _validated_plan: QueryPlan | None = field(default=None, repr=False, compare=False)
     _audit_record: Any = field(default=None, repr=False, compare=False)
 
@@ -84,7 +88,15 @@ class QueryResult:
             visualization=self.visualization,
             include_visualization=include_visualization,
         )
-        return {**serialized, "duration_ms": self.duration_ms}
+        return {
+            **serialized,
+            "duration_ms": self.duration_ms,
+            "result_metadata": {
+                "limit": self.limit,
+                "limit_scope": self.limit_scope,
+                "truncated": self.truncated,
+            },
+        }
 
 
 def execute_plan(
@@ -340,11 +352,15 @@ def _execute_compiled_query(
         raise TypeError(msg)
 
     started = perf_counter()
-    rows = tuple(
+    fetched_rows = tuple(
         normalize_row(row, key_map=compiled_query.key_map)
         for row in compiled_query.queryset
     )
     duration_ms = round((perf_counter() - started) * 1000)
+    truncated = (
+        compiled_query.detects_truncation and len(fetched_rows) > compiled_query.limit
+    )
+    rows = fetched_rows[: compiled_query.limit]
 
     return QueryResult(
         columns=compiled_query.columns,
@@ -352,6 +368,9 @@ def _execute_compiled_query(
         row_count=len(rows),
         duration_ms=duration_ms,
         visualization=compiled_query.visualization,
+        limit=compiled_query.limit,
+        limit_scope=compiled_query.limit_scope,
+        truncated=truncated,
     )
 
 

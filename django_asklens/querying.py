@@ -335,8 +335,9 @@ def build_success_payload(
         "row_count": query_result["row_count"],
         "duration_ms": query_result["duration_ms"],
         "result_metadata": build_result_metadata(
-            plan=plan,
-            row_count=query_result["row_count"],
+            limit=int(query_result["result_metadata"]["limit"]),
+            limit_scope=query_result["result_metadata"]["limit_scope"],
+            truncated=bool(query_result["result_metadata"]["truncated"]),
         ),
         "explanation": "Executed a validated read-only AskLens query plan.",
     }
@@ -349,26 +350,19 @@ def build_success_payload(
     return payload
 
 
-def build_result_metadata(*, plan: dict[str, Any], row_count: int) -> dict[str, Any]:
-    """Return alpha-safe metadata for result limits and possible truncation."""
+def build_result_metadata(
+    *,
+    limit: int,
+    limit_scope: str,
+    truncated: bool,
+) -> dict[str, Any]:
+    """Return accurate effective-limit metadata from trusted execution."""
 
-    limit = int(plan.get("limit") or row_count or 0)
-    limit_scope = "groups" if plan.get("intent") == "aggregate" else "rows"
-    limit_reached = limit > 0 and row_count >= limit
-    metadata: dict[str, Any] = {
+    return {
         "limit": limit,
         "limit_scope": limit_scope,
-        "limit_reached": limit_reached,
+        "truncated": truncated,
     }
-    if limit_reached:
-        max_rows = int(get_asklens_setting("MAX_ROWS"))
-        metadata["limit_warning"] = (
-            f"Returned {row_count} {limit_scope}, which reached the validated "
-            f"plan limit of {limit}. There may be more matching {limit_scope}; "
-            "refine filters, add ordering, or increase limit up to the "
-            f"configured maximum of {max_rows}."
-        )
-    return metadata
 
 
 def safe_provider_fallback_message(exc: AskLensError) -> str:

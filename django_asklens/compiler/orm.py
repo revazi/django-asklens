@@ -1,11 +1,11 @@
 """Privately compile prepared AskLens plans into Django ORM querysets."""
 
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any, Never
+from typing import Any, Literal, Never
 
-from django.db.models import IntegerField, QuerySet, Value
+from django.db.models import F, IntegerField, QuerySet, Value
 
 from django_asklens.catalog.resources import FieldSpec, Metric, SemanticResource
 from django_asklens.compiler.aggregations import build_aggregates
@@ -13,6 +13,9 @@ from django_asklens.compiler.dates import build_date_trunc_expression, to_orm_pa
 from django_asklens.compiler.filters import apply_filters
 from django_asklens.exceptions import UnsupportedQueryError
 from django_asklens.planning.schemas import GroupBySpec, QueryPlan
+
+type LimitScope = Literal["rows", "groups"]
+type OrderingTerm = tuple[str, Literal["asc", "desc"]]
 
 
 @dataclass(frozen=True, slots=True)
@@ -49,6 +52,9 @@ class _CompiledQuery:
     columns: tuple[ResultColumn, ...]
     key_map: Mapping[str, str]
     visualization: dict[str, Any]
+    limit: int
+    limit_scope: LimitScope
+    detects_truncation: bool
     context_binding: object = field(repr=False, compare=False)
 
     def __reduce__(self) -> Never:
@@ -92,12 +98,9 @@ def _compile_list_query(
         for orm_field, field_name in zip(orm_fields, plan.select, strict=True)
     }
     compiled = queryset.values(*orm_fields)
-    compiled = apply_order_by(
-        compiled,
-        plan,
-        field_aliases={field: to_orm_path(field) for field in plan.select},
-    )
-    compiled = compiled[: plan.limit]
+    ordering = build_list_ordering(plan, resource=resource)
+    compiled = apply_ordering(compiled, ordering)
+    compiled = compiled[: plan.limit + 1]
 
     return _CompiledQuery(
         queryset=compiled,
@@ -106,6 +109,9 @@ def _compile_list_query(
         ),
         key_map=key_map,
         visualization=plan.visualization.model_dump(exclude_none=True),
+        limit=plan.limit,
+        limit_scope="rows",
+        detects_truncation=True,
         context_binding=prepared.context_binding,
     )
 
@@ -129,6 +135,14 @@ def _compile_aggregate_query(
     if group_expressions:
         compiled = queryset.values(**group_expressions).annotate(**metric_expressions)
         field_aliases = group_aliases_to_public(group_aliases)
+        ordering = build_grouped_ordering(
+            plan,
+            field_aliases=field_aliases,
+        )
+        compiled = apply_ordering(compiled, ordering)
+        compiled = compiled[: plan.limit + 1]
+        effective_limit = plan.limit
+        detects_truncation = True
     else:
         compiled = (
             queryset.annotate(
@@ -138,10 +152,9 @@ def _compile_aggregate_query(
             .annotate(**metric_expressions)
             .values(*(metric.name for metric in plan.metrics))
         )
-        field_aliases = {}
-
-    compiled = apply_order_by(compiled, plan, field_aliases=field_aliases)
-    compiled = compiled[: plan.limit]
+        compiled = compiled[:1]
+        effective_limit = 1
+        detects_truncation = False
 
     key_map = {alias: group.field for alias, group in group_aliases.items()}
     key_map.update({metric.name: metric.name for metric in plan.metrics})
@@ -151,6 +164,9 @@ def _compile_aggregate_query(
         columns=build_aggregate_columns(resource, plan.group_by, plan.metrics),
         key_map=key_map,
         visualization=plan.visualization.model_dump(exclude_none=True),
+        limit=effective_limit,
+        limit_scope="groups",
+        detects_truncation=detects_truncation,
         context_binding=prepared.context_binding,
     )
 
@@ -167,29 +183,70 @@ def group_aliases_to_public(group_aliases: Mapping[str, GroupBySpec]) -> dict[st
     return {group.field: alias for alias, group in group_aliases.items()}
 
 
-def apply_order_by(
-    queryset: QuerySet,
+def build_list_ordering(
+    plan: QueryPlan,
+    *,
+    resource: SemanticResource,
+) -> tuple[OrderingTerm, ...]:
+    """Return caller/default list ordering with a private identity tie-breaker."""
+
+    ordering: list[OrderingTerm] = []
+    if plan.order_by:
+        ordering.extend(
+            (to_orm_path(item.field), item.direction)
+            for item in plan.order_by
+            if item.field is not None
+        )
+    else:
+        ordering.extend(
+            (to_orm_path(field_name), direction)
+            for field_name, direction in resource.default_order
+        )
+
+    identity_target = to_orm_path(resource.row_identity)
+    if identity_target not in {target for target, _direction in ordering}:
+        ordering.append((identity_target, "asc"))
+    return tuple(ordering)
+
+
+def build_grouped_ordering(
     plan: QueryPlan,
     *,
     field_aliases: Mapping[str, str],
+) -> tuple[OrderingTerm, ...]:
+    """Return grouped ordering with every missing group key as a tie-breaker."""
+
+    ordering: list[OrderingTerm] = []
+    for item in plan.order_by:
+        if item.field is not None:
+            ordering.append((field_aliases[item.field], item.direction))
+        elif item.metric is not None:
+            ordering.append((item.metric, item.direction))
+
+    seen = {target for target, _direction in ordering}
+    for group in plan.group_by:
+        target = field_aliases[group.field]
+        if target not in seen:
+            ordering.append((target, "asc"))
+            seen.add(target)
+    return tuple(ordering)
+
+
+def apply_ordering(
+    queryset: QuerySet,
+    ordering: Sequence[OrderingTerm],
 ) -> QuerySet:
-    """Apply order_by clauses to a compiled queryset."""
+    """Apply backend-normalized ordering with null values always last."""
 
-    order_by: list[str] = []
-    for order_spec in plan.order_by:
-        if order_spec.field is not None:
-            target = field_aliases[order_spec.field]
-        elif order_spec.metric is not None:
-            target = order_spec.metric
-        else:
-            continue
-        if order_spec.direction == "desc":
-            target = f"-{target}"
-        order_by.append(target)
-
-    if not order_by:
+    expressions = [
+        F(target).desc(nulls_last=True)
+        if direction == "desc"
+        else F(target).asc(nulls_last=True)
+        for target, direction in ordering
+    ]
+    if not expressions:
         return queryset
-    return queryset.order_by(*order_by)
+    return queryset.order_by(*expressions)
 
 
 def build_aggregate_columns(

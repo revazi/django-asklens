@@ -412,19 +412,19 @@ def test_live_query_endpoint_uses_one_unified_call_for_query(
     assert response.data["result_metadata"] == {
         "limit": 10,
         "limit_scope": "groups",
-        "limit_reached": False,
+        "truncated": False,
     }
     assert SemanticQueryRun.objects.count() == 1
 
 
-def test_query_endpoint_reports_limit_reached_without_has_more_claim(
+def test_query_endpoint_reports_accurate_group_truncation(
     settings,
     api_client: APIClient,
     user,
     order_data: None,
     registered_orders: None,
 ) -> None:
-    """Alpha metadata should flag reached limits without claiming truncation."""
+    """API metadata reports truncation only when another group exists."""
 
     plan = valid_plan_payload()
     plan["limit"] = 1
@@ -442,13 +442,9 @@ def test_query_endpoint_reports_limit_reached_without_has_more_claim(
     assert response.data["row_count"] == 1
     assert response.data["result_metadata"]["limit"] == 1
     assert response.data["result_metadata"]["limit_scope"] == "groups"
-    assert response.data["result_metadata"]["limit_reached"] is True
-    assert (
-        "There may be more matching groups"
-        in response.data["result_metadata"]["limit_warning"]
-    )
+    assert response.data["result_metadata"]["truncated"] is True
+    assert "limit_reached" not in response.data["result_metadata"]
     assert "has_more" not in response.data["result_metadata"]
-    assert "truncated" not in response.data["result_metadata"]
 
 
 def test_query_endpoint_intercepts_capabilities_question_without_provider_or_audit(

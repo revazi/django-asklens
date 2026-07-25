@@ -113,7 +113,7 @@ A successful data-query response includes `response_type: "query"`, the question
   "result_metadata": {
     "limit": 10,
     "limit_scope": "groups",
-    "limit_reached": false
+    "truncated": false
   },
   "visualization": {
     "type": "bar",
@@ -124,7 +124,7 @@ A successful data-query response includes `response_type: "query"`, the question
 }
 ```
 
-For aggregate/chart responses, `limit` caps returned groups/slices, not source rows. For list responses, `limit` caps returned rows. `result_metadata.limit_reached` means the returned row/group count reached the validated plan limit, so there may be more matching rows/groups; AskLens does not claim `has_more` or `truncated` in alpha because it does not fetch `limit + 1`.
+For grouped aggregate/chart responses, `limit` caps returned groups/slices; for list responses it caps returned rows. AskLens fetches `limit + 1` internally and returns at most `limit`, so `result_metadata.truncated` is true only when another matching row/group exists. Ungrouped aggregates have effective limit one and always report `truncated: false`. This metadata is accurate truncation detection, not cursor pagination.
 
 Capability/help questions return a non-row response and do not execute a database query. In live mode, `query_help_source` is `semantic_provider` when the unified provider response chose capability help and suggestions passed catalog-reference plus locally synthesized plan validation:
 

@@ -90,6 +90,7 @@ register(
         Metric("order_count", op="count", field="id", label="Orders"),
         Metric("revenue", op="sum", field="total_cents", label="Revenue"),
     ],
+    default_order=(("created_at", "desc"),),
     requires_permission="orders.view_reports",
     scope_mode="context_scoped",
     scope_provider=visible_orders,
@@ -139,7 +140,7 @@ Successful data responses include:
   "result_metadata": {
     "limit": 100,
     "limit_scope": "groups",
-    "limit_reached": false
+    "truncated": false
   },
   "visualization": {"type": "bar"}
 }
@@ -210,6 +211,7 @@ Live provider tests are opt-in and skipped by default. See [Provider configurati
 - Every resource must explicitly declare `scope_mode="global"` or `scope_mode="context_scoped"`. Context-scoped resources require a trusted `scope_provider(request)`; omission, invalid provider results, and provider failures reject without falling back to the model manager.
 - Sensitive fields are hidden unless explicitly permissioned through the normal validation paths.
 - Plans are bounded before ORM compilation by UTF-8 bytes, filters, selected/order/group/metric terms, relationship depth and unique edges, `in`/total filter values, and returned rows/groups.
+- List ordering uses semantic resource defaults plus a private unique row identity; grouped queries append group-key tie-breakers, nulls sort last, and `truncated` is derived by fetching one extra row/group.
 - Provider and submitted-plan output is untrusted and validated by the normal API, admin, and MCP orchestration before execution.
 - Use `django_asklens.execution.execute_plan()` for Python execution; it revalidates mappings and existing `QueryPlan` objects for the current request. `run_query_plan()` is a deprecated wrapper that also requires the current request. The compiler and compiled-query executor are internal and are not public exports.
 - AskLens executes read-only Django ORM queries only.

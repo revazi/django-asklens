@@ -30,6 +30,8 @@ AskLens is a data access surface. Configure it as carefully as any reporting, an
 - [ ] Register only reviewed fields.
 - [ ] Do not auto-expose every Django model or every model field.
 - [ ] Give resources and metrics clear labels/descriptions so provider planning has enough semantic context.
+- [ ] Review each resource's semantic `default_order`; identity-only ordering is acceptable when deliberate.
+- [ ] If overriding `row_identity`, confirm the field is concrete, non-null, and unconditionally unique.
 - [ ] Keep relation paths within configured `MAX_JOINS`.
 
 ## Tenant and row scope
@@ -68,6 +70,7 @@ AskLens is a data access surface. Configure it as carefully as any reporting, an
   - [ ] `MAX_ROWS`
   - [ ] `DEFAULT_LIMIT`
 - [ ] Test broad list queries and aggregate queries for acceptable latency.
+- [ ] Test repeated limited queries for stable ordering and verify `truncated` below, at, and above the effective limit.
 - [ ] Configure a database statement timeout appropriate to reporting queries.
 - [ ] Configure an end-to-end request timeout.
 - [ ] Apply host/API rate and concurrency limits; structural budgets do not bound request volume.

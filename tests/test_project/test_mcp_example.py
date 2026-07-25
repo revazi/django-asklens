@@ -16,7 +16,7 @@ from tests.test_project.mcp import (
     build_asklens_mcp_toolset,
     register_asklens_mcp_tools,
 )
-from tests.test_project.models import Customer, Order
+from tests.test_project.models import Account, AccountMembership, Customer, Order
 
 pytestmark = pytest.mark.django_db
 
@@ -57,7 +57,12 @@ def registered_orders() -> None:
         model=Order,
         name="orders",
         label="Orders",
-        scope_mode="global",
+        scope_mode="context_scoped",
+        scope_provider=lambda request: Order.objects.filter(
+            account_id__in=AccountMembership.objects.filter(user=request.user).values(
+                "account_id"
+            )
+        ),
         fields={
             "id": {"label": "Order ID"},
             "status": {"label": "Status"},
@@ -74,27 +79,40 @@ def registered_orders() -> None:
 
 
 @pytest.fixture
-def order_data() -> None:
-    """Create deterministic data for the concrete MCP example."""
+def order_data(user) -> None:
+    """Create visible and cross-tenant rows for the concrete MCP example."""
 
+    visible_account = Account.objects.create(name="Visible", slug="visible")
+    hidden_account = Account.objects.create(name="Hidden", slug="hidden")
+    AccountMembership.objects.create(user=user, account=visible_account)
     customer = Customer.objects.create(name="Alice", email="alice@example.com")
     Order.objects.create(
+        account=visible_account,
         customer=customer,
         status="paid",
         created_at=aware_datetime(2026, 1, 5),
         total=Decimal("100.00"),
     )
     Order.objects.create(
+        account=visible_account,
         customer=customer,
         status="paid",
         created_at=aware_datetime(2026, 1, 6),
         total=Decimal("50.00"),
     )
     Order.objects.create(
+        account=visible_account,
         customer=customer,
         status="pending",
         created_at=aware_datetime(2026, 1, 7),
         total=Decimal("75.00"),
+    )
+    Order.objects.create(
+        account=hidden_account,
+        customer=customer,
+        status="hidden-tenant",
+        created_at=aware_datetime(2026, 1, 8),
+        total=Decimal("999.00"),
     )
 
 
