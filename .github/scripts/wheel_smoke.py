@@ -46,12 +46,17 @@ def smoke_core_install() -> None:
 
     from django_asklens.access import can_access_asklens
     from django_asklens.catalog.registry import serialize_catalog
+    from django_asklens.exceptions import PlanValidationError, public_error_payload
     from django_asklens.mcp import AskLensMCPToolSet
     from django_asklens.planning import parse_query_plan
 
     request = SimpleNamespace(user=SimpleNamespace(is_authenticated=True))
     assert can_access_asklens(request) is True
     assert serialize_catalog()["resources"] == []
+    assert public_error_payload(PlanValidationError("private diagnostic")) == {
+        "code": "asklens.plan.invalid",
+        "message": "The query plan is invalid.",
+    }
     assert AskLensMCPToolSet(request_factory=lambda _context: request).tools()
     assert (
         parse_query_plan(

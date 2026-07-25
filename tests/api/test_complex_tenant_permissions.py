@@ -417,9 +417,13 @@ def test_complex_query_rejects_resource_without_required_grant(
     )
 
     assert response.status_code == 400
-    assert "member_subscriptions" in response.data["error"]
-    assert "PackageReportsView" in response.data["error"]
-    assert "Traceback" not in response.data["error"]
+    assert response.data["error"] == {
+        "code": "asklens.member.unavailable",
+        "message": "A requested query member is unavailable.",
+    }
+    assert "member_subscriptions" not in str(response.data)
+    assert "PackageReportsView" not in str(response.data)
+    assert "Traceback" not in str(response.data)
     run = SemanticQueryRun.objects.get(pk=response.data["run_id"])
     assert run.status == SemanticQueryRun.Status.FAILED
     assert run.plan == {}
@@ -444,8 +448,12 @@ def test_complex_crafted_plan_cannot_use_unregistered_tenant_field(
     )
 
     assert response.status_code == 400
-    assert "facility.slug" in response.data["error"]
-    assert "Traceback" not in response.data["error"]
+    assert response.data["error"] == {
+        "code": "asklens.member.unavailable",
+        "message": "A requested query member is unavailable.",
+    }
+    assert "facility.slug" not in str(response.data)
+    assert "Traceback" not in str(response.data)
     run = SemanticQueryRun.objects.get(pk=response.data["run_id"])
     assert run.status == SemanticQueryRun.Status.FAILED
     assert run.plan == {}

@@ -64,12 +64,10 @@ def test_asklens_mcp_toolset_query_tool_is_disabled_by_default(
 
     assert payload == {
         "response_type": "error",
-        "error_category": "tool_disabled",
-        "error": (
-            "The AskLens MCP query tool is disabled. Use asklens_capabilities, "
-            "asklens_validate_plan, and asklens_execute_plan, or construct the "
-            "toolset with expose_query_tool=True."
-        ),
+        "error": {
+            "code": "asklens.authorization.denied",
+            "message": "The AskLens MCP query tool is disabled.",
+        },
     }
     assert "asklens_query" not in toolset.tools()
 

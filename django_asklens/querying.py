@@ -8,8 +8,8 @@ from django.core.exceptions import PermissionDenied
 from django_asklens.catalog.capabilities import build_capabilities
 from django_asklens.exceptions import (
     AskLensError,
-    LLMProviderError,
-    PlanValidationError,
+    PublicErrorPayload,
+    public_error_payload,
 )
 from django_asklens.execution import execute_plan
 from django_asklens.models import SemanticQueryRun
@@ -45,6 +45,7 @@ __all__ = [
     "get_user_permissions",
     "safe_error_category",
     "safe_error_message",
+    "safe_error_payload",
     "safe_provider_fallback_message",
     "should_return_capabilities_fallback",
     "should_use_unified_provider_response",
@@ -181,6 +182,7 @@ def execute_asklens_query_request(
                 ),
             )
 
+        error_payload = safe_error_payload(exc)
         run = create_query_run(
             request=request,
             question=question,
@@ -188,7 +190,7 @@ def execute_asklens_query_request(
             status=SemanticQueryRun.Status.FAILED,
             row_count=0,
             duration_ms=None,
-            error=safe_error_message(exc),
+            error=f"{error_payload['code']}: {error_payload['message']}",
         )
         return AskLensQueryResponse(
             response_type="error",
@@ -198,7 +200,7 @@ def execute_asklens_query_request(
                 "run_id": run.pk,
                 "question": question,
                 "status": SemanticQueryRun.Status.FAILED,
-                "error": safe_error_message(exc),
+                "error": error_payload,
             },
         )
 
@@ -387,28 +389,38 @@ def build_result_metadata(*, plan: dict[str, Any], row_count: int) -> dict[str, 
 def safe_provider_fallback_message(exc: AskLensError) -> str:
     """Return a provider-fallback reason without raw provider details."""
 
-    category = safe_error_category(exc)
-    if category == "provider_error":
+    if exc.code == "asklens.provider.failed":
         reason = "Provider request failed."
-    elif category == "provider_validation_error":
+    elif exc.code in {
+        "asklens.parse.invalid",
+        "asklens.member.unavailable",
+        "asklens.plan.invalid",
+        "asklens.authorization.denied",
+        "asklens.scope.unavailable",
+        "asklens.budget.exceeded",
+        "asklens.binding.invalid",
+        "asklens.compile.failed",
+        "asklens.execute.failed",
+    }:
         reason = "Provider output failed AskLens validation."
-    else:
+    else:  # pragma: no cover - AskLensErrorCode is exhaustive
         reason = "Provider output could not be used."
     return f"{reason} Returned deterministic AskLens help instead."
 
 
 def safe_error_category(exc: AskLensError) -> str:
-    """Return a stable safe error category for diagnostics."""
+    """Return the stable namespaced public error code."""
 
-    if isinstance(exc, LLMProviderError):
-        return "provider_error"
-    if isinstance(exc, PlanValidationError):
-        return "provider_validation_error"
-    return "asklens_error"
+    return exc.code
 
 
 def safe_error_message(exc: AskLensError) -> str:
-    """Return a safe API/audit error message without traceback details."""
+    """Return the stable safe public error message."""
 
-    message = str(exc) or exc.__class__.__name__
-    return " ".join(message.split())[:500]
+    return exc.public_message
+
+
+def safe_error_payload(exc: AskLensError) -> PublicErrorPayload:
+    """Return the shared public error object for adapters."""
+
+    return public_error_payload(exc)

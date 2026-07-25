@@ -77,8 +77,10 @@ def test_mcp_capabilities_reject_invalid_resource_detail(
         "response_type": "error",
         "executed": False,
         "rows_omitted": True,
-        "error_category": "invalid_argument",
-        "error": "resource_detail must be either 'summary' or 'full'.",
+        "error": {
+            "code": "asklens.plan.invalid",
+            "message": "The MCP tool arguments are invalid.",
+        },
     }
 
 
@@ -136,8 +138,10 @@ def test_mcp_describe_resource_returns_safe_unknown_resource_error(
         "valid": False,
         "rows_omitted": True,
         "executed": False,
-        "error_category": "unknown_resource",
-        "error": "Resource 'missing' is not queryable for this request.",
+        "error": {
+            "code": "asklens.member.unavailable",
+            "message": "A requested query member is unavailable.",
+        },
     }
 
 
@@ -170,25 +174,50 @@ def test_mcp_validate_plan_returns_safe_error_for_unauthorized_fields(
         "valid": False,
         "executed": False,
         "rows_omitted": True,
-        "error_category": "permission_denied",
-        "error": (
-            "Field 'customer.email' is sensitive and requires explicit permission."
-        ),
+        "error": {
+            "code": "asklens.member.unavailable",
+            "message": "A requested query member is unavailable.",
+        },
     }
     assert SemanticQueryRun.objects.count() == 0
 
 
-def test_mcp_validate_plan_returns_plan_validation_category(
+def test_mcp_validate_plan_hides_unknown_vs_unauthorized_members(
     registered_orders: None,
     mcp_request,
 ) -> None:
-    """Malformed client-produced plans get an MCP-specific safe category."""
+    """MCP validation returns identical public member errors."""
+
+    unknown_plan = sensitive_list_plan()
+    unknown_plan["select"] = ["missing.private_field"]
+
+    unknown = asklens_validate_plan(mcp_request, unknown_plan)
+    unauthorized = asklens_validate_plan(mcp_request, sensitive_list_plan())
+
+    assert (
+        unknown["error"]
+        == unauthorized["error"]
+        == {
+            "code": "asklens.member.unavailable",
+            "message": "A requested query member is unavailable.",
+        }
+    )
+
+
+def test_mcp_validate_plan_returns_stable_parse_code(
+    registered_orders: None,
+    mcp_request,
+) -> None:
+    """Malformed client-produced plans use the shared stable parse code."""
 
     payload = asklens_validate_plan(mcp_request, {"resource": "orders"})
 
     assert payload["valid"] is False
     assert payload["executed"] is False
-    assert payload["error_category"] == "plan_validation_error"
+    assert payload["error"] == {
+        "code": "asklens.parse.invalid",
+        "message": "The query plan could not be parsed.",
+    }
     assert SemanticQueryRun.objects.count() == 0
 
 
@@ -227,9 +256,10 @@ def test_mcp_execute_plan_returns_safe_error_for_rejected_plan(
     assert payload["response_type"] == "error"
     assert payload["status_code"] == 400
     assert payload["status"] == SemanticQueryRun.Status.FAILED
-    assert payload["error"] == (
-        "Field 'customer.email' is sensitive and requires explicit permission."
-    )
+    assert payload["error"] == {
+        "code": "asklens.member.unavailable",
+        "message": "A requested query member is unavailable.",
+    }
     assert "data" not in payload
     run = SemanticQueryRun.objects.get()
     assert run.status == SemanticQueryRun.Status.FAILED

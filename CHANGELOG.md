@@ -9,12 +9,14 @@ The project is alpha and APIs may change before a stable release.
 ### Added
 
 - Began the R1 trusted-execution boundary with public `execute_plan(plan, *, request, registry=...)`, which treats mappings and existing `QueryPlan` objects as untrusted and repeats current permission, catalog, limit, and request-scope validation before ORM execution.
+- Added stable namespaced public errors for parse, unavailable-member, plan, authorization, scope, budget, binding, compilation, execution, and provider failures.
 
 ### Changed
 
 - Shared API/admin/MCP/provider orchestration now delegates data execution to `execute_plan()`.
 - `run_query_plan()` is a deprecated compatibility wrapper that revalidates plans instead of trusting prior validation.
 - ORM compilation now consumes a private, non-serializable prepared representation bound to the current execution context and resolved resource queryset.
+- AskLens query-plan failures in the API and MCP helpers now expose an `error` object containing only `code`, safe `message`, and an optional safe JSON `pointer`, replacing raw diagnostic strings and transport-specific `error_category` values.
 
 ### Removed
 
@@ -23,6 +25,7 @@ The project is alpha and APIs may change before a stable release.
 ### Security
 
 - Directly constructed `QueryPlan` objects can no longer bypass current field permissions or configured plan limits through the public facade or compatibility runner.
+- Unknown and unauthorized resources, fields, and metrics now share the same public `asklens.member.unavailable` code and message; internal member names, permission tokens, scope failures, compiler causes, and database causes are not included in public execution errors.
 
 ## 0.1.0a1 — 2026-07-19
 

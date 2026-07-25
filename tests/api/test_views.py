@@ -632,13 +632,19 @@ def test_query_errors_are_audited_safely(
 
     assert response.status_code == 400
     assert response.data["status"] == SemanticQueryRun.Status.FAILED
-    assert "missing" in response.data["error"]
-    assert "Traceback" not in response.data["error"]
+    assert response.data["error"] == {
+        "code": "asklens.member.unavailable",
+        "message": "A requested query member is unavailable.",
+    }
+    assert "missing" not in str(response.data)
+    assert "Traceback" not in str(response.data)
 
     run = SemanticQueryRun.objects.get(pk=response.data["run_id"])
     assert run.status == SemanticQueryRun.Status.FAILED
     assert run.plan == {}
-    assert "missing" in run.error
+    assert run.error == (
+        "asklens.member.unavailable: A requested query member is unavailable."
+    )
 
 
 def test_run_detail_endpoint_returns_owned_run(

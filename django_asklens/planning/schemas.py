@@ -13,7 +13,7 @@ from pydantic import (
     model_validator,
 )
 
-from django_asklens.exceptions import PlanValidationError
+from django_asklens.exceptions import PlanParseError
 
 SUPPORTED_INTENTS = ("list", "aggregate")
 SUPPORTED_FILTER_OPERATORS = (
@@ -212,7 +212,7 @@ def parse_query_plan(raw_plan: str | bytes | Mapping[str, Any]) -> QueryPlan:
         return QueryPlan.model_validate(payload)
     except ValidationError as exc:
         msg = format_pydantic_error(exc)
-        raise PlanValidationError(msg) from exc
+        raise PlanParseError(msg) from exc
 
 
 def get_query_plan_json_schema() -> dict[str, Any]:
@@ -233,14 +233,14 @@ def parse_plan_payload(raw_plan: str | bytes | Mapping[str, Any]) -> Mapping[str
             parsed = json.loads(raw_plan)
         except json.JSONDecodeError as exc:
             msg = "QueryPlan payload must be valid JSON."
-            raise PlanValidationError(msg) from exc
+            raise PlanParseError(msg) from exc
         if not isinstance(parsed, Mapping):
             msg = "QueryPlan JSON payload must be an object."
-            raise PlanValidationError(msg)
+            raise PlanParseError(msg)
         return parsed
 
     msg = "QueryPlan payload must be a JSON string, bytes, or mapping."
-    raise PlanValidationError(msg)
+    raise PlanParseError(msg)
 
 
 def validate_non_empty_string(value: str, label: str) -> str:
