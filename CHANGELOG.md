@@ -13,6 +13,7 @@ The project is alpha and APIs may change before a stable release.
 - Added server-owned audit modes: `database` (default), `disabled`, and `custom`, with an optional callable `AUDIT_SINK` for non-database operational events.
 - Added required resource `scope_mode="global" | "context_scoped"` registration and trusted `scope_provider=...` support.
 - Added configurable structural budgets for 64 KiB plan payloads, filters, selected/order/group/metric terms, relationship depth and unique edges, per-`in` and total filter values, returned rows/groups, and the default result limit.
+- Added semantic resource `default_order` plus private `row_identity` registration, defaulting to the model primary key.
 
 ### Changed
 
@@ -22,6 +23,8 @@ The project is alpha and APIs may change before a stable release.
 - AskLens query-plan failures in the API and MCP helpers now expose an `error` object containing only `code`, safe `message`, and an optional safe JSON `pointer`, replacing raw diagnostic strings and transport-specific `error_category` values.
 - Invalid `/asklens/query/` request bodies now return `asklens.parse.invalid` without exposing DRF serializer field details.
 - Omitted plan limits now use the current `DEFAULT_LIMIT` (capped by `MAX_ROWS`) instead of acting as a fixed protocol constant; repeated meaningless structural references are rejected.
+- List ordering uses semantic defaults when needed and always appends a missing private identity tie-breaker; grouped ordering appends missing group keys and nulls sort last.
+- Result metadata replaces non-definitive `limit_reached` with accurate `truncated`; list/grouped queries fetch `limit + 1`, while ungrouped aggregates have effective limit one.
 - Database auditing now stores operational resource/intent/status/error/row-count/duration metadata by default; questions, filter values, and complete plans require explicit `AUDIT_INCLUDE_CONTENT=True` opt-in.
 - Resource registration no longer has an implicit default-manager scope. Migrate `base_queryset=visible_rows` to `scope_mode="context_scoped", scope_provider=visible_rows`; intentionally unrestricted resources must declare `scope_mode="global"`.
 

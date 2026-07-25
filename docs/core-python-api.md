@@ -133,9 +133,23 @@ DJANGO_ASKLENS = {
 
 `MAX_JOINS` is the maximum hop depth of any field reference; `MAX_RELATIONSHIP_EDGES` counts unique traversed relationship prefixes across all plan positions. `DEFAULT_LIMIT` is capped by `MAX_ROWS`. Structural budgets do not replace database statement/request timeouts, rate/concurrency limits, read-only credentials, indexes, or monitoring.
 
+### Deterministic results and truncation
+
+List plans use explicit plan ordering when present, otherwise the resource's semantic `default_order`; a private `row_identity` (the primary key by default) is appended when missing. Grouped aggregates append missing group keys. Nulls sort last for both directions.
+
+List and grouped queries fetch one extra row/group, return at most the effective limit, and expose accurate metadata:
+
+```json
+{"limit": 100, "limit_scope": "rows", "truncated": false}
+```
+
+Ungrouped aggregates have effective limit one and always report `truncated: false`. Accurate truncation does not provide cursor pagination.
+
 ### Migrating low-level alpha imports
 
 Replace `from django_asklens.compiler import compile_query_plan` and `from django_asklens.execution import execute_query` with `execute_plan()`. `CompiledQuery` is also internal. AskLens intentionally provides no public operation that executes a caller-supplied compiled or merely shape-valid plan. `run_query_plan()` remains available for one alpha cycle, emits `DeprecationWarning`, requires the current request, and revalidates its input.
+
+Do not infer truncation from `row_count == plan.limit` or the old `build_result_metadata(plan=..., row_count=...)` helper shape. Consume the trusted `result_metadata` returned by `QueryResult.to_dict()` or the API/MCP response.
 
 ### Stable execution errors
 

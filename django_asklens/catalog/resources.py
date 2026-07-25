@@ -5,6 +5,7 @@ from dataclasses import dataclass, field
 from types import MappingProxyType
 from typing import Any, Literal, NotRequired, TypedDict
 
+from django.core.exceptions import FieldDoesNotExist
 from django.db import models
 from django.db.models import QuerySet
 from django.utils.text import slugify
@@ -20,6 +21,8 @@ from django_asklens.exceptions import (
 type MetricOp = Literal["count", "sum", "avg", "min", "max"]
 type FieldConfig = Mapping[str, str | bool | None]
 type ScopeMode = Literal["global", "context_scoped"]
+type ResourceOrderDirection = Literal["asc", "desc"]
+type DefaultOrder = tuple[tuple[str, ResourceOrderDirection], ...]
 type ScopeProvider = Callable[[Any], QuerySet]
 type BaseQuerySetHook = Callable[[Any], QuerySet]
 
@@ -64,6 +67,7 @@ class ResourceCatalogItem(TypedDict):
     requires_permission: NotRequired[str]
     scope_resource: NotRequired[bool]
     examples_enabled: NotRequired[bool]
+    default_order: NotRequired[list[dict[str, str]]]
     model: NotRequired[str]
 
 
@@ -204,6 +208,8 @@ class SemanticResource:
     default_date_field: str | None = None
     fields: Mapping[str, FieldSpec] = field(default_factory=dict)
     metrics: Mapping[str, Metric] = field(default_factory=dict)
+    default_order: DefaultOrder = ()
+    row_identity: str = ""
     scope_provider: ScopeProvider | None = None
     requires_permission: str | None = None
     scope_resource: bool = False
@@ -216,6 +222,16 @@ class SemanticResource:
             scope_mode=self.scope_mode,
             scope_provider=self.scope_provider,
         )
+        normalized_order = normalize_default_order(
+            self.default_order,
+            fields=self.fields,
+        )
+        normalized_identity = validate_row_identity(
+            self.model,
+            self.row_identity or None,
+        )
+        object.__setattr__(self, "default_order", normalized_order)
+        object.__setattr__(self, "row_identity", normalized_identity)
         object.__setattr__(self, "fields", MappingProxyType(dict(self.fields)))
         object.__setattr__(self, "metrics", MappingProxyType(dict(self.metrics)))
 
@@ -233,6 +249,8 @@ class SemanticResource:
         metrics: Sequence[Metric] | None = None,
         scope_mode: ScopeMode | None = None,
         scope_provider: ScopeProvider | None = None,
+        default_order: Sequence[tuple[str, str]] | None = None,
+        row_identity: str | None = None,
         base_queryset: BaseQuerySetHook | None | object = _BASE_QUERYSET_UNSET,
         requires_permission: str | None = None,
         scope_resource: bool = False,
@@ -263,6 +281,11 @@ class SemanticResource:
 
         metric_specs = build_metric_specs(metrics=metrics or (), fields=field_specs)
         normalized_synonyms = normalize_synonyms(synonyms or ())
+        normalized_order = normalize_default_order(
+            default_order if default_order is not None else (),
+            fields=field_specs,
+        )
+        normalized_identity = validate_row_identity(model, row_identity)
 
         return cls(
             model=model,
@@ -274,6 +297,8 @@ class SemanticResource:
             default_date_field=default_date_field,
             fields=field_specs,
             metrics=metric_specs,
+            default_order=normalized_order,
+            row_identity=normalized_identity,
             scope_provider=scope_provider,
             requires_permission=requires_permission,
             scope_resource=scope_resource,
@@ -358,6 +383,11 @@ class SemanticResource:
             data["scope_resource"] = True
         if not self.examples_enabled:
             data["examples_enabled"] = False
+        if self.default_order:
+            data["default_order"] = [
+                {"field": field_name, "direction": direction}
+                for field_name, direction in self.default_order
+            ]
         if include_internal:
             data["model"] = self.model._meta.label
         return data
@@ -441,6 +471,87 @@ def validate_scope_policy(
         msg = "scope_provider must be callable for a context_scoped resource."
         raise InvalidResourceError(msg)
     return "context_scoped"
+
+
+def normalize_default_order(
+    default_order: Sequence[tuple[str, str]],
+    *,
+    fields: Mapping[str, FieldSpec],
+) -> DefaultOrder:
+    """Validate semantic default ordering against registered fields."""
+
+    if isinstance(default_order, (str, bytes)):
+        msg = "default_order must be a sequence of (field, direction) pairs."
+        raise InvalidResourceError(msg)
+
+    normalized: list[tuple[str, ResourceOrderDirection]] = []
+    seen: set[str] = set()
+    for item in default_order:
+        if not isinstance(item, (tuple, list)) or len(item) != 2:
+            msg = "default_order entries must be (field, direction) pairs."
+            raise InvalidResourceError(msg)
+        field_name, direction = item
+        if not isinstance(field_name, str) or field_name not in fields:
+            msg = "default_order must reference registered semantic fields."
+            raise InvalidResourceError(msg)
+        field_spec = fields[field_name]
+        if (
+            field_spec.sensitive
+            or not field_spec.llm_visible
+            or not field_spec.result_visible
+            or field_spec.filter_only
+            or field_spec.requires_permission is not None
+        ):
+            msg = "default_order must use unrestricted result-visible fields."
+            raise InvalidResourceError(msg)
+        if field_name in seen:
+            msg = f"Duplicate default_order field {field_name!r}."
+            raise InvalidResourceError(msg)
+        if direction not in ("asc", "desc"):
+            msg = "default_order direction must be 'asc' or 'desc'."
+            raise InvalidResourceError(msg)
+        seen.add(field_name)
+        normalized.append((field_name, direction))
+    return tuple(normalized)
+
+
+def validate_row_identity(
+    model: type[models.Model],
+    row_identity: str | None,
+) -> str:
+    """Return a private non-null unique field usable as a stable tie-breaker."""
+
+    identity = model._meta.pk.name if row_identity is None else row_identity
+    if not isinstance(identity, str) or not identity or "." in identity:
+        msg = "row_identity must name one concrete field on the registered model."
+        raise InvalidResourceError(msg)
+    try:
+        identity_field = model._meta.get_field(identity)
+    except FieldDoesNotExist as exc:
+        msg = "row_identity must name one concrete field on the registered model."
+        raise InvalidResourceError(msg) from exc
+    if not isinstance(identity_field, models.Field) or not identity_field.concrete:
+        msg = "row_identity must name one concrete field on the registered model."
+        raise InvalidResourceError(msg)
+    if identity_field.null:
+        msg = "row_identity must have a non-null unconditional unique constraint."
+        raise InvalidResourceError(msg)
+    if identity_field.primary_key or identity_field.unique:
+        return identity
+
+    unique_together = tuple(model._meta.unique_together or ())
+    if (identity,) in unique_together:
+        return identity
+    for constraint in model._meta.constraints:
+        if not isinstance(constraint, models.UniqueConstraint):
+            continue
+        if constraint.condition is not None or constraint.expressions:
+            continue
+        if tuple(constraint.fields) == (identity,):
+            return identity
+
+    msg = "row_identity must have a non-null unconditional unique constraint."
+    raise InvalidResourceError(msg)
 
 
 def validate_requires_permission(requires_permission: str | None) -> None:

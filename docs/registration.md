@@ -21,6 +21,7 @@ resource = register(
         "total": {"label": "Order total", "metric": True},
     },
     metrics=[Metric("order_count", op="count", field="id")],
+    default_order=(("created_at", "desc"),),
     requires_permission="orders.view_reports",
     scope_mode="context_scoped",
     scope_provider=lambda request: Order.objects.filter(
@@ -39,6 +40,8 @@ resource = register(
 - `synonyms`: optional alternate words for the resource.
 - `default_date_field`: registered date/datetime field used by date-oriented planning.
 - `metrics`: explicit aggregate metrics available to plans.
+- `default_order`: optional semantic `(field, "asc" | "desc")` pairs used when a list plan omits ordering. Fields must be unrestricted, result-visible registered fields.
+- `row_identity`: optional private concrete non-null unique model field used as a final list tie-breaker. Defaults to the model primary key and is not serialized to catalogs/providers.
 - `requires_permission`: optional permission string required to see and query the whole resource.
 - `scope_mode`: required scope policy: `"global"` or `"context_scoped"`. There is no default.
 - `scope_provider`: trusted request-aware queryset provider required for `context_scoped`; forbidden for `global`.
@@ -138,5 +141,22 @@ register(
 A context scope provider must return an unevaluated Django `QuerySet` for the registered model. `Model.objects.none()` is valid. Returning `None`, a list, an evaluated queryset, or a queryset for another model fails with `asklens.scope.unavailable`; missing request context and provider exceptions also fail closed. AskLens never accepts client-provided tenant IDs or scope tokens as trusted scope.
 
 The legacy `base_queryset=` argument is rejected with migration guidance. Replace it with `scope_mode="context_scoped"` and `scope_provider=...`. Intentionally unrestricted resources must explicitly use `scope_mode="global"`; omission never falls back to the default manager.
+
+## Deterministic ordering
+
+When a list plan omits `order_by`, AskLens applies the registered semantic `default_order`, then appends the private `row_identity` when missing. Explicit plan ordering remains primary but also receives the identity tie-breaker. If no semantic default is configured, identity-only ordering is still deterministic.
+
+```python
+register(
+    model=Order,
+    fields={"status": {}, "created_at": {}},
+    scope_mode="context_scoped",
+    scope_provider=visible_orders,
+    default_order=(("created_at", "desc"),),
+    # row_identity="public_id",  # only if concrete, non-null, unconditionally unique
+)
+```
+
+Grouped aggregates append missing group keys as tie-breakers. Nulls sort last in both ascending and descending order. AskLens does not use `Meta.ordering` and provides no `assume_unique` escape hatch.
 
 Do not rely on AskLens as the only tenant boundary; keep normal Django authentication, permissions, read-only database defense, and application-specific scope tests in place.

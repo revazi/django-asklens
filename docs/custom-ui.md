@@ -94,14 +94,14 @@ A data-query response includes `response_type: "query"`, normalized rows, column
   "result_metadata": {
     "limit": 10,
     "limit_scope": "groups",
-    "limit_reached": false
+    "truncated": false
   },
   "duration_ms": 18,
   "visualization": {"type": "bar", "x": {"field": "status"}, "y": {"field": "order_count"}}
 }
 ```
 
-For aggregate/chart responses, `result_metadata.limit` caps returned groups or slices. For list/table responses, it caps returned rows. If `result_metadata.limit_reached` is true, show a non-blocking message such as “Showing top N results. Refine filters or increase limit.” Do not treat it as a definitive `has_more` flag in alpha.
+For grouped aggregate/chart responses, `result_metadata.limit` caps returned groups or slices. For list/table responses, it caps returned rows. If `result_metadata.truncated` is true, another matching row/group exists beyond the returned limit; show a message such as “Showing the first N results. Refine filters or increase the limit.” Ungrouped aggregates have effective limit one and are never truncated. AskLens does not provide cursor pagination.
 
 Render tables by iterating `columns` for headers and `data` for row values:
 

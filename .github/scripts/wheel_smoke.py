@@ -89,7 +89,10 @@ def smoke_core_install() -> None:
         name="users",
         fields={"id": {}},
         scope_mode="global",
+        default_order=(("id", "asc"),),
     )
+    assert resource.row_identity == "id"
+    assert resource.to_dict()["default_order"] == [{"field": "id", "direction": "asc"}]
     assert resource.get_scope_queryset(request).model is user_model
 
     assert (

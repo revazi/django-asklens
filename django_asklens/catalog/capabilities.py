@@ -73,6 +73,7 @@ class CapabilityResource(TypedDict):
     requires_permission: NotRequired[str]
     scope_resource: NotRequired[bool]
     examples_enabled: NotRequired[bool]
+    default_order: NotRequired[list[dict[str, str]]]
 
 
 class CapabilitiesSnapshot(TypedDict):
@@ -227,6 +228,8 @@ def build_resource_capability(
         capability["scope_resource"] = True
     if resource.get("examples_enabled") is False:
         capability["examples_enabled"] = False
+    if resource.get("default_order"):
+        capability["default_order"] = list(resource["default_order"])
     return capability
 
 
