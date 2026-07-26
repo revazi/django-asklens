@@ -15,6 +15,7 @@ The project is alpha and APIs may change before a stable release.
 - Added configurable structural budgets for 64 KiB plan payloads, filters, selected/order/group/metric terms, relationship depth and unique edges, per-`in` and total filter values, returned rows/groups, and the default result limit.
 - Added semantic resource `default_order` plus private `row_identity` registration, defaulting to the model primary key.
 - Added `DEFAULT_SCOPE_MODE="context_scoped"` for projects that want to configure the safe resource mode once while keeping every global resource explicit.
+- Added stable public semantic field keys with required private Django `binding`, canonical `type`, and `nullable` registration metadata.
 
 ### Changed
 
@@ -28,10 +29,12 @@ The project is alpha and APIs may change before a stable release.
 - Result metadata replaces non-definitive `limit_reached` with accurate `truncated`; list/grouped queries fetch `limit + 1`, while ungrouped aggregates have effective limit one.
 - Database auditing now stores operational resource/intent/status/error/row-count/duration metadata by default; questions, filter values, and complete plans require explicit `AUDIT_INCLUDE_CONTENT=True` opt-in.
 - Resource registration no longer has an implicit default-manager scope. Migrate `base_queryset=visible_rows` to a context-scoped registration with `scope_provider=visible_rows`; intentionally unrestricted resources must declare `scope_mode="global"`. Without a configured `DEFAULT_SCOPE_MODE`, omission still fails registration.
+- Field registration no longer interprets public mapping keys as Django paths. Every field now declares its private `__`-separated binding and explicit public type/nullability; changing a binding does not change the public plan.
 
 ### Removed
 
 - Removed `compile_query_plan`, `CompiledQuery`, and `execute_query` from public package exports. Python callers must use `execute_plan()`; there is no supported unsafe execution API.
+- Removed the `include_internal=True` catalog option; public catalog serialization no longer exposes Django model labels.
 - Removed the standalone `create_query_run` compatibility export so supported execution cannot bypass the configured privacy-aware audit policy/sink.
 
 ### Security
@@ -42,6 +45,7 @@ The project is alpha and APIs may change before a stable release.
 - Added adapter-convergence evidence for core provider orchestration, API, admin, and MCP execution through `execute_plan()`; the packaged frontend remains an API client rather than an independent execution path.
 - Rejected plans perform zero application-data queries. Database audit mode performs at most one metadata-only insert; disabled/custom non-database modes add zero SQL. Audit-sink failure cannot trigger rejected-plan execution or hide a successful result.
 - Missing scope declarations fail registration unless the safe `context_scoped` project default is configured. `DEFAULT_SCOPE_MODE="global"` is rejected. Missing request context, absent/invalid/evaluated/wrong-model scope results, and scope-provider failures reject with `asklens.scope.unavailable` instead of broadening to the default manager.
+- Public catalogs, capabilities, and provider metadata omit private Django field bindings, model labels, and permission-token formats while continuing to enforce registration and current-request permissions.
 - Every over-budget structural dimension rejects with `asklens.budget.exceeded` before scope resolution or application-data SQL; malformed UTF-8 byte plans return a typed parse error.
 
 ## 0.1.0a1 — 2026-07-19

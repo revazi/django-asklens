@@ -5,7 +5,8 @@ Use this checklist before enabling AskLens outside local development.
 ## Catalog and permissions
 
 - [ ] Register only resources users should query.
-- [ ] Register only allowed fields; do not auto-expose every model field.
+- [ ] Register only allowed semantic fields; give each an explicit private Django binding, canonical type, and nullability.
+- [ ] Confirm public catalogs, capabilities, and provider prompts contain no Django bindings, model labels, or permission-token formats.
 - [ ] Mark PII/secrets/internal fields as `sensitive=True` or hide them with `llm_visible=False` / `result_visible=False`.
 - [ ] Use `requires_permission` for fields that need explicit permissions.
 - [ ] Review every registered metric for business meaning and data sensitivity.

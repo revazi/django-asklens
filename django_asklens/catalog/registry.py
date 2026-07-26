@@ -97,7 +97,6 @@ class CatalogRegistry:
         *,
         include_sensitive: bool = False,
         include_hidden: bool = False,
-        include_internal: bool = False,
         permissions: Iterable[str] | None = None,
     ) -> CatalogSnapshot:
         """Serialize the registry as catalog metadata."""
@@ -108,7 +107,6 @@ class CatalogRegistry:
                 resource.to_dict(
                     include_sensitive=include_sensitive,
                     include_hidden=include_hidden,
-                    include_internal=include_internal,
                     permissions=permission_set,
                 )
                 for resource in self._resources.values()
@@ -171,7 +169,6 @@ def serialize_catalog(
     *,
     include_sensitive: bool = False,
     include_hidden: bool = False,
-    include_internal: bool = False,
     permissions: Iterable[str] | None = None,
 ) -> CatalogSnapshot:
     """Serialize the default AskLens catalog registry."""
@@ -179,6 +176,5 @@ def serialize_catalog(
     return default_registry.to_dict(
         include_sensitive=include_sensitive,
         include_hidden=include_hidden,
-        include_internal=include_internal,
         permissions=permissions,
     )

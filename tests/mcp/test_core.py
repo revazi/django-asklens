@@ -235,7 +235,10 @@ def test_mcp_execution_rejects_invalid_current_scope_before_sql(
     default_registry.register(
         model=Order,
         name="orders",
-        fields={"id": {}, "status": {}},
+        fields={
+            "id": {"binding": "id", "type": "integer", "nullable": False},
+            "status": {"binding": "status", "type": "string", "nullable": False},
+        },
         metrics=[Metric("order_count", op="count", field="id")],
         scope_mode="context_scoped",
         scope_provider=lambda _request: None,

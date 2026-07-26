@@ -42,11 +42,27 @@ def build_registry(
         "name": "orders",
         "scope_mode": "global",
         "fields": {
-            "id": {},
-            "status": {},
-            "created_at": {},
-            "total": {},
-            "account.name": {},
+            "id": {"binding": "id", "type": "integer", "nullable": False},
+            "status": {
+                "binding": "status",
+                "type": "string",
+                "nullable": False,
+            },
+            "created_at": {
+                "binding": "created_at",
+                "type": "datetime",
+                "nullable": False,
+            },
+            "total": {
+                "binding": "total",
+                "type": "decimal",
+                "nullable": False,
+            },
+            "account.name": {
+                "binding": "account__name",
+                "type": "string",
+                "nullable": True,
+            },
         },
         "metrics": [
             Metric("order_count", op="count", field="id"),
@@ -319,7 +335,10 @@ def test_default_order_registration_is_validated() -> None:
     with pytest.raises(InvalidResourceError, match="sequence.*pairs"):
         registry.register(
             model=Order,
-            fields={"id": {}, "status": {}},
+            fields={
+                "id": {"binding": "id", "type": "integer", "nullable": False},
+                "status": {"binding": "status", "type": "string", "nullable": False},
+            },
             scope_mode="global",
             default_order="status",
         )
@@ -327,7 +346,7 @@ def test_default_order_registration_is_validated() -> None:
     with pytest.raises(InvalidResourceError, match="default_order.*registered"):
         registry.register(
             model=Order,
-            fields={"id": {}},
+            fields={"id": {"binding": "id", "type": "integer", "nullable": False}},
             scope_mode="global",
             default_order=(("missing", "asc"),),
         )
@@ -335,7 +354,10 @@ def test_default_order_registration_is_validated() -> None:
     with pytest.raises(InvalidResourceError, match="Duplicate default_order"):
         registry.register(
             model=Order,
-            fields={"id": {}, "status": {}},
+            fields={
+                "id": {"binding": "id", "type": "integer", "nullable": False},
+                "status": {"binding": "status", "type": "string", "nullable": False},
+            },
             scope_mode="global",
             default_order=(("status", "asc"), ("status", "desc")),
         )
@@ -343,7 +365,10 @@ def test_default_order_registration_is_validated() -> None:
     with pytest.raises(InvalidResourceError, match="asc.*desc"):
         registry.register(
             model=Order,
-            fields={"id": {}, "status": {}},
+            fields={
+                "id": {"binding": "id", "type": "integer", "nullable": False},
+                "status": {"binding": "status", "type": "string", "nullable": False},
+            },
             scope_mode="global",
             default_order=(("status", "sideways"),),
         )
@@ -351,7 +376,15 @@ def test_default_order_registration_is_validated() -> None:
     with pytest.raises(InvalidResourceError, match="unrestricted result-visible"):
         registry.register(
             model=Order,
-            fields={"id": {}, "status": {"requires_permission": "shop.private"}},
+            fields={
+                "id": {"binding": "id", "type": "integer", "nullable": False},
+                "status": {
+                    "binding": "status",
+                    "type": "string",
+                    "nullable": False,
+                    "requires_permission": "shop.private",
+                },
+            },
             scope_mode="global",
             default_order=(("status", "asc"),),
         )
@@ -364,7 +397,10 @@ def test_alternate_row_identity_requires_non_null_unique_field() -> None:
     with pytest.raises(InvalidResourceError, match="one concrete field"):
         registry.register(
             model=Order,
-            fields={"id": {}, "status": {}},
+            fields={
+                "id": {"binding": "id", "type": "integer", "nullable": False},
+                "status": {"binding": "status", "type": "string", "nullable": False},
+            },
             scope_mode="global",
             row_identity="",
         )
@@ -372,7 +408,10 @@ def test_alternate_row_identity_requires_non_null_unique_field() -> None:
     with pytest.raises(InvalidResourceError, match="non-null.*unique"):
         registry.register(
             model=Order,
-            fields={"id": {}, "status": {}},
+            fields={
+                "id": {"binding": "id", "type": "integer", "nullable": False},
+                "status": {"binding": "status", "type": "string", "nullable": False},
+            },
             scope_mode="global",
             row_identity="status",
         )
@@ -380,7 +419,7 @@ def test_alternate_row_identity_requires_non_null_unique_field() -> None:
     account_registry = CatalogRegistry()
     resource = account_registry.register(
         model=Account,
-        fields={"name": {}},
+        fields={"name": {"binding": "name", "type": "string", "nullable": False}},
         scope_mode="global",
         row_identity="slug",
     )

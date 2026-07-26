@@ -57,11 +57,34 @@ register(
     label="Orders",
     description="Orders visible to the current user.",
     fields={
-        "id": {"label": "Order ID"},
-        "status": {"label": "Status"},
-        "created_at": {"label": "Created date"},
-        "total": {"label": "Order total"},
+        "id": {
+            "binding": "id",
+            "type": "integer",
+            "nullable": False,
+            "label": "Order ID",
+        },
+        "status": {
+            "binding": "status",
+            "type": "string",
+            "nullable": False,
+            "label": "Status",
+        },
+        "created_at": {
+            "binding": "created_at",
+            "type": "datetime",
+            "nullable": False,
+            "label": "Created date",
+        },
+        "total": {
+            "binding": "total",
+            "type": "decimal",
+            "nullable": False,
+            "label": "Order total",
+        },
         "customer.email": {
+            "binding": "customer__email",
+            "type": "string",
+            "nullable": False,
             "label": "Customer email",
             "sensitive": True,
             "requires_permission": "customers.view_pii",
@@ -75,6 +98,8 @@ register(
     scope_provider=visible_orders,
 )
 ```
+
+The field mapping key is the public semantic name used by plans. `binding` is trusted server-owned Django metadata, uses `__` for relationships, and is excluded from catalog, capability, and provider payloads. `type` and `nullable` are explicit public semantics rather than values inferred from the binding.
 
 ## Build permission-scoped capabilities
 

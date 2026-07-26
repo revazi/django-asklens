@@ -26,6 +26,23 @@ from tests.test_project.models import (
 )
 
 
+def semantic_field(
+    binding: str,
+    field_type: str,
+    *,
+    nullable: bool,
+    **metadata: object,
+) -> dict[str, object]:
+    """Build explicit test-project field metadata without binding inference."""
+
+    return {
+        "binding": binding,
+        "type": field_type,
+        "nullable": nullable,
+        **metadata,
+    }
+
+
 def ensure_complex_resources_registered() -> None:
     """Register complex resources once for the runnable demo settings."""
 
@@ -57,21 +74,37 @@ def register_facilities() -> None:
         description="Facilities visible to the current reporting user.",
         default_date_field="created_at",
         fields={
-            "id": {"label": "Facility ID", "llm_visible": False},
-            "name": {
-                "label": "Facility name",
-                "requires_permission": StaffGrant.FACILITY_VIEW,
-            },
-            "slug": {
-                "label": "Facility slug",
-                "sensitive": True,
-                "result_visible": True,
-                "requires_permission": StaffGrant.FACILITY_VIEW,
-            },
-            "facility_type": {"label": "Facility type"},
-            "timezone": {"label": "Timezone"},
-            "is_active": {"label": "Active"},
-            "created_at": {"label": "Created date"},
+            "id": semantic_field(
+                "id", "integer", nullable=False, label="Facility ID", llm_visible=False
+            ),
+            "name": semantic_field(
+                "name",
+                "string",
+                nullable=False,
+                label="Facility name",
+                requires_permission=StaffGrant.FACILITY_VIEW,
+            ),
+            "slug": semantic_field(
+                "slug",
+                "string",
+                nullable=False,
+                label="Facility slug",
+                sensitive=True,
+                result_visible=True,
+                requires_permission=StaffGrant.FACILITY_VIEW,
+            ),
+            "facility_type": semantic_field(
+                "facility_type", "string", nullable=False, label="Facility type"
+            ),
+            "timezone": semantic_field(
+                "timezone", "string", nullable=False, label="Timezone"
+            ),
+            "is_active": semantic_field(
+                "is_active", "boolean", nullable=False, label="Active"
+            ),
+            "created_at": semantic_field(
+                "created_at", "datetime", nullable=False, label="Created date"
+            ),
         },
         metrics=[
             Metric("facility_count", op="count", field="name", label="Facilities")
@@ -96,23 +129,48 @@ def register_staff_resources() -> None:
         ),
         default_date_field="created_at",
         fields={
-            "id": {"label": "Assignment ID", "llm_visible": False},
-            "facility.name": {
-                "label": "Facility",
-                "scope_dimension": True,
-                "requires_permission": StaffGrant.FACILITY_VIEW,
-            },
-            "user.first_name": {"label": "Owner first name"},
-            "user.last_name": {"label": "Owner last name"},
-            "user.username": {"label": "Owner username"},
-            "user.email": {
-                "label": "Owner email",
-                "sensitive": True,
-                "result_visible": True,
-                "requires_permission": StaffGrant.STAFF_PII_VIEW,
-            },
-            "is_primary": {"label": "Primary owner assignment"},
-            "created_at": {"label": "Created date"},
+            "id": semantic_field(
+                "id",
+                "integer",
+                nullable=False,
+                label="Assignment ID",
+                llm_visible=False,
+            ),
+            "facility.name": semantic_field(
+                "facility__name",
+                "string",
+                nullable=False,
+                label="Facility",
+                scope_dimension=True,
+                requires_permission=StaffGrant.FACILITY_VIEW,
+            ),
+            "user.first_name": semantic_field(
+                "user__first_name", "string", nullable=False, label="Owner first name"
+            ),
+            "user.last_name": semantic_field(
+                "user__last_name", "string", nullable=False, label="Owner last name"
+            ),
+            "user.username": semantic_field(
+                "user__username", "string", nullable=False, label="Owner username"
+            ),
+            "user.email": semantic_field(
+                "user__email",
+                "string",
+                nullable=False,
+                label="Owner email",
+                sensitive=True,
+                result_visible=True,
+                requires_permission=StaffGrant.STAFF_PII_VIEW,
+            ),
+            "is_primary": semantic_field(
+                "is_primary",
+                "boolean",
+                nullable=False,
+                label="Primary owner assignment",
+            ),
+            "created_at": semantic_field(
+                "created_at", "datetime", nullable=False, label="Created date"
+            ),
         },
         metrics=[
             Metric(
@@ -139,16 +197,36 @@ def register_member_resources() -> None:
         description="Non-PII member profile facts scoped by facility reporting grants.",
         default_date_field="member_since",
         fields={
-            "member_id": {"label": "Member ID", "llm_visible": False},
-            "facility.name": {
-                "label": "Facility",
-                "scope_dimension": True,
-                "requires_permission": StaffGrant.FACILITY_VIEW,
-            },
-            "gender": {"label": "Gender"},
-            "member_since": {"label": "Member since"},
-            "created_at": {"label": "Created date"},
-            "created_via_portal": {"label": "Created via portal"},
+            "member_id": semantic_field(
+                "member_id",
+                "uuid",
+                nullable=False,
+                label="Member ID",
+                llm_visible=False,
+            ),
+            "facility.name": semantic_field(
+                "facility__name",
+                "string",
+                nullable=False,
+                label="Facility",
+                scope_dimension=True,
+                requires_permission=StaffGrant.FACILITY_VIEW,
+            ),
+            "gender": semantic_field(
+                "gender", "string", nullable=False, label="Gender"
+            ),
+            "member_since": semantic_field(
+                "member_since", "datetime", nullable=True, label="Member since"
+            ),
+            "created_at": semantic_field(
+                "created_at", "datetime", nullable=False, label="Created date"
+            ),
+            "created_via_portal": semantic_field(
+                "created_via_portal",
+                "boolean",
+                nullable=False,
+                label="Created via portal",
+            ),
         },
         metrics=[Metric("member_count", op="count", field="gender", label="Members")],
         scope_mode="context_scoped",
@@ -165,43 +243,69 @@ def register_member_resources() -> None:
         description="Permission-scoped member contact details for approved facilities.",
         default_date_field="member_since",
         fields={
-            "member_id": {"label": "Member ID", "llm_visible": False},
-            "facility.name": {
-                "label": "Facility",
-                "scope_dimension": True,
-                "requires_permission": StaffGrant.FACILITY_VIEW,
-            },
-            "first_name": {
-                "label": "First name",
-                "sensitive": True,
-                "result_visible": True,
-                "requires_permission": StaffGrant.MEMBER_PII_VIEW,
-            },
-            "last_name": {
-                "label": "Last name",
-                "sensitive": True,
-                "result_visible": True,
-                "requires_permission": StaffGrant.MEMBER_PII_VIEW,
-            },
-            "email": {
-                "label": "Email",
-                "sensitive": True,
-                "result_visible": True,
-                "requires_permission": StaffGrant.MEMBER_PII_VIEW,
-            },
-            "phone": {
-                "label": "Phone",
-                "sensitive": True,
-                "result_visible": False,
-                "requires_permission": StaffGrant.MEMBER_PII_VIEW,
-            },
-            "date_of_birth": {
-                "label": "Date of birth",
-                "sensitive": True,
-                "result_visible": False,
-                "requires_permission": StaffGrant.MEMBER_PII_VIEW,
-            },
-            "member_since": {"label": "Member since"},
+            "member_id": semantic_field(
+                "member_id",
+                "uuid",
+                nullable=False,
+                label="Member ID",
+                llm_visible=False,
+            ),
+            "facility.name": semantic_field(
+                "facility__name",
+                "string",
+                nullable=False,
+                label="Facility",
+                scope_dimension=True,
+                requires_permission=StaffGrant.FACILITY_VIEW,
+            ),
+            "first_name": semantic_field(
+                "first_name",
+                "string",
+                nullable=False,
+                label="First name",
+                sensitive=True,
+                result_visible=True,
+                requires_permission=StaffGrant.MEMBER_PII_VIEW,
+            ),
+            "last_name": semantic_field(
+                "last_name",
+                "string",
+                nullable=False,
+                label="Last name",
+                sensitive=True,
+                result_visible=True,
+                requires_permission=StaffGrant.MEMBER_PII_VIEW,
+            ),
+            "email": semantic_field(
+                "email",
+                "string",
+                nullable=False,
+                label="Email",
+                sensitive=True,
+                result_visible=True,
+                requires_permission=StaffGrant.MEMBER_PII_VIEW,
+            ),
+            "phone": semantic_field(
+                "phone",
+                "string",
+                nullable=False,
+                label="Phone",
+                sensitive=True,
+                result_visible=False,
+                requires_permission=StaffGrant.MEMBER_PII_VIEW,
+            ),
+            "date_of_birth": semantic_field(
+                "date_of_birth",
+                "date",
+                nullable=True,
+                label="Date of birth",
+                sensitive=True,
+                result_visible=False,
+                requires_permission=StaffGrant.MEMBER_PII_VIEW,
+            ),
+            "member_since": semantic_field(
+                "member_since", "datetime", nullable=True, label="Member since"
+            ),
         },
         metrics=[
             Metric("contact_count", op="count", field="member_id", label="Contacts")
@@ -220,11 +324,25 @@ def register_member_resources() -> None:
         description="Tenant-scoped member status history.",
         default_date_field="start_date",
         fields={
-            "status_id": {"label": "Status ID", "llm_visible": False},
-            "status": {"label": "Status"},
-            "start_date": {"label": "Start date"},
-            "end_date": {"label": "End date"},
-            "member.member_since": {"label": "Member since"},
+            "status_id": semantic_field(
+                "status_id",
+                "uuid",
+                nullable=False,
+                label="Status ID",
+                llm_visible=False,
+            ),
+            "status": semantic_field(
+                "status", "string", nullable=False, label="Status"
+            ),
+            "start_date": semantic_field(
+                "start_date", "datetime", nullable=False, label="Start date"
+            ),
+            "end_date": semantic_field(
+                "end_date", "datetime", nullable=True, label="End date"
+            ),
+            "member.member_since": semantic_field(
+                "member__member_since", "datetime", nullable=True, label="Member since"
+            ),
         },
         metrics=[Metric("status_count", op="count", field="status", label="Statuses")],
         scope_mode="context_scoped",
@@ -241,17 +359,52 @@ def register_member_resources() -> None:
         description="Purchased subscription/package facts scoped by facility grants.",
         default_date_field="start_date",
         fields={
-            "subscription_id": {"label": "Subscription ID", "llm_visible": False},
-            "status": {"label": "Status"},
-            "start_date": {"label": "Start date"},
-            "end_date": {"label": "End date"},
-            "billing_start_date": {"label": "Billing start date"},
-            "cancellation_date": {"label": "Cancellation date"},
-            "auto_renew": {"label": "Auto-renew"},
-            "auto_pay": {"label": "Auto-pay"},
-            "is_prorated": {"label": "Prorated"},
-            "plan.name": {"label": "Plan"},
-            "plan.sales_status": {"label": "Plan sales status"},
+            "subscription_id": semantic_field(
+                "subscription_id",
+                "uuid",
+                nullable=False,
+                label="Subscription ID",
+                llm_visible=False,
+            ),
+            "status": semantic_field(
+                "status", "string", nullable=False, label="Status"
+            ),
+            "start_date": semantic_field(
+                "start_date", "datetime", nullable=False, label="Start date"
+            ),
+            "end_date": semantic_field(
+                "end_date", "datetime", nullable=False, label="End date"
+            ),
+            "billing_start_date": semantic_field(
+                "billing_start_date",
+                "datetime",
+                nullable=False,
+                label="Billing start date",
+            ),
+            "cancellation_date": semantic_field(
+                "cancellation_date",
+                "datetime",
+                nullable=True,
+                label="Cancellation date",
+            ),
+            "auto_renew": semantic_field(
+                "auto_renew", "boolean", nullable=False, label="Auto-renew"
+            ),
+            "auto_pay": semantic_field(
+                "auto_pay", "boolean", nullable=False, label="Auto-pay"
+            ),
+            "is_prorated": semantic_field(
+                "is_prorated", "boolean", nullable=False, label="Prorated"
+            ),
+            "plan.name": semantic_field(
+                "plan__name", "string", nullable=False, label="Plan"
+            ),
+            "plan.sales_status": semantic_field(
+                "plan__sales_status",
+                "string",
+                nullable=False,
+                label="Plan sales status",
+            ),
         },
         metrics=[
             Metric(
@@ -280,33 +433,72 @@ def register_billing_resources() -> None:
         description="Tenant-scoped billing line items for reporting.",
         default_date_field="billing_document.paid_at",
         fields={
-            "line_id": {"label": "Billing line ID", "llm_visible": False},
-            "billing_document.paid_at": {"label": "Paid date"},
-            "billing_document.due_date": {"label": "Due date"},
-            "billing_document.status": {"label": "Billing status"},
-            "product_name": {"label": "Product"},
-            "plan.name": {"label": "Plan"},
-            "quantity": {"label": "Quantity", "metric": True},
-            "item_price_cents": {
-                "label": "Item price in cents",
-                "metric": True,
-                "requires_permission": StaffGrant.BILLING_REPORTS_VIEW,
-            },
-            "pretax_amount_cents": {
-                "label": "Pre-tax amount in cents",
-                "metric": True,
-                "requires_permission": StaffGrant.BILLING_REPORTS_VIEW,
-            },
-            "tax_cents": {
-                "label": "Tax in cents",
-                "metric": True,
-                "requires_permission": StaffGrant.BILLING_REPORTS_VIEW,
-            },
-            "total_amount_cents": {
-                "label": "Total amount in cents",
-                "metric": True,
-                "requires_permission": StaffGrant.BILLING_REPORTS_VIEW,
-            },
+            "line_id": semantic_field(
+                "line_id",
+                "uuid",
+                nullable=False,
+                label="Billing line ID",
+                llm_visible=False,
+            ),
+            "billing_document.paid_at": semantic_field(
+                "billing_document__paid_at",
+                "datetime",
+                nullable=True,
+                label="Paid date",
+            ),
+            "billing_document.due_date": semantic_field(
+                "billing_document__due_date",
+                "datetime",
+                nullable=False,
+                label="Due date",
+            ),
+            "billing_document.status": semantic_field(
+                "billing_document__status",
+                "string",
+                nullable=False,
+                label="Billing status",
+            ),
+            "product_name": semantic_field(
+                "product_name", "string", nullable=False, label="Product"
+            ),
+            "plan.name": semantic_field(
+                "plan__name", "string", nullable=True, label="Plan"
+            ),
+            "quantity": semantic_field(
+                "quantity", "integer", nullable=False, label="Quantity", metric=True
+            ),
+            "item_price_cents": semantic_field(
+                "item_price_cents",
+                "integer",
+                nullable=False,
+                label="Item price in cents",
+                metric=True,
+                requires_permission=StaffGrant.BILLING_REPORTS_VIEW,
+            ),
+            "pretax_amount_cents": semantic_field(
+                "pretax_amount_cents",
+                "integer",
+                nullable=False,
+                label="Pre-tax amount in cents",
+                metric=True,
+                requires_permission=StaffGrant.BILLING_REPORTS_VIEW,
+            ),
+            "tax_cents": semantic_field(
+                "tax_cents",
+                "integer",
+                nullable=False,
+                label="Tax in cents",
+                metric=True,
+                requires_permission=StaffGrant.BILLING_REPORTS_VIEW,
+            ),
+            "total_amount_cents": semantic_field(
+                "total_amount_cents",
+                "integer",
+                nullable=False,
+                label="Total amount in cents",
+                metric=True,
+                requires_permission=StaffGrant.BILLING_REPORTS_VIEW,
+            ),
         },
         metrics=[
             Metric(
@@ -343,21 +535,44 @@ def register_billing_resources() -> None:
         description="Tenant-scoped payment attempts with processor fields omitted.",
         default_date_field="created_at",
         fields={
-            "payment_id": {"label": "Payment ID", "llm_visible": False},
-            "created_at": {"label": "Created date"},
-            "status": {"label": "Payment status"},
-            "billing_document.status": {"label": "Billing status"},
-            "amount_cents": {
-                "label": "Amount in cents",
-                "metric": True,
-                "requires_permission": StaffGrant.PAYMENT_REPORTS_VIEW,
-            },
-            "amount_refunded_cents": {
-                "label": "Refunded amount in cents",
-                "metric": True,
-                "requires_permission": StaffGrant.PAYMENT_REPORTS_VIEW,
-            },
-            "refunded": {"label": "Refunded"},
+            "payment_id": semantic_field(
+                "payment_id",
+                "uuid",
+                nullable=False,
+                label="Payment ID",
+                llm_visible=False,
+            ),
+            "created_at": semantic_field(
+                "created_at", "datetime", nullable=False, label="Created date"
+            ),
+            "status": semantic_field(
+                "status", "string", nullable=False, label="Payment status"
+            ),
+            "billing_document.status": semantic_field(
+                "billing_document__status",
+                "string",
+                nullable=False,
+                label="Billing status",
+            ),
+            "amount_cents": semantic_field(
+                "amount_cents",
+                "integer",
+                nullable=False,
+                label="Amount in cents",
+                metric=True,
+                requires_permission=StaffGrant.PAYMENT_REPORTS_VIEW,
+            ),
+            "amount_refunded_cents": semantic_field(
+                "amount_refunded_cents",
+                "integer",
+                nullable=False,
+                label="Refunded amount in cents",
+                metric=True,
+                requires_permission=StaffGrant.PAYMENT_REPORTS_VIEW,
+            ),
+            "refunded": semantic_field(
+                "refunded", "boolean", nullable=False, label="Refunded"
+            ),
         },
         metrics=[
             Metric("payment_count", op="count", field="status", label="Payments"),
@@ -389,23 +604,68 @@ def register_growth_resources() -> None:
         description="Tenant-scoped marketing campaign performance.",
         default_date_field="start_date",
         fields={
-            "campaign_id": {"label": "Campaign ID", "llm_visible": False},
-            "facility.name": {
-                "label": "Facility",
-                "scope_dimension": True,
-                "requires_permission": StaffGrant.ANALYTICS_VIEW,
-            },
-            "name": {"label": "Campaign"},
-            "channel": {"label": "Channel"},
-            "audience": {"label": "Audience"},
-            "status": {"label": "Status"},
-            "start_date": {"label": "Start date"},
-            "end_date": {"label": "End date"},
-            "budget_cents": {"label": "Budget in cents", "metric": True},
-            "spend_cents": {"label": "Spend in cents", "metric": True},
-            "impressions": {"label": "Impressions", "metric": True},
-            "clicks": {"label": "Clicks", "metric": True},
-            "conversions": {"label": "Conversions", "metric": True},
+            "campaign_id": semantic_field(
+                "campaign_id",
+                "uuid",
+                nullable=False,
+                label="Campaign ID",
+                llm_visible=False,
+            ),
+            "facility.name": semantic_field(
+                "facility__name",
+                "string",
+                nullable=False,
+                label="Facility",
+                scope_dimension=True,
+                requires_permission=StaffGrant.ANALYTICS_VIEW,
+            ),
+            "name": semantic_field("name", "string", nullable=False, label="Campaign"),
+            "channel": semantic_field(
+                "channel", "string", nullable=False, label="Channel"
+            ),
+            "audience": semantic_field(
+                "audience", "string", nullable=False, label="Audience"
+            ),
+            "status": semantic_field(
+                "status", "string", nullable=False, label="Status"
+            ),
+            "start_date": semantic_field(
+                "start_date", "date", nullable=False, label="Start date"
+            ),
+            "end_date": semantic_field(
+                "end_date", "date", nullable=True, label="End date"
+            ),
+            "budget_cents": semantic_field(
+                "budget_cents",
+                "integer",
+                nullable=False,
+                label="Budget in cents",
+                metric=True,
+            ),
+            "spend_cents": semantic_field(
+                "spend_cents",
+                "integer",
+                nullable=False,
+                label="Spend in cents",
+                metric=True,
+            ),
+            "impressions": semantic_field(
+                "impressions",
+                "integer",
+                nullable=False,
+                label="Impressions",
+                metric=True,
+            ),
+            "clicks": semantic_field(
+                "clicks", "integer", nullable=False, label="Clicks", metric=True
+            ),
+            "conversions": semantic_field(
+                "conversions",
+                "integer",
+                nullable=False,
+                label="Conversions",
+                metric=True,
+            ),
         },
         metrics=[
             Metric("campaign_count", op="count", field="status", label="Campaigns"),
@@ -443,23 +703,45 @@ def register_growth_resources() -> None:
         description="Tenant-scoped lead funnel facts without contact PII.",
         default_date_field="inquiry_date",
         fields={
-            "lead_id": {"label": "Lead ID", "llm_visible": False},
-            "facility.name": {
-                "label": "Facility",
-                "scope_dimension": True,
-                "requires_permission": StaffGrant.FACILITY_VIEW,
-            },
-            "campaign.name": {"label": "Campaign"},
-            "source": {"label": "Lead source"},
-            "stage": {"label": "Lead stage"},
-            "status": {"label": "Lead status"},
-            "inquiry_date": {"label": "Inquiry date"},
-            "trial_date": {"label": "Trial date"},
-            "converted_at": {"label": "Converted date"},
-            "estimated_value_cents": {
-                "label": "Estimated value in cents",
-                "metric": True,
-            },
+            "lead_id": semantic_field(
+                "lead_id", "uuid", nullable=False, label="Lead ID", llm_visible=False
+            ),
+            "facility.name": semantic_field(
+                "facility__name",
+                "string",
+                nullable=False,
+                label="Facility",
+                scope_dimension=True,
+                requires_permission=StaffGrant.FACILITY_VIEW,
+            ),
+            "campaign.name": semantic_field(
+                "campaign__name", "string", nullable=True, label="Campaign"
+            ),
+            "source": semantic_field(
+                "source", "string", nullable=False, label="Lead source"
+            ),
+            "stage": semantic_field(
+                "stage", "string", nullable=False, label="Lead stage"
+            ),
+            "status": semantic_field(
+                "status", "string", nullable=False, label="Lead status"
+            ),
+            "inquiry_date": semantic_field(
+                "inquiry_date", "datetime", nullable=False, label="Inquiry date"
+            ),
+            "trial_date": semantic_field(
+                "trial_date", "datetime", nullable=True, label="Trial date"
+            ),
+            "converted_at": semantic_field(
+                "converted_at", "datetime", nullable=True, label="Converted date"
+            ),
+            "estimated_value_cents": semantic_field(
+                "estimated_value_cents",
+                "integer",
+                nullable=False,
+                label="Estimated value in cents",
+                metric=True,
+            ),
         },
         metrics=[
             Metric("lead_count", op="count", field="status", label="Leads"),
@@ -486,21 +768,54 @@ def register_schedule_resources() -> None:
         description="Tenant-scoped staff schedule and labor coverage.",
         default_date_field="start_at",
         fields={
-            "shift_id": {"label": "Shift ID", "llm_visible": False},
-            "facility.name": {
-                "label": "Facility",
-                "scope_dimension": True,
-                "requires_permission": StaffGrant.FACILITY_VIEW,
-            },
-            "staff_user.username": {"label": "Staff username"},
-            "location.name": {"label": "Location"},
-            "role": {"label": "Role"},
-            "status": {"label": "Shift status"},
-            "start_at": {"label": "Start time"},
-            "end_at": {"label": "End time"},
-            "planned_minutes": {"label": "Planned minutes", "metric": True},
-            "actual_minutes": {"label": "Actual minutes", "metric": True},
-            "labor_cost_cents": {"label": "Labor cost in cents", "metric": True},
+            "shift_id": semantic_field(
+                "shift_id", "uuid", nullable=False, label="Shift ID", llm_visible=False
+            ),
+            "facility.name": semantic_field(
+                "facility__name",
+                "string",
+                nullable=False,
+                label="Facility",
+                scope_dimension=True,
+                requires_permission=StaffGrant.FACILITY_VIEW,
+            ),
+            "staff_user.username": semantic_field(
+                "staff_user__username", "string", nullable=False, label="Staff username"
+            ),
+            "location.name": semantic_field(
+                "location__name", "string", nullable=True, label="Location"
+            ),
+            "role": semantic_field("role", "string", nullable=False, label="Role"),
+            "status": semantic_field(
+                "status", "string", nullable=False, label="Shift status"
+            ),
+            "start_at": semantic_field(
+                "start_at", "datetime", nullable=False, label="Start time"
+            ),
+            "end_at": semantic_field(
+                "end_at", "datetime", nullable=False, label="End time"
+            ),
+            "planned_minutes": semantic_field(
+                "planned_minutes",
+                "integer",
+                nullable=False,
+                label="Planned minutes",
+                metric=True,
+            ),
+            "actual_minutes": semantic_field(
+                "actual_minutes",
+                "integer",
+                nullable=False,
+                label="Actual minutes",
+                metric=True,
+            ),
+            "labor_cost_cents": semantic_field(
+                "labor_cost_cents",
+                "integer",
+                nullable=False,
+                label="Labor cost in cents",
+                metric=True,
+            ),
         },
         metrics=[
             Metric("shift_count", op="count", field="status", label="Shifts"),
@@ -534,14 +849,42 @@ def register_schedule_resources() -> None:
         description="Tenant-scoped scheduled sessions/classes.",
         default_date_field="start_date",
         fields={
-            "session_id": {"label": "Session ID", "llm_visible": False},
-            "start_date": {"label": "Start date"},
-            "start_time": {"label": "Start time"},
-            "duration_minutes": {"label": "Duration minutes", "metric": True},
-            "capacity": {"label": "Capacity", "metric": True},
-            "waitlist_limit": {"label": "Waitlist limit", "metric": True},
-            "session_type.name": {"label": "Session type"},
-            "location.name": {"label": "Location"},
+            "session_id": semantic_field(
+                "session_id",
+                "uuid",
+                nullable=False,
+                label="Session ID",
+                llm_visible=False,
+            ),
+            "start_date": semantic_field(
+                "start_date", "date", nullable=False, label="Start date"
+            ),
+            "start_time": semantic_field(
+                "start_time", "time", nullable=False, label="Start time"
+            ),
+            "duration_minutes": semantic_field(
+                "duration_minutes",
+                "integer",
+                nullable=False,
+                label="Duration minutes",
+                metric=True,
+            ),
+            "capacity": semantic_field(
+                "capacity", "integer", nullable=False, label="Capacity", metric=True
+            ),
+            "waitlist_limit": semantic_field(
+                "waitlist_limit",
+                "integer",
+                nullable=True,
+                label="Waitlist limit",
+                metric=True,
+            ),
+            "session_type.name": semantic_field(
+                "session_type__name", "string", nullable=False, label="Session type"
+            ),
+            "location.name": semantic_field(
+                "location__name", "string", nullable=True, label="Location"
+            ),
         },
         metrics=[
             Metric("session_count", op="count", field="start_date", label="Sessions"),
@@ -571,17 +914,50 @@ def register_schedule_resources() -> None:
         ),
         default_date_field="booked_at",
         fields={
-            "booking_id": {"label": "Booking ID", "llm_visible": False},
-            "booked_at": {"label": "Booked date"},
-            "checked_in_at": {"label": "Check-in date"},
-            "canceled_at": {"label": "Canceled date"},
-            "status": {"label": "Booking status"},
-            "source": {"label": "Booking source"},
-            "party_size": {"label": "Party size", "metric": True},
-            "price_cents": {"label": "Booking price in cents", "metric": True},
-            "session.start_date": {"label": "Session date"},
-            "session.session_type.name": {"label": "Session type"},
-            "session.location.name": {"label": "Location"},
+            "booking_id": semantic_field(
+                "booking_id",
+                "uuid",
+                nullable=False,
+                label="Booking ID",
+                llm_visible=False,
+            ),
+            "booked_at": semantic_field(
+                "booked_at", "datetime", nullable=False, label="Booked date"
+            ),
+            "checked_in_at": semantic_field(
+                "checked_in_at", "datetime", nullable=True, label="Check-in date"
+            ),
+            "canceled_at": semantic_field(
+                "canceled_at", "datetime", nullable=True, label="Canceled date"
+            ),
+            "status": semantic_field(
+                "status", "string", nullable=False, label="Booking status"
+            ),
+            "source": semantic_field(
+                "source", "string", nullable=False, label="Booking source"
+            ),
+            "party_size": semantic_field(
+                "party_size", "integer", nullable=False, label="Party size", metric=True
+            ),
+            "price_cents": semantic_field(
+                "price_cents",
+                "integer",
+                nullable=False,
+                label="Booking price in cents",
+                metric=True,
+            ),
+            "session.start_date": semantic_field(
+                "session__start_date", "date", nullable=False, label="Session date"
+            ),
+            "session.session_type.name": semantic_field(
+                "session__session_type__name",
+                "string",
+                nullable=False,
+                label="Session type",
+            ),
+            "session.location.name": semantic_field(
+                "session__location__name", "string", nullable=True, label="Location"
+            ),
         },
         metrics=[
             Metric("booking_count", op="count", field="status", label="Bookings"),
@@ -613,21 +989,59 @@ def register_support_resources() -> None:
         description="Tenant-scoped support ticket volume and resolution facts.",
         default_date_field="opened_at",
         fields={
-            "ticket_id": {"label": "Ticket ID", "llm_visible": False},
-            "facility.name": {
-                "label": "Facility",
-                "scope_dimension": True,
-                "requires_permission": StaffGrant.ANALYTICS_VIEW,
-            },
-            "category": {"label": "Category"},
-            "priority": {"label": "Priority"},
-            "status": {"label": "Ticket status"},
-            "channel": {"label": "Channel"},
-            "opened_at": {"label": "Opened date"},
-            "first_response_at": {"label": "First response date"},
-            "resolved_at": {"label": "Resolved date"},
-            "satisfaction_score": {"label": "Satisfaction score", "metric": True},
-            "messages_count": {"label": "Message count", "metric": True},
+            "ticket_id": semantic_field(
+                "ticket_id",
+                "uuid",
+                nullable=False,
+                label="Ticket ID",
+                llm_visible=False,
+            ),
+            "facility.name": semantic_field(
+                "facility__name",
+                "string",
+                nullable=False,
+                label="Facility",
+                scope_dimension=True,
+                requires_permission=StaffGrant.ANALYTICS_VIEW,
+            ),
+            "category": semantic_field(
+                "category", "string", nullable=False, label="Category"
+            ),
+            "priority": semantic_field(
+                "priority", "string", nullable=False, label="Priority"
+            ),
+            "status": semantic_field(
+                "status", "string", nullable=False, label="Ticket status"
+            ),
+            "channel": semantic_field(
+                "channel", "string", nullable=False, label="Channel"
+            ),
+            "opened_at": semantic_field(
+                "opened_at", "datetime", nullable=False, label="Opened date"
+            ),
+            "first_response_at": semantic_field(
+                "first_response_at",
+                "datetime",
+                nullable=True,
+                label="First response date",
+            ),
+            "resolved_at": semantic_field(
+                "resolved_at", "datetime", nullable=True, label="Resolved date"
+            ),
+            "satisfaction_score": semantic_field(
+                "satisfaction_score",
+                "integer",
+                nullable=True,
+                label="Satisfaction score",
+                metric=True,
+            ),
+            "messages_count": semantic_field(
+                "messages_count",
+                "integer",
+                nullable=False,
+                label="Message count",
+                metric=True,
+            ),
         },
         metrics=[
             Metric("ticket_count", op="count", field="status", label="Tickets"),

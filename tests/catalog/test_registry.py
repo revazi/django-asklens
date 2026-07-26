@@ -31,12 +31,45 @@ def order_fields() -> dict[str, dict[str, object]]:
     """Return a representative field allowlist for Order resources."""
 
     return {
-        "id": {"label": "Order ID"},
-        "status": {"label": "Status"},
-        "created_at": {"label": "Created date"},
-        "customer.email": {"label": "Customer email", "sensitive": True},
-        "total": {"label": "Order total", "metric": True},
-        "internal_notes": {"label": "Internal notes", "llm_visible": False},
+        "id": {
+            "binding": "id",
+            "type": "integer",
+            "nullable": False,
+            "label": "Order ID",
+        },
+        "status": {
+            "binding": "status",
+            "type": "string",
+            "nullable": False,
+            "label": "Status",
+        },
+        "created_at": {
+            "binding": "created_at",
+            "type": "datetime",
+            "nullable": False,
+            "label": "Created date",
+        },
+        "customer.email": {
+            "binding": "customer__email",
+            "type": "string",
+            "nullable": False,
+            "label": "Customer email",
+            "sensitive": True,
+        },
+        "total": {
+            "binding": "total",
+            "type": "decimal",
+            "nullable": False,
+            "label": "Order total",
+            "metric": True,
+        },
+        "internal_notes": {
+            "binding": "internal_notes",
+            "type": "string",
+            "nullable": False,
+            "label": "Internal notes",
+            "llm_visible": False,
+        },
     }
 
 
@@ -74,26 +107,37 @@ def test_public_register_api_registers_resource() -> None:
     assert catalog["resources"][0]["name"] == "orders"
     assert "model" not in catalog["resources"][0]
 
-    internal_catalog = serialize_catalog(include_internal=True)
-    assert internal_catalog["resources"][0]["model"] == "test_project.Order"
+    with pytest.raises(TypeError, match="include_internal"):
+        serialize_catalog(include_internal=True)
 
 
 def test_duplicate_resource_name_fails_loudly() -> None:
     registry = CatalogRegistry()
     registry.register(
-        model=Order, name="orders", scope_mode="global", fields={"id": {}}
+        model=Order,
+        name="orders",
+        scope_mode="global",
+        fields={"id": {"binding": "id", "type": "integer", "nullable": False}},
     )
 
     with pytest.raises(DuplicateResourceError, match="orders"):
         registry.register(
-            model=Order, name="orders", scope_mode="global", fields={"id": {}}
+            model=Order,
+            name="orders",
+            scope_mode="global",
+            fields={"id": {"binding": "id", "type": "integer", "nullable": False}},
         )
 
 
 def test_field_allowlist_is_explicit_and_validated() -> None:
     registry = CatalogRegistry()
     resource = registry.register(
-        model=Order, scope_mode="global", fields={"id": {}, "status": {}}
+        model=Order,
+        scope_mode="global",
+        fields={
+            "id": {"binding": "id", "type": "integer", "nullable": False},
+            "status": {"binding": "status", "type": "string", "nullable": False},
+        },
     )
 
     assert set(resource.fields) == {"id", "status"}
@@ -104,7 +148,13 @@ def test_field_allowlist_is_explicit_and_validated() -> None:
             model=Order,
             name="bad_field",
             scope_mode="global",
-            fields={"does_not_exist": {}},
+            fields={
+                "does_not_exist": {
+                    "binding": "does_not_exist",
+                    "type": "string",
+                    "nullable": False,
+                }
+            },
         )
 
     with pytest.raises(UnknownFieldError, match="non-relation"):
@@ -112,21 +162,185 @@ def test_field_allowlist_is_explicit_and_validated() -> None:
             model=Order,
             name="bad_path",
             scope_mode="global",
-            fields={"status.code": {}},
+            fields={
+                "status.code": {
+                    "binding": "status__code",
+                    "type": "string",
+                    "nullable": False,
+                }
+            },
         )
+
+
+def test_semantic_field_keys_are_separate_from_private_django_bindings() -> None:
+    """Catalog keys stay public while trusted Django paths remain private."""
+
+    registry = CatalogRegistry()
+    resource = registry.register(
+        model=Order,
+        name="orders",
+        scope_mode="global",
+        fields={
+            "order.number": {
+                "binding": "id",
+                "type": "integer",
+                "nullable": False,
+                "label": "Order number",
+            },
+            "customer_contact": {
+                "binding": "customer__email",
+                "type": "string",
+                "nullable": False,
+                "label": "Customer contact",
+                "requires_permission": "customers.view_pii",
+            },
+        },
+    )
+
+    assert resource.fields["order.number"].binding == "id"
+    assert resource.fields["customer_contact"].binding == "customer__email"
+    assert resource.fields["customer_contact"].relation_depth == 1
+    assert resource.fields["customer_contact"].relationship_edges == ("customer",)
+    catalog = registry.to_dict(permissions={"customers.view_pii"})
+    serialized = str(catalog)
+    assert {field["name"] for field in catalog["resources"][0]["fields"]} == {
+        "order.number",
+        "customer_contact",
+    }
+    assert "binding" not in serialized
+    assert "customer__email" not in serialized
+    assert "customers.view_pii" not in serialized
+    assert "test_project.Order" not in serialized
+    assert all(
+        field["nullable"] is False for field in catalog["resources"][0]["fields"]
+    )
+
+
+def test_missing_private_field_binding_is_a_migration_error() -> None:
+    """A 0.1 field name must never be converted into an ORM path implicitly."""
+
+    registry = CatalogRegistry()
+
+    with pytest.raises(InvalidResourceError, match="binding.*required"):
+        registry.register(
+            model=Order,
+            name="orders",
+            scope_mode="global",
+            fields={"id": {}},
+        )
+
+    assert registry.all() == ()
+
+
+@pytest.mark.parametrize(
+    ("config", "message"),
+    [
+        ({"binding": "id", "nullable": False}, "Canonical type is required"),
+        ({"binding": "id", "type": "integer"}, "nullable must be a boolean"),
+    ],
+)
+def test_field_type_and_nullability_are_required(
+    config: dict[str, object],
+    message: str,
+) -> None:
+    """Public field metadata must not be inferred from a private binding."""
+
+    registry = CatalogRegistry()
+
+    with pytest.raises(InvalidResourceError, match=message):
+        registry.register(
+            model=Order,
+            name="orders",
+            scope_mode="global",
+            fields={"order_id": config},
+        )
+
+
+def test_unsupported_canonical_field_type_fails_registration() -> None:
+    """Legacy or backend-specific type labels cannot enter public metadata."""
+
+    registry = CatalogRegistry()
+
+    with pytest.raises(InvalidResourceError, match="Unsupported canonical type"):
+        registry.register(
+            model=Order,
+            name="orders",
+            scope_mode="global",
+            fields={
+                "amount": {
+                    "binding": "total",
+                    "type": "number",
+                    "nullable": False,
+                }
+            },
+        )
+
+
+def test_non_null_semantics_reject_a_nullable_private_binding() -> None:
+    """Registration cannot promise non-null values for a nullable traversal."""
+
+    registry = CatalogRegistry()
+
+    with pytest.raises(InvalidResourceError, match="cannot be non-null"):
+        registry.register(
+            model=Order,
+            name="orders",
+            scope_mode="global",
+            fields={
+                "account_name": {
+                    "binding": "account__name",
+                    "type": "string",
+                    "nullable": False,
+                }
+            },
+        )
+
+
+def test_unknown_private_field_binding_fails_registration() -> None:
+    """Invalid trusted bindings fail while the semantic key stays independent."""
+
+    registry = CatalogRegistry()
+
+    with pytest.raises(UnknownFieldError, match="missing_field"):
+        registry.register(
+            model=Order,
+            name="orders",
+            scope_mode="global",
+            fields={
+                "order_id": {
+                    "binding": "missing_field",
+                    "type": "integer",
+                    "nullable": False,
+                }
+            },
+        )
+
+    assert registry.all() == ()
 
 
 def test_registered_resource_metadata_is_effectively_immutable() -> None:
     registry = CatalogRegistry()
     resource = registry.register(
-        model=Order, scope_mode="global", fields={"id": {}, "status": {}}
+        model=Order,
+        scope_mode="global",
+        fields={
+            "id": {"binding": "id", "type": "integer", "nullable": False},
+            "status": {"binding": "status", "type": "string", "nullable": False},
+        },
     )
 
     with pytest.raises(FrozenInstanceError):
         resource.name = "other"
 
     with pytest.raises(TypeError):
-        resource.fields["total"] = FieldSpec("total", "Total", "number", 0)
+        resource.fields["total"] = FieldSpec(
+            name="total",
+            label="Total",
+            type="decimal",
+            nullable=False,
+            binding="total",
+            relation_depth=0,
+        )
 
 
 def test_scope_metadata_is_explicit_and_schema_agnostic() -> None:
@@ -138,7 +352,15 @@ def test_scope_metadata_is_explicit_and_schema_agnostic() -> None:
         name="locations",
         label="Locations",
         scope_mode="global",
-        fields={"id": {}, "customer.email": {"scope_dimension": True}},
+        fields={
+            "id": {"binding": "id", "type": "integer", "nullable": False},
+            "customer.email": {
+                "binding": "customer__email",
+                "type": "string",
+                "nullable": False,
+                "scope_dimension": True,
+            },
+        },
         scope_resource=True,
         examples_enabled=False,
     )
@@ -156,7 +378,10 @@ def test_resource_permission_scopes_catalog_visibility() -> None:
         model=Order,
         name="orders",
         scope_mode="global",
-        fields={"id": {}, "status": {}},
+        fields={
+            "id": {"binding": "id", "type": "integer", "nullable": False},
+            "status": {"binding": "status", "type": "string", "nullable": False},
+        },
         requires_permission="shop.view_orders",
     )
 
@@ -225,7 +450,14 @@ def test_field_config_validation_catches_typos_and_bad_types() -> None:
             model=Order,
             name="typo",
             scope_mode="global",
-            fields={"customer.email": {"sensitve": True}},
+            fields={
+                "customer.email": {
+                    "binding": "customer__email",
+                    "type": "string",
+                    "nullable": False,
+                    "sensitve": True,
+                }
+            },
         )
 
     with pytest.raises(InvalidResourceError, match="llm_visible"):
@@ -233,7 +465,14 @@ def test_field_config_validation_catches_typos_and_bad_types() -> None:
             model=Order,
             name="bad_bool",
             scope_mode="global",
-            fields={"customer.email": {"llm_visible": "no"}},
+            fields={
+                "customer.email": {
+                    "binding": "customer__email",
+                    "type": "string",
+                    "nullable": False,
+                    "llm_visible": "no",
+                }
+            },
         )
 
     with pytest.raises(InvalidResourceError, match="requires_permission"):
@@ -241,7 +480,14 @@ def test_field_config_validation_catches_typos_and_bad_types() -> None:
             model=Order,
             name="bad_permission",
             scope_mode="global",
-            fields={"customer.email": {"requires_permission": object()}},
+            fields={
+                "customer.email": {
+                    "binding": "customer__email",
+                    "type": "string",
+                    "nullable": False,
+                    "requires_permission": object(),
+                }
+            },
         )
 
     with pytest.raises(InvalidResourceError, match="scope_dimension"):
@@ -249,16 +495,25 @@ def test_field_config_validation_catches_typos_and_bad_types() -> None:
             model=Order,
             name="bad_scope_dimension",
             scope_mode="global",
-            fields={"customer.email": {"scope_dimension": "yes"}},
+            fields={
+                "customer.email": {
+                    "binding": "customer__email",
+                    "type": "string",
+                    "nullable": False,
+                    "scope_dimension": "yes",
+                }
+            },
         )
 
 
-def test_prebuilt_field_specs_are_still_validated_against_model_paths() -> None:
+def test_prebuilt_field_specs_are_validated_against_private_bindings() -> None:
     registry = CatalogRegistry()
     field_spec = FieldSpec(
         name="status",
         label="Status",
         type="string",
+        nullable=False,
+        binding="status",
         relation_depth=0,
     )
 
@@ -266,14 +521,24 @@ def test_prebuilt_field_specs_are_still_validated_against_model_paths() -> None:
         model=Order, scope_mode="global", fields={"status": field_spec}
     )
 
-    assert resource.fields["status"] is field_spec
+    assert resource.fields["status"] == field_spec
+    assert resource.fields["status"].binding == "status"
 
-    with pytest.raises(InvalidResourceError, match="must match field path"):
+    with pytest.raises(InvalidResourceError, match="must match semantic key"):
         registry.register(
             model=Order,
             name="mismatch",
             scope_mode="global",
-            fields={"status": FieldSpec("total", "Total", "number", 0)},
+            fields={
+                "status": FieldSpec(
+                    name="total",
+                    label="Total",
+                    type="decimal",
+                    nullable=False,
+                    binding="total",
+                    relation_depth=0,
+                )
+            },
         )
 
     with pytest.raises(UnknownFieldError, match="missing"):
@@ -281,7 +546,16 @@ def test_prebuilt_field_specs_are_still_validated_against_model_paths() -> None:
             model=Order,
             name="missing_spec",
             scope_mode="global",
-            fields={"missing": FieldSpec("missing", "Missing", "string", 0)},
+            fields={
+                "missing": FieldSpec(
+                    name="missing",
+                    label="Missing",
+                    type="string",
+                    nullable=False,
+                    binding="missing",
+                    relation_depth=0,
+                )
+            },
         )
 
 
@@ -290,7 +564,10 @@ def test_resource_config_validation() -> None:
 
     with pytest.raises(InvalidResourceError, match="Django model class"):
         registry.register(
-            model=object, name="bad_model", scope_mode="global", fields={"id": {}}
+            model=object,
+            name="bad_model",
+            scope_mode="global",
+            fields={"id": {"binding": "id", "type": "string", "nullable": False}},
         )
 
     with pytest.raises(InvalidResourceError, match="synonyms"):
@@ -298,7 +575,7 @@ def test_resource_config_validation() -> None:
             model=Order,
             name="bad_synonyms",
             scope_mode="global",
-            fields={"id": {}},
+            fields={"id": {"binding": "id", "type": "integer", "nullable": False}},
             synonyms="sales",
         )
 
@@ -306,7 +583,7 @@ def test_resource_config_validation() -> None:
         registry.register(
             model=Order,
             name="bad_scope_provider",
-            fields={"id": {}},
+            fields={"id": {"binding": "id", "type": "integer", "nullable": False}},
             scope_mode="context_scoped",
             scope_provider=object(),
         )
@@ -316,7 +593,7 @@ def test_resource_config_validation() -> None:
             model=Order,
             name="bad_resource_permission",
             scope_mode="global",
-            fields={"id": {}},
+            fields={"id": {"binding": "id", "type": "integer", "nullable": False}},
             requires_permission=object(),
         )
 
@@ -325,7 +602,7 @@ def test_resource_config_validation() -> None:
             model=Order,
             name="bad_scope_resource",
             scope_mode="global",
-            fields={"id": {}},
+            fields={"id": {"binding": "id", "type": "integer", "nullable": False}},
             scope_resource=object(),
         )
 
@@ -334,7 +611,7 @@ def test_resource_config_validation() -> None:
             model=Order,
             name="bad_examples_enabled",
             scope_mode="global",
-            fields={"id": {}},
+            fields={"id": {"binding": "id", "type": "integer", "nullable": False}},
             examples_enabled=object(),
         )
 
@@ -344,7 +621,10 @@ def test_metric_registration_is_validated() -> None:
     resource = registry.register(
         model=Order,
         scope_mode="global",
-        fields={"id": {}, "total": {}},
+        fields={
+            "id": {"binding": "id", "type": "integer", "nullable": False},
+            "total": {"binding": "total", "type": "decimal", "nullable": False},
+        },
         metrics=[Metric("revenue", op="sum", field="total")],
     )
 
@@ -360,7 +640,7 @@ def test_metric_registration_is_validated() -> None:
             model=Order,
             name="bad_metric_field",
             scope_mode="global",
-            fields={"id": {}},
+            fields={"id": {"binding": "id", "type": "integer", "nullable": False}},
             metrics=[Metric("bad", op="count", field="missing")],
         )
 
@@ -375,7 +655,7 @@ def test_default_date_field_must_be_allowlisted_and_date_like() -> None:
         registry.register(
             model=Order,
             scope_mode="global",
-            fields={"id": {}},
+            fields={"id": {"binding": "id", "type": "integer", "nullable": False}},
             default_date_field="created_at",
         )
 
@@ -384,15 +664,36 @@ def test_default_date_field_must_be_allowlisted_and_date_like() -> None:
             model=Order,
             name="bad_default_date_type",
             scope_mode="global",
-            fields={"id": {}, "status": {}},
+            fields={
+                "id": {"binding": "id", "type": "integer", "nullable": False},
+                "status": {"binding": "status", "type": "string", "nullable": False},
+            },
             default_date_field="status",
         )
 
-    with pytest.raises(InvalidResourceError, match="date or datetime"):
+    with pytest.raises(InvalidResourceError, match="does not match"):
         registry.register(
             model=Order,
             name="bad_default_date_override",
             scope_mode="global",
-            fields={"id": {}, "status": {"type": "date"}},
+            fields={
+                "id": {"binding": "id", "type": "integer", "nullable": False},
+                "status": {"binding": "status", "nullable": False, "type": "date"},
+            },
             default_date_field="status",
+        )
+
+    with pytest.raises(InvalidResourceError, match="does not match"):
+        registry.register(
+            model=Order,
+            name="bad_default_date_semantics",
+            scope_mode="global",
+            fields={
+                "placed_at": {
+                    "binding": "created_at",
+                    "type": "string",
+                    "nullable": False,
+                }
+            },
+            default_date_field="placed_at",
         )

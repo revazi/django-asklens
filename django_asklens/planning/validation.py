@@ -285,7 +285,10 @@ def build_choice_value_lookup(
 ) -> dict[str, object]:
     """Return normalized choice label/value tokens for one field."""
 
-    field = resolve_field_path(resource.model, field_name).field
+    field = resolve_field_path(
+        resource.model,
+        resource.fields[field_name].binding,
+    ).field
     flat_choices = tuple(getattr(field, "flatchoices", ()) or ())
     if not flat_choices:
         return {}
@@ -514,10 +517,7 @@ def collect_relationship_edges(
         field = resource.fields.get(field_name)
         if field is None:
             continue
-        parts = field_name.split(".")
-        edges.update(
-            ".".join(parts[: index + 1]) for index in range(field.relation_depth)
-        )
+        edges.update(field.relationship_edges)
     return edges
 
 

@@ -154,7 +154,20 @@ def test_scope_compilation_and_execution_failures_hide_internal_causes(
     registry.register(
         model=Order,
         name="orders",
-        fields={"id": {"label": "ID"}, "status": {"label": "Status"}},
+        fields={
+            "id": {
+                "binding": "id",
+                "type": "integer",
+                "nullable": False,
+                "label": "ID",
+            },
+            "status": {
+                "binding": "status",
+                "type": "string",
+                "nullable": False,
+                "label": "Status",
+            },
+        },
         metrics=[Metric("order_count", op="count", field="id")],
         scope_mode="context_scoped",
         scope_provider=unavailable_scope,

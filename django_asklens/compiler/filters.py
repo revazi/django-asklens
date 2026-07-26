@@ -4,11 +4,8 @@ from datetime import datetime
 
 from django.db.models import Q
 
-from django_asklens.compiler.dates import (
-    parse_temporal_value,
-    relative_datetime,
-    to_orm_path,
-)
+from django_asklens.catalog.resources import SemanticResource
+from django_asklens.compiler.dates import parse_temporal_value, relative_datetime
 from django_asklens.exceptions import PlanValidationError
 from django_asklens.planning.schemas import FilterSpec
 
@@ -26,28 +23,48 @@ LOOKUP_BY_OPERATOR = {
 
 
 def apply_filters(
-    queryset, filters: tuple[FilterSpec, ...], *, now: datetime | None = None
+    queryset,
+    filters: tuple[FilterSpec, ...],
+    *,
+    resource: SemanticResource,
+    now: datetime | None = None,
 ):
-    """Apply validated QueryPlan filters to a queryset."""
+    """Apply validated QueryPlan filters through private field bindings."""
 
     for filter_spec in filters:
-        queryset = apply_filter(queryset, filter_spec, now=now)
+        queryset = apply_filter(
+            queryset,
+            filter_spec,
+            resource=resource,
+            now=now,
+        )
     return queryset
 
 
-def apply_filter(queryset, filter_spec: FilterSpec, *, now: datetime | None = None):
-    """Apply one validated filter to a queryset."""
+def apply_filter(
+    queryset,
+    filter_spec: FilterSpec,
+    *,
+    resource: SemanticResource,
+    now: datetime | None = None,
+):
+    """Apply one validated filter through a private field binding."""
 
-    q_object = build_filter_q(filter_spec, now=now)
+    q_object = build_filter_q(filter_spec, resource=resource, now=now)
     if filter_spec.op == "neq":
         return queryset.exclude(q_object)
     return queryset.filter(q_object)
 
 
-def build_filter_q(filter_spec: FilterSpec, *, now: datetime | None = None) -> Q:
-    """Build a safe ORM Q object for one validated filter."""
+def build_filter_q(
+    filter_spec: FilterSpec,
+    *,
+    resource: SemanticResource,
+    now: datetime | None = None,
+) -> Q:
+    """Build a safe ORM Q object through a private field binding."""
 
-    orm_path = to_orm_path(filter_spec.field)
+    orm_path = resource.fields[filter_spec.field].binding
     operator = filter_spec.op
 
     if operator == "neq":

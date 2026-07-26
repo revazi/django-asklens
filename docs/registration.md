@@ -25,12 +25,33 @@ resource = register(
     synonyms=["sales", "purchases"],
     default_date_field="created_at",
     fields={
-        "id": {"label": "Order ID"},
-        "status": {"label": "Status"},
-        "created_at": {"label": "Created date"},
-        "total": {"label": "Order total", "metric": True},
+        "order_id": {
+            "binding": "id",
+            "type": "integer",
+            "nullable": False,
+            "label": "Order ID",
+        },
+        "status": {
+            "binding": "status",
+            "type": "string",
+            "nullable": False,
+            "label": "Status",
+        },
+        "created_at": {
+            "binding": "created_at",
+            "type": "datetime",
+            "nullable": False,
+            "label": "Created date",
+        },
+        "total": {
+            "binding": "total",
+            "type": "decimal",
+            "nullable": False,
+            "label": "Order total",
+            "metric": True,
+        },
     },
-    metrics=[Metric("order_count", op="count", field="id")],
+    metrics=[Metric("order_count", op="count", field="order_id")],
     default_order=(("created_at", "desc"),),
     requires_permission="orders.view_reports",
     scope_provider=lambda request: Order.objects.filter(account=request.user.account),
@@ -40,7 +61,7 @@ resource = register(
 ### Arguments
 
 - `model`: Django model class to expose as a semantic resource.
-- `fields`: explicit allowlist of field paths. Relation paths such as `customer.name` are allowed when they validate against the model.
+- `fields`: explicit mapping of stable public semantic keys to field definitions. Every definition requires a private Django `binding`, canonical `type`, and boolean `nullable`. Public dotted keys have no ORM meaning; private relationship bindings use Django `__` syntax.
 - `name`: stable plan-facing key. If omitted, AskLens derives one from the label/model name.
 - `label`: human-readable display label.
 - `description`: optional planner/user-facing description.
@@ -61,8 +82,10 @@ Supported field config keys:
 
 ```python
 {
-    "label": "Customer email",
+    "binding": "customer__email",
     "type": "string",
+    "nullable": False,
+    "label": "Customer email",
     "sensitive": True,
     "llm_visible": False,
     "result_visible": False,
@@ -73,7 +96,41 @@ Supported field config keys:
 }
 ```
 
-Defaults are conservative for catalog exposure: sensitive fields and hidden fields are not included in normal planner catalog serialization.
+`binding`, model metadata, and permission tokens remain server-owned and are never serialized into public catalogs, capabilities, or provider prompts. A binding change does not require a plan change. Registration rejects omitted bindings/types/nullability, invalid Django paths, unsupported type labels, and a non-null semantic declaration backed by a nullable field or traversal. Canonical type labels are `string`, `boolean`, `integer`, `decimal`, `float`, `date`, `datetime`, `time`, `uuid`, and `enum`; enum value registration is completed separately in the remaining 0.2 semantic work.
+
+Defaults remain conservative for catalog exposure: sensitive fields and hidden fields are not included in normal planner catalog serialization.
+
+### Migrating 0.1 field registrations
+
+The 0.1 form used each mapping key as both public name and Django path:
+
+```python
+fields = {
+    "id": {"label": "Order ID"},
+    "customer.email": {"label": "Customer email"},
+}
+```
+
+The 0.2 form separates those responsibilities explicitly:
+
+```python
+fields = {
+    "order_id": {
+        "binding": "id",
+        "type": "integer",
+        "nullable": False,
+        "label": "Order ID",
+    },
+    "customer.email": {
+        "binding": "customer__email",
+        "type": "string",
+        "nullable": False,
+        "label": "Customer email",
+    },
+}
+```
+
+There is no implicit key-to-binding migration fallback. Missing metadata fails registration with developer-facing guidance. Update metrics, defaults, and plans only when you deliberately rename a public semantic key; changing `binding` alone does not change those references. The former `include_internal=True` catalog option is removed because public serialization no longer exposes model labels. Permission declarations continue to enforce visibility but are no longer copied into public catalog/capability payloads.
 
 ## Resource and field permissions
 
@@ -83,7 +140,14 @@ Use resource-level `requires_permission` when the entire resource should be visi
 register(
     model=Order,
     name="orders",
-    fields={"id": {"label": "Order ID"}},
+    fields={
+        "order_id": {
+            "binding": "id",
+            "type": "integer",
+            "nullable": False,
+            "label": "Order ID",
+        }
+    },
     requires_permission="orders.view_reports",
     scope_provider=lambda request: Order.objects.filter(account=request.user.account),
 )
@@ -93,8 +157,16 @@ Use field-level `requires_permission` for individual fields that need stronger a
 
 ```python
 fields = {
-    "status": {"label": "Status"},
+    "status": {
+        "binding": "status",
+        "type": "string",
+        "nullable": False,
+        "label": "Status",
+    },
     "customer.email": {
+        "binding": "customer__email",
+        "type": "string",
+        "nullable": False,
         "label": "Customer email",
         "sensitive": True,
         "requires_permission": "customers.view_pii",
@@ -125,7 +197,10 @@ Every resource must resolve to one mode. A resource can declare it directly, or 
 # Reviewed as intentionally unrestricted across rows.
 register(
     model=Currency,
-    fields={"code": {}, "name": {}},
+    fields={
+        "code": {"binding": "code", "type": "string", "nullable": False},
+        "name": {"binding": "name", "type": "string", "nullable": False},
+    },
     scope_mode="global",
 )
 
@@ -137,7 +212,10 @@ def visible_orders(request):
 
 register(
     model=Order,
-    fields={"id": {}, "status": {}},
+    fields={
+        "id": {"binding": "id", "type": "integer", "nullable": False},
+        "status": {"binding": "status", "type": "string", "nullable": False},
+    },
     # Inherits DEFAULT_SCOPE_MODE="context_scoped".
     scope_provider=visible_orders,
 )
@@ -154,7 +232,14 @@ When a list plan omits `order_by`, AskLens applies the registered semantic `defa
 ```python
 register(
     model=Order,
-    fields={"status": {}, "created_at": {}},
+    fields={
+        "status": {"binding": "status", "type": "string", "nullable": False},
+        "created_at": {
+            "binding": "created_at",
+            "type": "datetime",
+            "nullable": False,
+        },
+    },
     scope_provider=visible_orders,
     default_order=(("created_at", "desc"),),
     # row_identity="public_id",  # only if concrete, non-null, unconditionally unique

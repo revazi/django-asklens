@@ -27,9 +27,22 @@ register(
     model=Order,
     name="orders",
     fields={
-        "id": {"label": "Order ID"},
-        "status": {"label": "Status"},
+        "id": {
+            "binding": "id",
+            "type": "integer",
+            "nullable": False,
+            "label": "Order ID",
+        },
+        "status": {
+            "binding": "status",
+            "type": "string",
+            "nullable": False,
+            "label": "Status",
+        },
         "account.slug": {
+            "binding": "account__slug",
+            "type": "string",
+            "nullable": False,
             "label": "Tenant",
             "sensitive": True,
             "result_visible": True,
@@ -44,6 +57,8 @@ register(
 ```
 
 Use this provider for tenant isolation and row-level visibility. It must return an unevaluated `QuerySet` for the registered model; `none()` is valid. Missing request context, missing/invalid provider results, evaluated querysets, wrong models, and provider failures reject rather than falling back to the default manager. Use `scope_mode="global"` only for resources intentionally reviewed as unrestricted across rows.
+
+Public field keys such as `account.slug` have no ORM meaning. The separately registered `account__slug` binding remains server-owned and is not included in catalogs, capabilities, provider prompts, plans, or results.
 
 ## Resource and field permissions
 

@@ -91,11 +91,37 @@ def build_registry(*, paid_only: bool = False) -> CatalogRegistry:
         label="Orders",
         default_date_field="created_at",
         fields={
-            "id": {"label": "Order ID"},
-            "status": {"label": "Status"},
-            "created_at": {"label": "Created date"},
-            "customer.name": {"label": "Customer name"},
-            "total": {"label": "Order total", "metric": True},
+            "id": {
+                "binding": "id",
+                "type": "integer",
+                "nullable": False,
+                "label": "Order ID",
+            },
+            "status": {
+                "binding": "status",
+                "type": "string",
+                "nullable": False,
+                "label": "Status",
+            },
+            "created_at": {
+                "binding": "created_at",
+                "type": "datetime",
+                "nullable": False,
+                "label": "Created date",
+            },
+            "customer.name": {
+                "binding": "customer__name",
+                "type": "string",
+                "nullable": False,
+                "label": "Customer name",
+            },
+            "total": {
+                "binding": "total",
+                "type": "decimal",
+                "nullable": False,
+                "label": "Order total",
+                "metric": True,
+            },
         },
         metrics=[
             Metric("order_count", op="count", field="id", label="Number of orders"),
@@ -148,6 +174,143 @@ def test_compile_list_query_returns_selected_public_keys(order_data: None) -> No
         {"customer.name": "Alice", "status": "paid", "total": Decimal("100.00")},
         {"customer.name": "Bob", "status": "paid", "total": Decimal("50.00")},
     )
+
+
+def test_semantic_keys_bind_privately_across_query_positions(
+    order_data: None,
+) -> None:
+    """Plans remain semantic across select, filter, group, metric, and ordering."""
+
+    registry = CatalogRegistry()
+    registry.register(
+        model=Order,
+        name="orders",
+        scope_mode="global",
+        default_date_field="placed_at",
+        default_order=(("order.number", "asc"),),
+        fields={
+            "order.number": {
+                "binding": "id",
+                "type": "integer",
+                "nullable": False,
+                "label": "Order number",
+            },
+            "customer_contact": {
+                "binding": "customer__email",
+                "type": "string",
+                "nullable": False,
+                "label": "Customer contact",
+            },
+            "lifecycle": {
+                "binding": "status",
+                "type": "string",
+                "nullable": False,
+                "label": "Lifecycle",
+            },
+            "placed_at": {
+                "binding": "created_at",
+                "type": "datetime",
+                "nullable": False,
+                "label": "Placed at",
+            },
+            "amount": {
+                "binding": "total",
+                "type": "decimal",
+                "nullable": False,
+                "label": "Amount",
+                "metric": True,
+            },
+        },
+        metrics=[Metric("revenue", op="sum", field="amount")],
+    )
+
+    list_result = execute_test_plan(
+        {
+            "resource": "orders",
+            "intent": "list",
+            "filters": [{"field": "lifecycle", "op": "eq", "value": "paid"}],
+            "select": ["order.number", "customer_contact", "lifecycle"],
+            "limit": 10,
+        },
+        registry=registry,
+    )
+    aggregate_result = execute_test_plan(
+        {
+            "resource": "orders",
+            "intent": "aggregate",
+            "group_by": [{"field": "lifecycle"}],
+            "metrics": [{"name": "revenue", "op": "sum", "field": "amount"}],
+            "order_by": [{"metric": "revenue", "direction": "desc"}],
+            "limit": 10,
+        },
+        registry=registry,
+    )
+
+    assert list_result.rows == (
+        {
+            "order.number": 1,
+            "customer_contact": "alice@example.com",
+            "lifecycle": "paid",
+        },
+        {
+            "order.number": 2,
+            "customer_contact": "bob@example.com",
+            "lifecycle": "paid",
+        },
+    )
+    assert aggregate_result.rows == (
+        {"lifecycle": "paid", "revenue": Decimal("150")},
+        {"lifecycle": "pending", "revenue": Decimal("75")},
+        {"lifecycle": "failed", "revenue": Decimal("25")},
+    )
+
+
+def test_changing_private_binding_does_not_change_public_plan(
+    order_data: None,
+) -> None:
+    """The same semantic plan executes after a server-owned binding change."""
+
+    def registry_for(binding: str) -> CatalogRegistry:
+        registry = CatalogRegistry()
+        registry.register(
+            model=Order,
+            name="orders",
+            scope_mode="global",
+            fields={
+                "display_value": {
+                    "binding": binding,
+                    "type": "string",
+                    "nullable": False,
+                }
+            },
+        )
+        return registry
+
+    plan = {
+        "resource": "orders",
+        "intent": "list",
+        "select": ["display_value"],
+        "order_by": [{"field": "display_value"}],
+        "limit": 10,
+    }
+
+    status_result = execute_test_plan(plan, registry=registry_for("status"))
+    customer_result = execute_test_plan(
+        plan,
+        registry=registry_for("customer__name"),
+    )
+
+    assert [column.key for column in status_result.columns] == ["display_value"]
+    assert [column.key for column in customer_result.columns] == ["display_value"]
+    assert {row["display_value"] for row in status_result.rows} == {
+        "failed",
+        "paid",
+        "pending",
+    }
+    assert {row["display_value"] for row in customer_result.rows} == {
+        "Alice",
+        "Bob",
+    }
 
 
 def test_filters_cover_in_contains_date_range_and_relative_dates(
@@ -362,4 +525,7 @@ def test_compile_query_metadata_without_executing_result(order_data: None) -> No
     compiled = _compile_prepared_query(prepared)
 
     assert [column.key for column in compiled.columns] == ["id", "status"]
-    assert compiled.key_map == {"id": "id", "status": "status"}
+    assert compiled.key_map == {
+        "_asklens_select_0": "id",
+        "_asklens_select_1": "status",
+    }
