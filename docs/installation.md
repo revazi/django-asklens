@@ -79,6 +79,8 @@ python -m django migrate asklens
 
 ```python
 DJANGO_ASKLENS = {
+    # Optional safe default; global resources must still opt in individually.
+    "DEFAULT_SCOPE_MODE": "context_scoped",
     "LLM_BACKEND": "dummy",
     "LLM_MODEL": None,
     "LLM_BASE_URL": "https://api.openai.com/v1",

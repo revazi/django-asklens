@@ -15,6 +15,7 @@ DEFAULTS: dict[str, Any] = {
     "LOG_LLM_IO": False,
     "MAX_ROWS": 500,
     "DEFAULT_LIMIT": 100,
+    "DEFAULT_SCOPE_MODE": None,
     "MAX_PLAN_BYTES": 65_536,
     "MAX_FILTERS": 20,
     "MAX_SELECTED_FIELDS": 25,

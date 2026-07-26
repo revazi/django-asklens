@@ -29,7 +29,15 @@ Do not include or import `django_asklens.api.urls` unless the `api` extra and `r
 
 ## Register resources
 
-Register only reviewed models and fields. Every resource must explicitly choose `scope_mode="global"` or `scope_mode="context_scoped"`; use a trusted `scope_provider(request)` for tenant and row-level scope.
+Register only reviewed models and fields. Configure the safe project default once when resources are normally request-scoped:
+
+```python
+DJANGO_ASKLENS = {
+    "DEFAULT_SCOPE_MODE": "context_scoped",
+}
+```
+
+Resources can override that setting, but `global` must always be explicit per resource. Use a trusted `scope_provider(request)` for tenant and row-level scope.
 
 ```python
 from django_asklens import Metric, register
@@ -64,7 +72,6 @@ register(
         Metric("revenue", op="sum", field="total", label="Revenue"),
     ],
     requires_permission="orders.view_reports",
-    scope_mode="context_scoped",
     scope_provider=visible_orders,
 )
 ```
@@ -104,9 +111,9 @@ result = execute_plan(payload, request=request)
 response_payload = result.to_dict()
 ```
 
-`execute_plan(...)` repeats current semantic validation and then resolves the resource's explicit scope policy. `global` uses the registered model manager only when deliberately declared. `context_scoped` requires the current request and a trusted provider returning an unevaluated `QuerySet` for the registered model. Missing or invalid scope fails with `asklens.scope.unavailable` and never broadens to the default manager.
+`execute_plan(...)` repeats current semantic validation and then resolves the resource's fail-closed scope policy. `global` uses the registered model manager only when deliberately declared on that resource. `context_scoped` may be inherited from `DEFAULT_SCOPE_MODE`, but still requires the current request and a trusted provider returning an unevaluated `QuerySet` for the registered model. Missing or invalid scope fails with `asklens.scope.unavailable` and never broadens to the default manager.
 
-The legacy `base_queryset=` registration argument is rejected. Migrate it to `scope_mode="context_scoped", scope_provider=...`; resources intentionally unrestricted across rows must declare `scope_mode="global"`.
+The legacy `base_queryset=` registration argument is rejected. Migrate it to a context-scoped registration with `scope_provider=...`; resources intentionally unrestricted across rows must declare `scope_mode="global"` explicitly.
 
 ### Structural budgets
 

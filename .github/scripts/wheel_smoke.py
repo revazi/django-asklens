@@ -74,6 +74,7 @@ def smoke_core_install() -> None:
     assert get_asklens_setting("MAX_IN_VALUES") == 100
     assert get_asklens_setting("MAX_FILTER_VALUES") == 200
     assert get_asklens_setting("DEFAULT_LIMIT") == 100
+    assert get_asklens_setting("DEFAULT_SCOPE_MODE") is None
     assert AskLensMCPToolSet(request_factory=lambda _context: request).tools()
 
     registry = CatalogRegistry()
@@ -84,6 +85,16 @@ def smoke_core_install() -> None:
         assert "scope_mode is required" in str(exc)
     else:
         raise AssertionError("Resource registration accepted missing scope_mode")
+
+    settings.DJANGO_ASKLENS = {"DEFAULT_SCOPE_MODE": "context_scoped"}
+    scoped_resource = registry.register(
+        model=user_model,
+        name="scoped_users",
+        fields={"id": {}},
+        scope_provider=lambda _request: user_model.objects.none(),
+    )
+    assert scoped_resource.scope_mode == "context_scoped"
+
     resource = registry.register(
         model=user_model,
         name="users",

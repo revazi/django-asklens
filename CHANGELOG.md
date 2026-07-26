@@ -14,6 +14,7 @@ The project is alpha and APIs may change before a stable release.
 - Added required resource `scope_mode="global" | "context_scoped"` registration and trusted `scope_provider=...` support.
 - Added configurable structural budgets for 64 KiB plan payloads, filters, selected/order/group/metric terms, relationship depth and unique edges, per-`in` and total filter values, returned rows/groups, and the default result limit.
 - Added semantic resource `default_order` plus private `row_identity` registration, defaulting to the model primary key.
+- Added `DEFAULT_SCOPE_MODE="context_scoped"` for projects that want to configure the safe resource mode once while keeping every global resource explicit.
 
 ### Changed
 
@@ -26,7 +27,7 @@ The project is alpha and APIs may change before a stable release.
 - List ordering uses semantic defaults when needed and always appends a missing private identity tie-breaker; grouped ordering appends missing group keys and nulls sort last.
 - Result metadata replaces non-definitive `limit_reached` with accurate `truncated`; list/grouped queries fetch `limit + 1`, while ungrouped aggregates have effective limit one.
 - Database auditing now stores operational resource/intent/status/error/row-count/duration metadata by default; questions, filter values, and complete plans require explicit `AUDIT_INCLUDE_CONTENT=True` opt-in.
-- Resource registration no longer has an implicit default-manager scope. Migrate `base_queryset=visible_rows` to `scope_mode="context_scoped", scope_provider=visible_rows`; intentionally unrestricted resources must declare `scope_mode="global"`.
+- Resource registration no longer has an implicit default-manager scope. Migrate `base_queryset=visible_rows` to a context-scoped registration with `scope_provider=visible_rows`; intentionally unrestricted resources must declare `scope_mode="global"`. Without a configured `DEFAULT_SCOPE_MODE`, omission still fails registration.
 
 ### Removed
 
@@ -40,7 +41,7 @@ The project is alpha and APIs may change before a stable release.
 - Added regression evidence that preview validation cannot authorize later execution and that ordinary plans are revalidated against current resource, field, metric, policy, catalog, identity, and request scope.
 - Added adapter-convergence evidence for core provider orchestration, API, admin, and MCP execution through `execute_plan()`; the packaged frontend remains an API client rather than an independent execution path.
 - Rejected plans perform zero application-data queries. Database audit mode performs at most one metadata-only insert; disabled/custom non-database modes add zero SQL. Audit-sink failure cannot trigger rejected-plan execution or hide a successful result.
-- Missing scope declarations fail registration. Missing request context, absent/invalid/evaluated/wrong-model scope results, and scope-provider failures reject with `asklens.scope.unavailable` instead of broadening to the default manager.
+- Missing scope declarations fail registration unless the safe `context_scoped` project default is configured. `DEFAULT_SCOPE_MODE="global"` is rejected. Missing request context, absent/invalid/evaluated/wrong-model scope results, and scope-provider failures reject with `asklens.scope.unavailable` instead of broadening to the default manager.
 - Every over-budget structural dimension rejects with `asklens.budget.exceeded` before scope resolution or application-data SQL; malformed UTF-8 byte plans return a typed parse error.
 
 ## 0.1.0a1 — 2026-07-19

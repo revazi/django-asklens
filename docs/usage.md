@@ -2,7 +2,13 @@
 
 ## 1. Register resources
 
-AskLens only queries resources that your project explicitly registers. Register resources during app startup, such as from an app config `ready()` method or another import path you control.
+AskLens only queries resources that your project explicitly registers. Register resources during app startup, such as from an app config `ready()` method or another import path you control. Projects whose resources are normally request-scoped can configure the safe default once:
+
+```python
+DJANGO_ASKLENS = {
+    "DEFAULT_SCOPE_MODE": "context_scoped",
+}
+```
 
 ```python
 from django_asklens import Metric, register
@@ -37,14 +43,13 @@ register(
         Metric("revenue", op="sum", field="total", label="Revenue"),
     ],
     requires_permission="orders.view_reports",
-    scope_mode="context_scoped",
     scope_provider=visible_orders,
 )
 ```
 
 Resource-level `requires_permission` gates the whole resource. Field-level `requires_permission` gates individual fields. Sensitive fields are hidden from the default catalog serialization. Hidden fields and internal model names are not sent to the planner prompt by default.
 
-Every registration must explicitly choose `scope_mode="global"` or `scope_mode="context_scoped"`. Context-scoped resources require a trusted `scope_provider`; missing or invalid scope never falls back to the default manager.
+Every resource must resolve to `global` or `context_scoped`. `DEFAULT_SCOPE_MODE` can only be `context_scoped`; global resources must declare `scope_mode="global"` individually. Context-scoped resources require a trusted `scope_provider`; missing or invalid scope never falls back to the default manager.
 
 ## 2. Configure a provider
 
@@ -52,6 +57,7 @@ AskLens ships with `DummyProvider`, which maps exact questions to deterministic 
 
 ```python
 DJANGO_ASKLENS = {
+    "DEFAULT_SCOPE_MODE": "context_scoped",
     "LLM_BACKEND": "dummy",
     "DUMMY_PLANS": {
         "Show orders by status": {
