@@ -17,6 +17,7 @@ from django_asklens.exceptions import (
     ScopeUnavailableError,
     UnknownFieldError,
 )
+from django_asklens.settings import get_asklens_setting
 
 type MetricOp = Literal["count", "sum", "avg", "min", "max"]
 type FieldConfig = Mapping[str, str | bool | None]
@@ -261,7 +262,7 @@ class SemanticResource:
         validate_model(model)
         validate_legacy_base_queryset(base_queryset)
         validated_scope_mode = validate_scope_policy(
-            scope_mode=scope_mode,
+            scope_mode=resolve_scope_mode(scope_mode),
             scope_provider=scope_provider,
         )
         validate_requires_permission(requires_permission)
@@ -444,6 +445,21 @@ def validate_legacy_base_queryset(
             "scope_mode='context_scoped' and scope_provider=... instead."
         )
         raise InvalidResourceError(msg)
+
+
+def resolve_scope_mode(scope_mode: object) -> object:
+    """Resolve a safe project default while keeping global scope explicit."""
+
+    default_scope_mode = get_asklens_setting("DEFAULT_SCOPE_MODE")
+    if default_scope_mode not in (None, "context_scoped"):
+        msg = (
+            "DJANGO_ASKLENS['DEFAULT_SCOPE_MODE'] must be 'context_scoped' or "
+            "None; global resources must declare scope_mode='global' explicitly."
+        )
+        raise InvalidResourceError(msg)
+    if scope_mode is not None:
+        return scope_mode
+    return default_scope_mode
 
 
 def validate_scope_policy(

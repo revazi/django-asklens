@@ -2,7 +2,7 @@
 
 Use this checklist before enabling AskLens in a production or production-like environment.
 
-AskLens is a data access surface. Configure it as carefully as any reporting, analytics, or admin feature. Supported Python execution uses `execute_plan()` (with `run_query_plan()` temporarily retained as a deprecated safe wrapper), and every resource registration now requires an explicit fail-closed scope policy. Production-like evaluation must still test host scope providers and operational controls.
+AskLens is a data access surface. Configure it as carefully as any reporting, analytics, or admin feature. Supported Python execution uses `execute_plan()` (with `run_query_plan()` temporarily retained as a deprecated safe wrapper), and every resource registration must resolve a fail-closed scope policy from an explicit resource mode or the context-only project default. Production-like evaluation must still test host scope providers and operational controls.
 
 ## Access gates
 
@@ -36,8 +36,8 @@ AskLens is a data access surface. Configure it as carefully as any reporting, an
 
 ## Tenant and row scope
 
-- [ ] Every resource explicitly declares `scope_mode="global"` or `scope_mode="context_scoped"`; no registration relies on omission.
-- [ ] Every `global` resource is deliberately reviewed as unrestricted across rows.
+- [ ] Every resource resolves to `global` or `context_scoped`; if configured, `DEFAULT_SCOPE_MODE` is `context_scoped` only.
+- [ ] Every `global` resource is deliberately reviewed as unrestricted across rows and declares `scope_mode="global"` individually.
 - [ ] Every `context_scoped` resource has a trusted `scope_provider(request)` that returns an unevaluated queryset for the registered model.
 - [ ] Scope providers return `none()` for anonymous/unauthorized users unless host policy deliberately permits access.
 - [ ] Tests prove missing/invalid scope fails closed and users cannot see another tenant's rows.

@@ -56,7 +56,7 @@ Run migrations for AskLens audit records:
 python -m django migrate asklens
 ```
 
-Register a resource during app startup:
+Register a resource during app startup. This example inherits the safe `DEFAULT_SCOPE_MODE="context_scoped"` setting shown below:
 
 ```python
 from django_asklens import Metric, register
@@ -92,7 +92,6 @@ register(
     ],
     default_order=(("created_at", "desc"),),
     requires_permission="orders.view_reports",
-    scope_mode="context_scoped",
     scope_provider=visible_orders,
 )
 ```
@@ -103,6 +102,7 @@ Start with the deterministic dummy provider:
 
 ```python
 DJANGO_ASKLENS = {
+    "DEFAULT_SCOPE_MODE": "context_scoped",
     "LLM_BACKEND": "dummy",
     "DUMMY_PLANS": {
         "Show orders by status": {
@@ -208,7 +208,7 @@ Live provider tests are opt-in and skipped by default. See [Provider configurati
 ## Safety posture
 
 - Only explicitly registered resources and fields are queryable through the normal validated orchestration paths.
-- Every resource must explicitly declare `scope_mode="global"` or `scope_mode="context_scoped"`. Context-scoped resources require a trusted `scope_provider(request)`; omission, invalid provider results, and provider failures reject without falling back to the model manager.
+- Every resource resolves to `global` or `context_scoped`. Projects may configure `DEFAULT_SCOPE_MODE="context_scoped"` once, but `global` must always be explicit per resource. Context-scoped resources require a trusted `scope_provider(request)`; omission, invalid provider results, and provider failures reject without falling back to the model manager.
 - Sensitive fields are hidden unless explicitly permissioned through the normal validation paths.
 - Plans are bounded before ORM compilation by UTF-8 bytes, filters, selected/order/group/metric terms, relationship depth and unique edges, `in`/total filter values, and returned rows/groups.
 - List ordering uses semantic resource defaults plus a private unique row identity; grouped queries append group-key tie-breakers, nulls sort last, and `truncated` is derived by fetching one extra row/group.

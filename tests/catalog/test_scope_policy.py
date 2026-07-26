@@ -70,6 +70,97 @@ def test_scope_mode_is_required_at_registration() -> None:
     assert registry.all() == ()
 
 
+def test_context_scoped_mode_can_be_configured_once(
+    settings,
+    django_assert_num_queries,
+) -> None:
+    """A safe project default avoids repeating context_scoped registrations."""
+
+    settings.DJANGO_ASKLENS = {
+        "AUDIT_MODE": "disabled",
+        "DEFAULT_SCOPE_MODE": "context_scoped",
+    }
+    registry = CatalogRegistry()
+
+    resource = registry.register(
+        model=Order,
+        name="orders",
+        fields={"id": {}},
+        scope_provider=lambda _request: Order.objects.none(),
+    )
+
+    assert resource.scope_mode == "context_scoped"
+    assert resource.get_scope_queryset(request_context()).model is Order
+    with django_assert_num_queries(0):
+        result = execute_plan(
+            order_plan(),
+            request=request_context(),
+            registry=registry,
+        )
+    assert result.rows == ()
+
+
+def test_context_scoped_default_still_requires_provider(settings) -> None:
+    """The project default must not weaken the trusted-provider requirement."""
+
+    settings.DJANGO_ASKLENS = {
+        "AUDIT_MODE": "disabled",
+        "DEFAULT_SCOPE_MODE": "context_scoped",
+    }
+    registry = CatalogRegistry()
+
+    with pytest.raises(InvalidResourceError, match="requires scope_provider"):
+        registry.register(model=Order, name="orders", fields={"id": {}})
+
+    assert registry.all() == ()
+
+
+def test_explicit_global_mode_overrides_context_scoped_default(settings) -> None:
+    """Reviewed global resources remain explicit resource-level decisions."""
+
+    settings.DJANGO_ASKLENS = {
+        "AUDIT_MODE": "disabled",
+        "DEFAULT_SCOPE_MODE": "context_scoped",
+    }
+    registry = CatalogRegistry()
+
+    resource = registry.register(
+        model=Order,
+        name="orders",
+        fields={"id": {}},
+        scope_mode="global",
+    )
+
+    assert resource.scope_mode == "global"
+    assert resource.get_scope_queryset(request_context()).model is Order
+
+
+@pytest.mark.parametrize("default_scope_mode", ["global", "", "tenant", object()])
+def test_default_scope_mode_must_be_context_scoped(
+    settings,
+    default_scope_mode: object,
+) -> None:
+    """A project default must never make omitted resource scope unrestricted."""
+
+    settings.DJANGO_ASKLENS = {
+        "AUDIT_MODE": "disabled",
+        "DEFAULT_SCOPE_MODE": default_scope_mode,
+    }
+    registry = CatalogRegistry()
+
+    with pytest.raises(
+        InvalidResourceError, match="DEFAULT_SCOPE_MODE.*context_scoped"
+    ):
+        registry.register(
+            model=Order,
+            name="orders",
+            fields={"id": {}},
+            scope_provider=lambda _request: Order.objects.none(),
+        )
+
+    assert registry.all() == ()
+
+
 @pytest.mark.parametrize(
     "legacy_base_queryset",
     [None, lambda _request: Order.objects.none()],

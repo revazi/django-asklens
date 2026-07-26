@@ -9,8 +9,8 @@ Use this checklist before enabling AskLens outside local development.
 - [ ] Mark PII/secrets/internal fields as `sensitive=True` or hide them with `llm_visible=False` / `result_visible=False`.
 - [ ] Use `requires_permission` for fields that need explicit permissions.
 - [ ] Review every registered metric for business meaning and data sensitivity.
-- [ ] Require every resource to declare `scope_mode="global"` or `scope_mode="context_scoped"`.
-- [ ] Review every `global` resource as intentionally unrestricted across rows.
+- [ ] Require every resource to resolve to `global` or `context_scoped`; if using `DEFAULT_SCOPE_MODE`, keep it `context_scoped`.
+- [ ] Review every `global` resource as intentionally unrestricted across rows and declare it explicitly on that resource.
 - [ ] Keep tenant and row-level restrictions in trusted `scope_provider(request)` callables for `context_scoped` resources.
 - [ ] Add tests proving missing/invalid scope fails closed and each tenant/user sees only rows from the registered scope queryset.
 

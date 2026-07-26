@@ -4,7 +4,13 @@ AskLens does not include a separate tenant policy engine in the alpha package su
 
 ## Tenant scoping with `scope_provider(request)`
 
-Every resource must declare `scope_mode="global"` or `scope_mode="context_scoped"`. Context-scoped resources require a trusted request-aware provider, and AskLens compiles and executes plans from the returned queryset.
+Every resource must resolve to `global` or `context_scoped`. Projects can configure `DJANGO_ASKLENS["DEFAULT_SCOPE_MODE"] = "context_scoped"` once; `global` must always be declared individually. Context-scoped resources require a trusted request-aware provider, and AskLens compiles and executes plans from the returned queryset.
+
+```python
+DJANGO_ASKLENS = {
+    "DEFAULT_SCOPE_MODE": "context_scoped",
+}
+```
 
 ```python
 from django_asklens import Metric, register
@@ -33,7 +39,6 @@ register(
     },
     metrics=[Metric("order_count", op="count", field="id")],
     requires_permission="orders.view_reports",
-    scope_mode="context_scoped",
     scope_provider=visible_orders,
 )
 ```

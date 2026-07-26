@@ -215,7 +215,7 @@ Content-Type: application/json
 }
 ```
 
-The normal AskLens API revalidates submitted plans against the current request's permissions, resource catalog, field rules, and current plan limits before execution. Execution then resolves the resource's required explicit scope policy: deliberately reviewed `global` scope or a trusted current-request `scope_provider`. Missing or invalid scope rejects without falling back to the model manager. This applies to clicked suggestions, browser-saved plans, server-saved plans, and UI-edited plans with changed filters, date intervals, ordering, or limits. A saved plan is an optimization and UX convenience, not a permission bypass.
+The normal AskLens API revalidates submitted plans against the current request's permissions, resource catalog, field rules, and current plan limits before execution. Execution then resolves the resource's fail-closed scope policy: deliberately reviewed per-resource `global` scope or a trusted current-request `scope_provider` under `context_scoped`, which may be configured once as the safe project default. Missing or invalid scope rejects without falling back to the model manager. This applies to clicked suggestions, browser-saved plans, server-saved plans, and UI-edited plans with changed filters, date intervals, ordering, or limits. A saved plan is an optimization and UX convenience, not a permission bypass.
 
 If you build server-side saved queries, keep them project-owned until AskLens grows a first-class saved-query model after alpha. Suggested fields are:
 
