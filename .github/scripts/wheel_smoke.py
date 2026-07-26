@@ -80,17 +80,32 @@ def smoke_core_install() -> None:
     registry = CatalogRegistry()
     user_model = get_user_model()
     try:
-        registry.register(model=user_model, fields={"id": {}})
+        registry.register(
+            model=user_model,
+            fields={"id": {"binding": "id", "type": "integer", "nullable": False}},
+        )
     except InvalidResourceError as exc:
         assert "scope_mode is required" in str(exc)
     else:
         raise AssertionError("Resource registration accepted missing scope_mode")
 
+    try:
+        registry.register(
+            model=user_model,
+            name="legacy_users",
+            fields={"id": {}},
+            scope_mode="global",
+        )
+    except InvalidResourceError as exc:
+        assert "Private binding is required" in str(exc)
+    else:
+        raise AssertionError("Resource registration accepted an implicit field binding")
+
     settings.DJANGO_ASKLENS = {"DEFAULT_SCOPE_MODE": "context_scoped"}
     scoped_resource = registry.register(
         model=user_model,
         name="scoped_users",
-        fields={"id": {}},
+        fields={"id": {"binding": "id", "type": "integer", "nullable": False}},
         scope_provider=lambda _request: user_model.objects.none(),
     )
     assert scoped_resource.scope_mode == "context_scoped"
@@ -98,7 +113,7 @@ def smoke_core_install() -> None:
     resource = registry.register(
         model=user_model,
         name="users",
-        fields={"id": {}},
+        fields={"id": {"binding": "id", "type": "integer", "nullable": False}},
         scope_mode="global",
         default_order=(("id", "asc"),),
     )

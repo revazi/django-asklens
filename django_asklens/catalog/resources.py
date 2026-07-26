@@ -1,7 +1,7 @@
 """Semantic catalog resource definitions."""
 
 from collections.abc import Callable, Iterable, Mapping, Sequence
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from types import MappingProxyType
 from typing import Any, Literal, NotRequired, TypedDict
 
@@ -45,12 +45,12 @@ class FieldCatalogItem(TypedDict):
     name: str
     label: str
     type: str
+    nullable: bool
     relation_depth: int
     sensitive: NotRequired[bool]
     llm_visible: NotRequired[bool]
     result_visible: NotRequired[bool]
     filter_only: NotRequired[bool]
-    requires_permission: NotRequired[str]
     metric: NotRequired[bool]
     scope_dimension: NotRequired[bool]
 
@@ -65,11 +65,9 @@ class ResourceCatalogItem(TypedDict):
     default_date_field: str | None
     fields: list[FieldCatalogItem]
     metrics: list[MetricCatalogItem]
-    requires_permission: NotRequired[str]
     scope_resource: NotRequired[bool]
     examples_enabled: NotRequired[bool]
     default_order: NotRequired[list[dict[str, str]]]
-    model: NotRequired[str]
 
 
 class CatalogSnapshot(TypedDict):
@@ -79,11 +77,25 @@ class CatalogSnapshot(TypedDict):
 
 
 SUPPORTED_METRIC_OPS = {"count", "sum", "avg", "min", "max"}
+SUPPORTED_FIELD_TYPES = {
+    "boolean",
+    "date",
+    "datetime",
+    "decimal",
+    "enum",
+    "float",
+    "integer",
+    "string",
+    "time",
+    "uuid",
+}
 ALLOWED_FIELD_CONFIG_KEYS = {
+    "binding",
     "filter_only",
     "label",
     "llm_visible",
     "metric",
+    "nullable",
     "requires_permission",
     "result_visible",
     "sensitive",
@@ -126,12 +138,15 @@ class Metric:
 
 @dataclass(frozen=True, slots=True)
 class FieldSpec:
-    """Developer-allowed field metadata for a semantic resource."""
+    """Developer-allowed semantic field with a private Django binding."""
 
     name: str
     label: str
     type: str
-    relation_depth: int
+    nullable: bool
+    binding: str = field(repr=False)
+    relation_depth: int = field(repr=False)
+    relationship_edges: tuple[str, ...] = field(default=(), repr=False)
     sensitive: bool = False
     llm_visible: bool = True
     result_visible: bool = True
@@ -177,6 +192,7 @@ class FieldSpec:
             "name": self.name,
             "label": self.label,
             "type": self.type,
+            "nullable": self.nullable,
             "relation_depth": self.relation_depth,
         }
         if self.sensitive:
@@ -187,8 +203,6 @@ class FieldSpec:
             data["result_visible"] = False
         if self.filter_only:
             data["filter_only"] = True
-        if self.requires_permission:
-            data["requires_permission"] = self.requires_permission
         if self.metric:
             data["metric"] = True
         if self.scope_dimension:
@@ -347,7 +361,6 @@ class SemanticResource:
         *,
         include_sensitive: bool = False,
         include_hidden: bool = False,
-        include_internal: bool = False,
         permissions: Iterable[str] | None = None,
     ) -> ResourceCatalogItem:
         """Serialize safe catalog metadata for planners/API consumers."""
@@ -378,8 +391,6 @@ class SemanticResource:
             "fields": visible_fields,
             "metrics": visible_metrics,
         }
-        if self.requires_permission:
-            data["requires_permission"] = self.requires_permission
         if self.scope_resource:
             data["scope_resource"] = True
         if not self.examples_enabled:
@@ -389,8 +400,6 @@ class SemanticResource:
                 {"field": field_name, "direction": direction}
                 for field_name, direction in self.default_order
             ]
-        if include_internal:
-            data["model"] = self.model._meta.label
         return data
 
 
@@ -612,10 +621,14 @@ def validate_default_date_field(
         )
         raise UnknownFieldError(msg)
 
-    default_field_type = get_field_type(
-        resolve_field_path(model, default_date_field).field
+    field_spec = field_specs[default_date_field]
+    binding_field_type = get_field_type(
+        resolve_field_path(model, field_spec.binding).field
     )
-    if default_field_type not in DATE_FIELD_TYPES:
+    if (
+        field_spec.type not in DATE_FIELD_TYPES
+        or binding_field_type not in DATE_FIELD_TYPES
+    ):
         msg = (
             f"Default date field {default_date_field!r} must be a date "
             f"or datetime field for resource {resource_name!r}."
@@ -641,20 +654,71 @@ def normalize_synonyms(synonyms: Sequence[str]) -> tuple[str, ...]:
     return tuple(normalized)
 
 
-def validate_field_spec(
-    path: str,
-    field_spec: FieldSpec,
-    relation_depth: int,
-) -> FieldSpec:
-    """Validate a prebuilt field spec against the registered model path."""
+def validate_semantic_field_key(key: object) -> str:
+    """Validate a public field key without giving it ORM-path meaning."""
 
-    if field_spec.name != path:
-        msg = f"FieldSpec name {field_spec.name!r} must match field path {path!r}."
+    if not isinstance(key, str) or not key or "__" in key:
+        msg = "Semantic field keys must be non-empty strings without '__'."
         raise InvalidResourceError(msg)
-    if field_spec.relation_depth != relation_depth:
-        msg = f"FieldSpec relation depth for {path!r} does not match the model path."
+    if any(part == "" for part in key.split(".")):
+        msg = f"Semantic field key {key!r} contains an empty dotted segment."
         raise InvalidResourceError(msg)
-    return field_spec
+    return key
+
+
+def validate_field_spec(
+    key: str,
+    field_spec: FieldSpec,
+    *,
+    relation_depth: int,
+    relationship_edges: tuple[str, ...],
+    binding_type: str,
+    binding_nullable: bool,
+) -> FieldSpec:
+    """Validate and normalize a prebuilt semantic field specification."""
+
+    if field_spec.name != key:
+        msg = f"FieldSpec name {field_spec.name!r} must match semantic key {key!r}."
+        raise InvalidResourceError(msg)
+    if not field_spec.type:
+        msg = f"FieldSpec type is required for semantic key {key!r}."
+        raise InvalidResourceError(msg)
+    if field_spec.type not in SUPPORTED_FIELD_TYPES:
+        msg = f"Unsupported canonical type {field_spec.type!r} for field {key!r}."
+        raise InvalidResourceError(msg)
+    validate_binding_type(
+        key, configured_type=field_spec.type, binding_type=binding_type
+    )
+    if not isinstance(field_spec.nullable, bool):
+        msg = f"FieldSpec nullable must be a boolean for semantic key {key!r}."
+        raise InvalidResourceError(msg)
+    if binding_nullable and not field_spec.nullable:
+        msg = f"Semantic field {key!r} cannot be non-null for its nullable binding."
+        raise InvalidResourceError(msg)
+    return replace(
+        field_spec,
+        relation_depth=relation_depth,
+        relationship_edges=relationship_edges,
+    )
+
+
+def validate_binding_type(
+    key: str,
+    *,
+    configured_type: str,
+    binding_type: str,
+) -> None:
+    """Reject semantic types incompatible with resolved Django field types."""
+
+    if configured_type == binding_type:
+        return
+    if configured_type == "enum" and binding_type in {"integer", "string"}:
+        return
+    msg = (
+        f"Canonical type {configured_type!r} for field {key!r} does not match "
+        f"its private binding type {binding_type!r}."
+    )
+    raise InvalidResourceError(msg)
 
 
 def get_bool_field_config(
@@ -682,25 +746,61 @@ def build_field_specs(
         raise InvalidResourceError(msg)
 
     field_specs: dict[str, FieldSpec] = {}
-    for path, config in fields.items():
-        resolution = resolve_field_path(model, path)
+    for raw_key, config in fields.items():
+        key = validate_semantic_field_key(raw_key)
         if isinstance(config, FieldSpec):
-            field_specs[path] = validate_field_spec(
-                path,
+            if not config.binding:
+                msg = f"Private binding is required for semantic field {key!r}."
+                raise InvalidResourceError(msg)
+            resolution = resolve_field_path(model, config.binding)
+            field_specs[key] = validate_field_spec(
+                key,
                 config,
-                resolution.relation_depth,
+                relation_depth=resolution.relation_depth,
+                relationship_edges=resolution.relationship_edges,
+                binding_type=get_field_type(resolution.field),
+                binding_nullable=resolution.nullable,
             )
             continue
 
         if not isinstance(config, Mapping):
-            msg = f"Field config for {path!r} must be a mapping."
+            msg = f"Field config for semantic key {key!r} must be a mapping."
             raise InvalidResourceError(msg)
 
         field_config = dict(config)
         unknown_keys = set(field_config) - ALLOWED_FIELD_CONFIG_KEYS
         if unknown_keys:
             unknown_keys_display = ", ".join(sorted(unknown_keys))
-            msg = f"Unknown field config keys for {path!r}: {unknown_keys_display}."
+            msg = f"Unknown field config keys for {key!r}: {unknown_keys_display}."
+            raise InvalidResourceError(msg)
+
+        binding = field_config.get("binding")
+        if not isinstance(binding, str) or not binding:
+            msg = (
+                f"Private binding is required for semantic field {key!r}; add "
+                "binding='field' or binding='relation__field'."
+            )
+            raise InvalidResourceError(msg)
+        resolution = resolve_field_path(model, binding)
+
+        configured_type = field_config.get("type")
+        if not isinstance(configured_type, str) or not configured_type:
+            msg = f"Canonical type is required for semantic field {key!r}."
+            raise InvalidResourceError(msg)
+        if configured_type not in SUPPORTED_FIELD_TYPES:
+            msg = f"Unsupported canonical type {configured_type!r} for field {key!r}."
+            raise InvalidResourceError(msg)
+        validate_binding_type(
+            key,
+            configured_type=configured_type,
+            binding_type=get_field_type(resolution.field),
+        )
+        configured_nullable = field_config.get("nullable")
+        if not isinstance(configured_nullable, bool):
+            msg = f"nullable must be a boolean for semantic field {key!r}."
+            raise InvalidResourceError(msg)
+        if resolution.nullable and not configured_nullable:
+            msg = f"Semantic field {key!r} cannot be non-null for its nullable binding."
             raise InvalidResourceError(msg)
 
         sensitive = get_bool_field_config(field_config, "sensitive", default=False)
@@ -714,20 +814,20 @@ def build_field_specs(
             "result_visible",
             default=not sensitive,
         )
-        label = str(
-            field_config.get("label") or default_field_label(path, resolution.field)
-        )
-        field_type = str(field_config.get("type") or get_field_type(resolution.field))
+        label = str(field_config.get("label") or default_field_label(key))
         requires_permission = field_config.get("requires_permission")
         if requires_permission is not None and not isinstance(requires_permission, str):
-            msg = f"requires_permission for {path!r} must be a string."
+            msg = f"requires_permission for {key!r} must be a string."
             raise InvalidResourceError(msg)
 
-        field_specs[path] = FieldSpec(
-            name=path,
+        field_specs[key] = FieldSpec(
+            name=key,
             label=label,
-            type=field_type,
+            type=configured_type,
+            nullable=configured_nullable,
+            binding=binding,
             relation_depth=resolution.relation_depth,
+            relationship_edges=resolution.relationship_edges,
             sensitive=sensitive,
             llm_visible=llm_visible,
             result_visible=result_visible,
@@ -765,9 +865,7 @@ def build_metric_specs(
     return metric_specs
 
 
-def default_field_label(path: str, field: models.Field) -> str:
-    """Return a human-readable default label for a field path."""
+def default_field_label(key: str) -> str:
+    """Return a binding-independent label for a public semantic key."""
 
-    if "." not in path:
-        return str(getattr(field, "verbose_name", path)).title()
-    return path.replace(".", " ").replace("_", " ").title()
+    return key.replace(".", " ").replace("_", " ").title()

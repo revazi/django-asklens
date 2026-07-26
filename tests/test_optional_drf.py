@@ -77,7 +77,20 @@ register(
     name="users",
     label="Users",
     scope_mode="global",
-    fields={"id": {"label": "ID"}, "username": {"label": "Username"}},
+    fields={
+        "id": {
+            "binding": "id",
+            "type": "integer",
+            "nullable": False,
+            "label": "ID",
+        },
+        "username": {
+            "binding": "username",
+            "type": "string",
+            "nullable": False,
+            "label": "Username",
+        },
+    },
     metrics=[Metric("user_count", op="count", field="id")],
 )
 

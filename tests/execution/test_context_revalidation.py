@@ -72,7 +72,14 @@ def test_previewed_plan_is_revalidated_against_current_catalog(
     current_registry.register(
         model=Order,
         name="orders",
-        fields={"id": {"label": "Order ID"}},
+        fields={
+            "id": {
+                "binding": "id",
+                "type": "integer",
+                "nullable": False,
+                "label": "Order ID",
+            }
+        },
         metrics=[Metric("order_count", op="count", field="id")],
         scope_mode="context_scoped",
         scope_provider=lambda _request: Order.objects.all(),
@@ -127,8 +134,16 @@ def test_resource_and_metric_permissions_are_rechecked_before_sql(
         model=Order,
         name="orders",
         fields={
-            "id": {"label": "Order ID"},
+            "id": {
+                "binding": "id",
+                "type": "integer",
+                "nullable": False,
+                "label": "Order ID",
+            },
             "total": {
+                "binding": "total",
+                "type": "decimal",
+                "nullable": False,
                 "label": "Order total",
                 "metric": True,
                 "requires_permission": "shop.view_financials",

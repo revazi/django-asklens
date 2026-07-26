@@ -57,10 +57,28 @@ def registered_orders() -> None:
         scope_mode="context_scoped",
         scope_provider=lambda _request: Order.objects.all(),
         fields={
-            "id": {"label": "Order ID"},
-            "status": {"label": "Status"},
-            "created_at": {"label": "Created date"},
+            "id": {
+                "binding": "id",
+                "type": "integer",
+                "nullable": False,
+                "label": "Order ID",
+            },
+            "status": {
+                "binding": "status",
+                "type": "string",
+                "nullable": False,
+                "label": "Status",
+            },
+            "created_at": {
+                "binding": "created_at",
+                "type": "datetime",
+                "nullable": False,
+                "label": "Created date",
+            },
             "customer.email": {
+                "binding": "customer__email",
+                "type": "string",
+                "nullable": False,
                 "label": "Customer email",
                 "sensitive": True,
                 "requires_permission": "shop.view_customer_pii",

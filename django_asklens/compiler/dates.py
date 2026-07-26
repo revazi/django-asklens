@@ -71,29 +71,22 @@ def parse_temporal_value(value: object) -> object:
 
 
 def build_date_trunc_expression(
-    field_path: str, date_trunc: DateTrunc | None
+    field_binding: str, date_trunc: DateTrunc | None
 ) -> Expression:
-    """Return an ORM expression for a plain or truncated grouping field."""
+    """Return an ORM expression for a trusted private field binding."""
 
-    orm_path = to_orm_path(field_path)
     if date_trunc is None:
-        return F(orm_path)
+        return F(field_binding)
     if date_trunc == "day":
-        return TruncDay(orm_path)
+        return TruncDay(field_binding)
     if date_trunc == "week":
-        return TruncWeek(orm_path)
+        return TruncWeek(field_binding)
     if date_trunc == "month":
-        return TruncMonth(orm_path)
+        return TruncMonth(field_binding)
     if date_trunc == "quarter":
-        return TruncQuarter(orm_path)
+        return TruncQuarter(field_binding)
     if date_trunc == "year":
-        return TruncYear(orm_path)
+        return TruncYear(field_binding)
 
     msg = f"Unsupported date truncation {date_trunc!r}."
     raise PlanValidationError(msg)
-
-
-def to_orm_path(field_path: str) -> str:
-    """Convert a catalog dot path to a Django ORM lookup path."""
-
-    return field_path.replace(".", "__")

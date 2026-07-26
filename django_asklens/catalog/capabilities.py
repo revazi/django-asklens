@@ -1,10 +1,10 @@
 """Permission-scoped query guidance built from the semantic catalog."""
 
 import re
-from collections.abc import Iterable, Sequence
+from collections.abc import Iterable, Mapping, Sequence
 from typing import Literal, NotRequired, TypedDict
 
-from django_asklens.catalog.registry import serialize_catalog
+from django_asklens.catalog.registry import CatalogRegistry, default_registry
 from django_asklens.catalog.resources import (
     CatalogSnapshot,
     FieldCatalogItem,
@@ -28,6 +28,7 @@ class CapabilityField(TypedDict):
     name: str
     label: str
     type: str
+    nullable: bool
     relation_depth: int
     can_filter: bool
     can_select: bool
@@ -35,7 +36,6 @@ class CapabilityField(TypedDict):
     can_order: bool
     can_date_bucket: bool
     sensitive: NotRequired[bool]
-    requires_permission: NotRequired[str]
     scope_dimension: NotRequired[bool]
 
 
@@ -70,7 +70,6 @@ class CapabilityResource(TypedDict):
     examples: list[str]
     guidance: list[str]
     scope: CapabilityScope
-    requires_permission: NotRequired[str]
     scope_resource: NotRequired[bool]
     examples_enabled: NotRequired[bool]
     default_order: NotRequired[list[dict[str, str]]]
@@ -90,22 +89,32 @@ def build_capabilities(
     *,
     permissions: Iterable[str] | None = None,
     catalog: CatalogSnapshot | None = None,
+    registry: CatalogRegistry = default_registry,
+    resource_permissions: Mapping[str, str | None] | None = None,
 ) -> CapabilitiesSnapshot:
     """Return safe, human-readable query guidance for visible catalog metadata.
 
-    The payload is derived only from permission-scoped catalog metadata. It does
-    not inspect database rows, sample values, credentials, environment values,
-    or private model internals.
+    The payload is derived only from permission-scoped catalog metadata. A
+    trusted ``resource_permissions`` mapping may accompany an already serialized
+    catalog for sanitized scope guidance; tokens are never copied to output. The
+    builder does not inspect rows, samples, credentials, or model internals.
     """
 
     permission_set = frozenset(permissions or ())
-    scoped_catalog = (
-        catalog
-        if catalog is not None
-        else serialize_catalog(permissions=permission_set)
-    )
+    if catalog is None:
+        scoped_catalog = registry.to_dict(permissions=permission_set)
+        required_permissions = {
+            resource.name: resource.requires_permission for resource in registry.all()
+        }
+    else:
+        scoped_catalog = catalog
+        required_permissions = dict(resource_permissions or {})
     resources = [
-        build_resource_capability(resource, permissions=permission_set)
+        build_resource_capability(
+            resource,
+            permissions=permission_set,
+            required_permission=required_permissions.get(resource["name"]),
+        )
         for resource in scoped_catalog.get("resources", [])
     ]
     examples = collect_examples(resources)
@@ -187,11 +196,12 @@ def build_resource_capability(
     resource: ResourceCatalogItem,
     *,
     permissions: Iterable[str] = (),
+    required_permission: str | None = None,
 ) -> CapabilityResource:
     """Return guidance for one visible catalog resource."""
 
     scope = infer_capability_scope(
-        required_permission=resource.get("requires_permission"),
+        required_permission=required_permission,
         permissions=permissions,
     )
     fields = [build_field_capability(field) for field in resource.get("fields", [])]
@@ -222,8 +232,6 @@ def build_resource_capability(
         ),
         "scope": scope,
     }
-    if resource.get("requires_permission"):
-        capability["requires_permission"] = resource["requires_permission"]
     if resource.get("scope_resource"):
         capability["scope_resource"] = True
     if resource.get("examples_enabled") is False:
@@ -350,6 +358,7 @@ def build_field_capability(field: FieldCatalogItem) -> CapabilityField:
         "name": field["name"],
         "label": field["label"],
         "type": field["type"],
+        "nullable": field.get("nullable", True),
         "relation_depth": field["relation_depth"],
         "can_filter": True,
         "can_select": can_use_in_results,
@@ -359,8 +368,6 @@ def build_field_capability(field: FieldCatalogItem) -> CapabilityField:
     }
     if field.get("sensitive"):
         capability["sensitive"] = True
-    if field.get("requires_permission"):
-        capability["requires_permission"] = field["requires_permission"]
     if field.get("scope_dimension"):
         capability["scope_dimension"] = True
     return capability

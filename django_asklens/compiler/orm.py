@@ -9,7 +9,7 @@ from django.db.models import F, IntegerField, QuerySet, Value
 
 from django_asklens.catalog.resources import FieldSpec, Metric, SemanticResource
 from django_asklens.compiler.aggregations import build_aggregates
-from django_asklens.compiler.dates import build_date_trunc_expression, to_orm_path
+from django_asklens.compiler.dates import build_date_trunc_expression
 from django_asklens.compiler.filters import apply_filters
 from django_asklens.exceptions import UnsupportedQueryError
 from django_asklens.planning.schemas import GroupBySpec, QueryPlan
@@ -72,7 +72,12 @@ def _compile_prepared_query(prepared: _PreparedQueryPlan) -> _CompiledQuery:
         raise TypeError(msg)
 
     plan = prepared.plan
-    queryset = apply_filters(prepared.queryset, plan.filters, now=prepared.now)
+    queryset = apply_filters(
+        prepared.queryset,
+        plan.filters,
+        resource=prepared.resource,
+        now=prepared.now,
+    )
 
     if plan.intent == "list":
         return _compile_list_query(prepared=prepared, queryset=queryset)
@@ -92,12 +97,15 @@ def _compile_list_query(
 
     plan = prepared.plan
     resource = prepared.resource
-    orm_fields = tuple(to_orm_path(field_name) for field_name in plan.select)
-    key_map = {
-        orm_field: field_name
-        for orm_field, field_name in zip(orm_fields, plan.select, strict=True)
+    select_aliases = {
+        f"_asklens_select_{index}": F(resource.fields[field_name].binding)
+        for index, field_name in enumerate(plan.select)
     }
-    compiled = queryset.values(*orm_fields)
+    key_map = {
+        alias: field_name
+        for alias, field_name in zip(select_aliases, plan.select, strict=True)
+    }
+    compiled = queryset.values(**select_aliases)
     ordering = build_list_ordering(plan, resource=resource)
     compiled = apply_ordering(compiled, ordering)
     compiled = compiled[: plan.limit + 1]
@@ -127,10 +135,13 @@ def _compile_aggregate_query(
     resource = prepared.resource
     group_aliases = build_group_aliases(plan.group_by)
     group_expressions = {
-        alias: build_date_trunc_expression(group.field, group.date_trunc)
+        alias: build_date_trunc_expression(
+            resource.fields[group.field].binding,
+            group.date_trunc,
+        )
         for alias, group in group_aliases.items()
     }
-    metric_expressions = build_aggregates(plan.metrics)
+    metric_expressions = build_aggregates(plan.metrics, resource=resource)
 
     if group_expressions:
         compiled = queryset.values(**group_expressions).annotate(**metric_expressions)
@@ -193,17 +204,17 @@ def build_list_ordering(
     ordering: list[OrderingTerm] = []
     if plan.order_by:
         ordering.extend(
-            (to_orm_path(item.field), item.direction)
+            (resource.fields[item.field].binding, item.direction)
             for item in plan.order_by
             if item.field is not None
         )
     else:
         ordering.extend(
-            (to_orm_path(field_name), direction)
+            (resource.fields[field_name].binding, direction)
             for field_name, direction in resource.default_order
         )
 
-    identity_target = to_orm_path(resource.row_identity)
+    identity_target = resource.row_identity
     if identity_target not in {target for target, _direction in ordering}:
         ordering.append((identity_target, "asc"))
     return tuple(ordering)

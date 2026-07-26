@@ -57,9 +57,22 @@ def register_default_orders() -> None:
         model=Order,
         name="orders",
         fields={
-            "id": {"label": "Order ID"},
-            "status": {"label": "Status"},
+            "id": {
+                "binding": "id",
+                "type": "integer",
+                "nullable": False,
+                "label": "Order ID",
+            },
+            "status": {
+                "binding": "status",
+                "type": "string",
+                "nullable": False,
+                "label": "Status",
+            },
             "customer.email": {
+                "binding": "customer__email",
+                "type": "string",
+                "nullable": False,
                 "label": "Customer email",
                 "sensitive": True,
                 "requires_permission": "shop.view_customer_pii",

@@ -149,10 +149,31 @@ def registered_orders() -> None:
         label="Orders",
         scope_mode="global",
         fields={
-            "id": {"label": "Order ID"},
-            "status": {"label": "Status"},
-            "created_at": {"label": "Created date"},
-            "customer.email": {"label": "Customer email", "sensitive": True},
+            "id": {
+                "binding": "id",
+                "type": "integer",
+                "nullable": False,
+                "label": "Order ID",
+            },
+            "status": {
+                "binding": "status",
+                "type": "string",
+                "nullable": False,
+                "label": "Status",
+            },
+            "created_at": {
+                "binding": "created_at",
+                "type": "datetime",
+                "nullable": False,
+                "label": "Created date",
+            },
+            "customer.email": {
+                "binding": "customer__email",
+                "type": "string",
+                "nullable": False,
+                "label": "Customer email",
+                "sensitive": True,
+            },
         },
         metrics=[Metric("order_count", op="count", field="id")],
     )
@@ -628,7 +649,10 @@ def test_api_execution_rejects_invalid_current_scope_before_sql(
     default_registry.register(
         model=Order,
         name="orders",
-        fields={"id": {}, "status": {}},
+        fields={
+            "id": {"binding": "id", "type": "integer", "nullable": False},
+            "status": {"binding": "status", "type": "string", "nullable": False},
+        },
         metrics=[Metric("order_count", op="count", field="id")],
         scope_mode="context_scoped",
         scope_provider=lambda _request: None,

@@ -76,18 +76,41 @@ register(
     description="Orders visible to the current user.",
     default_date_field="created_at",
     fields={
-        "id": {"label": "Order ID"},
-        "status": {"label": "Status"},
-        "created_at": {"label": "Created date"},
+        "order_id": {
+            "binding": "id",
+            "type": "integer",
+            "nullable": False,
+            "label": "Order ID",
+        },
+        "status": {
+            "binding": "status",
+            "type": "string",
+            "nullable": False,
+            "label": "Status",
+        },
+        "created_at": {
+            "binding": "created_at",
+            "type": "datetime",
+            "nullable": False,
+            "label": "Created date",
+        },
         "customer.email": {
+            "binding": "customer__email",
+            "type": "string",
+            "nullable": False,
             "label": "Customer email",
             "sensitive": True,
             "requires_permission": "customers.view_pii",
         },
-        "total_cents": {"label": "Total in cents"},
+        "total_cents": {
+            "binding": "total_cents",
+            "type": "integer",
+            "nullable": False,
+            "label": "Total in cents",
+        },
     },
     metrics=[
-        Metric("order_count", op="count", field="id", label="Orders"),
+        Metric("order_count", op="count", field="order_id", label="Orders"),
         Metric("revenue", op="sum", field="total_cents", label="Revenue"),
     ],
     default_order=(("created_at", "desc"),),
@@ -96,7 +119,7 @@ register(
 )
 ```
 
-`requires_permission` on the resource gates catalog visibility and query validation for the whole resource. Field-level `requires_permission` gates individual fields such as PII.
+Field mapping keys are stable public semantic names. Each field explicitly declares its private Django `binding`, canonical `type`, and `nullable` contract; bindings use Django `__` traversal syntax and are never serialized to catalogs or providers. `requires_permission` on the resource gates catalog visibility and query validation for the whole resource. Field-level `requires_permission` gates individual fields such as PII without exposing the permission token in public metadata.
 
 Start with the deterministic dummy provider:
 
@@ -109,7 +132,7 @@ DJANGO_ASKLENS = {
             "resource": "orders",
             "intent": "aggregate",
             "group_by": [{"field": "status"}],
-            "metrics": [{"name": "order_count", "op": "count", "field": "id"}],
+            "metrics": [{"name": "order_count", "op": "count", "field": "order_id"}],
             "limit": 100,
             "visualization": {"type": "bar", "x": "status", "y": "order_count"},
         }

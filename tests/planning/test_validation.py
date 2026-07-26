@@ -32,21 +32,54 @@ def build_registry() -> CatalogRegistry:
         default_date_field="created_at",
         scope_mode="global",
         fields={
-            "id": {"label": "Order ID"},
-            "status": {"label": "Status"},
-            "created_at": {"label": "Created date"},
+            "id": {
+                "binding": "id",
+                "type": "integer",
+                "nullable": False,
+                "label": "Order ID",
+            },
+            "status": {
+                "binding": "status",
+                "type": "string",
+                "nullable": False,
+                "label": "Status",
+            },
+            "created_at": {
+                "binding": "created_at",
+                "type": "datetime",
+                "nullable": False,
+                "label": "Created date",
+            },
             "customer.email": {
+                "binding": "customer__email",
+                "type": "string",
+                "nullable": False,
                 "label": "Customer email",
                 "sensitive": True,
                 "requires_permission": "shop.view_pii",
             },
             "total": {
+                "binding": "total",
+                "type": "decimal",
+                "nullable": False,
                 "label": "Order total",
                 "metric": True,
                 "requires_permission": "shop.view_financials",
             },
-            "internal_notes": {"label": "Internal notes", "llm_visible": False},
-            "customer.name": {"label": "Customer name", "filter_only": True},
+            "internal_notes": {
+                "binding": "internal_notes",
+                "type": "string",
+                "nullable": False,
+                "label": "Internal notes",
+                "llm_visible": False,
+            },
+            "customer.name": {
+                "binding": "customer__name",
+                "type": "string",
+                "nullable": False,
+                "label": "Customer name",
+                "filter_only": True,
+            },
         },
         metrics=[
             Metric("order_count", op="count", field="id", label="Number of orders"),
@@ -75,9 +108,24 @@ def build_billing_registry() -> CatalogRegistry:
         label="Billing lines",
         scope_mode="global",
         fields={
-            "billing_document.status": {"label": "Billing status"},
-            "product_name": {"label": "Product"},
-            "total_amount_cents": {"label": "Total amount in cents"},
+            "billing_document.status": {
+                "binding": "billing_document__status",
+                "type": "string",
+                "nullable": False,
+                "label": "Billing status",
+            },
+            "product_name": {
+                "binding": "product_name",
+                "type": "string",
+                "nullable": False,
+                "label": "Product",
+            },
+            "total_amount_cents": {
+                "binding": "total_amount_cents",
+                "type": "integer",
+                "nullable": False,
+                "label": "Total amount in cents",
+            },
         },
         metrics=[
             Metric(
@@ -174,7 +222,20 @@ def test_resource_permission_fails_without_matching_permission() -> None:
         model=Order,
         name="orders",
         scope_mode="global",
-        fields={"id": {"label": "Order ID"}, "status": {"label": "Status"}},
+        fields={
+            "id": {
+                "binding": "id",
+                "type": "integer",
+                "nullable": False,
+                "label": "Order ID",
+            },
+            "status": {
+                "binding": "status",
+                "type": "string",
+                "nullable": False,
+                "label": "Status",
+            },
+        },
         metrics=[Metric("order_count", op="count", field="id")],
         requires_permission="shop.view_orders",
     )

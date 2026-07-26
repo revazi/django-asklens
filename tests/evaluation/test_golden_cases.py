@@ -101,7 +101,7 @@ GOLDEN_CASES = (
         expected_intent="list",
         expected_visualization_type="table",
         expected_data=[
-            {"customer.name": "Bob", "status": "failed", "total": 200.0},
+            {"customer.name": "Bob", "status": "failed", "total": "200.00"},
         ],
     ),
     GoldenCase(
@@ -191,12 +191,44 @@ def registry() -> CatalogRegistry:
         default_date_field="created_at",
         scope_mode="global",
         fields={
-            "id": {"label": "Order ID"},
-            "status": {"label": "Status"},
-            "created_at": {"label": "Created date"},
-            "customer.name": {"label": "Customer name"},
-            "customer.email": {"label": "Customer email", "sensitive": True},
-            "total": {"label": "Order total", "metric": True},
+            "id": {
+                "binding": "id",
+                "type": "integer",
+                "nullable": False,
+                "label": "Order ID",
+            },
+            "status": {
+                "binding": "status",
+                "type": "string",
+                "nullable": False,
+                "label": "Status",
+            },
+            "created_at": {
+                "binding": "created_at",
+                "type": "datetime",
+                "nullable": False,
+                "label": "Created date",
+            },
+            "customer.name": {
+                "binding": "customer__name",
+                "type": "string",
+                "nullable": False,
+                "label": "Customer name",
+            },
+            "customer.email": {
+                "binding": "customer__email",
+                "type": "string",
+                "nullable": False,
+                "label": "Customer email",
+                "sensitive": True,
+            },
+            "total": {
+                "binding": "total",
+                "type": "decimal",
+                "nullable": False,
+                "label": "Order total",
+                "metric": True,
+            },
         },
         metrics=[
             Metric("order_count", op="count", field="id", label="Number of orders"),

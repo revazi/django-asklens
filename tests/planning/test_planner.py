@@ -38,11 +38,39 @@ def build_registry() -> CatalogRegistry:
         name="orders",
         scope_mode="global",
         fields={
-            "id": {"label": "Order ID"},
-            "status": {"label": "Status"},
-            "created_at": {"label": "Created date"},
-            "customer.email": {"label": "Customer email", "sensitive": True},
-            "internal_notes": {"label": "Internal notes", "llm_visible": False},
+            "id": {
+                "binding": "id",
+                "type": "integer",
+                "nullable": False,
+                "label": "Order ID",
+            },
+            "status": {
+                "binding": "status",
+                "type": "string",
+                "nullable": False,
+                "label": "Status",
+            },
+            "created_at": {
+                "binding": "created_at",
+                "type": "datetime",
+                "nullable": False,
+                "label": "Created date",
+            },
+            "customer.email": {
+                "binding": "customer__email",
+                "type": "string",
+                "nullable": False,
+                "label": "Customer email",
+                "sensitive": True,
+                "requires_permission": "customers.view_pii",
+            },
+            "internal_notes": {
+                "binding": "internal_notes",
+                "type": "string",
+                "nullable": False,
+                "label": "Internal notes",
+                "llm_visible": False,
+            },
         },
         metrics=[Metric("order_count", op="count", field="id")],
     )
@@ -101,6 +129,9 @@ def test_planner_sends_safe_catalog_metadata_and_schema() -> None:
     assert "start_date_month" in prompt_text
     assert "original group_by field name" in prompt_text
     assert "customer.email" not in prompt_text
+    assert "customer__email" not in prompt_text
+    assert "customers.view_pii" not in prompt_text
+    assert '"binding"' not in prompt_text
     assert "internal_notes" not in prompt_text
     assert "test_project.Order" not in prompt_text
 
@@ -115,6 +146,22 @@ def test_build_planner_request_is_deterministic_and_safe() -> None:
     assert "Never invent bucket aliases" in prompt_text
     assert "customer.email" not in prompt_text
     assert "internal_notes" not in prompt_text
+
+
+def test_permissioned_planner_metadata_still_omits_private_policy_and_binding() -> None:
+    """Visible semantic fields never reveal their binding or permission token."""
+
+    request = build_planner_request(
+        question=QUESTION,
+        registry=build_registry(),
+        permissions={"customers.view_pii"},
+    )
+    prompt_text = "\n".join(message["content"] for message in request.messages)
+
+    assert "customer.email" in prompt_text
+    assert "customer__email" not in prompt_text
+    assert "customers.view_pii" not in prompt_text
+    assert '"binding"' not in prompt_text
 
 
 def test_provider_output_is_always_validated() -> None:

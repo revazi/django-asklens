@@ -52,7 +52,7 @@ def register_context_resource(
     registry.register(
         model=Order,
         name="orders",
-        fields={"id": {}},
+        fields={"id": {"binding": "id", "type": "integer", "nullable": False}},
         scope_mode="context_scoped",
         scope_provider=scope_provider,
     )
@@ -65,7 +65,11 @@ def test_scope_mode_is_required_at_registration() -> None:
     registry = CatalogRegistry()
 
     with pytest.raises(InvalidResourceError, match="scope_mode is required"):
-        registry.register(model=Order, name="orders", fields={"id": {}})
+        registry.register(
+            model=Order,
+            name="orders",
+            fields={"id": {"binding": "id", "type": "integer", "nullable": False}},
+        )
 
     assert registry.all() == ()
 
@@ -85,7 +89,7 @@ def test_context_scoped_mode_can_be_configured_once(
     resource = registry.register(
         model=Order,
         name="orders",
-        fields={"id": {}},
+        fields={"id": {"binding": "id", "type": "integer", "nullable": False}},
         scope_provider=lambda _request: Order.objects.none(),
     )
 
@@ -110,7 +114,11 @@ def test_context_scoped_default_still_requires_provider(settings) -> None:
     registry = CatalogRegistry()
 
     with pytest.raises(InvalidResourceError, match="requires scope_provider"):
-        registry.register(model=Order, name="orders", fields={"id": {}})
+        registry.register(
+            model=Order,
+            name="orders",
+            fields={"id": {"binding": "id", "type": "integer", "nullable": False}},
+        )
 
     assert registry.all() == ()
 
@@ -127,7 +135,7 @@ def test_explicit_global_mode_overrides_context_scoped_default(settings) -> None
     resource = registry.register(
         model=Order,
         name="orders",
-        fields={"id": {}},
+        fields={"id": {"binding": "id", "type": "integer", "nullable": False}},
         scope_mode="global",
     )
 
@@ -154,7 +162,7 @@ def test_default_scope_mode_must_be_context_scoped(
         registry.register(
             model=Order,
             name="orders",
-            fields={"id": {}},
+            fields={"id": {"binding": "id", "type": "integer", "nullable": False}},
             scope_provider=lambda _request: Order.objects.none(),
         )
 
@@ -177,7 +185,7 @@ def test_legacy_base_queryset_is_a_migration_error(
         registry.register(
             model=Order,
             name="orders",
-            fields={"id": {}},
+            fields={"id": {"binding": "id", "type": "integer", "nullable": False}},
             base_queryset=legacy_base_queryset,
         )
 
@@ -194,7 +202,7 @@ def test_scope_mode_must_be_global_or_context_scoped(scope_mode: object) -> None
         registry.register(
             model=Order,
             name="orders",
-            fields={"id": {}},
+            fields={"id": {"binding": "id", "type": "integer", "nullable": False}},
             scope_mode=scope_mode,
         )
 
@@ -208,7 +216,7 @@ def test_context_scoped_registration_requires_provider() -> None:
         registry.register(
             model=Order,
             name="orders",
-            fields={"id": {}},
+            fields={"id": {"binding": "id", "type": "integer", "nullable": False}},
             scope_mode="context_scoped",
         )
 
@@ -222,7 +230,7 @@ def test_global_registration_rejects_scope_provider() -> None:
         registry.register(
             model=Order,
             name="orders",
-            fields={"id": {}},
+            fields={"id": {"binding": "id", "type": "integer", "nullable": False}},
             scope_mode="global",
             scope_provider=lambda _request: Order.objects.none(),
         )
@@ -237,7 +245,7 @@ def test_scope_provider_must_be_callable() -> None:
         registry.register(
             model=Order,
             name="orders",
-            fields={"id": {}},
+            fields={"id": {"binding": "id", "type": "integer", "nullable": False}},
             scope_mode="context_scoped",
             scope_provider=object(),
         )
@@ -250,7 +258,7 @@ def test_explicit_global_scope_returns_default_manager_queryset() -> None:
     resource = registry.register(
         model=Order,
         name="orders",
-        fields={"id": {}},
+        fields={"id": {"binding": "id", "type": "integer", "nullable": False}},
         scope_mode="global",
     )
 
@@ -269,7 +277,7 @@ def test_deprecated_runner_rejects_missing_current_request_before_sql(
     registry.register(
         model=Order,
         name="orders",
-        fields={"id": {}},
+        fields={"id": {"binding": "id", "type": "integer", "nullable": False}},
         scope_mode="global",
     )
 

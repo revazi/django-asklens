@@ -58,7 +58,6 @@ def build_planner_catalog(
     return registry.to_dict(
         include_sensitive=False,
         include_hidden=False,
-        include_internal=False,
         permissions=permissions,
     )
 

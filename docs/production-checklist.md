@@ -27,8 +27,9 @@ AskLens is a data access surface. Configure it as carefully as any reporting, an
 ## Resource registration
 
 - [ ] Register only reviewed resources.
-- [ ] Register only reviewed fields.
+- [ ] Register only reviewed semantic fields with explicit private bindings, canonical types, and nullability.
 - [ ] Do not auto-expose every Django model or every model field.
+- [ ] Confirm catalog, capability, and provider payloads omit bindings, model labels, and permission-token formats.
 - [ ] Give resources and metrics clear labels/descriptions so provider planning has enough semantic context.
 - [ ] Review each resource's semantic `default_order`; identity-only ordering is acceptable when deliberate.
 - [ ] If overriding `row_identity`, confirm the field is concrete, non-null, and unconditionally unique.

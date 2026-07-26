@@ -101,6 +101,7 @@ def test_build_capabilities_adds_sanitized_single_scope_guidance() -> None:
 
     capabilities = build_capabilities(
         permissions={"facility:123:BillingReportsView"},
+        resource_permissions={"billing_lines": "BillingReportsView"},
         catalog={
             "resources": [
                 {
@@ -109,7 +110,6 @@ def test_build_capabilities_adds_sanitized_single_scope_guidance() -> None:
                     "description": "Billing facts.",
                     "synonyms": [],
                     "default_date_field": "created_at",
-                    "requires_permission": "BillingReportsView",
                     "fields": [
                         {
                             "name": "facility.name",
@@ -147,6 +147,7 @@ def test_build_capabilities_adds_sanitized_single_scope_guidance() -> None:
     assert resource["scope"]["level"] == "single"
     assert resource["scope"]["kind"] == "facility"
     assert "facility:123" not in str(capabilities)
+    assert "BillingReportsView" not in str(capabilities)
     assert all("Facility" not in example for example in resource["examples"])
     assert "Show Gross revenue by Product" in resource["examples"]
 
@@ -156,6 +157,7 @@ def test_build_capabilities_omits_single_scope_resource_examples() -> None:
 
     capabilities = build_capabilities(
         permissions={"facility:123:FacilityView"},
+        resource_permissions={"facilities": "FacilityView"},
         catalog={
             "resources": [
                 {
@@ -164,7 +166,6 @@ def test_build_capabilities_omits_single_scope_resource_examples() -> None:
                     "description": "Visible facilities.",
                     "synonyms": [],
                     "default_date_field": "created_at",
-                    "requires_permission": "FacilityView",
                     "fields": [
                         {
                             "name": "name",
@@ -244,6 +245,10 @@ def test_build_capabilities_uses_explicit_scope_metadata_for_arbitrary_names() -
 
     capabilities = build_capabilities(
         permissions={"gym:abc:ReportsView"},
+        resource_permissions={
+            "locations": "ReportsView",
+            "bookings": "ReportsView",
+        },
         catalog={
             "resources": [
                 {
@@ -252,7 +257,6 @@ def test_build_capabilities_uses_explicit_scope_metadata_for_arbitrary_names() -
                     "description": "Visible studios.",
                     "synonyms": [],
                     "default_date_field": "opened_at",
-                    "requires_permission": "ReportsView",
                     "scope_resource": True,
                     "fields": [
                         {
@@ -283,7 +287,6 @@ def test_build_capabilities_uses_explicit_scope_metadata_for_arbitrary_names() -
                     "description": "Bookings.",
                     "synonyms": [],
                     "default_date_field": "booked_at",
-                    "requires_permission": "ReportsView",
                     "fields": [
                         {
                             "name": "home_box.label",

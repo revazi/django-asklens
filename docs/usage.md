@@ -28,15 +28,39 @@ register(
     description="Customer orders placed in the store",
     default_date_field="created_at",
     fields={
-        "id": {"label": "Order ID"},
-        "status": {"label": "Status"},
-        "created_at": {"label": "Created date"},
+        "id": {
+            "binding": "id",
+            "type": "integer",
+            "nullable": False,
+            "label": "Order ID",
+        },
+        "status": {
+            "binding": "status",
+            "type": "string",
+            "nullable": False,
+            "label": "Status",
+        },
+        "created_at": {
+            "binding": "created_at",
+            "type": "datetime",
+            "nullable": False,
+            "label": "Created date",
+        },
         "customer.email": {
+            "binding": "customer__email",
+            "type": "string",
+            "nullable": False,
             "label": "Customer email",
             "sensitive": True,
             "requires_permission": "customers.view_pii",
         },
-        "total": {"label": "Order total", "metric": True},
+        "total": {
+            "binding": "total",
+            "type": "decimal",
+            "nullable": False,
+            "label": "Order total",
+            "metric": True,
+        },
     },
     metrics=[
         Metric("order_count", op="count", field="id", label="Number of orders"),
@@ -47,7 +71,7 @@ register(
 )
 ```
 
-Resource-level `requires_permission` gates the whole resource. Field-level `requires_permission` gates individual fields. Sensitive fields are hidden from the default catalog serialization. Hidden fields and internal model names are not sent to the planner prompt by default.
+Resource-level `requires_permission` gates the whole resource. Field-level `requires_permission` gates individual fields. Sensitive fields are hidden from the default catalog serialization. Private Django bindings, permission tokens, hidden fields, and internal model names are never sent to the planner prompt. Field mapping keys are public semantic names; they are not translated into ORM paths.
 
 Every resource must resolve to `global` or `context_scoped`. `DEFAULT_SCOPE_MODE` can only be `context_scoped`; global resources must declare `scope_mode="global"` individually. Context-scoped resources require a trusted `scope_provider`; missing or invalid scope never falls back to the default manager.
 
