@@ -1,7 +1,7 @@
 """Security tests for the public trusted execution facade."""
 
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime, time
 from decimal import Decimal
 
 import pytest
@@ -11,7 +11,7 @@ from django_asklens.catalog.registry import CatalogRegistry
 from django_asklens.exceptions import PublicAskLensError
 from django_asklens.execution import execute_plan, run_query_plan
 from django_asklens.planning import parse_query_plan
-from tests.test_project.models import Customer, Facility, Order
+from tests.test_project.models import CanonicalValueFixture, Customer, Facility, Order
 
 pytestmark = pytest.mark.django_db
 
@@ -130,6 +130,37 @@ def build_independent_fanout_registry() -> CatalogRegistry:
     return registry
 
 
+def build_canonical_registry() -> CatalogRegistry:
+    """Return canonical fields for pre-query semantic rejection tests."""
+
+    registry = CatalogRegistry()
+    registry.register(
+        model=CanonicalValueFixture,
+        name="canonical_values",
+        scope_mode="global",
+        fields={
+            "count": {
+                "binding": "integer_value",
+                "type": "integer",
+                "nullable": False,
+            },
+            "state": {
+                "binding": "enum_text_value",
+                "type": "enum",
+                "nullable": False,
+                "enum": {
+                    "type": "string",
+                    "values": [
+                        {"value": "draft", "aliases": ["pending"]},
+                        {"value": "active"},
+                    ],
+                },
+            },
+        },
+    )
+    return registry
+
+
 def sensitive_plan():
     """Return a directly constructed shape-valid sensitive-field plan."""
 
@@ -217,6 +248,114 @@ def test_execute_plan_rejects_independent_metric_fanout_before_sql(
             )
 
     assert exc_info.value.code == "asklens.plan.invalid"
+
+
+@pytest.mark.parametrize(
+    "filter_spec",
+    [
+        {"field": "count", "op": "contains", "value": "1"},
+        {"field": "state", "op": "eq", "value": "unknown"},
+        {"field": "count", "op": "eq", "value": "1"},
+    ],
+)
+def test_invalid_canonical_filters_reject_before_application_sql(
+    filter_spec: dict[str, object],
+    django_assert_num_queries,
+) -> None:
+    """Type/operator/enum failures must not reach registered application data."""
+
+    with django_assert_num_queries(0):
+        with pytest.raises(PublicAskLensError) as exc_info:
+            execute_plan(
+                {
+                    "resource": "canonical_values",
+                    "intent": "list",
+                    "filters": [filter_spec],
+                    "select": ["count"],
+                    "limit": 10,
+                },
+                request=request_with(),
+                registry=build_canonical_registry(),
+            )
+
+    assert exc_info.value.code == "asklens.plan.invalid"
+
+
+def test_invalid_enum_value_does_not_reveal_unavailable_field(
+    django_assert_num_queries,
+) -> None:
+    """Value normalization runs only after current field authorization."""
+
+    registry = build_canonical_registry()
+    state = registry.get("canonical_values").fields["state"]
+    hidden_registry = CatalogRegistry()
+    hidden_registry.register(
+        model=CanonicalValueFixture,
+        name="canonical_values",
+        scope_mode="global",
+        fields={
+            "count": {
+                "binding": "integer_value",
+                "type": "integer",
+                "nullable": False,
+            },
+            "state": {
+                "binding": state.binding,
+                "type": "enum",
+                "nullable": False,
+                "requires_permission": "reports.view_state",
+                "enum": state.enum.to_dict() if state.enum is not None else None,
+            },
+        },
+    )
+
+    with django_assert_num_queries(0):
+        with pytest.raises(PublicAskLensError) as exc_info:
+            execute_plan(
+                {
+                    "resource": "canonical_values",
+                    "intent": "list",
+                    "filters": [{"field": "state", "op": "eq", "value": "unknown"}],
+                    "select": ["count"],
+                },
+                request=request_with(),
+                registry=hidden_registry,
+            )
+
+    assert exc_info.value.code == "asklens.member.unavailable"
+
+
+def test_unregistered_enum_result_fails_inside_trusted_execution(
+    django_assert_num_queries,
+) -> None:
+    """Unexpected stored enum values cannot become successful public results."""
+
+    CanonicalValueFixture.objects.create(
+        text_value="value",
+        boolean_value=False,
+        integer_value=1,
+        decimal_value=Decimal("1.0000"),
+        float_value=1.0,
+        date_value=date(2026, 1, 1),
+        datetime_value=datetime(2026, 1, 1, tzinfo=UTC),
+        time_value=time(12, 0),
+        enum_text_value="retired",
+    )
+
+    with django_assert_num_queries(1):
+        with pytest.raises(PublicAskLensError) as exc_info:
+            execute_plan(
+                {
+                    "resource": "canonical_values",
+                    "intent": "list",
+                    "select": ["state"],
+                    "limit": 10,
+                },
+                request=request_with(),
+                registry=build_canonical_registry(),
+            )
+
+    assert exc_info.value.code == "asklens.execute.failed"
 
 
 def test_execute_plan_revalidates_direct_query_plan_permissions(

@@ -1,6 +1,6 @@
 """AskLens registrations for the complex runnable test project."""
 
-from collections.abc import Callable
+from collections.abc import Callable, Iterable
 from typing import Any
 
 from django.db.models import Model, Q, QuerySet
@@ -9,6 +9,7 @@ from django_asklens import Metric, register
 from django_asklens.catalog.registry import default_registry
 from django_asklens.exceptions import UnknownResourceError
 from tests.test_project.models import (
+    BillingDocument,
     BillingLine,
     Facility,
     Lead,
@@ -41,6 +42,42 @@ def semantic_field(
         "nullable": nullable,
         **metadata,
     }
+
+
+def explicit_enum_field(
+    binding: str,
+    choices: Iterable[tuple[str | int, object]],
+    *,
+    nullable: bool,
+    **metadata: object,
+) -> dict[str, object]:
+    """Opt explicitly into safe enum metadata for a reviewed Django choice set."""
+
+    values = []
+    for value, label in choices:
+        item: dict[str, object] = {"value": value, "label": str(label)}
+        aliases = []
+        for candidate in (str(label), str(value).casefold()):
+            if candidate != value and candidate not in aliases:
+                aliases.append(candidate)
+        if aliases:
+            item["aliases"] = aliases
+        values.append(item)
+    underlying_type = (
+        "integer"
+        if all(
+            isinstance(item["value"], int) and not isinstance(item["value"], bool)
+            for item in values
+        )
+        else "string"
+    )
+    return semantic_field(
+        binding,
+        "enum",
+        nullable=nullable,
+        enum={"type": underlying_type, "values": values},
+        **metadata,
+    )
 
 
 def ensure_complex_resources_registered() -> None:
@@ -93,8 +130,11 @@ def register_facilities() -> None:
                 result_visible=True,
                 requires_permission=StaffGrant.FACILITY_VIEW,
             ),
-            "facility_type": semantic_field(
-                "facility_type", "string", nullable=False, label="Facility type"
+            "facility_type": explicit_enum_field(
+                "facility_type",
+                Facility.FacilityType.choices,
+                nullable=False,
+                label="Facility type",
             ),
             "timezone": semantic_field(
                 "timezone", "string", nullable=False, label="Timezone"
@@ -219,8 +259,8 @@ def register_member_resources() -> None:
                 scope_dimension=True,
                 requires_permission=StaffGrant.FACILITY_VIEW,
             ),
-            "gender": semantic_field(
-                "gender", "string", nullable=False, label="Gender"
+            "gender": explicit_enum_field(
+                "gender", MemberProfile.Gender.choices, nullable=False, label="Gender"
             ),
             "member_since": semantic_field(
                 "member_since", "datetime", nullable=True, label="Member since"
@@ -352,8 +392,8 @@ def register_member_resources() -> None:
                 label="Status ID",
                 llm_visible=False,
             ),
-            "status": semantic_field(
-                "status", "string", nullable=False, label="Status"
+            "status": explicit_enum_field(
+                "status", MemberStatus.Status.choices, nullable=False, label="Status"
             ),
             "start_date": semantic_field(
                 "start_date", "datetime", nullable=False, label="Start date"
@@ -395,8 +435,11 @@ def register_member_resources() -> None:
                 label="Subscription ID",
                 llm_visible=False,
             ),
-            "status": semantic_field(
-                "status", "string", nullable=False, label="Status"
+            "status": explicit_enum_field(
+                "status",
+                MemberSubscription.Status.choices,
+                nullable=False,
+                label="Status",
             ),
             "start_date": semantic_field(
                 "start_date", "datetime", nullable=False, label="Start date"
@@ -482,9 +525,9 @@ def register_billing_resources() -> None:
                 nullable=False,
                 label="Due date",
             ),
-            "billing_document.status": semantic_field(
+            "billing_document.status": explicit_enum_field(
                 "billing_document__status",
-                "string",
+                BillingDocument.Status.choices,
                 nullable=False,
                 label="Billing status",
             ),
@@ -580,12 +623,15 @@ def register_billing_resources() -> None:
             "created_at": semantic_field(
                 "created_at", "datetime", nullable=False, label="Created date"
             ),
-            "status": semantic_field(
-                "status", "string", nullable=False, label="Payment status"
+            "status": explicit_enum_field(
+                "status",
+                PaymentAttempt.Status.choices,
+                nullable=False,
+                label="Payment status",
             ),
-            "billing_document.status": semantic_field(
+            "billing_document.status": explicit_enum_field(
                 "billing_document__status",
-                "string",
+                BillingDocument.Status.choices,
                 nullable=False,
                 label="Billing status",
             ),
@@ -664,14 +710,23 @@ def register_growth_resources() -> None:
                 requires_permission=StaffGrant.ANALYTICS_VIEW,
             ),
             "name": semantic_field("name", "string", nullable=False, label="Campaign"),
-            "channel": semantic_field(
-                "channel", "string", nullable=False, label="Channel"
+            "channel": explicit_enum_field(
+                "channel",
+                MarketingCampaign.Channel.choices,
+                nullable=False,
+                label="Channel",
             ),
-            "audience": semantic_field(
-                "audience", "string", nullable=False, label="Audience"
+            "audience": explicit_enum_field(
+                "audience",
+                MarketingCampaign.Audience.choices,
+                nullable=False,
+                label="Audience",
             ),
-            "status": semantic_field(
-                "status", "string", nullable=False, label="Status"
+            "status": explicit_enum_field(
+                "status",
+                MarketingCampaign.Status.choices,
+                nullable=False,
+                label="Status",
             ),
             "start_date": semantic_field(
                 "start_date", "date", nullable=False, label="Start date"
@@ -779,14 +834,14 @@ def register_growth_resources() -> None:
             "campaign.name": semantic_field(
                 "campaign__name", "string", nullable=True, label="Campaign"
             ),
-            "source": semantic_field(
-                "source", "string", nullable=False, label="Lead source"
+            "source": explicit_enum_field(
+                "source", Lead.Source.choices, nullable=False, label="Lead source"
             ),
-            "stage": semantic_field(
-                "stage", "string", nullable=False, label="Lead stage"
+            "stage": explicit_enum_field(
+                "stage", Lead.Stage.choices, nullable=False, label="Lead stage"
             ),
-            "status": semantic_field(
-                "status", "string", nullable=False, label="Lead status"
+            "status": explicit_enum_field(
+                "status", Lead.Status.choices, nullable=False, label="Lead status"
             ),
             "inquiry_date": semantic_field(
                 "inquiry_date", "datetime", nullable=False, label="Inquiry date"
@@ -853,9 +908,14 @@ def register_schedule_resources() -> None:
             "location.name": semantic_field(
                 "location__name", "string", nullable=True, label="Location"
             ),
-            "role": semantic_field("role", "string", nullable=False, label="Role"),
-            "status": semantic_field(
-                "status", "string", nullable=False, label="Shift status"
+            "role": explicit_enum_field(
+                "role", StaffShift.Role.choices, nullable=False, label="Role"
+            ),
+            "status": explicit_enum_field(
+                "status",
+                StaffShift.Status.choices,
+                nullable=False,
+                label="Shift status",
             ),
             "start_at": semantic_field(
                 "start_at", "datetime", nullable=False, label="Start time"
@@ -1016,11 +1076,17 @@ def register_schedule_resources() -> None:
             "canceled_at": semantic_field(
                 "canceled_at", "datetime", nullable=True, label="Canceled date"
             ),
-            "status": semantic_field(
-                "status", "string", nullable=False, label="Booking status"
+            "status": explicit_enum_field(
+                "status",
+                SessionBooking.Status.choices,
+                nullable=False,
+                label="Booking status",
             ),
-            "source": semantic_field(
-                "source", "string", nullable=False, label="Booking source"
+            "source": explicit_enum_field(
+                "source",
+                SessionBooking.Source.choices,
+                nullable=False,
+                label="Booking source",
             ),
             "party_size": semantic_field(
                 "party_size", "integer", nullable=False, label="Party size"
@@ -1100,17 +1166,29 @@ def register_support_resources() -> None:
                 scope_dimension=True,
                 requires_permission=StaffGrant.ANALYTICS_VIEW,
             ),
-            "category": semantic_field(
-                "category", "string", nullable=False, label="Category"
+            "category": explicit_enum_field(
+                "category",
+                SupportTicket.Category.choices,
+                nullable=False,
+                label="Category",
             ),
-            "priority": semantic_field(
-                "priority", "string", nullable=False, label="Priority"
+            "priority": explicit_enum_field(
+                "priority",
+                SupportTicket.Priority.choices,
+                nullable=False,
+                label="Priority",
             ),
-            "status": semantic_field(
-                "status", "string", nullable=False, label="Ticket status"
+            "status": explicit_enum_field(
+                "status",
+                SupportTicket.Status.choices,
+                nullable=False,
+                label="Ticket status",
             ),
-            "channel": semantic_field(
-                "channel", "string", nullable=False, label="Channel"
+            "channel": explicit_enum_field(
+                "channel",
+                SupportTicket.Channel.choices,
+                nullable=False,
+                label="Channel",
             ),
             "opened_at": semantic_field(
                 "opened_at", "datetime", nullable=False, label="Opened date"

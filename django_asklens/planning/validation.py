@@ -1,14 +1,18 @@
 """Semantic validation for parsed QueryPlan objects."""
 
 import json
+import math
 import re
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
-from typing import Any, Literal
+from decimal import Decimal, InvalidOperation
+from typing import Any, Literal, Never
+from uuid import UUID
 
-from django_asklens.catalog.introspection import resolve_field_path
 from django_asklens.catalog.registry import CatalogRegistry, default_registry
 from django_asklens.catalog.resources import (
+    OPERATORS_BY_FIELD_TYPE,
+    EnumDefinition,
     FieldSpec,
     Metric,
     SemanticResource,
@@ -108,7 +112,6 @@ def _validate_query_plan(
     validate_plan_limits(normalized_plan, resource=resource, limits=limits)
 
     normalized_plan = normalize_visualization_date_trunc_aliases(normalized_plan)
-    normalized_plan = normalize_choice_filter_values(normalized_plan, resource=resource)
     normalized_plan = normalize_visualization_defaults(normalized_plan)
     validate_no_meaningless_duplicates(normalized_plan)
     validate_plan_fields(
@@ -119,6 +122,8 @@ def _validate_query_plan(
         allow_hidden_fields=allow_hidden_fields,
         permissions=permission_set,
     )
+    normalized_plan = normalize_filter_values(normalized_plan, resource=resource)
+    validate_no_meaningless_duplicates(normalized_plan)
     return normalized_plan
 
 
@@ -226,23 +231,15 @@ def validate_resource_permission(
     raise PermissionDeniedError(msg)
 
 
-def normalize_choice_filter_values(
+def normalize_filter_values(
     plan: QueryPlan,
     *,
     resource: SemanticResource,
 ) -> QueryPlan:
-    """Canonicalize filter values for registered Django choice fields.
-
-    LLM providers see field metadata, not database rows or sample values. For
-    Django ``choices`` fields, providers may naturally return the human label
-    (for example ``"Paid"``) or a case variant of the stored value
-    (``"paid"``) while the database stores the canonical choice value
-    (``"PAID"``). This normalization uses only model schema metadata and only
-    changes unambiguous choice-label/value matches.
-    """
+    """Normalize validated scalar values using only explicit semantic metadata."""
 
     filters = tuple(
-        normalize_choice_filter_value(filter_spec, resource=resource)
+        normalize_filter_value(filter_spec, field=resource.fields[filter_spec.field])
         for filter_spec in plan.filters
     )
     if filters == plan.filters:
@@ -250,85 +247,100 @@ def normalize_choice_filter_values(
     return plan.model_copy(update={"filters": filters})
 
 
-def normalize_choice_filter_value(
-    filter_spec: FilterSpec,
-    *,
-    resource: SemanticResource,
-) -> FilterSpec:
-    """Return a filter with canonical choice values when safely known."""
+def normalize_filter_value(filter_spec: FilterSpec, *, field: FieldSpec) -> FilterSpec:
+    """Return one filter with canonical float, UUID, decimal, or enum values."""
 
-    if filter_spec.op not in {"eq", "neq", "in"}:
+    if filter_spec.op in {"isnull", "date_range", "last_n_days", "last_n_months"}:
         return filter_spec
-    if filter_spec.field not in resource.fields:
-        return filter_spec
-
-    choice_lookup = build_choice_value_lookup(resource, filter_spec.field)
-    if not choice_lookup:
-        return filter_spec
-
     if filter_spec.op == "in":
-        if not isinstance(filter_spec.value, list):
-            return filter_spec
-        normalized_value = [
-            normalize_choice_scalar(value, choice_lookup) for value in filter_spec.value
+        if not isinstance(filter_spec.value, list):  # Defensive after shape parsing.
+            msg = "in filters require a non-empty list value."
+            raise PlanValidationError(msg)
+        normalized_value: object = [
+            normalize_canonical_scalar(value, field=field)
+            for value in filter_spec.value
         ]
     else:
-        normalized_value = normalize_choice_scalar(filter_spec.value, choice_lookup)
-
+        normalized_value = normalize_canonical_scalar(filter_spec.value, field=field)
     if normalized_value == filter_spec.value:
         return filter_spec
     return filter_spec.model_copy(update={"value": normalized_value})
 
 
-def build_choice_value_lookup(
-    resource: SemanticResource,
-    field_name: str,
-) -> dict[str, object]:
-    """Return normalized choice label/value tokens for one field."""
+def normalize_canonical_scalar(value: object, *, field: FieldSpec) -> object:
+    """Validate and normalize one scalar for a canonical semantic field type."""
 
-    field = resolve_field_path(
-        resource.model,
-        resource.fields[field_name].binding,
-    ).field
-    flat_choices = tuple(getattr(field, "flatchoices", ()) or ())
-    if not flat_choices:
-        return {}
-
-    lookup: dict[str, object] = {}
-    ambiguous: set[str] = set()
-    for choice_value, choice_label in flat_choices:
-        for candidate in (choice_value, choice_label):
-            token = choice_token(candidate)
-            if not token:
-                continue
-            existing = lookup.get(token)
-            if existing is not None and existing != choice_value:
-                ambiguous.add(token)
-                continue
-            lookup[token] = choice_value
-
-    for token in ambiguous:
-        lookup.pop(token, None)
-    return lookup
-
-
-def normalize_choice_scalar(
-    value: object, choice_lookup: Mapping[str, object]
-) -> object:
-    """Return the canonical choice value for a scalar when unambiguous."""
-
-    token = choice_token(value)
-    if not token:
+    if field.type == "string":
+        if not isinstance(value, str):
+            raise_invalid_filter_value(field, "must be a string")
         return value
-    return choice_lookup.get(token, value)
+    if field.type == "boolean":
+        if not isinstance(value, bool):
+            raise_invalid_filter_value(field, "must be a boolean")
+        return value
+    if field.type == "integer":
+        if not isinstance(value, int) or isinstance(value, bool):
+            raise_invalid_filter_value(field, "must be an integer")
+        return value
+    if field.type == "decimal":
+        if not isinstance(value, str):
+            raise_invalid_filter_value(field, "must be a decimal string")
+        try:
+            parsed_decimal = Decimal(value)
+        except InvalidOperation:
+            raise_invalid_filter_value(field, "must be a valid decimal string")
+        if not parsed_decimal.is_finite():
+            raise_invalid_filter_value(field, "must be a finite decimal string")
+        return value
+    if field.type == "float":
+        if not isinstance(value, (int, float)) or isinstance(value, bool):
+            raise_invalid_filter_value(field, "must be a JSON number")
+        try:
+            normalized_float = float(value)
+        except OverflowError:
+            raise_invalid_filter_value(field, "must be a finite JSON number")
+        if not math.isfinite(normalized_float):
+            raise_invalid_filter_value(field, "must be a finite JSON number")
+        return normalized_float
+    if field.type in {"date", "datetime", "time"}:
+        if not isinstance(value, str):
+            raise_invalid_filter_value(field, f"must be a {field.type} string")
+        return value
+    if field.type == "uuid":
+        if not isinstance(value, str):
+            raise_invalid_filter_value(field, "must be a valid UUID string")
+        try:
+            return str(UUID(value))
+        except ValueError:
+            raise_invalid_filter_value(field, "must be a valid UUID string")
+    if field.type == "enum":
+        return normalize_enum_scalar(value, field=field)
+
+    raise_invalid_filter_value(field, "uses an unsupported canonical type")
 
 
-def choice_token(value: object) -> str:
-    """Return a conservative normalized token for a choice value/label."""
+def normalize_enum_scalar(value: object, *, field: FieldSpec) -> str | int:
+    """Resolve one accepted explicit enum value or alias to its canonical value."""
 
-    if not isinstance(value, str):
-        return ""
-    return re.sub(r"[\s_-]+", " ", value.strip().casefold())
+    enum = field.enum
+    if not isinstance(enum, EnumDefinition):  # Defensive against invalid mutation.
+        raise_invalid_filter_value(field, "has no trusted enum definition")
+    lookup = {
+        (type(token), token): enum_value.value
+        for enum_value in enum.values
+        for token in (enum_value.value, *enum_value.aliases)
+    }
+    try:
+        return lookup[(type(value), value)]
+    except (KeyError, TypeError):
+        raise_invalid_filter_value(field, "must be a registered enum value or alias")
+
+
+def raise_invalid_filter_value(field: FieldSpec, detail: str) -> Never:
+    """Raise a stable semantic error without relying on Django coercion."""
+
+    msg = f"Filter value for field {field.name!r} {detail}."
+    raise PlanValidationError(msg)
 
 
 def normalize_visualization_defaults(plan: QueryPlan) -> QueryPlan:
@@ -595,7 +607,7 @@ def validate_plan_fields(
         )
 
     for filter_spec in plan.filters:
-        validate_field_usage(
+        field = validate_field_usage(
             resource,
             filter_spec.field,
             usage="filter",
@@ -604,6 +616,7 @@ def validate_plan_fields(
             allow_hidden_fields=allow_hidden_fields,
             permissions=permissions,
         )
+        validate_filter_operator(filter_spec, field=field)
 
     for group_by in plan.group_by:
         validate_group_by(
@@ -638,6 +651,19 @@ def validate_plan_fields(
         available_keys=visible_field_keys | metric_names,
         metric_names=metric_names,
     )
+
+
+def validate_filter_operator(filter_spec: FilterSpec, *, field: FieldSpec) -> None:
+    """Reject operators outside the explicit canonical field-type matrix."""
+
+    supported = OPERATORS_BY_FIELD_TYPE.get(field.type, ())
+    if filter_spec.op in supported:
+        return
+    msg = (
+        f"Operator {filter_spec.op!r} is not supported for canonical "
+        f"type {field.type!r}."
+    )
+    raise PlanValidationError(msg)
 
 
 def validate_group_by(

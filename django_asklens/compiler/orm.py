@@ -5,7 +5,8 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any, Literal, Never
 
-from django.db.models import F, IntegerField, QuerySet, Value
+from django.db.models import F, QuerySet
+from django.db.models.aggregates import Aggregate
 
 from django_asklens.catalog.resources import FieldSpec, Metric, SemanticResource
 from django_asklens.compiler.aggregations import (
@@ -28,6 +29,8 @@ class ResultColumn:
     key: str
     label: str
     type: str
+    nullable: bool
+    enum_values: tuple[str | int, ...] = field(default=(), repr=False)
 
 
 @dataclass(frozen=True, slots=True)
@@ -58,6 +61,7 @@ class _CompiledQuery:
     limit: int
     limit_scope: LimitScope
     detects_truncation: bool
+    aggregate_expressions: Mapping[str, Aggregate] | None
     context_binding: object = field(repr=False, compare=False)
 
     def __reduce__(self) -> Never:
@@ -123,6 +127,7 @@ def _compile_list_query(
         limit=plan.limit,
         limit_scope="rows",
         detects_truncation=True,
+        aggregate_expressions=None,
         context_binding=prepared.context_binding,
     )
 
@@ -160,15 +165,7 @@ def _compile_aggregate_query(
         effective_limit = plan.limit
         detects_truncation = True
     else:
-        compiled = (
-            queryset.annotate(
-                _asklens_group_all=Value(1, output_field=IntegerField()),
-            )
-            .values("_asklens_group_all")
-            .annotate(**metric_expressions)
-            .values(*metric_aliases)
-        )
-        compiled = compiled[:1]
+        compiled = queryset
         effective_limit = 1
         detects_truncation = False
 
@@ -183,6 +180,7 @@ def _compile_aggregate_query(
         limit=effective_limit,
         limit_scope="groups",
         detects_truncation=detects_truncation,
+        aggregate_expressions=(None if group_expressions else metric_expressions),
         context_binding=prepared.context_binding,
     )
 
@@ -293,7 +291,17 @@ def build_aggregate_columns(
 def field_column(field: FieldSpec) -> ResultColumn:
     """Return result column metadata for a field."""
 
-    return ResultColumn(key=field.name, label=field.label, type=field.type)
+    return ResultColumn(
+        key=field.name,
+        label=field.label,
+        type=field.type,
+        nullable=field.nullable,
+        enum_values=(
+            tuple(item.value for item in field.enum.values)
+            if field.enum is not None
+            else ()
+        ),
+    )
 
 
 def metric_column(metric: Metric) -> ResultColumn:
@@ -303,4 +311,5 @@ def metric_column(metric: Metric) -> ResultColumn:
         key=metric.name,
         label=metric.label or metric.name.replace("_", " ").title(),
         type=metric.result_type,
+        nullable=metric.op != "count",
     )

@@ -7,7 +7,7 @@ from django_asklens.compiler import ResultColumn
 from django_asklens.exceptions import VisualizationHintError
 
 SUPPORTED_VISUALIZATION_HINT_TYPES = ("table", "metric", "bar", "line", "pie")
-NUMERIC_COLUMN_TYPES = {"decimal", "float", "integer", "number"}
+NUMERIC_COLUMN_TYPES = {"decimal", "float", "integer"}
 
 type VisualizationHintType = Literal["table", "metric", "bar", "line", "pie"]
 

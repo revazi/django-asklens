@@ -52,7 +52,8 @@ def apply_filter(
 
     q_object = build_filter_q(filter_spec, resource=resource, now=now)
     if filter_spec.op == "neq":
-        return queryset.exclude(q_object)
+        orm_path = resource.fields[filter_spec.field].binding
+        return queryset.filter(**{f"{orm_path}__isnull": False}).exclude(q_object)
     return queryset.filter(q_object)
 
 

@@ -48,6 +48,7 @@ def smoke_core_install() -> None:
 
     from django_asklens import Metric
     from django_asklens.access import can_access_asklens
+    from django_asklens.catalog.capabilities import build_capabilities
     from django_asklens.catalog.registry import CatalogRegistry, serialize_catalog
     from django_asklens.exceptions import (
         InvalidResourceError,
@@ -56,6 +57,7 @@ def smoke_core_install() -> None:
     )
     from django_asklens.mcp import AskLensMCPToolSet
     from django_asklens.planning import parse_query_plan
+    from django_asklens.results import serialize_rows
     from django_asklens.settings import get_asklens_setting
 
     request = SimpleNamespace(user=SimpleNamespace(is_authenticated=True))
@@ -114,7 +116,21 @@ def smoke_core_install() -> None:
     resource = registry.register(
         model=user_model,
         name="users",
-        fields={"id": {"binding": "id", "type": "integer", "nullable": False}},
+        fields={
+            "id": {"binding": "id", "type": "integer", "nullable": False},
+            "state": {
+                "binding": "username",
+                "type": "enum",
+                "nullable": False,
+                "enum": {
+                    "type": "string",
+                    "values": [
+                        {"value": "active", "aliases": ["enabled"]},
+                        {"value": "disabled"},
+                    ],
+                },
+            },
+        },
         metrics=[
             Metric(
                 "user_count",
@@ -132,6 +148,36 @@ def smoke_core_install() -> None:
     assert resource_metadata["metrics"] == [
         {"name": "user_count", "label": "User Count", "result_type": "integer"}
     ]
+    assert resource_metadata["fields"][1]["enum"]["values"][0] == {
+        "value": "active",
+        "aliases": ["enabled"],
+    }
+    capabilities = build_capabilities(registry=registry)
+    users_capability = next(
+        item for item in capabilities["resources"] if item["name"] == "users"
+    )
+    id_capability = next(
+        item for item in users_capability["fields"] if item["name"] == "id"
+    )
+    state_capability = next(
+        item for item in users_capability["fields"] if item["name"] == "state"
+    )
+    assert id_capability["operators"] == [
+        "eq",
+        "neq",
+        "gt",
+        "gte",
+        "lt",
+        "lte",
+        "in",
+        "isnull",
+    ]
+    assert state_capability["operators"] == ["eq", "neq", "in", "isnull"]
+    assert state_capability["enum"]["values"][0]["aliases"] == ["enabled"]
+    assert serialize_rows(
+        columns=(compiler_package.ResultColumn("id", "ID", "integer", False),),
+        rows=({"id": 1},),
+    )["columns"] == [{"key": "id", "label": "ID", "type": "integer", "nullable": False}]
     assert "binding" not in str(resource_metadata)
     assert resource.get_scope_queryset(request).model is user_model
 

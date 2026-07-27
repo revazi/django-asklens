@@ -39,7 +39,7 @@ from django_asklens.execution.audit import (
 from django_asklens.permissions import get_request_permissions
 from django_asklens.planning.schemas import QueryPlan
 from django_asklens.planning.validation import parse_and_validate_query_plan
-from django_asklens.results import serialize_query_result
+from django_asklens.results import serialize_query_result, serialize_rows
 
 type UntrustedPlan = str | bytes | Mapping[str, Any] | QueryPlan
 
@@ -352,9 +352,14 @@ def _execute_compiled_query(
         raise TypeError(msg)
 
     started = perf_counter()
+    if compiled_query.aggregate_expressions is None:
+        raw_rows = compiled_query.queryset
+    else:
+        raw_rows = (
+            compiled_query.queryset.aggregate(**compiled_query.aggregate_expressions),
+        )
     fetched_rows = tuple(
-        normalize_row(row, key_map=compiled_query.key_map)
-        for row in compiled_query.queryset
+        normalize_row(row, key_map=compiled_query.key_map) for row in raw_rows
     )
     duration_ms = round((perf_counter() - started) * 1000)
     truncated = (
@@ -362,7 +367,7 @@ def _execute_compiled_query(
     )
     rows = fetched_rows[: compiled_query.limit]
 
-    return QueryResult(
+    result = QueryResult(
         columns=compiled_query.columns,
         rows=rows,
         row_count=len(rows),
@@ -372,6 +377,10 @@ def _execute_compiled_query(
         limit_scope=compiled_query.limit_scope,
         truncated=truncated,
     )
+    # Serialization is part of trusted execution: unsupported runtime objects
+    # fail before a successful result is returned or audited.
+    serialize_rows(columns=result.columns, rows=result.rows)
+    return result
 
 
 def normalize_row(

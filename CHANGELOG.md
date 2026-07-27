@@ -17,6 +17,8 @@ The project is alpha and APIs may change before a stable release.
 - Added `DEFAULT_SCOPE_MODE="context_scoped"` for projects that want to configure the safe resource mode once while keeping every global resource explicit.
 - Added stable public semantic field keys with required private Django `binding`, canonical `type`, and `nullable` registration metadata.
 - Added trusted metric `binding`, `result_type`, `requires_permission`, `cardinality_policy`, and optional private `distinct_key` registration metadata.
+- Added explicit enum definitions with string/integer canonical values, safe labels, and accepted aliases; enum metadata is catalog-visible only when deliberately registered.
+- Added a canonical per-type filter-operator matrix to permission-scoped capabilities and result-column nullability metadata.
 
 ### Changed
 
@@ -32,6 +34,10 @@ The project is alpha and APIs may change before a stable release.
 - Resource registration no longer has an implicit default-manager scope. Migrate `base_queryset=visible_rows` to a context-scoped registration with `scope_provider=visible_rows`; intentionally unrestricted resources must declare `scope_mode="global"`. Without a configured `DEFAULT_SCOPE_MODE`, omission still fails registration.
 - Field registration no longer interprets public mapping keys as Django paths. Every field now declares its private `__`-separated binding and explicit public type/nullability; changing a binding does not change the public plan.
 - QueryPlan metrics now contain only `{"metric": "registered_name"}`. Operations, backing fields, result types, permissions, distinctness, and relationship policy are resolved from trusted registration; 0.1 `name`/`op`/`field` metric objects and the legacy field-level `metric=True` flag are rejected with migration guidance.
+- Every filter now requires a non-null `value`. Filter validation enforces canonical JSON value types before scope resolution: decimal inputs remain finite strings, floats remain finite JSON numbers, UUIDs normalize canonically, and enum values resolve only through explicit values/aliases. Django `choices` labels are no longer inferred as input aliases.
+- `neq` explicitly excludes null rows. Empty ungrouped aggregates return one row (`count=0`; `sum`/`avg`/`min`/`max=null`), while empty grouped aggregates return no rows.
+- Result serialization now preserves decimal strings, verifies canonical runtime types, declared columns, nullability, and registered enum outputs, and rejects unsupported objects instead of stringifying them. Callers that directly construct the alpha `ResultColumn` helper must add `nullable=True|False`; the legacy broad `number` label is no longer canonical.
+- The compact provider response schema now correctly requests semantic-name-only metric objects.
 
 ### Removed
 
@@ -50,6 +56,7 @@ The project is alpha and APIs may change before a stable release.
 - Public catalogs, capabilities, and provider metadata omit private Django field and metric bindings, metric operations/distinct keys, model labels, and permission-token formats while continuing to enforce registration and current-request permissions.
 - To-many metrics now fail closed by default. Only explicit one-grain `count_rows` and private-key `count_distinct` registrations are accepted; numeric to-many aggregates, unsafe keys, plan-level fanout, and independent relationship paths reject before application-data SQL.
 - Every over-budget structural dimension rejects with `asklens.budget.exceeded` before scope resolution or application-data SQL; malformed UTF-8 byte plans return a typed parse error.
+- Unsupported type/operator pairs, invalid scalar types, and unknown enum inputs reject with `asklens.plan.invalid` before scope resolution or application-data SQL. Unsupported result objects fail with the safe `asklens.execute.failed` category.
 
 ## 0.1.0a1 — 2026-07-19
 

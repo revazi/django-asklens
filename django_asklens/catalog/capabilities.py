@@ -6,7 +6,9 @@ from typing import Literal, NotRequired, TypedDict
 
 from django_asklens.catalog.registry import CatalogRegistry, default_registry
 from django_asklens.catalog.resources import (
+    OPERATORS_BY_FIELD_TYPE,
     CatalogSnapshot,
+    EnumCatalogItem,
     FieldCatalogItem,
     MetricCatalogItem,
     ResourceCatalogItem,
@@ -35,6 +37,8 @@ class CapabilityField(TypedDict):
     can_group: bool
     can_order: bool
     can_date_bucket: bool
+    operators: list[str]
+    enum: NotRequired[EnumCatalogItem]
     sensitive: NotRequired[bool]
     scope_dimension: NotRequired[bool]
 
@@ -364,7 +368,10 @@ def build_field_capability(field: FieldCatalogItem) -> CapabilityField:
         "can_group": can_use_in_results,
         "can_order": can_use_in_results,
         "can_date_bucket": can_use_in_results and field["type"] in DATE_FIELD_TYPES,
+        "operators": list(OPERATORS_BY_FIELD_TYPE.get(field["type"], ())),
     }
+    if "enum" in field:
+        capability["enum"] = field["enum"]
     if field.get("sensitive"):
         capability["sensitive"] = True
     if field.get("scope_dimension"):

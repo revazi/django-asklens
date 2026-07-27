@@ -50,9 +50,11 @@ trends, and "by ..." grouping questions. Aggregate plans must put dimensions in
 group_by only and must not include select. Use list plans only when the user
 asks to list records or fields. List plans use select and must not include
 metrics or group_by. Result keys are exact select field names, group_by field
-names, and metric names. For date_trunc groupings, visualization axes and
-order_by fields must still reference the original group_by field name; never
-invent bucket aliases such as "start_date_month".
+names, and metric names. Use only the operators listed for each field in
+capabilities, and use enum canonical values or aliases exactly as listed. Never
+use null with eq/neq; use isnull with a boolean value. For date_trunc groupings,
+visualization axes and order_by fields must still reference the original
+group_by field name; never invent bucket aliases such as "start_date_month".
 
 For response_type="capabilities", return query_help and omit query_plan. Query
 help suggestions must include natural-language question text plus exact
@@ -303,7 +305,7 @@ def compact_query_plan_schema() -> dict[str, Any]:
                 "items": {
                     "type": "object",
                     "additionalProperties": False,
-                    "required": ["field", "op"],
+                    "required": ["field", "op", "value"],
                     "properties": {
                         "field": {"type": "string"},
                         "op": {
@@ -348,15 +350,8 @@ def compact_query_plan_schema() -> dict[str, Any]:
                 "items": {
                     "type": "object",
                     "additionalProperties": False,
-                    "required": ["name", "op", "field"],
-                    "properties": {
-                        "name": {"type": "string"},
-                        "op": {
-                            "type": "string",
-                            "enum": ["count", "sum", "avg", "min", "max"],
-                        },
-                        "field": {"type": "string"},
-                    },
+                    "required": ["metric"],
+                    "properties": {"metric": {"type": "string"}},
                 },
             },
             "select": {"type": "array", "items": {"type": "string"}},
@@ -393,8 +388,8 @@ def compact_json_value_schema() -> dict[str, Any]:
     """Return a compact schema for filter values."""
 
     return {
-        "type": ["string", "integer", "number", "boolean", "array", "null"],
-        "items": {"type": ["string", "integer", "number", "boolean", "null"]},
+        "type": ["string", "integer", "number", "boolean", "array"],
+        "items": {"type": ["string", "integer", "number", "boolean"]},
     }
 
 

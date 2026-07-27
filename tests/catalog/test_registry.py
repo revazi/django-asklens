@@ -15,7 +15,12 @@ from django_asklens.exceptions import (
     InvalidResourceError,
     UnknownFieldError,
 )
-from tests.test_project.models import Facility, MemberProfile, Order
+from tests.test_project.models import (
+    CanonicalValueFixture,
+    Facility,
+    MemberProfile,
+    Order,
+)
 
 
 @pytest.fixture(autouse=True)
@@ -282,6 +287,149 @@ def test_unsupported_canonical_field_type_fails_registration() -> None:
                     "binding": "total",
                     "type": "number",
                     "nullable": False,
+                }
+            },
+        )
+
+
+def test_explicit_enum_registration_serializes_only_declared_metadata() -> None:
+    """Enum values and aliases come from semantic registration, not Django choices."""
+
+    registry = CatalogRegistry()
+    resource = registry.register(
+        model=CanonicalValueFixture,
+        name="canonical_values",
+        scope_mode="global",
+        fields={
+            "state": {
+                "binding": "enum_text_value",
+                "type": "enum",
+                "nullable": False,
+                "enum": {
+                    "type": "string",
+                    "values": [
+                        {
+                            "value": "draft",
+                            "label": "Draft",
+                            "aliases": ["DRAFT", "pending"],
+                        },
+                        {
+                            "value": "active",
+                            "label": "Active",
+                            "aliases": ["ACTIVE"],
+                        },
+                    ],
+                },
+            },
+            "raw_state": {
+                "binding": "enum_text_value",
+                "type": "string",
+                "nullable": False,
+            },
+        },
+    )
+
+    assert resource.fields["state"].enum is not None
+    catalog_fields = {
+        item["name"]: item for item in registry.to_dict()["resources"][0]["fields"]
+    }
+    assert catalog_fields["state"]["enum"] == {
+        "type": "string",
+        "values": [
+            {
+                "value": "draft",
+                "label": "Draft",
+                "aliases": ["DRAFT", "pending"],
+            },
+            {"value": "active", "label": "Active", "aliases": ["ACTIVE"]},
+        ],
+    }
+    assert "enum" not in catalog_fields["raw_state"]
+    assert "Draft" not in str(catalog_fields["raw_state"])
+
+
+@pytest.mark.parametrize(
+    ("field_type", "enum_config", "message"),
+    [
+        ("enum", None, "requires explicit enum metadata"),
+        (
+            "string",
+            {"type": "string", "values": [{"value": "draft"}]},
+            "only supported for canonical type 'enum'",
+        ),
+        (
+            "enum",
+            {"type": "integer", "values": [{"value": 1}]},
+            "does not match its private binding type",
+        ),
+    ],
+)
+def test_enum_registration_fails_closed(
+    field_type: str,
+    enum_config: object,
+    message: str,
+) -> None:
+    """Enums require explicit, binding-compatible trusted definitions."""
+
+    config: dict[str, object] = {
+        "binding": "enum_text_value",
+        "type": field_type,
+        "nullable": False,
+    }
+    if enum_config is not None:
+        config["enum"] = enum_config
+
+    with pytest.raises(InvalidResourceError, match=message):
+        CatalogRegistry().register(
+            model=CanonicalValueFixture,
+            name="canonical_values",
+            scope_mode="global",
+            fields={"state": config},
+        )
+
+
+def test_enum_aliases_must_be_unambiguous() -> None:
+    """One accepted input token cannot map to different canonical values."""
+
+    with pytest.raises(InvalidResourceError, match="Ambiguous enum alias"):
+        CatalogRegistry().register(
+            model=CanonicalValueFixture,
+            name="canonical_values",
+            scope_mode="global",
+            fields={
+                "state": {
+                    "binding": "enum_text_value",
+                    "type": "enum",
+                    "nullable": False,
+                    "enum": {
+                        "type": "string",
+                        "values": [
+                            {"value": "draft", "aliases": ["current"]},
+                            {"value": "active", "aliases": ["current"]},
+                        ],
+                    },
+                }
+            },
+        )
+
+
+def test_integer_enum_requires_integer_canonical_values() -> None:
+    """Enum canonical values must match their declared underlying type."""
+
+    with pytest.raises(InvalidResourceError, match="must be an integer"):
+        CatalogRegistry().register(
+            model=CanonicalValueFixture,
+            name="canonical_values",
+            scope_mode="global",
+            fields={
+                "state": {
+                    "binding": "enum_integer_value",
+                    "type": "enum",
+                    "nullable": False,
+                    "enum": {
+                        "type": "integer",
+                        "values": [{"value": "1"}],
+                    },
                 }
             },
         )

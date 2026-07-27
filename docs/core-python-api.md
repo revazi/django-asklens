@@ -113,6 +113,8 @@ register(
 
 The field mapping key is the public semantic name used by plans. `binding` is trusted server-owned Django metadata, uses `__` for relationships, and is excluded from catalog, capability, and provider payloads. `type` and `nullable` are explicit public semantics rather than values inferred from the binding. Metric operation, binding, result type, permission, distinctness, and cardinality are also trusted registration metadata; untrusted plans contain only `{"metric": "registered_name"}`.
 
+Validation enforces the capability-declared operator matrix and canonical JSON values before scope resolution. Decimal filter values are finite strings, floats are finite JSON numbers, UUIDs normalize canonically, and `eq`/`neq` never accept null. Choice labels are not inferred from Django model metadata; use an explicit `type="enum"` definition with registered canonical values and aliases when closed-set semantics are intended. See [Registration](registration.md).
+
 ## Build permission-scoped capabilities
 
 Use capabilities when a Python caller needs to show what the current request can query without exposing database rows or sample values.
@@ -187,7 +189,9 @@ List and grouped queries fetch one extra row/group, return at most the effective
 {"limit": 100, "limit_scope": "rows", "truncated": false}
 ```
 
-Ungrouped aggregates have effective limit one and always report `truncated: false`. Accurate truncation does not provide cursor pagination.
+Ungrouped aggregates have effective limit one and always report `truncated: false`. An empty ungrouped aggregate returns one row with count metrics set to `0` and other aggregates set to `null`; an empty grouped aggregate returns no rows. Accurate truncation does not provide cursor pagination.
+
+Serialized columns include canonical `type` and `nullable`. Decimal results remain strings. Runtime values that do not match the declared canonical type, nullability, enum values, or column set fail with `asklens.execute.failed` instead of being silently stringified.
 
 ### Migrating low-level alpha imports
 

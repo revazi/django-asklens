@@ -33,8 +33,20 @@ def test_build_capabilities_describes_visible_fields_metrics_and_examples() -> N
                         {
                             "name": "status",
                             "label": "Status",
-                            "type": "string",
+                            "type": "enum",
+                            "nullable": False,
                             "relation_depth": 0,
+                            "enum": {
+                                "type": "string",
+                                "values": [
+                                    {
+                                        "value": "paid",
+                                        "label": "Paid",
+                                        "aliases": ["settled"],
+                                    },
+                                    {"value": "pending", "label": "Pending"},
+                                ],
+                            },
                         },
                         {
                             "name": "created_at",
@@ -65,7 +77,17 @@ def test_build_capabilities_describes_visible_fields_metrics_and_examples() -> N
     [resource] = capabilities["resources"]
     assert resource["name"] == "orders"
     assert resource["fields"][0]["can_select"] is True
+    assert resource["fields"][0]["nullable"] is False
+    assert resource["fields"][0]["operators"] == ["eq", "neq", "in", "isnull"]
+    assert resource["fields"][0]["enum"] == {
+        "type": "string",
+        "values": [
+            {"value": "paid", "label": "Paid", "aliases": ["settled"]},
+            {"value": "pending", "label": "Pending"},
+        ],
+    }
     assert resource["fields"][1]["can_date_bucket"] is True
+    assert "date_range" in resource["fields"][1]["operators"]
     assert resource["fields"][2]["can_select"] is False
     assert resource["metrics"] == [
         {

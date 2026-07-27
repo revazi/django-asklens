@@ -51,9 +51,16 @@ def build_registry() -> CatalogRegistry:
         fields={
             "status": {
                 "binding": "status",
-                "type": "string",
+                "type": "enum",
                 "nullable": False,
                 "label": "Status",
+                "enum": {
+                    "type": "string",
+                    "values": [
+                        {"value": "paid", "label": "Paid", "aliases": ["settled"]},
+                        {"value": "pending", "label": "Pending"},
+                    ],
+                },
             },
             "created_at": {
                 "binding": "created_at",
@@ -88,8 +95,21 @@ def capabilities_payload() -> dict[str, Any]:
                     {
                         "name": "status",
                         "label": "Status",
-                        "type": "string",
+                        "type": "enum",
+                        "nullable": False,
                         "relation_depth": 0,
+                        "operators": ["eq", "neq", "in", "isnull"],
+                        "enum": {
+                            "type": "string",
+                            "values": [
+                                {
+                                    "value": "paid",
+                                    "label": "Paid",
+                                    "aliases": ["settled"],
+                                },
+                                {"value": "pending", "label": "Pending"},
+                            ],
+                        },
                         "can_filter": True,
                         "can_select": True,
                         "can_group": True,
@@ -160,7 +180,16 @@ def test_provider_response_schema_hides_local_suggestion_plans() -> None:
     assert schema["title"] == "AskLensProviderResponse"
     assert "$defs" not in schema
     assert "query_plan" in schema["properties"]
-    assert schema["properties"]["query_plan"]["required"] == ["resource", "intent"]
+    query_plan_schema = schema["properties"]["query_plan"]
+    assert query_plan_schema["required"] == ["resource", "intent"]
+    metric_schema = query_plan_schema["properties"]["metrics"]["items"]
+    assert metric_schema["required"] == ["metric"]
+    assert metric_schema["properties"] == {"metric": {"type": "string"}}
+    filter_item_schema = query_plan_schema["properties"]["filters"]["items"]
+    assert filter_item_schema["required"] == ["field", "op", "value"]
+    filter_value_schema = filter_item_schema["properties"]["value"]
+    assert "null" not in filter_value_schema["type"]
+    assert "null" not in filter_value_schema["items"]["type"]
     suggestion_schema = schema["properties"]["query_help"]["properties"]["suggestions"][
         "items"
     ]
@@ -202,6 +231,10 @@ def test_plan_asklens_response_validates_query_branch() -> None:
     assert "Visible capabilities metadata" in prompt_text
     assert "Aggregate plans must put dimensions in" in prompt_text
     assert "must not include select" in prompt_text
+    assert "operators listed for each field" in prompt_text
+    assert "enum canonical values or aliases" in prompt_text
+    assert '"operators": [' in prompt_text
+    assert '"settled"' in prompt_text
     assert "Catalog metadata" not in prompt_text
 
 

@@ -37,6 +37,11 @@ def test_mcp_capabilities_are_permission_scoped(
         "status",
         "created_at",
     }
+    status_field = next(
+        field for field in resource["fields"] if field["name"] == "status"
+    )
+    assert status_field["operators"] == ["eq", "neq", "in", "isnull"]
+    assert status_field["enum"]["values"][0]["aliases"] == ["settled"]
     assert "alice@example.com" not in str(payload)
 
     mcp_request.asklens_permissions = frozenset({"shop.view_customer_pii"})
@@ -245,6 +250,32 @@ def test_mcp_rejects_client_controlled_metric_backing_before_sql(
     }
 
 
+def test_mcp_rejects_invalid_enum_alias_before_sql(
+    registered_orders: None,
+    mcp_request,
+    django_assert_num_queries,
+) -> None:
+    """MCP validation shares canonical enum rejection without querying rows."""
+
+    plan = {
+        "resource": "orders",
+        "intent": "list",
+        "filters": [{"field": "status", "op": "eq", "value": "unknown"}],
+        "select": ["status"],
+        "limit": 10,
+    }
+
+    with django_assert_num_queries(0):
+        payload = asklens_validate_plan(mcp_request, plan)
+
+    assert payload["valid"] is False
+    assert payload["executed"] is False
+    assert payload["error"] == {
+        "code": "asklens.plan.invalid",
+        "message": "The query plan is invalid.",
+    }
+
+
 def test_mcp_execution_rejects_invalid_current_scope_before_sql(
     settings,
     mcp_request,
@@ -319,8 +350,13 @@ def test_mcp_execute_plan_omits_rows_by_default(
     assert payload["response_type"] == "query"
     assert payload["row_count"] == 2
     assert payload["columns"] == [
-        {"key": "status", "label": "Status", "type": "string"},
-        {"key": "order_count", "label": "Order Count", "type": "integer"},
+        {"key": "status", "label": "Status", "type": "enum", "nullable": False},
+        {
+            "key": "order_count",
+            "label": "Order Count",
+            "type": "integer",
+            "nullable": False,
+        },
     ]
     assert payload["data"] == []
     assert payload["rows_omitted"] is True
