@@ -1,6 +1,6 @@
 # Provider configuration
 
-AskLens treats provider output as untrusted data. A provider may suggest a structured `QueryPlan`, but AskLens validates it before compilation or execution.
+AskLens treats provider output as untrusted data. A provider may suggest a structured `QueryPlan`, but AskLens validates it before compilation or execution. Metric requests contain only a registered semantic name; providers never choose or receive the operation, private Django binding, distinct key, or permission token.
 
 ## Default backend: dummy
 
@@ -14,7 +14,7 @@ DJANGO_ASKLENS = {
             "resource": "orders",
             "intent": "aggregate",
             "group_by": [{"field": "status"}],
-            "metrics": [{"name": "order_count", "op": "count", "field": "id"}],
+            "metrics": [{"metric": "order_count"}],
             "limit": 100,
             "visualization": {"type": "bar", "x": "status", "y": "order_count"},
         }

@@ -116,13 +116,7 @@ DUMMY_PLANS = {
         "intent": "aggregate",
         "filters": [{"field": "billing_document.status", "op": "eq", "value": "PAID"}],
         "group_by": [{"field": "product_name"}],
-        "metrics": [
-            {
-                "name": "gross_revenue",
-                "op": "sum",
-                "field": "total_amount_cents",
-            }
-        ],
+        "metrics": [{"metric": "gross_revenue"}],
         "order_by": [{"metric": "gross_revenue", "direction": "desc"}],
         "limit": 10,
         "visualization": {
@@ -136,8 +130,8 @@ DUMMY_PLANS = {
         "intent": "aggregate",
         "group_by": [{"field": "status"}],
         "metrics": [
-            {"name": "payment_count", "op": "count", "field": "status"},
-            {"name": "payment_amount", "op": "sum", "field": "amount_cents"},
+            {"metric": "payment_count"},
+            {"metric": "payment_amount"},
         ],
         "order_by": [{"metric": "payment_amount", "direction": "desc"}],
         "limit": 10,
@@ -175,13 +169,7 @@ DUMMY_PLANS = {
         "resource": "member_subscriptions",
         "intent": "aggregate",
         "group_by": [{"field": "plan.name"}, {"field": "status"}],
-        "metrics": [
-            {
-                "name": "subscription_count",
-                "op": "count",
-                "field": "status",
-            }
-        ],
+        "metrics": [{"metric": "subscription_count"}],
         "order_by": [{"metric": "subscription_count", "direction": "desc"}],
         "limit": 20,
         "visualization": {
@@ -195,13 +183,9 @@ DUMMY_PLANS = {
         "intent": "aggregate",
         "group_by": [{"field": "session_type.name"}],
         "metrics": [
-            {"name": "session_count", "op": "count", "field": "start_date"},
-            {"name": "total_capacity", "op": "sum", "field": "capacity"},
-            {
-                "name": "average_duration",
-                "op": "avg",
-                "field": "duration_minutes",
-            },
+            {"metric": "session_count"},
+            {"metric": "total_capacity"},
+            {"metric": "average_duration"},
         ],
         "order_by": [{"metric": "total_capacity", "direction": "desc"}],
         "limit": 10,
@@ -216,8 +200,8 @@ DUMMY_PLANS = {
         "intent": "aggregate",
         "group_by": [{"field": "channel"}],
         "metrics": [
-            {"name": "marketing_spend", "op": "sum", "field": "spend_cents"},
-            {"name": "total_conversions", "op": "sum", "field": "conversions"},
+            {"metric": "marketing_spend"},
+            {"metric": "total_conversions"},
         ],
         "order_by": [{"metric": "marketing_spend", "direction": "desc"}],
         "limit": 10,
@@ -227,7 +211,7 @@ DUMMY_PLANS = {
         "resource": "leads",
         "intent": "aggregate",
         "group_by": [{"field": "source"}, {"field": "stage"}],
-        "metrics": [{"name": "lead_count", "op": "count", "field": "status"}],
+        "metrics": [{"metric": "lead_count"}],
         "order_by": [{"metric": "lead_count", "direction": "desc"}],
         "limit": 20,
         "visualization": {"type": "bar", "x": "source", "y": "lead_count"},
@@ -237,8 +221,8 @@ DUMMY_PLANS = {
         "intent": "aggregate",
         "group_by": [{"field": "session.session_type.name"}, {"field": "status"}],
         "metrics": [
-            {"name": "booking_count", "op": "count", "field": "status"},
-            {"name": "total_party_size", "op": "sum", "field": "party_size"},
+            {"metric": "booking_count"},
+            {"metric": "total_party_size"},
         ],
         "order_by": [{"metric": "booking_count", "direction": "desc"}],
         "limit": 20,
@@ -253,8 +237,8 @@ DUMMY_PLANS = {
         "intent": "aggregate",
         "group_by": [{"field": "role"}],
         "metrics": [
-            {"name": "shift_count", "op": "count", "field": "status"},
-            {"name": "actual_minutes", "op": "sum", "field": "actual_minutes"},
+            {"metric": "shift_count"},
+            {"metric": "actual_minutes"},
         ],
         "order_by": [{"metric": "actual_minutes", "direction": "desc"}],
         "limit": 10,
@@ -264,7 +248,7 @@ DUMMY_PLANS = {
         "resource": "support_tickets",
         "intent": "aggregate",
         "group_by": [{"field": "priority"}, {"field": "status"}],
-        "metrics": [{"name": "ticket_count", "op": "count", "field": "status"}],
+        "metrics": [{"metric": "ticket_count"}],
         "order_by": [{"metric": "ticket_count", "direction": "desc"}],
         "limit": 20,
         "visualization": {"type": "bar", "x": "priority", "y": "ticket_count"},

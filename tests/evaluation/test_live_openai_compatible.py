@@ -165,7 +165,6 @@ def tenant_order_context():
                 "type": "decimal",
                 "nullable": False,
                 "label": "Order total",
-                "metric": True,
             },
             "account.slug": {
                 "binding": "account__slug",
@@ -177,10 +176,26 @@ def tenant_order_context():
             },
         },
         metrics=[
-            Metric("order_count", op="count", field="id", label="Number of orders"),
-            Metric("revenue", op="sum", field="total", label="Revenue"),
             Metric(
-                "avg_order_value", op="avg", field="total", label="Average order value"
+                "order_count",
+                op="count",
+                binding="id",
+                result_type="integer",
+                label="Number of orders",
+            ),
+            Metric(
+                "revenue",
+                op="sum",
+                binding="total",
+                result_type="decimal",
+                label="Revenue",
+            ),
+            Metric(
+                "avg_order_value",
+                op="avg",
+                binding="total",
+                result_type="decimal",
+                label="Average order value",
             ),
         ],
         scope_mode="context_scoped",

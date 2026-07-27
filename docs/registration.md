@@ -48,10 +48,16 @@ resource = register(
             "type": "decimal",
             "nullable": False,
             "label": "Order total",
-            "metric": True,
         },
     },
-    metrics=[Metric("order_count", op="count", field="order_id")],
+    metrics=[
+        Metric(
+            "order_count",
+            op="count",
+            binding="id",
+            result_type="integer",
+        )
+    ],
     default_order=(("created_at", "desc"),),
     requires_permission="orders.view_reports",
     scope_provider=lambda request: Order.objects.filter(account=request.user.account),
@@ -91,14 +97,13 @@ Supported field config keys:
     "result_visible": False,
     "filter_only": True,
     "requires_permission": "customers.view_pii",
-    "metric": False,
     "scope_dimension": False,
 }
 ```
 
 `binding`, model metadata, and permission tokens remain server-owned and are never serialized into public catalogs, capabilities, or provider prompts. A binding change does not require a plan change. Registration rejects omitted bindings/types/nullability, invalid Django paths, unsupported type labels, and a non-null semantic declaration backed by a nullable field or traversal. Canonical type labels are `string`, `boolean`, `integer`, `decimal`, `float`, `date`, `datetime`, `time`, `uuid`, and `enum`; enum value registration is completed separately in the remaining 0.2 semantic work.
 
-Defaults remain conservative for catalog exposure: sensitive fields and hidden fields are not included in normal planner catalog serialization.
+Defaults remain conservative for catalog exposure: sensitive fields and hidden fields are not included in normal planner catalog serialization. The legacy field-level `metric=True` flag is rejected; aggregate backing is declared only on `Metric` registrations.
 
 ### Migrating 0.1 field registrations
 
@@ -130,7 +135,7 @@ fields = {
 }
 ```
 
-There is no implicit key-to-binding migration fallback. Missing metadata fails registration with developer-facing guidance. Update metrics, defaults, and plans only when you deliberately rename a public semantic key; changing `binding` alone does not change those references. The former `include_internal=True` catalog option is removed because public serialization no longer exposes model labels. Permission declarations continue to enforce visibility but are no longer copied into public catalog/capability payloads.
+There is no implicit key-to-binding migration fallback. Missing metadata fails registration with developer-facing guidance. Update defaults and plans only when you deliberately rename a public semantic key; changing a field binding alone does not change those references. Metric bindings are now independent trusted registration metadata rather than references to semantic fields. The former `include_internal=True` catalog option is removed because public serialization no longer exposes model labels. Permission declarations continue to enforce visibility but are no longer copied into public catalog/capability payloads.
 
 ## Resource and field permissions
 
@@ -180,14 +185,65 @@ Use `scope_dimension=True` for any field that identifies the user's row scope, w
 
 ## Metrics
 
-Aggregate queries currently use explicit `Metric(...)` definitions.
+Aggregate plans reference registered metrics by semantic name only:
 
-```python
-Metric("revenue", op="sum", field="total", label="Revenue")
-Metric("avg_order_value", op="avg", field="total")
+```json
+{"metrics": [{"metric": "revenue"}]}
 ```
 
-Supported metric operations are `count`, `sum`, `avg`, `min`, and `max`.
+The server-owned registration defines everything that could change query behavior:
+
+```python
+Metric(
+    "revenue",
+    op="sum",
+    binding="total",
+    result_type="decimal",
+    label="Revenue",
+    cardinality_policy="to_one_only",
+    requires_permission="orders.view_financials",
+)
+```
+
+`binding`, `op`, `result_type`, `distinct_key`, cardinality policy, and permission policy are never accepted from a plan. Public catalog and capability payloads include only the semantic name, label, and result type; private Django paths and permission tokens are omitted.
+
+Supported operations are `count`, `sum`, `avg`, `min`, and `max`. The default `to_one_only` policy rejects any metric crossing a to-many relationship. The only 0.2 exceptions are explicit counts at one declared relationship grain:
+
+```python
+Metric(
+    "line_count",
+    op="count",
+    binding="lines__id",
+    result_type="integer",
+    cardinality_policy="count_rows",
+)
+Metric(
+    "distinct_products",
+    op="count",
+    binding="lines__product__id",
+    result_type="integer",
+    cardinality_policy="count_distinct",
+    distinct_key="lines__product__id",
+)
+```
+
+`count_rows` requires a non-null unique terminal key. `count_distinct` additionally requires a private non-null unique `distinct_key` at the same relationship grain. Numeric to-many aggregates, nested/independent fanout, implicit distinctness, and `allow_fanout` escape hatches are rejected.
+
+### Migrating 0.1 metric plans
+
+Replace client-supplied metric definitions:
+
+```json
+{"name": "revenue", "op": "sum", "field": "total"}
+```
+
+with the registered semantic reference:
+
+```json
+{"metric": "revenue"}
+```
+
+Move the operation and backing field into `Metric(binding=..., result_type=...)`. Old plan keys are rejected during structural parsing rather than compared with trusted registration.
 
 ## Fail-closed resource scope
 

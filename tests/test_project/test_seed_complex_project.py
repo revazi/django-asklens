@@ -52,9 +52,7 @@ def revenue_by_product_plan() -> dict[str, Any]:
         "intent": "aggregate",
         "filters": [{"field": "billing_document.status", "op": "eq", "value": "PAID"}],
         "group_by": [{"field": "product_name"}],
-        "metrics": [
-            {"name": "gross_revenue", "op": "sum", "field": "total_amount_cents"}
-        ],
+        "metrics": [{"metric": "gross_revenue"}],
         "order_by": [{"metric": "gross_revenue", "direction": "desc"}],
         "limit": 10,
         "visualization": {"type": "bar", "x": "product_name", "y": "gross_revenue"},

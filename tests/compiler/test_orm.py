@@ -120,17 +120,44 @@ def build_registry(*, paid_only: bool = False) -> CatalogRegistry:
                 "type": "decimal",
                 "nullable": False,
                 "label": "Order total",
-                "metric": True,
             },
         },
         metrics=[
-            Metric("order_count", op="count", field="id", label="Number of orders"),
-            Metric("revenue", op="sum", field="total", label="Revenue"),
             Metric(
-                "avg_order_value", op="avg", field="total", label="Average order value"
+                "order_count",
+                op="count",
+                binding="id",
+                result_type="integer",
+                label="Number of orders",
             ),
-            Metric("min_order_total", op="min", field="total", label="Minimum order"),
-            Metric("max_order_total", op="max", field="total", label="Maximum order"),
+            Metric(
+                "revenue",
+                op="sum",
+                binding="total",
+                result_type="decimal",
+                label="Revenue",
+            ),
+            Metric(
+                "avg_order_value",
+                op="avg",
+                binding="total",
+                result_type="decimal",
+                label="Average order value",
+            ),
+            Metric(
+                "min_order_total",
+                op="min",
+                binding="total",
+                result_type="decimal",
+                label="Minimum order",
+            ),
+            Metric(
+                "max_order_total",
+                op="max",
+                binding="total",
+                result_type="decimal",
+                label="Maximum order",
+            ),
         ],
         scope_mode="context_scoped",
         scope_provider=scope_provider,
@@ -218,10 +245,9 @@ def test_semantic_keys_bind_privately_across_query_positions(
                 "type": "decimal",
                 "nullable": False,
                 "label": "Amount",
-                "metric": True,
             },
         },
-        metrics=[Metric("revenue", op="sum", field="amount")],
+        metrics=[Metric("revenue", op="sum", binding="total", result_type="decimal")],
     )
 
     list_result = execute_test_plan(
@@ -239,7 +265,7 @@ def test_semantic_keys_bind_privately_across_query_positions(
             "resource": "orders",
             "intent": "aggregate",
             "group_by": [{"field": "lifecycle"}],
-            "metrics": [{"name": "revenue", "op": "sum", "field": "amount"}],
+            "metrics": [{"metric": "revenue"}],
             "order_by": [{"metric": "revenue", "direction": "desc"}],
             "limit": 10,
         },
@@ -263,6 +289,49 @@ def test_semantic_keys_bind_privately_across_query_positions(
         {"lifecycle": "pending", "revenue": Decimal("75")},
         {"lifecycle": "failed", "revenue": Decimal("25")},
     )
+
+
+def test_metric_semantic_key_and_private_binding_are_orm_independent(
+    order_data: None,
+) -> None:
+    """Metric keys are neither ORM aliases nor backing-field references."""
+
+    def registry_for(binding: str) -> CatalogRegistry:
+        registry = CatalogRegistry()
+        registry.register(
+            model=Order,
+            name="orders",
+            scope_mode="global",
+            fields={
+                "order.number": {
+                    "binding": "id",
+                    "type": "integer",
+                    "nullable": False,
+                }
+            },
+            metrics=[
+                Metric(
+                    "orders.count",
+                    op="count",
+                    binding=binding,
+                    result_type="integer",
+                )
+            ],
+        )
+        return registry
+
+    plan = {
+        "resource": "orders",
+        "intent": "aggregate",
+        "metrics": [{"metric": "orders.count"}],
+        "limit": 1,
+    }
+
+    id_result = execute_test_plan(plan, registry=registry_for("id"))
+    customer_result = execute_test_plan(plan, registry=registry_for("customer"))
+
+    assert id_result.rows == ({"orders.count": 4},)
+    assert customer_result.rows == ({"orders.count": 4},)
 
 
 def test_changing_private_binding_does_not_change_public_plan(
@@ -361,8 +430,8 @@ def test_group_by_status_with_count_sum_and_order_by_metric(order_data: None) ->
             "intent": "aggregate",
             "group_by": [{"field": "status"}],
             "metrics": [
-                {"name": "order_count", "op": "count", "field": "id"},
-                {"name": "revenue", "op": "sum", "field": "total"},
+                {"metric": "order_count"},
+                {"metric": "revenue"},
             ],
             "order_by": [{"metric": "revenue", "direction": "desc"}],
             "limit": 10,
@@ -385,6 +454,104 @@ def test_group_by_status_with_count_sum_and_order_by_metric(order_data: None) ->
     )
 
 
+def test_registered_to_many_count_policies_compile_from_private_keys(
+    order_data: None,
+) -> None:
+    registry = CatalogRegistry()
+    registry.register(
+        model=Customer,
+        name="customers",
+        scope_mode="global",
+        fields={
+            "customer.name": {
+                "binding": "name",
+                "type": "string",
+                "nullable": False,
+            }
+        },
+        metrics=[
+            Metric(
+                "order_rows",
+                op="count",
+                binding="order__id",
+                result_type="integer",
+                cardinality_policy="count_rows",
+            ),
+            Metric(
+                "distinct_orders",
+                op="count",
+                binding="order__id",
+                result_type="integer",
+                cardinality_policy="count_distinct",
+                distinct_key="order__id",
+            ),
+        ],
+    )
+
+    result = execute_test_plan(
+        {
+            "resource": "customers",
+            "intent": "aggregate",
+            "group_by": [{"field": "customer.name"}],
+            "metrics": [
+                {"metric": "order_rows"},
+                {"metric": "distinct_orders"},
+            ],
+            "order_by": [{"field": "customer.name"}],
+            "limit": 10,
+        },
+        registry=registry,
+    )
+
+    assert result.rows == (
+        {"customer.name": "Alice", "order_rows": 2, "distinct_orders": 2},
+        {"customer.name": "Bob", "order_rows": 2, "distinct_orders": 2},
+    )
+
+
+def test_to_many_metric_starts_from_current_trusted_root_scope(
+    order_data: None,
+) -> None:
+    registry = CatalogRegistry()
+    registry.register(
+        model=Customer,
+        name="customers",
+        scope_mode="context_scoped",
+        scope_provider=lambda request: Customer.objects.filter(
+            name=request.visible_customer
+        ),
+        fields={
+            "customer.name": {
+                "binding": "name",
+                "type": "string",
+                "nullable": False,
+            }
+        },
+        metrics=[
+            Metric(
+                "order_rows",
+                op="count",
+                binding="order__id",
+                result_type="integer",
+                cardinality_policy="count_rows",
+            )
+        ],
+    )
+
+    result = execute_plan(
+        {
+            "resource": "customers",
+            "intent": "aggregate",
+            "metrics": [{"metric": "order_rows"}],
+            "limit": 1,
+        },
+        request=SimpleNamespace(user=None, visible_customer="Alice"),
+        registry=registry,
+    )
+
+    assert result.rows == ({"order_rows": 2},)
+
+
 def test_group_by_month_and_average_metric(order_data: None) -> None:
     registry = build_registry()
     plan = validate_payload(
@@ -392,7 +559,7 @@ def test_group_by_month_and_average_metric(order_data: None) -> None:
             "resource": "orders",
             "intent": "aggregate",
             "group_by": [{"field": "created_at", "date_trunc": "month"}],
-            "metrics": [{"name": "avg_order_value", "op": "avg", "field": "total"}],
+            "metrics": [{"metric": "avg_order_value"}],
             "order_by": [{"field": "created_at"}],
             "limit": 10,
             "visualization": {
@@ -425,8 +592,8 @@ def test_min_and_max_metrics(order_data: None) -> None:
             "resource": "orders",
             "intent": "aggregate",
             "metrics": [
-                {"name": "min_order_total", "op": "min", "field": "total"},
-                {"name": "max_order_total", "op": "max", "field": "total"},
+                {"metric": "min_order_total"},
+                {"metric": "max_order_total"},
             ],
             "limit": 1,
             "visualization": {"type": "metric", "y": "max_order_total"},
@@ -450,7 +617,7 @@ def test_metric_query_without_group_by_returns_single_row(order_data: None) -> N
         {
             "resource": "orders",
             "intent": "aggregate",
-            "metrics": [{"name": "order_count", "op": "count", "field": "id"}],
+            "metrics": [{"metric": "order_count"}],
             "limit": 1,
             "visualization": {"type": "metric", "y": "order_count"},
         },
@@ -469,7 +636,7 @@ def test_limit_is_applied_to_result_rows(order_data: None) -> None:
             "resource": "orders",
             "intent": "aggregate",
             "group_by": [{"field": "status"}],
-            "metrics": [{"name": "revenue", "op": "sum", "field": "total"}],
+            "metrics": [{"metric": "revenue"}],
             "order_by": [{"metric": "revenue", "direction": "desc"}],
             "limit": 1,
             "visualization": {"type": "bar", "x": "status", "y": "revenue"},
@@ -489,7 +656,7 @@ def test_compiler_starts_from_context_scope_provider(order_data: None) -> None:
         {
             "resource": "orders",
             "intent": "aggregate",
-            "metrics": [{"name": "order_count", "op": "count", "field": "id"}],
+            "metrics": [{"metric": "order_count"}],
             "limit": 1,
             "visualization": {"type": "metric", "y": "order_count"},
         },

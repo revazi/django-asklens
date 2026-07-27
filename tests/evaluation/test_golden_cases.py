@@ -43,7 +43,7 @@ GOLDEN_CASES = (
             "resource": "orders",
             "intent": "aggregate",
             "group_by": [{"field": "status"}],
-            "metrics": [{"name": "order_count", "op": "count", "field": "id"}],
+            "metrics": [{"metric": "order_count"}],
             "order_by": [{"metric": "order_count", "direction": "desc"}],
             "limit": 10,
             "visualization": {"type": "bar", "x": "status", "y": "order_count"},
@@ -61,7 +61,7 @@ GOLDEN_CASES = (
         plan={
             "resource": "orders",
             "intent": "aggregate",
-            "metrics": [{"name": "order_count", "op": "count", "field": "id"}],
+            "metrics": [{"metric": "order_count"}],
             "limit": 1,
             "visualization": {"type": "metric", "y": "order_count"},
         },
@@ -75,7 +75,7 @@ GOLDEN_CASES = (
             "resource": "orders",
             "intent": "aggregate",
             "group_by": [{"field": "created_at", "date_trunc": "month"}],
-            "metrics": [{"name": "revenue", "op": "sum", "field": "total"}],
+            "metrics": [{"metric": "revenue"}],
             "order_by": [{"field": "created_at", "direction": "asc"}],
             "limit": 12,
             "visualization": {"type": "line", "x": "created_at", "y": "revenue"},
@@ -83,9 +83,9 @@ GOLDEN_CASES = (
         expected_intent="aggregate",
         expected_visualization_type="line",
         expected_data=[
-            {"created_at": "2026-01-01T00:00:00+00:00", "revenue": 150.0},
-            {"created_at": "2026-02-01T00:00:00+00:00", "revenue": 100.0},
-            {"created_at": "2026-03-01T00:00:00+00:00", "revenue": 350.0},
+            {"created_at": "2026-01-01T00:00:00+00:00", "revenue": "150"},
+            {"created_at": "2026-02-01T00:00:00+00:00", "revenue": "100"},
+            {"created_at": "2026-03-01T00:00:00+00:00", "revenue": "350"},
         ],
     ),
     GoldenCase(
@@ -110,7 +110,7 @@ GOLDEN_CASES = (
             "resource": "orders",
             "intent": "aggregate",
             "group_by": [{"field": "status"}],
-            "metrics": [{"name": "avg_order_value", "op": "avg", "field": "total"}],
+            "metrics": [{"metric": "avg_order_value"}],
             "order_by": [{"metric": "avg_order_value", "direction": "desc"}],
             "limit": 10,
             "visualization": {
@@ -122,9 +122,9 @@ GOLDEN_CASES = (
         expected_intent="aggregate",
         expected_visualization_type="bar",
         expected_data=[
-            {"status": "failed", "avg_order_value": 200.0},
-            {"status": "paid", "avg_order_value": 100.0},
-            {"status": "pending", "avg_order_value": 50.0},
+            {"status": "failed", "avg_order_value": "200"},
+            {"status": "paid", "avg_order_value": "100"},
+            {"status": "pending", "avg_order_value": "50"},
         ],
     ),
 )
@@ -227,14 +227,29 @@ def registry() -> CatalogRegistry:
                 "type": "decimal",
                 "nullable": False,
                 "label": "Order total",
-                "metric": True,
             },
         },
         metrics=[
-            Metric("order_count", op="count", field="id", label="Number of orders"),
-            Metric("revenue", op="sum", field="total", label="Revenue"),
             Metric(
-                "avg_order_value", op="avg", field="total", label="Average order value"
+                "order_count",
+                op="count",
+                binding="id",
+                result_type="integer",
+                label="Number of orders",
+            ),
+            Metric(
+                "revenue",
+                op="sum",
+                binding="total",
+                result_type="decimal",
+                label="Revenue",
+            ),
+            Metric(
+                "avg_order_value",
+                op="avg",
+                binding="total",
+                result_type="decimal",
+                label="Average order value",
             ),
         ],
     )

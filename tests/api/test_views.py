@@ -175,7 +175,9 @@ def registered_orders() -> None:
                 "sensitive": True,
             },
         },
-        metrics=[Metric("order_count", op="count", field="id")],
+        metrics=[
+            Metric("order_count", op="count", binding="id", result_type="integer")
+        ],
     )
 
 
@@ -186,7 +188,7 @@ def valid_plan_payload() -> dict[str, Any]:
         "resource": "orders",
         "intent": "aggregate",
         "group_by": [{"field": "status"}],
-        "metrics": [{"name": "order_count", "op": "count", "field": "id"}],
+        "metrics": [{"metric": "order_count"}],
         "order_by": [{"metric": "order_count", "direction": "desc"}],
         "limit": 10,
         "visualization": {"type": "bar", "x": "status", "y": "order_count"},
@@ -271,7 +273,7 @@ def test_capabilities_endpoint_returns_permission_scoped_query_guidance(
         "created_at",
     }
     assert resource["metrics"][0]["name"] == "order_count"
-    assert "Show count of Orders by Status" in resource["examples"]
+    assert "Show Order Count by Status" in resource["examples"]
     assert "customer.email" not in str(response.data)
 
 
@@ -597,7 +599,7 @@ def test_query_endpoint_returns_result_and_records_successful_run(
     assert response.data["visualization"] == {
         "type": "bar",
         "x": {"field": "status", "label": "Status", "type": "string"},
-        "y": {"field": "order_count", "label": "Order Count", "type": "number"},
+        "y": {"field": "order_count", "label": "Order Count", "type": "integer"},
     }
 
     run = SemanticQueryRun.objects.get(pk=response.data["run_id"])
@@ -637,6 +639,35 @@ def test_query_endpoint_executes_provided_valid_plan_without_planner(
     ]
 
 
+def test_api_rejects_client_controlled_metric_backing_before_sql(
+    settings,
+    api_client: APIClient,
+    user,
+    registered_orders: None,
+    django_assert_num_queries,
+) -> None:
+    settings.DJANGO_ASKLENS = {"AUDIT_MODE": "disabled"}
+    plan = valid_plan_payload()
+    plan["metrics"] = [
+        {"metric": "order_count", "op": "count", "field": "customer__email"}
+    ]
+    api_client.force_authenticate(user=user)
+    assert user.get_all_permissions() == set()
+
+    with django_assert_num_queries(0):
+        response = api_client.post(
+            "/asklens/query/",
+            {"question": "Submitted plan", "plan": plan},
+            format="json",
+        )
+
+    assert response.status_code == 400
+    assert response.data["error"] == {
+        "code": "asklens.parse.invalid",
+        "message": "The query plan could not be parsed.",
+    }
+
+
 def test_api_execution_rejects_invalid_current_scope_before_sql(
     settings,
     api_client: APIClient,
@@ -653,7 +684,9 @@ def test_api_execution_rejects_invalid_current_scope_before_sql(
             "id": {"binding": "id", "type": "integer", "nullable": False},
             "status": {"binding": "status", "type": "string", "nullable": False},
         },
-        metrics=[Metric("order_count", op="count", field="id")],
+        metrics=[
+            Metric("order_count", op="count", binding="id", result_type="integer")
+        ],
         scope_mode="context_scoped",
         scope_provider=lambda _request: None,
     )

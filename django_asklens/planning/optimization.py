@@ -144,8 +144,7 @@ def compact_capability_metric(metric: Mapping[str, Any]) -> dict[str, Any]:
     return {
         "name": metric.get("name"),
         "label": metric.get("label"),
-        "op": metric.get("op"),
-        "field": metric.get("field"),
+        "result_type": metric.get("result_type"),
     }
 
 
@@ -184,7 +183,7 @@ def metric_tokens(resource: Mapping[str, Any]) -> set[str]:
     for metric in resource.get("metrics", []):
         if not isinstance(metric, Mapping):
             continue
-        for key in ("name", "label", "field"):
+        for key in ("name", "label"):
             value = metric.get(key)
             if isinstance(value, str):
                 tokens.update(tokenize_prompt_text(value))

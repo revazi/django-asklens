@@ -59,19 +59,30 @@ register(
             "type": "decimal",
             "nullable": False,
             "label": "Order total",
-            "metric": True,
         },
     },
     metrics=[
-        Metric("order_count", op="count", field="id", label="Number of orders"),
-        Metric("revenue", op="sum", field="total", label="Revenue"),
+        Metric(
+            "order_count",
+            op="count",
+            binding="id",
+            result_type="integer",
+            label="Number of orders",
+        ),
+        Metric(
+            "revenue",
+            op="sum",
+            binding="total",
+            result_type="decimal",
+            label="Revenue",
+        ),
     ],
     requires_permission="orders.view_reports",
     scope_provider=visible_orders,
 )
 ```
 
-Resource-level `requires_permission` gates the whole resource. Field-level `requires_permission` gates individual fields. Sensitive fields are hidden from the default catalog serialization. Private Django bindings, permission tokens, hidden fields, and internal model names are never sent to the planner prompt. Field mapping keys are public semantic names; they are not translated into ORM paths.
+Resource-level `requires_permission` gates the whole resource. Field- and metric-level `requires_permission` gate individual members. Sensitive fields are hidden from the default catalog serialization. Private Django bindings, metric operations, distinct keys, permission tokens, hidden fields, and internal model names are never sent to the planner prompt. Field mapping keys and metric names are public semantics; they are not translated into ORM paths.
 
 Every resource must resolve to `global` or `context_scoped`. `DEFAULT_SCOPE_MODE` can only be `context_scoped`; global resources must declare `scope_mode="global"` individually. Context-scoped resources require a trusted `scope_provider`; missing or invalid scope never falls back to the default manager.
 
@@ -88,7 +99,7 @@ DJANGO_ASKLENS = {
             "resource": "orders",
             "intent": "aggregate",
             "group_by": [{"field": "status"}],
-            "metrics": [{"name": "order_count", "op": "count", "field": "id"}],
+            "metrics": [{"metric": "order_count"}],
             "order_by": [{"metric": "order_count", "direction": "desc"}],
             "limit": 100,
             "visualization": {"type": "bar", "x": "status", "y": "order_count"},
@@ -115,8 +126,10 @@ A response includes visible resources, exposed fields, metrics, date fields, exa
       "name": "orders",
       "label": "Orders",
       "fields": [{"name": "status", "label": "Status", "can_group": true}],
-      "metrics": [{"name": "order_count", "label": "Number of orders"}],
-      "examples": ["Show count of Orders by Status"]
+      "metrics": [
+        {"name": "order_count", "label": "Number of orders", "result_type": "integer"}
+      ],
+      "examples": ["Show Number of orders by Status"]
     }
   ]
 }

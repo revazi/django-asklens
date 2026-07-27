@@ -78,7 +78,9 @@ def register_default_orders() -> None:
                 "requires_permission": "shop.view_customer_pii",
             },
         },
-        metrics=[Metric("order_count", op="count", field="id")],
+        metrics=[
+            Metric("order_count", op="count", binding="id", result_type="integer")
+        ],
         requires_permission="shop.view_orders",
         scope_mode="context_scoped",
         scope_provider=lambda request: Order.objects.filter(

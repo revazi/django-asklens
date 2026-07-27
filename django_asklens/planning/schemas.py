@@ -31,7 +31,6 @@ SUPPORTED_FILTER_OPERATORS = (
     "last_n_days",
     "last_n_months",
 )
-SUPPORTED_METRIC_OPERATORS = ("count", "sum", "avg", "min", "max")
 SUPPORTED_DATE_TRUNCS = ("day", "week", "month", "quarter", "year")
 SUPPORTED_ORDER_DIRECTIONS = ("asc", "desc")
 SUPPORTED_VISUALIZATION_TYPES = ("table", "metric", "bar", "line", "pie")
@@ -52,7 +51,6 @@ type FilterOperator = Literal[
     "last_n_days",
     "last_n_months",
 ]
-type MetricOperator = Literal["count", "sum", "avg", "min", "max"]
 type DateTrunc = Literal["day", "week", "month", "quarter", "year"]
 type OrderDirection = Literal["asc", "desc"]
 type VisualizationType = Literal["table", "metric", "bar", "line", "pie"]
@@ -103,21 +101,14 @@ class GroupBySpec(PlanBaseModel):
 
 
 class MetricSpec(PlanBaseModel):
-    """A metric requested by a plan."""
+    """A semantic metric name requested by an untrusted plan."""
 
-    name: str
-    op: MetricOperator
-    field: str
+    metric: str
 
-    @field_validator("name")
+    @field_validator("metric")
     @classmethod
-    def validate_name(cls, value: str) -> str:
-        return validate_non_empty_string(value, "metric name")
-
-    @field_validator("field")
-    @classmethod
-    def validate_field(cls, value: str) -> str:
-        return validate_non_empty_string(value, "metric field")
+    def validate_metric(cls, value: str) -> str:
+        return validate_non_empty_string(value, "metric")
 
 
 class OrderBySpec(PlanBaseModel):

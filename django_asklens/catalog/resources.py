@@ -10,7 +10,11 @@ from django.db import models
 from django.db.models import QuerySet
 from django.utils.text import slugify
 
-from django_asklens.catalog.introspection import get_field_type, resolve_field_path
+from django_asklens.catalog.introspection import (
+    FieldResolution,
+    get_field_type,
+    resolve_field_path,
+)
 from django_asklens.exceptions import (
     InvalidMetricError,
     InvalidResourceError,
@@ -20,6 +24,7 @@ from django_asklens.exceptions import (
 from django_asklens.settings import get_asklens_setting
 
 type MetricOp = Literal["count", "sum", "avg", "min", "max"]
+type MetricCardinalityPolicy = Literal["to_one_only", "count_rows", "count_distinct"]
 type FieldConfig = Mapping[str, str | bool | None]
 type ScopeMode = Literal["global", "context_scoped"]
 type ResourceOrderDirection = Literal["asc", "desc"]
@@ -35,8 +40,7 @@ class MetricCatalogItem(TypedDict):
 
     name: str
     label: str
-    op: MetricOp
-    field: str
+    result_type: str
 
 
 class FieldCatalogItem(TypedDict):
@@ -51,7 +55,6 @@ class FieldCatalogItem(TypedDict):
     llm_visible: NotRequired[bool]
     result_visible: NotRequired[bool]
     filter_only: NotRequired[bool]
-    metric: NotRequired[bool]
     scope_dimension: NotRequired[bool]
 
 
@@ -77,6 +80,12 @@ class CatalogSnapshot(TypedDict):
 
 
 SUPPORTED_METRIC_OPS = {"count", "sum", "avg", "min", "max"}
+SUPPORTED_METRIC_CARDINALITY_POLICIES = {
+    "to_one_only",
+    "count_rows",
+    "count_distinct",
+}
+NUMERIC_FIELD_TYPES = {"decimal", "float", "integer"}
 SUPPORTED_FIELD_TYPES = {
     "boolean",
     "date",
@@ -94,7 +103,6 @@ ALLOWED_FIELD_CONFIG_KEYS = {
     "filter_only",
     "label",
     "llm_visible",
-    "metric",
     "nullable",
     "requires_permission",
     "result_visible",
@@ -107,32 +115,81 @@ DATE_FIELD_TYPES = {"date", "datetime"}
 
 @dataclass(frozen=True, slots=True)
 class Metric:
-    """Developer-registered aggregate metric."""
+    """Developer-registered aggregate with trusted private backing metadata."""
 
     name: str
     op: MetricOp
-    field: str
+    binding: str = field(repr=False)
+    result_type: str
     label: str | None = None
+    cardinality_policy: MetricCardinalityPolicy = "to_one_only"
+    distinct_key: str | None = field(default=None, repr=False)
+    requires_permission: str | None = field(default=None, repr=False)
+    relation_depth: int = field(default=0, repr=False, compare=False)
+    relationship_edges: tuple[str, ...] = field(default=(), repr=False, compare=False)
+    to_many_relationship_edges: tuple[str, ...] = field(
+        default=(), repr=False, compare=False
+    )
 
     def __post_init__(self) -> None:
-        if not self.name:
-            msg = "Metric name is required."
+        if (
+            not isinstance(self.name, str)
+            or not self.name
+            or "__" in self.name
+            or any(part == "" for part in self.name.split("."))
+        ):
+            msg = (
+                "Metric name must be a non-empty semantic key without '__' or "
+                "empty dotted segments."
+            )
             raise InvalidMetricError(msg)
-        if self.op not in SUPPORTED_METRIC_OPS:
+        if not isinstance(self.op, str) or self.op not in SUPPORTED_METRIC_OPS:
             msg = f"Unsupported metric operation {self.op!r} for metric {self.name!r}."
             raise InvalidMetricError(msg)
-        if not self.field:
-            msg = f"Metric {self.name!r} requires a field."
+        if not isinstance(self.binding, str) or not self.binding:
+            msg = f"Metric {self.name!r} requires a private binding."
+            raise InvalidMetricError(msg)
+        if (
+            not isinstance(self.result_type, str)
+            or self.result_type not in SUPPORTED_FIELD_TYPES
+        ):
+            msg = f"Metric {self.name!r} requires a supported canonical result_type."
+            raise InvalidMetricError(msg)
+        if self.label is not None and not isinstance(self.label, str):
+            msg = f"Metric {self.name!r} label must be a string."
+            raise InvalidMetricError(msg)
+        if (
+            not isinstance(self.cardinality_policy, str)
+            or self.cardinality_policy not in SUPPORTED_METRIC_CARDINALITY_POLICIES
+        ):
+            msg = (
+                f"Unsupported cardinality policy {self.cardinality_policy!r} "
+                f"for metric {self.name!r}."
+            )
+            raise InvalidMetricError(msg)
+        if self.distinct_key is not None and (
+            not isinstance(self.distinct_key, str) or not self.distinct_key
+        ):
+            msg = f"Metric {self.name!r} distinct_key must be a non-empty string."
+            raise InvalidMetricError(msg)
+        if self.requires_permission is not None and not isinstance(
+            self.requires_permission, str
+        ):
+            msg = f"Metric {self.name!r} requires_permission must be a string."
             raise InvalidMetricError(msg)
 
+    def is_catalog_visible(self, permissions: Iterable[str] = ()) -> bool:
+        """Return whether current trusted permissions expose this metric."""
+
+        return permission_set_allows(permissions, self.requires_permission)
+
     def to_dict(self) -> MetricCatalogItem:
-        """Serialize the metric for catalog consumers."""
+        """Serialize only safe semantic metric metadata."""
 
         return {
             "name": self.name,
             "label": self.label or self.name.replace("_", " ").title(),
-            "op": self.op,
-            "field": self.field,
+            "result_type": self.result_type,
         }
 
 
@@ -147,12 +204,12 @@ class FieldSpec:
     binding: str = field(repr=False)
     relation_depth: int = field(repr=False)
     relationship_edges: tuple[str, ...] = field(default=(), repr=False)
+    to_many_relationship_edges: tuple[str, ...] = field(default=(), repr=False)
     sensitive: bool = False
     llm_visible: bool = True
     result_visible: bool = True
     filter_only: bool = False
     requires_permission: str | None = None
-    metric: bool = False
     scope_dimension: bool = False
 
     def is_catalog_visible(
@@ -203,8 +260,6 @@ class FieldSpec:
             data["result_visible"] = False
         if self.filter_only:
             data["filter_only"] = True
-        if self.metric:
-            data["metric"] = True
         if self.scope_dimension:
             data["scope_dimension"] = True
         return data
@@ -294,7 +349,7 @@ class SemanticResource:
             default_date_field=default_date_field,
         )
 
-        metric_specs = build_metric_specs(metrics=metrics or (), fields=field_specs)
+        metric_specs = build_metric_specs(model=model, metrics=metrics or ())
         normalized_synonyms = normalize_synonyms(synonyms or ())
         normalized_order = normalize_default_order(
             default_order if default_order is not None else (),
@@ -375,11 +430,10 @@ class SemanticResource:
                 permissions=permission_set,
             )
         ]
-        visible_field_names = {field["name"] for field in visible_fields}
         visible_metrics: list[MetricCatalogItem] = [
             metric.to_dict()
             for metric in self.metrics.values()
-            if metric.field in visible_field_names
+            if metric.is_catalog_visible(permission_set)
         ]
 
         data: ResourceCatalogItem = {
@@ -672,6 +726,7 @@ def validate_field_spec(
     *,
     relation_depth: int,
     relationship_edges: tuple[str, ...],
+    to_many_relationship_edges: tuple[str, ...],
     binding_type: str,
     binding_nullable: bool,
 ) -> FieldSpec:
@@ -699,6 +754,7 @@ def validate_field_spec(
         field_spec,
         relation_depth=relation_depth,
         relationship_edges=relationship_edges,
+        to_many_relationship_edges=to_many_relationship_edges,
     )
 
 
@@ -758,6 +814,7 @@ def build_field_specs(
                 config,
                 relation_depth=resolution.relation_depth,
                 relationship_edges=resolution.relationship_edges,
+                to_many_relationship_edges=resolution.to_many_relationship_edges,
                 binding_type=get_field_type(resolution.field),
                 binding_nullable=resolution.nullable,
             )
@@ -769,6 +826,12 @@ def build_field_specs(
 
         field_config = dict(config)
         unknown_keys = set(field_config) - ALLOWED_FIELD_CONFIG_KEYS
+        if "metric" in unknown_keys:
+            msg = (
+                f"Field config key 'metric' is no longer supported for {key!r}; "
+                "define a Metric with a private binding and result_type instead."
+            )
+            raise InvalidResourceError(msg)
         if unknown_keys:
             unknown_keys_display = ", ".join(sorted(unknown_keys))
             msg = f"Unknown field config keys for {key!r}: {unknown_keys_display}."
@@ -828,6 +891,7 @@ def build_field_specs(
             binding=binding,
             relation_depth=resolution.relation_depth,
             relationship_edges=resolution.relationship_edges,
+            to_many_relationship_edges=resolution.to_many_relationship_edges,
             sensitive=sensitive,
             llm_visible=llm_visible,
             result_visible=result_visible,
@@ -837,7 +901,6 @@ def build_field_specs(
                 default=False,
             ),
             requires_permission=requires_permission,
-            metric=get_bool_field_config(field_config, "metric", default=False),
             scope_dimension=get_bool_field_config(
                 field_config,
                 "scope_dimension",
@@ -849,20 +912,174 @@ def build_field_specs(
 
 
 def build_metric_specs(
-    *, metrics: Sequence[Metric], fields: Mapping[str, FieldSpec]
+    *, model: type[models.Model], metrics: Sequence[Metric]
 ) -> dict[str, Metric]:
-    """Validate and normalize metric configuration."""
+    """Resolve trusted metric bindings and reject unsafe cardinality."""
 
     metric_specs: dict[str, Metric] = {}
     for metric in metrics:
+        if not isinstance(metric, Metric):
+            msg = "metrics must contain Metric registrations."
+            raise InvalidMetricError(msg)
         if metric.name in metric_specs:
             msg = f"Duplicate metric name {metric.name!r}."
             raise InvalidMetricError(msg)
-        if metric.field not in fields:
-            msg = f"Metric {metric.name!r} references unknown field {metric.field!r}."
-            raise UnknownFieldError(msg)
-        metric_specs[metric.name] = metric
+
+        resolution = resolve_field_path(model, metric.binding)
+        binding_type = get_field_type(resolution.field)
+        validate_metric_result_type(metric, binding_type=binding_type)
+        validate_metric_cardinality(model, metric, resolution=resolution)
+
+        bound_resolutions = [resolution]
+        if metric.cardinality_policy == "count_distinct" and metric.distinct_key:
+            bound_resolutions.append(resolve_field_path(model, metric.distinct_key))
+        metric_specs[metric.name] = replace(
+            metric,
+            relation_depth=max(item.relation_depth for item in bound_resolutions),
+            relationship_edges=dedupe_relationship_edges(
+                edge for item in bound_resolutions for edge in item.relationship_edges
+            ),
+            to_many_relationship_edges=dedupe_relationship_edges(
+                edge
+                for item in bound_resolutions
+                for edge in item.to_many_relationship_edges
+            ),
+        )
     return metric_specs
+
+
+def dedupe_relationship_edges(edges: Iterable[str]) -> tuple[str, ...]:
+    """Preserve trusted relationship order while removing repeated prefixes."""
+
+    return tuple(dict.fromkeys(edges))
+
+
+def validate_metric_result_type(metric: Metric, *, binding_type: str) -> None:
+    """Reject registrations whose trusted operation/type pair is contradictory."""
+
+    if metric.op == "count":
+        if metric.result_type != "integer":
+            msg = f"Count metric {metric.name!r} must use result_type='integer'."
+            raise InvalidMetricError(msg)
+        return
+    if metric.op in {"sum", "avg"}:
+        if binding_type not in NUMERIC_FIELD_TYPES:
+            msg = f"Metric {metric.name!r} requires a numeric private binding."
+            raise InvalidMetricError(msg)
+        expected_type = (
+            "float"
+            if metric.op == "avg" and binding_type == "integer"
+            else binding_type
+        )
+        if metric.result_type != expected_type:
+            msg = (
+                f"Metric {metric.name!r} result_type must be {expected_type!r} "
+                f"for its private binding."
+            )
+            raise InvalidMetricError(msg)
+        return
+    if metric.result_type != binding_type:
+        msg = (
+            f"Metric {metric.name!r} result_type must match its private "
+            f"binding type {binding_type!r}."
+        )
+        raise InvalidMetricError(msg)
+
+
+def validate_metric_cardinality(
+    model: type[models.Model],
+    metric: Metric,
+    *,
+    resolution: FieldResolution,
+) -> None:
+    """Enforce the accepted fail-closed metric fanout policies."""
+
+    to_many_edges = resolution.to_many_relationship_edges
+    if metric.op in {"sum", "avg", "min", "max"} and to_many_edges:
+        msg = f"Numeric metric {metric.name!r} cannot cross a to-many relationship."
+        raise InvalidMetricError(msg)
+
+    if metric.cardinality_policy == "to_one_only":
+        if metric.distinct_key is not None:
+            msg = f"Metric {metric.name!r} must not define distinct_key."
+            raise InvalidMetricError(msg)
+        if to_many_edges:
+            msg = f"Metric {metric.name!r} cannot cross a to-many relationship."
+            raise InvalidMetricError(msg)
+        return
+
+    if metric.op != "count":
+        msg = f"Metric policy {metric.cardinality_policy!r} requires op='count'."
+        raise InvalidMetricError(msg)
+    if len(to_many_edges) != 1:
+        msg = (
+            f"Metric {metric.name!r} must cross exactly one to-many relationship "
+            f"for policy {metric.cardinality_policy!r}."
+        )
+        raise InvalidMetricError(msg)
+
+    if metric.cardinality_policy == "count_rows":
+        if metric.distinct_key is not None:
+            msg = f"count_rows metric {metric.name!r} must not define distinct_key."
+            raise InvalidMetricError(msg)
+        validate_private_metric_key(metric.name, resolution.field, label="binding")
+        return
+
+    if not metric.distinct_key:
+        msg = f"count_distinct metric {metric.name!r} requires distinct_key."
+        raise InvalidMetricError(msg)
+    distinct_resolution = resolve_field_path(model, metric.distinct_key)
+    if distinct_resolution.to_many_relationship_edges != to_many_edges:
+        msg = (
+            f"count_distinct metric {metric.name!r} must use a distinct_key at "
+            "the same declared to-many grain as its binding."
+        )
+        raise InvalidMetricError(msg)
+    validate_private_metric_key(
+        metric.name,
+        distinct_resolution.field,
+        label="distinct_key",
+    )
+
+
+def validate_private_metric_key(
+    metric_name: str,
+    metric_field: object,
+    *,
+    label: str,
+) -> None:
+    """Require a non-null unique concrete key for an explicit count grain."""
+
+    if (
+        not isinstance(metric_field, models.Field)
+        or not metric_field.concrete
+        or metric_field.null
+    ):
+        msg = (
+            f"Metric {metric_name!r} {label} must resolve to a non-null unique "
+            "concrete field."
+        )
+        raise InvalidMetricError(msg)
+    if metric_field.primary_key or metric_field.unique:
+        return
+
+    model = metric_field.model
+    field_name = metric_field.name
+    if (field_name,) in tuple(model._meta.unique_together or ()):
+        return
+    for constraint in model._meta.constraints:
+        if not isinstance(constraint, models.UniqueConstraint):
+            continue
+        if constraint.condition is not None or constraint.expressions:
+            continue
+        if tuple(constraint.fields) == (field_name,):
+            return
+
+    msg = (
+        f"Metric {metric_name!r} {label} must resolve to a non-null unique "
+        "concrete field."
+    )
+    raise InvalidMetricError(msg)
 
 
 def default_field_label(key: str) -> str:

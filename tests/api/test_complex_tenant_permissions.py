@@ -255,9 +255,7 @@ def revenue_by_product_plan() -> dict[str, Any]:
         "intent": "aggregate",
         "filters": [{"field": "billing_document.status", "op": "eq", "value": "PAID"}],
         "group_by": [{"field": "product_name"}],
-        "metrics": [
-            {"name": "gross_revenue", "op": "sum", "field": "total_amount_cents"}
-        ],
+        "metrics": [{"metric": "gross_revenue"}],
         "order_by": [{"field": "product_name", "direction": "asc"}],
         "limit": 10,
         "visualization": {"type": "bar", "x": "product_name", "y": "gross_revenue"},
@@ -284,7 +282,7 @@ def member_subscriptions_plan() -> dict[str, Any]:
         "resource": "member_subscriptions",
         "intent": "aggregate",
         "group_by": [{"field": "plan.name"}, {"field": "status"}],
-        "metrics": [{"name": "subscription_count", "op": "count", "field": "status"}],
+        "metrics": [{"metric": "subscription_count"}],
         "order_by": [{"metric": "subscription_count", "direction": "desc"}],
         "limit": 10,
         "visualization": {

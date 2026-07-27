@@ -168,7 +168,9 @@ def test_scope_compilation_and_execution_failures_hide_internal_causes(
                 "label": "Status",
             },
         },
-        metrics=[Metric("order_count", op="count", field="id")],
+        metrics=[
+            Metric("order_count", op="count", binding="id", result_type="integer")
+        ],
         scope_mode="context_scoped",
         scope_provider=unavailable_scope,
     )

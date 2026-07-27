@@ -91,15 +91,27 @@ register(
         },
     },
     metrics=[
-        Metric("order_count", op="count", field="id", label="Orders"),
-        Metric("revenue", op="sum", field="total", label="Revenue"),
+        Metric(
+            "order_count",
+            op="count",
+            binding="id",
+            result_type="integer",
+            label="Orders",
+        ),
+        Metric(
+            "revenue",
+            op="sum",
+            binding="total",
+            result_type="decimal",
+            label="Revenue",
+        ),
     ],
     requires_permission="orders.view_reports",
     scope_provider=visible_orders,
 )
 ```
 
-The field mapping key is the public semantic name used by plans. `binding` is trusted server-owned Django metadata, uses `__` for relationships, and is excluded from catalog, capability, and provider payloads. `type` and `nullable` are explicit public semantics rather than values inferred from the binding.
+The field mapping key is the public semantic name used by plans. `binding` is trusted server-owned Django metadata, uses `__` for relationships, and is excluded from catalog, capability, and provider payloads. `type` and `nullable` are explicit public semantics rather than values inferred from the binding. Metric operation, binding, result type, permission, distinctness, and cardinality are also trusted registration metadata; untrusted plans contain only `{"metric": "registered_name"}`.
 
 ## Build permission-scoped capabilities
 
@@ -126,7 +138,7 @@ payload = {
     "resource": "orders",
     "intent": "aggregate",
     "group_by": [{"field": "status"}],
-    "metrics": [{"name": "order_count", "op": "count", "field": "id"}],
+    "metrics": [{"metric": "order_count"}],
     "order_by": [{"metric": "order_count", "direction": "desc"}],
     "limit": 10,
     "visualization": {"type": "bar", "x": "status", "y": "order_count"},

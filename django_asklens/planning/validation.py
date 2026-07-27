@@ -10,6 +10,7 @@ from django_asklens.catalog.introspection import resolve_field_path
 from django_asklens.catalog.registry import CatalogRegistry, default_registry
 from django_asklens.catalog.resources import (
     FieldSpec,
+    Metric,
     SemanticResource,
     permission_set_allows,
 )
@@ -31,9 +32,9 @@ from django_asklens.planning.schemas import (
 )
 from django_asklens.settings import get_asklens_settings
 
-type FieldUsage = Literal["filter", "select", "group_by", "metric", "order_by"]
+type FieldUsage = Literal["filter", "select", "group_by", "order_by"]
 
-RESULT_USAGES = {"select", "group_by", "metric", "order_by"}
+RESULT_USAGES = {"select", "group_by", "order_by"}
 DATE_FIELD_TYPES = {"date", "datetime"}
 
 
@@ -350,7 +351,7 @@ def normalize_visualization_defaults(plan: QueryPlan) -> QueryPlan:
         return plan.model_copy(
             update={
                 "visualization": plan.visualization.model_copy(
-                    update={"y": plan.metrics[0].name}
+                    update={"y": plan.metrics[0].metric}
                 )
             }
         )
@@ -501,7 +502,6 @@ def iter_plan_field_references(plan: QueryPlan) -> Iterable[str]:
     yield from plan.select
     yield from (item.field for item in plan.filters)
     yield from (item.field for item in plan.group_by)
-    yield from (item.field for item in plan.metrics)
     yield from (item.field for item in plan.order_by if item.field is not None)
 
 
@@ -518,6 +518,10 @@ def collect_relationship_edges(
         if field is None:
             continue
         edges.update(field.relationship_edges)
+    for metric_spec in plan.metrics:
+        metric = resource.metrics.get(metric_spec.metric)
+        if metric is not None:
+            edges.update(metric.relationship_edges)
     return edges
 
 
@@ -615,10 +619,9 @@ def validate_plan_fields(
         resource,
         plan.metrics,
         limits=limits,
-        allow_sensitive_fields=allow_sensitive_fields,
-        allow_hidden_fields=allow_hidden_fields,
         permissions=permissions,
     )
+    validate_aggregate_relationship_policy(plan, resource=resource)
     visible_field_keys = set(plan.select) | {group.field for group in plan.group_by}
     validate_order_by(
         resource,
@@ -667,43 +670,95 @@ def validate_metrics(
     metrics: tuple[MetricSpec, ...],
     *,
     limits: PlanLimits,
-    allow_sensitive_fields: bool,
-    allow_hidden_fields: bool,
     permissions: frozenset[str],
 ) -> set[str]:
     """Validate requested metrics against registered catalog metrics."""
 
     seen: set[str] = set()
     for metric_spec in metrics:
-        if metric_spec.name in seen:
-            msg = f"Duplicate metric requested: {metric_spec.name!r}."
+        if metric_spec.metric in seen:
+            msg = f"Duplicate metric requested: {metric_spec.metric!r}."
             raise PlanValidationError(msg)
-        seen.add(metric_spec.name)
+        seen.add(metric_spec.metric)
 
-        registered_metric = resource.metrics.get(metric_spec.name)
+        registered_metric = resource.metrics.get(metric_spec.metric)
         if registered_metric is None:
-            msg = f"Unknown metric {metric_spec.name!r} for resource {resource.name!r}."
-            raise UnknownMetricError(msg)
-        if (
-            metric_spec.op != registered_metric.op
-            or metric_spec.field != registered_metric.field
-        ):
             msg = (
-                f"Metric {metric_spec.name!r} does not match the registered "
-                "catalog metric."
+                f"Unknown metric {metric_spec.metric!r} for resource {resource.name!r}."
             )
-            raise PlanValidationError(msg)
-
-        validate_field_usage(
-            resource,
-            metric_spec.field,
-            usage="metric",
+            raise UnknownMetricError(msg)
+        validate_metric_usage(
+            registered_metric,
             limits=limits,
-            allow_sensitive_fields=allow_sensitive_fields,
-            allow_hidden_fields=allow_hidden_fields,
             permissions=permissions,
         )
     return seen
+
+
+def validate_metric_usage(
+    metric: Metric,
+    *,
+    limits: PlanLimits,
+    permissions: frozenset[str],
+) -> None:
+    """Validate one trusted registered metric for the current request."""
+
+    if metric.relation_depth > limits.max_joins:
+        msg = (
+            f"Metric {metric.name!r} exceeds MAX_JOINS "
+            f"({metric.relation_depth} > {limits.max_joins})."
+        )
+        raise PlanValidationError(msg)
+    if not permission_set_allows(permissions, metric.requires_permission):
+        msg = (
+            f"Metric {metric.name!r} requires permission "
+            f"{metric.requires_permission!r}."
+        )
+        raise PermissionDeniedError(msg)
+
+
+def validate_aggregate_relationship_policy(
+    plan: QueryPlan,
+    *,
+    resource: SemanticResource,
+) -> None:
+    """Reject plan-level fanout that could silently alter registered metrics."""
+
+    if plan.intent != "aggregate":
+        return
+
+    field_edges: set[str] = set()
+    for field_name in iter_plan_field_references(plan):
+        field = resource.fields.get(field_name)
+        if field is not None:
+            field_edges.update(field.to_many_relationship_edges)
+
+    registered_metrics = [resource.metrics[item.metric] for item in plan.metrics]
+    metric_edges = {
+        edge
+        for metric in registered_metrics
+        for edge in metric.to_many_relationship_edges
+    }
+    all_edges = field_edges | metric_edges
+    if len(all_edges) > 1:
+        msg = "Aggregate plans cannot combine independent to-many relationship paths."
+        raise PlanValidationError(msg)
+
+    if not field_edges:
+        return
+    for metric in registered_metrics:
+        if metric.cardinality_policy == "to_one_only":
+            msg = (
+                f"Metric {metric.name!r} cannot be combined with a to-many "
+                "field traversal."
+            )
+            raise PlanValidationError(msg)
+        if set(metric.to_many_relationship_edges) != field_edges:
+            msg = (
+                f"Metric {metric.name!r} does not use the same declared "
+                "to-many grain as the aggregate fields."
+            )
+            raise PlanValidationError(msg)
 
 
 def validate_order_by(

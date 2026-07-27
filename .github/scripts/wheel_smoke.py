@@ -46,6 +46,7 @@ def smoke_core_install() -> None:
 
     from django.contrib.auth import get_user_model
 
+    from django_asklens import Metric
     from django_asklens.access import can_access_asklens
     from django_asklens.catalog.registry import CatalogRegistry, serialize_catalog
     from django_asklens.exceptions import (
@@ -114,12 +115,46 @@ def smoke_core_install() -> None:
         model=user_model,
         name="users",
         fields={"id": {"binding": "id", "type": "integer", "nullable": False}},
+        metrics=[
+            Metric(
+                "user_count",
+                op="count",
+                binding="id",
+                result_type="integer",
+            )
+        ],
         scope_mode="global",
         default_order=(("id", "asc"),),
     )
     assert resource.row_identity == "id"
-    assert resource.to_dict()["default_order"] == [{"field": "id", "direction": "asc"}]
+    resource_metadata = resource.to_dict()
+    assert resource_metadata["default_order"] == [{"field": "id", "direction": "asc"}]
+    assert resource_metadata["metrics"] == [
+        {"name": "user_count", "label": "User Count", "result_type": "integer"}
+    ]
+    assert "binding" not in str(resource_metadata)
     assert resource.get_scope_queryset(request).model is user_model
+
+    parsed_metric_plan = parse_query_plan(
+        {
+            "resource": "users",
+            "intent": "aggregate",
+            "metrics": [{"metric": "user_count"}],
+        }
+    )
+    assert parsed_metric_plan.metrics[0].metric == "user_count"
+    try:
+        parse_query_plan(
+            {
+                "resource": "users",
+                "intent": "aggregate",
+                "metrics": [{"name": "user_count", "op": "count", "field": "id"}],
+            }
+        )
+    except PlanValidationError:
+        pass
+    else:
+        raise AssertionError("QueryPlan accepted client-controlled metric backing")
 
     assert (
         parse_query_plan(

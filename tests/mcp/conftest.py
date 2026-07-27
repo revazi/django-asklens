@@ -84,7 +84,9 @@ def registered_orders() -> None:
                 "requires_permission": "shop.view_customer_pii",
             },
         },
-        metrics=[Metric("order_count", op="count", field="id")],
+        metrics=[
+            Metric("order_count", op="count", binding="id", result_type="integer")
+        ],
     )
 
 

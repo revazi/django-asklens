@@ -110,8 +110,20 @@ register(
         },
     },
     metrics=[
-        Metric("order_count", op="count", field="order_id", label="Orders"),
-        Metric("revenue", op="sum", field="total_cents", label="Revenue"),
+        Metric(
+            "order_count",
+            op="count",
+            binding="id",
+            result_type="integer",
+            label="Orders",
+        ),
+        Metric(
+            "revenue",
+            op="sum",
+            binding="total_cents",
+            result_type="integer",
+            label="Revenue",
+        ),
     ],
     default_order=(("created_at", "desc"),),
     requires_permission="orders.view_reports",
@@ -119,7 +131,7 @@ register(
 )
 ```
 
-Field mapping keys are stable public semantic names. Each field explicitly declares its private Django `binding`, canonical `type`, and `nullable` contract; bindings use Django `__` traversal syntax and are never serialized to catalogs or providers. `requires_permission` on the resource gates catalog visibility and query validation for the whole resource. Field-level `requires_permission` gates individual fields such as PII without exposing the permission token in public metadata.
+Field mapping keys are stable public semantic names. Each field explicitly declares its private Django `binding`, canonical `type`, and `nullable` contract; bindings use Django `__` traversal syntax and are never serialized to catalogs or providers. Metrics also own their private binding, operation, result type, permission, and relationship-cardinality policy; plans reference only the registered metric name. `requires_permission` on the resource gates catalog visibility and query validation for the whole resource. Field- and metric-level `requires_permission` gate individual members without exposing permission tokens in public metadata.
 
 Start with the deterministic dummy provider:
 
@@ -132,7 +144,7 @@ DJANGO_ASKLENS = {
             "resource": "orders",
             "intent": "aggregate",
             "group_by": [{"field": "status"}],
-            "metrics": [{"name": "order_count", "op": "count", "field": "order_id"}],
+            "metrics": [{"metric": "order_count"}],
             "limit": 100,
             "visualization": {"type": "bar", "x": "status", "y": "order_count"},
         }

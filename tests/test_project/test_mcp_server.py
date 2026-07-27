@@ -80,7 +80,15 @@ def registered_orders() -> None:
                 "label": "Created date",
             },
         },
-        metrics=[Metric("order_count", op="count", field="id", label="Orders")],
+        metrics=[
+            Metric(
+                "order_count",
+                op="count",
+                binding="id",
+                result_type="integer",
+                label="Orders",
+            )
+        ],
     )
 
 
@@ -116,7 +124,7 @@ def valid_aggregate_plan() -> dict[str, Any]:
         "resource": "orders",
         "intent": "aggregate",
         "group_by": [{"field": "status"}],
-        "metrics": [{"name": "order_count", "op": "count", "field": "id"}],
+        "metrics": [{"metric": "order_count"}],
         "order_by": [{"metric": "order_count", "direction": "desc"}],
         "limit": 10,
         "visualization": {"type": "bar", "x": "status", "y": "order_count"},

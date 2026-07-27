@@ -8,11 +8,14 @@ from typing import Any, Literal, Never
 from django.db.models import F, IntegerField, QuerySet, Value
 
 from django_asklens.catalog.resources import FieldSpec, Metric, SemanticResource
-from django_asklens.compiler.aggregations import build_aggregates
+from django_asklens.compiler.aggregations import (
+    build_aggregates,
+    build_metric_aliases,
+)
 from django_asklens.compiler.dates import build_date_trunc_expression
 from django_asklens.compiler.filters import apply_filters
 from django_asklens.exceptions import UnsupportedQueryError
-from django_asklens.planning.schemas import GroupBySpec, QueryPlan
+from django_asklens.planning.schemas import GroupBySpec, MetricSpec, QueryPlan
 
 type LimitScope = Literal["rows", "groups"]
 type OrderingTerm = tuple[str, Literal["asc", "desc"]]
@@ -141,7 +144,8 @@ def _compile_aggregate_query(
         )
         for alias, group in group_aliases.items()
     }
-    metric_expressions = build_aggregates(plan.metrics, resource=resource)
+    metric_aliases = build_metric_aliases(plan.metrics)
+    metric_expressions = build_aggregates(metric_aliases, resource=resource)
 
     if group_expressions:
         compiled = queryset.values(**group_expressions).annotate(**metric_expressions)
@@ -149,6 +153,7 @@ def _compile_aggregate_query(
         ordering = build_grouped_ordering(
             plan,
             field_aliases=field_aliases,
+            metric_aliases=metric_aliases_to_private(metric_aliases),
         )
         compiled = apply_ordering(compiled, ordering)
         compiled = compiled[: plan.limit + 1]
@@ -161,14 +166,14 @@ def _compile_aggregate_query(
             )
             .values("_asklens_group_all")
             .annotate(**metric_expressions)
-            .values(*(metric.name for metric in plan.metrics))
+            .values(*metric_aliases)
         )
         compiled = compiled[:1]
         effective_limit = 1
         detects_truncation = False
 
     key_map = {alias: group.field for alias, group in group_aliases.items()}
-    key_map.update({metric.name: metric.name for metric in plan.metrics})
+    key_map.update({alias: metric.metric for alias, metric in metric_aliases.items()})
 
     return _CompiledQuery(
         queryset=compiled,
@@ -192,6 +197,14 @@ def group_aliases_to_public(group_aliases: Mapping[str, GroupBySpec]) -> dict[st
     """Return mapping from public group field names to internal ORM aliases."""
 
     return {group.field: alias for alias, group in group_aliases.items()}
+
+
+def metric_aliases_to_private(
+    metric_aliases: Mapping[str, MetricSpec],
+) -> dict[str, str]:
+    """Map public semantic metric names to private ORM aliases."""
+
+    return {metric.metric: alias for alias, metric in metric_aliases.items()}
 
 
 def build_list_ordering(
@@ -224,6 +237,7 @@ def build_grouped_ordering(
     plan: QueryPlan,
     *,
     field_aliases: Mapping[str, str],
+    metric_aliases: Mapping[str, str],
 ) -> tuple[OrderingTerm, ...]:
     """Return grouped ordering with every missing group key as a tie-breaker."""
 
@@ -232,7 +246,7 @@ def build_grouped_ordering(
         if item.field is not None:
             ordering.append((field_aliases[item.field], item.direction))
         elif item.metric is not None:
-            ordering.append((item.metric, item.direction))
+            ordering.append((metric_aliases[item.metric], item.direction))
 
     seen = {target for target, _direction in ordering}
     for group in plan.group_by:
@@ -271,7 +285,7 @@ def build_aggregate_columns(
         field_column(resource.fields[group.field]) for group in group_by
     )
     metric_columns = tuple(
-        metric_column(resource.metrics[metric.name]) for metric in metrics
+        metric_column(resource.metrics[metric.metric]) for metric in metrics
     )
     return group_columns + metric_columns
 
@@ -288,5 +302,5 @@ def metric_column(metric: Metric) -> ResultColumn:
     return ResultColumn(
         key=metric.name,
         label=metric.label or metric.name.replace("_", " ").title(),
-        type="number",
+        type=metric.result_type,
     )

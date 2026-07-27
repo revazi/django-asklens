@@ -71,9 +71,9 @@ def build_registry() -> CatalogRegistry:
             },
         },
         metrics=[
-            Metric("order_count", op="count", field="id"),
-            Metric("revenue", op="sum", field="total"),
-            Metric("max_total", op="max", field="total"),
+            Metric("order_count", op="count", binding="id", result_type="integer"),
+            Metric("revenue", op="sum", binding="total", result_type="decimal"),
+            Metric("max_total", op="max", binding="total", result_type="decimal"),
         ],
     )
     return registry
@@ -128,7 +128,7 @@ def aggregate_plan(**updates: object) -> dict[str, Any]:
         "intent": "aggregate",
         "filters": [],
         "group_by": [{"field": "status"}],
-        "metrics": [{"name": "order_count", "op": "count", "field": "id"}],
+        "metrics": [{"metric": "order_count"}],
         "order_by": [],
         "limit": 10,
     }
@@ -210,8 +210,8 @@ def test_group_term_count_below_at_and_above_boundary() -> None:
 
 def test_metric_count_below_at_and_above_boundary() -> None:
     metrics = [
-        {"name": "order_count", "op": "count", "field": "id"},
-        {"name": "revenue", "op": "sum", "field": "total"},
+        {"metric": "order_count"},
+        {"metric": "revenue"},
     ]
     assert_count_boundary(
         aggregate_plan(metrics=metrics),
@@ -310,8 +310,8 @@ def test_unique_relationship_edges_below_at_and_above_boundary() -> None:
         (
             aggregate_plan(
                 metrics=[
-                    {"name": "order_count", "op": "count", "field": "id"},
-                    {"name": "revenue", "op": "sum", "field": "total"},
+                    {"metric": "order_count"},
+                    {"metric": "revenue"},
                 ]
             ),
             {"MAX_METRICS": 1},
