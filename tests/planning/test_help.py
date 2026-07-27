@@ -25,6 +25,7 @@ def registered_orders() -> None:
 
     default_registry.clear()
     default_registry.register(
+        timezone="UTC",
         model=Order,
         name="orders",
         label="Orders",

@@ -19,6 +19,7 @@ The project is alpha and APIs may change before a stable release.
 - Added trusted metric `binding`, `result_type`, `requires_permission`, `cardinality_policy`, and optional private `distinct_key` registration metadata.
 - Added explicit enum definitions with string/integer canonical values, safe labels, and accepted aliases; enum metadata is catalog-visible only when deliberately registered.
 - Added a canonical per-type filter-operator matrix to permission-scoped capabilities and result-column nullability metadata.
+- Added required explicit server-owned IANA timezone registration for every resource; the timezone is safe catalog/capability metadata but cannot be supplied by a plan.
 
 ### Changed
 
@@ -38,6 +39,7 @@ The project is alpha and APIs may change before a stable release.
 - `neq` explicitly excludes null rows. Empty ungrouped aggregates return one row (`count=0`; `sum`/`avg`/`min`/`max=null`), while empty grouped aggregates return no rows.
 - Result serialization now preserves decimal strings, verifies canonical runtime types, declared columns, nullability, and registered enum outputs, and rejects unsupported objects instead of stringifying them. Callers that directly construct the alpha `ResultColumn` helper must add `nullable=True|False`; the legacy broad `number` label is no longer canonical.
 - The compact provider response schema now correctly requests semantic-name-only metric objects.
+- Temporal filters now require strict ISO dates, offset-free local times, and offset-bearing RFC 3339 datetimes. Date ranges are inclusive, datetime ranges are half-open, relative filters use the injected aware clock with an exclusive upper bound at `now`, rolling days are exact 24-hour durations, calendar months use resource-local wall time with month-end/DST handling, and date buckets use the explicit resource timezone with Monday week starts.
 
 ### Removed
 

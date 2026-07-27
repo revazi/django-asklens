@@ -70,6 +70,7 @@ def test_previewed_plan_is_revalidated_against_current_catalog(
     )
     current_registry = CatalogRegistry()
     current_registry.register(
+        timezone="UTC",
         model=Order,
         name="orders",
         fields={
@@ -133,6 +134,7 @@ def test_resource_and_metric_permissions_are_rechecked_before_sql(
 
     metric_registry = CatalogRegistry()
     metric_registry.register(
+        timezone="UTC",
         model=Order,
         name="orders",
         fields={

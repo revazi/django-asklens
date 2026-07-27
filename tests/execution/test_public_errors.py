@@ -152,6 +152,7 @@ def test_scope_compilation_and_execution_failures_hide_internal_causes(
         raise RuntimeError("secret tenant scope implementation")
 
     registry.register(
+        timezone="UTC",
         model=Order,
         name="orders",
         fields={

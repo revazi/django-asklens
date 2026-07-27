@@ -34,6 +34,13 @@ from django_asklens.planning.schemas import (
     QueryPlan,
     parse_query_plan,
 )
+from django_asklens.planning.temporal import (
+    normalize_date_string,
+    normalize_datetime_string,
+    normalize_time_string,
+    parse_date_string,
+    parse_datetime_string,
+)
 from django_asklens.settings import get_asklens_settings
 
 type FieldUsage = Literal["filter", "select", "group_by", "order_by"]
@@ -250,8 +257,10 @@ def normalize_filter_values(
 def normalize_filter_value(filter_spec: FilterSpec, *, field: FieldSpec) -> FilterSpec:
     """Return one filter with canonical float, UUID, decimal, or enum values."""
 
-    if filter_spec.op in {"isnull", "date_range", "last_n_days", "last_n_months"}:
+    if filter_spec.op in {"isnull", "last_n_days", "last_n_months"}:
         return filter_spec
+    if filter_spec.op == "date_range":
+        return normalize_date_range_filter(filter_spec, field=field)
     if filter_spec.op == "in":
         if not isinstance(filter_spec.value, list):  # Defensive after shape parsing.
             msg = "in filters require a non-empty list value."
@@ -302,10 +311,12 @@ def normalize_canonical_scalar(value: object, *, field: FieldSpec) -> object:
         if not math.isfinite(normalized_float):
             raise_invalid_filter_value(field, "must be a finite JSON number")
         return normalized_float
-    if field.type in {"date", "datetime", "time"}:
-        if not isinstance(value, str):
-            raise_invalid_filter_value(field, f"must be a {field.type} string")
-        return value
+    if field.type == "date":
+        return normalize_date_string(value)
+    if field.type == "datetime":
+        return normalize_datetime_string(value)
+    if field.type == "time":
+        return normalize_time_string(value)
     if field.type == "uuid":
         if not isinstance(value, str):
             raise_invalid_filter_value(field, "must be a valid UUID string")
@@ -317,6 +328,34 @@ def normalize_canonical_scalar(value: object, *, field: FieldSpec) -> object:
         return normalize_enum_scalar(value, field=field)
 
     raise_invalid_filter_value(field, "uses an unsupported canonical type")
+
+
+def normalize_date_range_filter(
+    filter_spec: FilterSpec,
+    *,
+    field: FieldSpec,
+) -> FilterSpec:
+    """Validate and normalize one type-specific temporal range."""
+
+    if not isinstance(filter_spec.value, list) or len(filter_spec.value) != 2:
+        msg = "date_range filters require two values."
+        raise PlanValidationError(msg)
+    start_value, end_value = filter_spec.value
+    if field.type == "date":
+        normalized_start = normalize_date_string(start_value)
+        normalized_end = normalize_date_string(end_value)
+        if parse_date_string(normalized_start) > parse_date_string(normalized_end):
+            raise_invalid_filter_value(field, "requires an ordered inclusive range")
+    elif field.type == "datetime":
+        normalized_start = normalize_datetime_string(start_value)
+        normalized_end = normalize_datetime_string(end_value)
+        if parse_datetime_string(normalized_start) >= parse_datetime_string(
+            normalized_end
+        ):
+            raise_invalid_filter_value(field, "requires an ordered half-open range")
+    else:  # Defensive after the operator/type matrix.
+        raise_invalid_filter_value(field, "does not support date_range")
+    return filter_spec.model_copy(update={"value": [normalized_start, normalized_end]})
 
 
 def normalize_enum_scalar(value: object, *, field: FieldSpec) -> str | int:

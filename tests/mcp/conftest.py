@@ -51,6 +51,7 @@ def registered_orders() -> None:
     """Register an order resource with a permission-gated sensitive field."""
 
     default_registry.register(
+        timezone="UTC",
         model=Order,
         name="orders",
         label="Orders",

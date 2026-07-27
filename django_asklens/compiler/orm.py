@@ -146,6 +146,8 @@ def _compile_aggregate_query(
         alias: build_date_trunc_expression(
             resource.fields[group.field].binding,
             group.date_trunc,
+            field_type=resource.fields[group.field].type,
+            resource_timezone=resource.timezone_info,
         )
         for alias, group in group_aliases.items()
     }

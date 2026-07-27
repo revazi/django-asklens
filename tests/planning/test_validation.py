@@ -33,6 +33,7 @@ def build_registry() -> CatalogRegistry:
 
     registry = CatalogRegistry()
     registry.register(
+        timezone="UTC",
         model=Order,
         name="orders",
         label="Orders",
@@ -128,6 +129,7 @@ def build_billing_registry() -> CatalogRegistry:
 
     registry = CatalogRegistry()
     registry.register(
+        timezone="UTC",
         model=BillingLine,
         name="billing_lines",
         label="Billing lines",
@@ -185,6 +187,7 @@ def build_canonical_registry() -> CatalogRegistry:
 
     registry = CatalogRegistry()
     registry.register(
+        timezone="UTC",
         model=CanonicalValueFixture,
         name="canonical_values",
         scope_mode="global",
@@ -495,6 +498,81 @@ def test_canonical_filter_values_reject_wrong_or_unsafe_types(
         )
 
 
+@pytest.mark.parametrize(
+    ("field", "value", "message"),
+    [
+        ("day", "2026-02-29", "valid ISO 8601 date"),
+        ("day", "2026-2-28", "valid ISO 8601 date"),
+        ("instant", "2026-01-15T12:00:00", "offset-bearing RFC 3339"),
+        ("instant", "2026-01-15 12:00:00Z", "offset-bearing RFC 3339"),
+        ("instant", "2026-01-15T12:00:00-00:00", "offset-bearing RFC 3339"),
+        ("clock", "12:30", "offset-free ISO time"),
+        ("clock", "12:30:00+02:00", "offset-free ISO time"),
+    ],
+)
+def test_temporal_scalar_values_are_validated_before_compilation(
+    field: str,
+    value: object,
+    message: str,
+) -> None:
+    with pytest.raises(PlanValidationError, match=message):
+        parse_and_validate_query_plan(
+            canonical_list_payload(field=field, op="eq", value=value),
+            registry=build_canonical_registry(),
+        )
+
+
+@pytest.mark.parametrize(
+    ("field", "value", "message"),
+    [
+        ("day", ["2026-02-01", "2026-01-01"], "ordered inclusive range"),
+        (
+            "instant",
+            ["2026-02-01T00:00:00Z", "2026-01-01T00:00:00Z"],
+            "ordered half-open range",
+        ),
+        (
+            "instant",
+            ["2026-01-01T00:00:00Z", "2026-01-01T00:00:00Z"],
+            "ordered half-open range",
+        ),
+        (
+            "instant",
+            ["2026-01-01T00:00:00", "2026-02-01T00:00:00Z"],
+            "offset-bearing RFC 3339",
+        ),
+    ],
+)
+def test_temporal_ranges_reject_invalid_or_unordered_boundaries(
+    field: str,
+    value: list[str],
+    message: str,
+) -> None:
+    with pytest.raises(PlanValidationError, match=message):
+        parse_and_validate_query_plan(
+            canonical_list_payload(field=field, op="date_range", value=value),
+            registry=build_canonical_registry(),
+        )
+
+
+def test_temporal_values_normalize_dates_datetimes_and_in_lists() -> None:
+    normalized_date = parse_and_validate_query_plan(
+        canonical_list_payload(field="day", op="in", value=["2026-01-15"]),
+        registry=build_canonical_registry(),
+    )
+    normalized_datetime = parse_and_validate_query_plan(
+        canonical_list_payload(
+            field="instant",
+            op="eq",
+            value="2026-01-15T12:00:00Z",
+        ),
+        registry=build_canonical_registry(),
+    )
+
+    assert normalized_date.filters[0].value == ["2026-01-15"]
+    assert normalized_datetime.filters[0].value == "2026-01-15T12:00:00+00:00"
+
+
 def test_canonical_filter_values_normalize_float_uuid_and_enum_aliases() -> None:
     """Safe aliases normalize without changing the public field or operation."""
 
@@ -541,6 +619,7 @@ def test_django_choices_are_not_automatic_enum_aliases() -> None:
 
     registry = CatalogRegistry()
     registry.register(
+        timezone="UTC",
         model=BillingLine,
         name="billing_lines",
         scope_mode="global",
@@ -576,6 +655,7 @@ def test_unknown_resource_fails() -> None:
 def test_resource_permission_fails_without_matching_permission() -> None:
     registry = CatalogRegistry()
     registry.register(
+        timezone="UTC",
         model=Order,
         name="orders",
         scope_mode="global",
@@ -657,6 +737,7 @@ def build_facility_fanout_registry() -> CatalogRegistry:
 
     registry = CatalogRegistry()
     registry.register(
+        timezone="UTC",
         model=Facility,
         name="facilities",
         scope_mode="global",

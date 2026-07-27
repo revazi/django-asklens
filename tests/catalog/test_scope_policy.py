@@ -50,6 +50,7 @@ def register_context_resource(
 
     registry = CatalogRegistry()
     registry.register(
+        timezone="UTC",
         model=Order,
         name="orders",
         fields={"id": {"binding": "id", "type": "integer", "nullable": False}},
@@ -66,6 +67,7 @@ def test_scope_mode_is_required_at_registration() -> None:
 
     with pytest.raises(InvalidResourceError, match="scope_mode is required"):
         registry.register(
+            timezone="UTC",
             model=Order,
             name="orders",
             fields={"id": {"binding": "id", "type": "integer", "nullable": False}},
@@ -87,6 +89,7 @@ def test_context_scoped_mode_can_be_configured_once(
     registry = CatalogRegistry()
 
     resource = registry.register(
+        timezone="UTC",
         model=Order,
         name="orders",
         fields={"id": {"binding": "id", "type": "integer", "nullable": False}},
@@ -115,6 +118,7 @@ def test_context_scoped_default_still_requires_provider(settings) -> None:
 
     with pytest.raises(InvalidResourceError, match="requires scope_provider"):
         registry.register(
+            timezone="UTC",
             model=Order,
             name="orders",
             fields={"id": {"binding": "id", "type": "integer", "nullable": False}},
@@ -133,6 +137,7 @@ def test_explicit_global_mode_overrides_context_scoped_default(settings) -> None
     registry = CatalogRegistry()
 
     resource = registry.register(
+        timezone="UTC",
         model=Order,
         name="orders",
         fields={"id": {"binding": "id", "type": "integer", "nullable": False}},
@@ -160,6 +165,7 @@ def test_default_scope_mode_must_be_context_scoped(
         InvalidResourceError, match="DEFAULT_SCOPE_MODE.*context_scoped"
     ):
         registry.register(
+            timezone="UTC",
             model=Order,
             name="orders",
             fields={"id": {"binding": "id", "type": "integer", "nullable": False}},
@@ -183,6 +189,7 @@ def test_legacy_base_queryset_is_a_migration_error(
 
     with pytest.raises(InvalidResourceError, match="base_queryset.*scope_provider"):
         registry.register(
+            timezone="UTC",
             model=Order,
             name="orders",
             fields={"id": {"binding": "id", "type": "integer", "nullable": False}},
@@ -200,6 +207,7 @@ def test_scope_mode_must_be_global_or_context_scoped(scope_mode: object) -> None
 
     with pytest.raises(InvalidResourceError, match="global.*context_scoped"):
         registry.register(
+            timezone="UTC",
             model=Order,
             name="orders",
             fields={"id": {"binding": "id", "type": "integer", "nullable": False}},
@@ -214,6 +222,7 @@ def test_context_scoped_registration_requires_provider() -> None:
 
     with pytest.raises(InvalidResourceError, match="requires scope_provider"):
         registry.register(
+            timezone="UTC",
             model=Order,
             name="orders",
             fields={"id": {"binding": "id", "type": "integer", "nullable": False}},
@@ -228,6 +237,7 @@ def test_global_registration_rejects_scope_provider() -> None:
 
     with pytest.raises(InvalidResourceError, match="global.*scope_provider"):
         registry.register(
+            timezone="UTC",
             model=Order,
             name="orders",
             fields={"id": {"binding": "id", "type": "integer", "nullable": False}},
@@ -243,6 +253,7 @@ def test_scope_provider_must_be_callable() -> None:
 
     with pytest.raises(InvalidResourceError, match="scope_provider must be callable"):
         registry.register(
+            timezone="UTC",
             model=Order,
             name="orders",
             fields={"id": {"binding": "id", "type": "integer", "nullable": False}},
@@ -256,6 +267,7 @@ def test_explicit_global_scope_returns_default_manager_queryset() -> None:
 
     registry = CatalogRegistry()
     resource = registry.register(
+        timezone="UTC",
         model=Order,
         name="orders",
         fields={"id": {"binding": "id", "type": "integer", "nullable": False}},
@@ -275,6 +287,7 @@ def test_deprecated_runner_rejects_missing_current_request_before_sql(
 
     registry = CatalogRegistry()
     registry.register(
+        timezone="UTC",
         model=Order,
         name="orders",
         fields={"id": {"binding": "id", "type": "integer", "nullable": False}},

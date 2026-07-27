@@ -144,6 +144,7 @@ def registered_orders() -> None:
     """Register the Order resource in the default registry for API views."""
 
     default_registry.register(
+        timezone="UTC",
         model=Order,
         name="orders",
         label="Orders",
@@ -274,6 +275,7 @@ def test_capabilities_endpoint_returns_permission_scoped_query_guidance(
     [resource] = response.data["resources"]
     assert resource["name"] == "orders"
     assert resource["label"] == "Orders"
+    assert resource["timezone"] == "UTC"
     assert {field["name"] for field in resource["fields"]} == {
         "id",
         "status",
@@ -719,6 +721,7 @@ def test_api_execution_rejects_invalid_current_scope_before_sql(
 
     settings.DJANGO_ASKLENS = {"AUDIT_MODE": "disabled"}
     default_registry.register(
+        timezone="UTC",
         model=Order,
         name="orders",
         fields={

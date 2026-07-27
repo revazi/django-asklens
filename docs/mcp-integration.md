@@ -66,7 +66,7 @@ asklens_execute_plan(plan, include_rows=false)
 asklens_query(question, include_rows=false)  # optional convenience tool
 ```
 
-`asklens_capabilities(request)` returns permission-scoped metadata only: visible resources, fields, metrics, supported patterns, limitations, example questions, and optionally the `QueryPlan` JSON schema. It does not return database rows or sample values, execute a query, or call an LLM provider. For MCP transports, prefer `resource_detail="summary"` and `include_query_plan_schema=False` during discovery to keep tool output compact.
+`asklens_capabilities(request)` returns permission-scoped metadata only: visible resources, their server-owned timezones, fields, metrics, supported patterns, limitations, example questions, and optionally the `QueryPlan` JSON schema. It does not return database rows or sample values, execute a query, or call an LLM provider. For MCP transports, prefer `resource_detail="summary"` and `include_query_plan_schema=False` during discovery to keep tool output compact.
 
 `asklens_query_plan_schema(request)` returns the QueryPlan JSON schema without repeating catalog capabilities.
 

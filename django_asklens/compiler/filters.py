@@ -1,11 +1,14 @@
 """Filter compilation for Django ORM querysets."""
 
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from django.db.models import Q
 
-from django_asklens.catalog.resources import SemanticResource
-from django_asklens.compiler.dates import parse_temporal_value, relative_datetime
+from django_asklens.catalog.resources import FieldSpec, SemanticResource
+from django_asklens.compiler.dates import (
+    parse_temporal_value,
+    relative_datetime_bounds,
+)
 from django_asklens.exceptions import PlanValidationError
 from django_asklens.planning.schemas import FilterSpec
 
@@ -65,34 +68,72 @@ def build_filter_q(
 ) -> Q:
     """Build a safe ORM Q object through a private field binding."""
 
-    orm_path = resource.fields[filter_spec.field].binding
+    field = resource.fields[filter_spec.field]
+    orm_path = field.binding
     operator = filter_spec.op
 
-    if operator == "neq":
-        return Q(**{f"{orm_path}__exact": filter_spec.value})
     if operator == "date_range":
-        return Q(**{f"{orm_path}__range": parse_date_range(filter_spec.value)})
+        return build_date_range_q(
+            orm_path,
+            filter_spec.value,
+            field_type=field.type,
+        )
     if operator in {"last_n_days", "last_n_months"}:
         if not isinstance(filter_spec.value, int):
             msg = f"{operator} filters require an integer value."
             raise PlanValidationError(msg)
-        lower_bound = relative_datetime(
-            operator=operator, amount=filter_spec.value, now=now
+        start, end = relative_datetime_bounds(
+            operator=operator,
+            amount=filter_spec.value,
+            now=now,
+            resource_timezone=resource.timezone_info,
         )
-        return Q(**{f"{orm_path}__gte": lower_bound})
+        if field.type == "date":
+            local_start = start.astimezone(resource.timezone_info).date()
+            local_end = (
+                (end - timedelta(microseconds=1))
+                .astimezone(resource.timezone_info)
+                .date()
+            )
+            return Q(**{f"{orm_path}__gte": local_start}) & Q(
+                **{f"{orm_path}__lte": local_end}
+            )
+        return Q(**{f"{orm_path}__gte": start}) & Q(**{f"{orm_path}__lt": end})
+
+    value = compile_filter_value(filter_spec.value, field=field)
+    if operator == "neq":
+        return Q(**{f"{orm_path}__exact": value})
 
     lookup = LOOKUP_BY_OPERATOR.get(operator)
     if lookup is None:
         msg = f"Unsupported filter operator {operator!r}."
         raise PlanValidationError(msg)
-    return Q(**{f"{orm_path}__{lookup}": filter_spec.value})
+    return Q(**{f"{orm_path}__{lookup}": value})
 
 
-def parse_date_range(value: object) -> tuple[object, object]:
-    """Parse a validated date_range value into ORM-ready values."""
+def compile_filter_value(value: object, *, field: FieldSpec) -> object:
+    """Convert canonical temporal strings to explicit Python ORM values."""
+
+    if field.type not in {"date", "datetime", "time"}:
+        return value
+    if isinstance(value, list):
+        return [parse_temporal_value(item, field_type=field.type) for item in value]
+    return parse_temporal_value(value, field_type=field.type)
+
+
+def build_date_range_q(
+    orm_path: str,
+    value: object,
+    *,
+    field_type: str,
+) -> Q:
+    """Build an inclusive date or half-open datetime range predicate."""
 
     if not isinstance(value, list) or len(value) != 2:
         msg = "date_range filters require two values."
         raise PlanValidationError(msg)
-    start, end = value
-    return parse_temporal_value(start), parse_temporal_value(end)
+    start = parse_temporal_value(value[0], field_type=field_type)
+    end = parse_temporal_value(value[1], field_type=field_type)
+    if field_type == "date":
+        return Q(**{f"{orm_path}__gte": start}) & Q(**{f"{orm_path}__lte": end})
+    return Q(**{f"{orm_path}__gte": start}) & Q(**{f"{orm_path}__lt": end})

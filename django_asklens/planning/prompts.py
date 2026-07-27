@@ -21,7 +21,9 @@ Use filter operators only with compatible field types: contains/icontains only f
 strings; ordered comparisons only for integer, decimal, float, date, datetime,
 and time; date_range/last_n_days/last_n_months only for date or datetime; enum
 filters only with registered canonical values or aliases. Never use null with
-eq/neq; use isnull with a boolean value.
+eq/neq; use isnull with a boolean value. Datetime filter values must be
+RFC 3339 strings with an explicit offset. Resource timezone metadata is
+server-owned and must never be copied into the plan.
 Use date_trunc on date/datetime fields for day, week, month, quarter, or year buckets.
 Result keys are the exact select field names, group_by field names, and metric names.
 For date_trunc groupings, visualization axes and order_by fields must still

@@ -103,7 +103,7 @@ AskLens must not send sample database rows, secrets, credentials, `.env` content
 
 ## Prompt-size optimization
 
-Live `/asklens/query/` calls use permission-scoped capabilities metadata for provider prompts. By default, AskLens sends all visible resources in a compact provider-facing shape so the provider can choose among the user's full allowed catalog. Compact field metadata retains canonical type, nullability, supported operators, and explicitly registered enum values/aliases; it still omits Django bindings, model labels, permission tokens, and database values.
+Live `/asklens/query/` calls use permission-scoped capabilities metadata for provider prompts. By default, AskLens sends all visible resources in a compact provider-facing shape so the provider can choose among the user's full allowed catalog. Compact resource metadata retains the server-owned timezone, and compact field metadata retains canonical type, nullability, supported operators, and explicitly registered enum values/aliases; it still omits Django bindings, model labels, permission tokens, and database values. The provider cannot override the resource timezone in a plan.
 
 Resource shortlisting is available as an opt-in prompt-size optimization for larger catalogs. When enabled, likely data questions send only the top matching visible resources before the provider call. This can reduce prompt size and cost, but it is not an authorization decision: every returned plan is still validated against the full catalog, request permissions, and limits before execution.
 

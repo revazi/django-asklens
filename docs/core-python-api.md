@@ -52,6 +52,7 @@ def visible_orders(request):
 
 
 register(
+    timezone="UTC",
     model=Order,
     name="orders",
     label="Orders",
@@ -111,9 +112,9 @@ register(
 )
 ```
 
-The field mapping key is the public semantic name used by plans. `binding` is trusted server-owned Django metadata, uses `__` for relationships, and is excluded from catalog, capability, and provider payloads. `type` and `nullable` are explicit public semantics rather than values inferred from the binding. Metric operation, binding, result type, permission, distinctness, and cardinality are also trusted registration metadata; untrusted plans contain only `{"metric": "registered_name"}`.
+The field mapping key is the public semantic name used by plans. `binding` is trusted server-owned Django metadata, uses `__` for relationships, and is excluded from catalog, capability, and provider payloads. `type` and `nullable` are explicit public semantics rather than values inferred from the binding. Every resource also requires a server-owned IANA `timezone`, which is visible metadata but never client-controlled. Metric operation, binding, result type, permission, distinctness, and cardinality are also trusted registration metadata; untrusted plans contain only `{"metric": "registered_name"}`.
 
-Validation enforces the capability-declared operator matrix and canonical JSON values before scope resolution. Decimal filter values are finite strings, floats are finite JSON numbers, UUIDs normalize canonically, and `eq`/`neq` never accept null. Choice labels are not inferred from Django model metadata; use an explicit `type="enum"` definition with registered canonical values and aliases when closed-set semantics are intended. See [Registration](registration.md).
+Validation enforces the capability-declared operator matrix and canonical JSON values before scope resolution. Decimal filter values are finite strings, floats are finite JSON numbers, UUIDs normalize canonically, dates and local times use strict ISO forms, datetimes require an explicit RFC 3339 offset, and `eq`/`neq` never accept null. Choice labels are not inferred from Django model metadata; use an explicit `type="enum"` definition with registered canonical values and aliases when closed-set semantics are intended. See [Registration](registration.md).
 
 ## Build permission-scoped capabilities
 

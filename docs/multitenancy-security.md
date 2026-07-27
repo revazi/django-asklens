@@ -24,6 +24,7 @@ def visible_orders(request):
 
 
 register(
+    timezone="UTC",
     model=Order,
     name="orders",
     fields={

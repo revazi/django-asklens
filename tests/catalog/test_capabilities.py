@@ -29,6 +29,7 @@ def test_build_capabilities_describes_visible_fields_metrics_and_examples() -> N
                     "description": "Customer orders.",
                     "synonyms": ["purchases"],
                     "default_date_field": "created_at",
+                    "timezone": "UTC",
                     "fields": [
                         {
                             "name": "status",
@@ -76,6 +77,7 @@ def test_build_capabilities_describes_visible_fields_metrics_and_examples() -> N
 
     [resource] = capabilities["resources"]
     assert resource["name"] == "orders"
+    assert resource["timezone"] == "UTC"
     assert resource["fields"][0]["can_select"] is True
     assert resource["fields"][0]["nullable"] is False
     assert resource["fields"][0]["operators"] == ["eq", "neq", "in", "isnull"]
@@ -130,6 +132,7 @@ def test_build_capabilities_adds_sanitized_single_scope_guidance() -> None:
                     "description": "Billing facts.",
                     "synonyms": [],
                     "default_date_field": "created_at",
+                    "timezone": "UTC",
                     "fields": [
                         {
                             "name": "facility.name",
@@ -185,6 +188,7 @@ def test_build_capabilities_omits_single_scope_resource_examples() -> None:
                     "description": "Visible facilities.",
                     "synonyms": [],
                     "default_date_field": "created_at",
+                    "timezone": "UTC",
                     "fields": [
                         {
                             "name": "name",
@@ -236,6 +240,7 @@ def test_build_capabilities_honors_examples_enabled_flag() -> None:
                     "description": "Owner lookup.",
                     "synonyms": [],
                     "default_date_field": None,
+                    "timezone": "UTC",
                     "examples_enabled": False,
                     "fields": [
                         {
@@ -275,6 +280,7 @@ def test_build_capabilities_uses_explicit_scope_metadata_for_arbitrary_names() -
                     "description": "Visible studios.",
                     "synonyms": [],
                     "default_date_field": "opened_at",
+                    "timezone": "UTC",
                     "scope_resource": True,
                     "fields": [
                         {
@@ -304,6 +310,7 @@ def test_build_capabilities_uses_explicit_scope_metadata_for_arbitrary_names() -
                     "description": "Bookings.",
                     "synonyms": [],
                     "default_date_field": "booked_at",
+                    "timezone": "UTC",
                     "fields": [
                         {
                             "name": "home_box.label",

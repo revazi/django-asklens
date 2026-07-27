@@ -86,6 +86,18 @@ def smoke_core_install() -> None:
         registry.register(
             model=user_model,
             fields={"id": {"binding": "id", "type": "integer", "nullable": False}},
+            scope_mode="global",
+        )
+    except InvalidResourceError as exc:
+        assert "timezone is required" in str(exc)
+    else:
+        raise AssertionError("Resource registration accepted a missing timezone")
+
+    try:
+        registry.register(
+            timezone="UTC",
+            model=user_model,
+            fields={"id": {"binding": "id", "type": "integer", "nullable": False}},
         )
     except InvalidResourceError as exc:
         assert "scope_mode is required" in str(exc)
@@ -94,6 +106,7 @@ def smoke_core_install() -> None:
 
     try:
         registry.register(
+            timezone="UTC",
             model=user_model,
             name="legacy_users",
             fields={"id": {}},
@@ -106,6 +119,7 @@ def smoke_core_install() -> None:
 
     settings.DJANGO_ASKLENS = {"DEFAULT_SCOPE_MODE": "context_scoped"}
     scoped_resource = registry.register(
+        timezone="UTC",
         model=user_model,
         name="scoped_users",
         fields={"id": {"binding": "id", "type": "integer", "nullable": False}},
@@ -114,6 +128,7 @@ def smoke_core_install() -> None:
     assert scoped_resource.scope_mode == "context_scoped"
 
     resource = registry.register(
+        timezone="UTC",
         model=user_model,
         name="users",
         fields={
@@ -143,7 +158,9 @@ def smoke_core_install() -> None:
         default_order=(("id", "asc"),),
     )
     assert resource.row_identity == "id"
+    assert resource.timezone_info.key == "UTC"
     resource_metadata = resource.to_dict()
+    assert resource_metadata["timezone"] == "UTC"
     assert resource_metadata["default_order"] == [{"field": "id", "direction": "asc"}]
     assert resource_metadata["metrics"] == [
         {"name": "user_count", "label": "User Count", "result_type": "integer"}
@@ -173,6 +190,7 @@ def smoke_core_install() -> None:
         "isnull",
     ]
     assert state_capability["operators"] == ["eq", "neq", "in", "isnull"]
+    assert users_capability["timezone"] == "UTC"
     assert state_capability["enum"]["values"][0]["aliases"] == ["enabled"]
     assert serialize_rows(
         columns=(compiler_package.ResultColumn("id", "ID", "integer", False),),

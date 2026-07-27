@@ -83,8 +83,50 @@ def scoped_orders(_request: object) -> QuerySet:
     return Order.objects.none()
 
 
+def test_resource_timezone_is_required_without_django_setting_fallback(
+    settings,
+) -> None:
+    settings.TIME_ZONE = "Pacific/Auckland"
+
+    with pytest.raises(InvalidResourceError, match="timezone is required"):
+        CatalogRegistry().register(
+            model=Order,
+            name="orders",
+            scope_mode="global",
+            fields={"id": {"binding": "id", "type": "integer", "nullable": False}},
+        )
+
+
+@pytest.mark.parametrize("resource_timezone", ["", "Mars/Olympus", 123])
+def test_resource_timezone_must_be_an_iana_name(resource_timezone: object) -> None:
+    with pytest.raises(InvalidResourceError, match="valid IANA timezone"):
+        CatalogRegistry().register(
+            model=Order,
+            name="orders",
+            timezone=resource_timezone,
+            scope_mode="global",
+            fields={"id": {"binding": "id", "type": "integer", "nullable": False}},
+        )
+
+
+def test_resource_timezone_is_server_owned_catalog_metadata() -> None:
+    registry = CatalogRegistry()
+    resource = registry.register(
+        model=Order,
+        name="orders",
+        timezone="America/New_York",
+        scope_mode="global",
+        fields={"id": {"binding": "id", "type": "integer", "nullable": False}},
+    )
+
+    assert resource.timezone == "America/New_York"
+    assert resource.timezone_info.key == "America/New_York"
+    assert registry.to_dict()["resources"][0]["timezone"] == "America/New_York"
+
+
 def test_public_register_api_registers_resource() -> None:
     resource = register(
+        timezone="UTC",
         model=Order,
         label="Orders",
         description="Customer orders placed in the store",
@@ -130,6 +172,7 @@ def test_public_register_api_registers_resource() -> None:
 def test_duplicate_resource_name_fails_loudly() -> None:
     registry = CatalogRegistry()
     registry.register(
+        timezone="UTC",
         model=Order,
         name="orders",
         scope_mode="global",
@@ -138,6 +181,7 @@ def test_duplicate_resource_name_fails_loudly() -> None:
 
     with pytest.raises(DuplicateResourceError, match="orders"):
         registry.register(
+            timezone="UTC",
             model=Order,
             name="orders",
             scope_mode="global",
@@ -148,6 +192,7 @@ def test_duplicate_resource_name_fails_loudly() -> None:
 def test_field_allowlist_is_explicit_and_validated() -> None:
     registry = CatalogRegistry()
     resource = registry.register(
+        timezone="UTC",
         model=Order,
         scope_mode="global",
         fields={
@@ -161,6 +206,7 @@ def test_field_allowlist_is_explicit_and_validated() -> None:
 
     with pytest.raises(UnknownFieldError, match="does_not_exist"):
         registry.register(
+            timezone="UTC",
             model=Order,
             name="bad_field",
             scope_mode="global",
@@ -175,6 +221,7 @@ def test_field_allowlist_is_explicit_and_validated() -> None:
 
     with pytest.raises(UnknownFieldError, match="non-relation"):
         registry.register(
+            timezone="UTC",
             model=Order,
             name="bad_path",
             scope_mode="global",
@@ -193,6 +240,7 @@ def test_semantic_field_keys_are_separate_from_private_django_bindings() -> None
 
     registry = CatalogRegistry()
     resource = registry.register(
+        timezone="UTC",
         model=Order,
         name="orders",
         scope_mode="global",
@@ -239,6 +287,7 @@ def test_missing_private_field_binding_is_a_migration_error() -> None:
 
     with pytest.raises(InvalidResourceError, match="binding.*required"):
         registry.register(
+            timezone="UTC",
             model=Order,
             name="orders",
             scope_mode="global",
@@ -265,6 +314,7 @@ def test_field_type_and_nullability_are_required(
 
     with pytest.raises(InvalidResourceError, match=message):
         registry.register(
+            timezone="UTC",
             model=Order,
             name="orders",
             scope_mode="global",
@@ -279,6 +329,7 @@ def test_unsupported_canonical_field_type_fails_registration() -> None:
 
     with pytest.raises(InvalidResourceError, match="Unsupported canonical type"):
         registry.register(
+            timezone="UTC",
             model=Order,
             name="orders",
             scope_mode="global",
@@ -297,6 +348,7 @@ def test_explicit_enum_registration_serializes_only_declared_metadata() -> None:
 
     registry = CatalogRegistry()
     resource = registry.register(
+        timezone="UTC",
         model=CanonicalValueFixture,
         name="canonical_values",
         scope_mode="global",
@@ -381,6 +433,7 @@ def test_enum_registration_fails_closed(
 
     with pytest.raises(InvalidResourceError, match=message):
         CatalogRegistry().register(
+            timezone="UTC",
             model=CanonicalValueFixture,
             name="canonical_values",
             scope_mode="global",
@@ -393,6 +446,7 @@ def test_enum_aliases_must_be_unambiguous() -> None:
 
     with pytest.raises(InvalidResourceError, match="Ambiguous enum alias"):
         CatalogRegistry().register(
+            timezone="UTC",
             model=CanonicalValueFixture,
             name="canonical_values",
             scope_mode="global",
@@ -418,6 +472,7 @@ def test_integer_enum_requires_integer_canonical_values() -> None:
 
     with pytest.raises(InvalidResourceError, match="must be an integer"):
         CatalogRegistry().register(
+            timezone="UTC",
             model=CanonicalValueFixture,
             name="canonical_values",
             scope_mode="global",
@@ -442,6 +497,7 @@ def test_non_null_semantics_reject_a_nullable_private_binding() -> None:
 
     with pytest.raises(InvalidResourceError, match="cannot be non-null"):
         registry.register(
+            timezone="UTC",
             model=Order,
             name="orders",
             scope_mode="global",
@@ -462,6 +518,7 @@ def test_unknown_private_field_binding_fails_registration() -> None:
 
     with pytest.raises(UnknownFieldError, match="missing_field"):
         registry.register(
+            timezone="UTC",
             model=Order,
             name="orders",
             scope_mode="global",
@@ -480,6 +537,7 @@ def test_unknown_private_field_binding_fails_registration() -> None:
 def test_registered_resource_metadata_is_effectively_immutable() -> None:
     registry = CatalogRegistry()
     resource = registry.register(
+        timezone="UTC",
         model=Order,
         scope_mode="global",
         fields={
@@ -507,6 +565,7 @@ def test_scope_metadata_is_explicit_and_schema_agnostic() -> None:
 
     registry = CatalogRegistry()
     registry.register(
+        timezone="UTC",
         model=Order,
         name="locations",
         label="Locations",
@@ -534,6 +593,7 @@ def test_scope_metadata_is_explicit_and_schema_agnostic() -> None:
 def test_resource_permission_scopes_catalog_visibility() -> None:
     registry = CatalogRegistry()
     registry.register(
+        timezone="UTC",
         model=Order,
         name="orders",
         scope_mode="global",
@@ -560,6 +620,7 @@ def test_resource_permission_scopes_catalog_visibility() -> None:
 def test_sensitive_and_hidden_fields_are_excluded_from_default_catalog() -> None:
     registry = CatalogRegistry()
     registry.register(
+        timezone="UTC",
         model=Order,
         label="Orders",
         scope_mode="global",
@@ -601,7 +662,7 @@ def test_sensitive_and_hidden_fields_are_excluded_from_default_catalog() -> None
 def test_relation_depth_is_tracked_for_relation_paths() -> None:
     registry = CatalogRegistry()
     resource = registry.register(
-        model=Order, scope_mode="global", fields=order_fields()
+        timezone="UTC", model=Order, scope_mode="global", fields=order_fields()
     )
 
     assert resource.fields["id"].relation_depth == 0
@@ -613,6 +674,7 @@ def test_field_config_validation_catches_typos_and_bad_types() -> None:
 
     with pytest.raises(InvalidResourceError, match="sensitve"):
         registry.register(
+            timezone="UTC",
             model=Order,
             name="typo",
             scope_mode="global",
@@ -628,6 +690,7 @@ def test_field_config_validation_catches_typos_and_bad_types() -> None:
 
     with pytest.raises(InvalidResourceError, match="llm_visible"):
         registry.register(
+            timezone="UTC",
             model=Order,
             name="bad_bool",
             scope_mode="global",
@@ -643,6 +706,7 @@ def test_field_config_validation_catches_typos_and_bad_types() -> None:
 
     with pytest.raises(InvalidResourceError, match="requires_permission"):
         registry.register(
+            timezone="UTC",
             model=Order,
             name="bad_permission",
             scope_mode="global",
@@ -658,6 +722,7 @@ def test_field_config_validation_catches_typos_and_bad_types() -> None:
 
     with pytest.raises(InvalidResourceError, match="scope_dimension"):
         registry.register(
+            timezone="UTC",
             model=Order,
             name="bad_scope_dimension",
             scope_mode="global",
@@ -684,7 +749,7 @@ def test_prebuilt_field_specs_are_validated_against_private_bindings() -> None:
     )
 
     resource = registry.register(
-        model=Order, scope_mode="global", fields={"status": field_spec}
+        timezone="UTC", model=Order, scope_mode="global", fields={"status": field_spec}
     )
 
     assert resource.fields["status"] == field_spec
@@ -692,6 +757,7 @@ def test_prebuilt_field_specs_are_validated_against_private_bindings() -> None:
 
     with pytest.raises(InvalidResourceError, match="must match semantic key"):
         registry.register(
+            timezone="UTC",
             model=Order,
             name="mismatch",
             scope_mode="global",
@@ -709,6 +775,7 @@ def test_prebuilt_field_specs_are_validated_against_private_bindings() -> None:
 
     with pytest.raises(UnknownFieldError, match="missing"):
         registry.register(
+            timezone="UTC",
             model=Order,
             name="missing_spec",
             scope_mode="global",
@@ -730,6 +797,7 @@ def test_resource_config_validation() -> None:
 
     with pytest.raises(InvalidResourceError, match="Django model class"):
         registry.register(
+            timezone="UTC",
             model=object,
             name="bad_model",
             scope_mode="global",
@@ -738,6 +806,7 @@ def test_resource_config_validation() -> None:
 
     with pytest.raises(InvalidResourceError, match="synonyms"):
         registry.register(
+            timezone="UTC",
             model=Order,
             name="bad_synonyms",
             scope_mode="global",
@@ -747,6 +816,7 @@ def test_resource_config_validation() -> None:
 
     with pytest.raises(InvalidResourceError, match="scope_provider"):
         registry.register(
+            timezone="UTC",
             model=Order,
             name="bad_scope_provider",
             fields={"id": {"binding": "id", "type": "integer", "nullable": False}},
@@ -756,6 +826,7 @@ def test_resource_config_validation() -> None:
 
     with pytest.raises(InvalidResourceError, match="requires_permission"):
         registry.register(
+            timezone="UTC",
             model=Order,
             name="bad_resource_permission",
             scope_mode="global",
@@ -765,6 +836,7 @@ def test_resource_config_validation() -> None:
 
     with pytest.raises(InvalidResourceError, match="scope_resource"):
         registry.register(
+            timezone="UTC",
             model=Order,
             name="bad_scope_resource",
             scope_mode="global",
@@ -774,6 +846,7 @@ def test_resource_config_validation() -> None:
 
     with pytest.raises(InvalidResourceError, match="examples_enabled"):
         registry.register(
+            timezone="UTC",
             model=Order,
             name="bad_examples_enabled",
             scope_mode="global",
@@ -787,6 +860,7 @@ def test_legacy_field_metric_flag_is_rejected() -> None:
 
     with pytest.raises(InvalidResourceError, match="no longer supported"):
         CatalogRegistry().register(
+            timezone="UTC",
             model=Order,
             name="legacy_metric_field",
             scope_mode="global",
@@ -804,6 +878,7 @@ def test_legacy_field_metric_flag_is_rejected() -> None:
 def test_metric_registration_is_validated() -> None:
     registry = CatalogRegistry()
     resource = registry.register(
+        timezone="UTC",
         model=Order,
         scope_mode="global",
         fields={
@@ -821,6 +896,7 @@ def test_metric_registration_is_validated() -> None:
 
     with pytest.raises(UnknownFieldError, match="missing"):
         registry.register(
+            timezone="UTC",
             model=Order,
             name="bad_metric_field",
             scope_mode="global",
@@ -837,6 +913,7 @@ def test_metric_registration_is_validated() -> None:
 def test_metric_registration_enforces_private_cardinality_policy() -> None:
     registry = CatalogRegistry()
     resource = registry.register(
+        timezone="UTC",
         model=Facility,
         name="facilities",
         scope_mode="global",
@@ -894,6 +971,7 @@ def test_metric_registration_rejects_unsafe_to_many_policies() -> None:
 
     with pytest.raises(InvalidMetricError, match="cannot cross a to-many"):
         CatalogRegistry().register(
+            timezone="UTC",
             model=MemberProfile,
             name="members_default_fanout",
             scope_mode="global",
@@ -910,6 +988,7 @@ def test_metric_registration_rejects_unsafe_to_many_policies() -> None:
 
     with pytest.raises(InvalidMetricError, match="Numeric metric"):
         CatalogRegistry().register(
+            timezone="UTC",
             model=MemberProfile,
             name="members_numeric_fanout",
             scope_mode="global",
@@ -927,6 +1006,7 @@ def test_metric_registration_rejects_unsafe_to_many_policies() -> None:
 
     with pytest.raises(InvalidMetricError, match="non-null unique"):
         CatalogRegistry().register(
+            timezone="UTC",
             model=MemberProfile,
             name="members_non_unique_grain",
             scope_mode="global",
@@ -944,6 +1024,7 @@ def test_metric_registration_rejects_unsafe_to_many_policies() -> None:
 
     with pytest.raises(InvalidMetricError, match="requires distinct_key"):
         CatalogRegistry().register(
+            timezone="UTC",
             model=MemberProfile,
             name="members_missing_distinct_key",
             scope_mode="global",
@@ -961,6 +1042,7 @@ def test_metric_registration_rejects_unsafe_to_many_policies() -> None:
 
     with pytest.raises(InvalidMetricError, match="non-null unique"):
         CatalogRegistry().register(
+            timezone="UTC",
             model=MemberProfile,
             name="members_non_unique_distinct_key",
             scope_mode="global",
@@ -979,6 +1061,7 @@ def test_metric_registration_rejects_unsafe_to_many_policies() -> None:
 
     with pytest.raises(InvalidMetricError, match="exactly one to-many"):
         CatalogRegistry().register(
+            timezone="UTC",
             model=MemberProfile,
             name="members_root_count_rows",
             scope_mode="global",
@@ -998,6 +1081,7 @@ def test_metric_registration_rejects_unsafe_to_many_policies() -> None:
 def test_metric_registration_validates_result_type_and_permission_metadata() -> None:
     with pytest.raises(InvalidMetricError, match="result_type='integer'"):
         CatalogRegistry().register(
+            timezone="UTC",
             model=Order,
             name="bad_count_type",
             scope_mode="global",
@@ -1021,6 +1105,7 @@ def test_metric_registration_validates_result_type_and_permission_metadata() -> 
     )
     registry = CatalogRegistry()
     resource = registry.register(
+        timezone="UTC",
         model=Order,
         scope_mode="global",
         fields={"id": {"binding": "id", "type": "integer", "nullable": False}},
@@ -1040,6 +1125,7 @@ def test_default_date_field_must_be_allowlisted_and_date_like() -> None:
 
     with pytest.raises(UnknownFieldError, match="Default date field"):
         registry.register(
+            timezone="UTC",
             model=Order,
             scope_mode="global",
             fields={"id": {"binding": "id", "type": "integer", "nullable": False}},
@@ -1048,6 +1134,7 @@ def test_default_date_field_must_be_allowlisted_and_date_like() -> None:
 
     with pytest.raises(InvalidResourceError, match="date or datetime"):
         registry.register(
+            timezone="UTC",
             model=Order,
             name="bad_default_date_type",
             scope_mode="global",
@@ -1060,6 +1147,7 @@ def test_default_date_field_must_be_allowlisted_and_date_like() -> None:
 
     with pytest.raises(InvalidResourceError, match="does not match"):
         registry.register(
+            timezone="UTC",
             model=Order,
             name="bad_default_date_override",
             scope_mode="global",
@@ -1072,6 +1160,7 @@ def test_default_date_field_must_be_allowlisted_and_date_like() -> None:
 
     with pytest.raises(InvalidResourceError, match="does not match"):
         registry.register(
+            timezone="UTC",
             model=Order,
             name="bad_default_date_semantics",
             scope_mode="global",

@@ -49,6 +49,7 @@ def build_registry() -> CatalogRegistry:
 
     registry = CatalogRegistry()
     registry.register(
+        timezone="UTC",
         model=Order,
         name="orders",
         fields={
@@ -100,6 +101,7 @@ def build_independent_fanout_registry() -> CatalogRegistry:
 
     registry = CatalogRegistry()
     registry.register(
+        timezone="UTC",
         model=Facility,
         name="facilities",
         scope_mode="global",
@@ -135,6 +137,7 @@ def build_canonical_registry() -> CatalogRegistry:
 
     registry = CatalogRegistry()
     registry.register(
+        timezone="UTC",
         model=CanonicalValueFixture,
         name="canonical_values",
         scope_mode="global",
@@ -142,6 +145,11 @@ def build_canonical_registry() -> CatalogRegistry:
             "count": {
                 "binding": "integer_value",
                 "type": "integer",
+                "nullable": False,
+            },
+            "instant": {
+                "binding": "datetime_value",
+                "type": "datetime",
                 "nullable": False,
             },
             "state": {
@@ -227,6 +235,27 @@ def test_execute_plan_rejects_client_metric_redefinition_before_sql(
     assert exc_info.value.code == "asklens.parse.invalid"
 
 
+def test_execute_plan_rejects_client_controlled_timezone_before_sql(
+    django_assert_num_queries,
+) -> None:
+    plan = {
+        "resource": "orders",
+        "intent": "list",
+        "select": ["status"],
+        "timezone": "Pacific/Auckland",
+    }
+
+    with django_assert_num_queries(0):
+        with pytest.raises(PublicAskLensError) as exc_info:
+            execute_plan(
+                plan,
+                request=request_with("shop.view_orders"),
+                registry=build_registry(),
+            )
+
+    assert exc_info.value.code == "asklens.parse.invalid"
+
+
 def test_execute_plan_rejects_independent_metric_fanout_before_sql(
     django_assert_num_queries,
 ) -> None:
@@ -256,6 +285,7 @@ def test_execute_plan_rejects_independent_metric_fanout_before_sql(
         {"field": "count", "op": "contains", "value": "1"},
         {"field": "state", "op": "eq", "value": "unknown"},
         {"field": "count", "op": "eq", "value": "1"},
+        {"field": "instant", "op": "eq", "value": "2026-01-01T12:00:00"},
     ],
 )
 def test_invalid_canonical_filters_reject_before_application_sql(
@@ -290,6 +320,7 @@ def test_invalid_enum_value_does_not_reveal_unavailable_field(
     state = registry.get("canonical_values").fields["state"]
     hidden_registry = CatalogRegistry()
     hidden_registry.register(
+        timezone="UTC",
         model=CanonicalValueFixture,
         name="canonical_values",
         scope_mode="global",
@@ -316,6 +347,52 @@ def test_invalid_enum_value_does_not_reveal_unavailable_field(
                     "resource": "canonical_values",
                     "intent": "list",
                     "filters": [{"field": "state", "op": "eq", "value": "unknown"}],
+                    "select": ["count"],
+                },
+                request=request_with(),
+                registry=hidden_registry,
+            )
+
+    assert exc_info.value.code == "asklens.member.unavailable"
+
+
+def test_invalid_datetime_does_not_reveal_unavailable_field(
+    django_assert_num_queries,
+) -> None:
+    hidden_registry = CatalogRegistry()
+    hidden_registry.register(
+        timezone="UTC",
+        model=CanonicalValueFixture,
+        name="canonical_values",
+        scope_mode="global",
+        fields={
+            "count": {
+                "binding": "integer_value",
+                "type": "integer",
+                "nullable": False,
+            },
+            "instant": {
+                "binding": "datetime_value",
+                "type": "datetime",
+                "nullable": False,
+                "requires_permission": "reports.view_instant",
+            },
+        },
+    )
+
+    with django_assert_num_queries(0):
+        with pytest.raises(PublicAskLensError) as exc_info:
+            execute_plan(
+                {
+                    "resource": "canonical_values",
+                    "intent": "list",
+                    "filters": [
+                        {
+                            "field": "instant",
+                            "op": "eq",
+                            "value": "2026-01-01T12:00:00",
+                        }
+                    ],
                     "select": ["count"],
                 },
                 request=request_with(),

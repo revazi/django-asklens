@@ -34,6 +34,7 @@ def build_registry() -> CatalogRegistry:
 
     registry = CatalogRegistry()
     registry.register(
+        timezone="UTC",
         model=Order,
         name="orders",
         scope_mode="global",
@@ -144,6 +145,8 @@ def test_planner_sends_safe_catalog_metadata_and_schema() -> None:
     assert '"enum"' in prompt_text
     assert '"settled"' in prompt_text
     assert "contains/icontains only" in prompt_text
+    assert '"timezone": "UTC"' in prompt_text
+    assert "server-owned" in prompt_text
     assert "order_count" in prompt_text
     assert "customer_email_count" not in prompt_text
     assert "start_date_month" in prompt_text

@@ -158,6 +158,7 @@ def summarize_resource_capability(resource: Mapping[str, Any]) -> dict[str, Any]
         "label": resource.get("label"),
         "description": resource.get("description", ""),
         "default_date_field": resource.get("default_date_field"),
+        "timezone": resource.get("timezone"),
         "field_names": names_from_capability_items(fields),
         "metric_names": names_from_capability_items(metrics),
         "date_field_names": names_from_capability_items(date_fields),

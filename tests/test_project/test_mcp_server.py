@@ -56,6 +56,7 @@ def registered_orders() -> None:
     """Register a resource used by the FastMCP bridge tests."""
 
     default_registry.register(
+        timezone="UTC",
         model=Order,
         name="orders",
         label="Orders",

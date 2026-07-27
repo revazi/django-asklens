@@ -93,6 +93,14 @@ def test_raw_sql_payload_extra_key_fails_closed() -> None:
         parse_query_plan(payload)
 
 
+def test_client_cannot_choose_resource_timezone() -> None:
+    payload = valid_aggregate_plan_payload()
+    payload["timezone"] = "America/New_York"
+
+    with pytest.raises(PlanValidationError, match="timezone"):
+        parse_query_plan(payload)
+
+
 def test_mutation_intent_fails_schema_validation() -> None:
     payload = valid_aggregate_plan_payload()
     payload["intent"] = "delete"

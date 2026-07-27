@@ -130,6 +130,7 @@ def live_tenant_user():
         return Order.objects.filter(account_id__in=account_ids)
 
     default_registry.register(
+        timezone="UTC",
         model=Order,
         name="orders",
         label="Orders",
