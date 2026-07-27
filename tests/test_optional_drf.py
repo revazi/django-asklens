@@ -75,6 +75,7 @@ User.objects.create_user(username="bob")
 register(
     model=User,
     name="users",
+    timezone="UTC",
     label="Users",
     scope_mode="global",
     fields={

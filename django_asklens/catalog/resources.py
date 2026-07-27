@@ -4,6 +4,7 @@ from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass, field, replace
 from types import MappingProxyType
 from typing import Any, Literal, NotRequired, TypedDict
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from django.core.exceptions import FieldDoesNotExist
 from django.db import models
@@ -82,6 +83,7 @@ class ResourceCatalogItem(TypedDict):
     description: str
     synonyms: list[str]
     default_date_field: str | None
+    timezone: str
     fields: list[FieldCatalogItem]
     metrics: list[MetricCatalogItem]
     scope_resource: NotRequired[bool]
@@ -366,6 +368,7 @@ class SemanticResource:
     name: str
     label: str
     scope_mode: ScopeMode
+    timezone: str
     description: str = ""
     synonyms: tuple[str, ...] = ()
     default_date_field: str | None = None
@@ -385,6 +388,7 @@ class SemanticResource:
             scope_mode=self.scope_mode,
             scope_provider=self.scope_provider,
         )
+        normalized_timezone = validate_resource_timezone(self.timezone)
         normalized_order = normalize_default_order(
             self.default_order,
             fields=self.fields,
@@ -393,6 +397,7 @@ class SemanticResource:
             self.model,
             self.row_identity or None,
         )
+        object.__setattr__(self, "timezone", normalized_timezone)
         object.__setattr__(self, "default_order", normalized_order)
         object.__setattr__(self, "row_identity", normalized_identity)
         object.__setattr__(self, "fields", MappingProxyType(dict(self.fields)))
@@ -409,6 +414,7 @@ class SemanticResource:
         description: str = "",
         synonyms: Sequence[str] | None = None,
         default_date_field: str | None = None,
+        timezone: str | None = None,
         metrics: Sequence[Metric] | None = None,
         scope_mode: ScopeMode | None = None,
         scope_provider: ScopeProvider | None = None,
@@ -430,6 +436,7 @@ class SemanticResource:
         validate_requires_permission(requires_permission)
         validate_scope_resource(scope_resource)
         validate_examples_enabled(examples_enabled)
+        normalized_timezone = validate_resource_timezone(timezone)
 
         resource_label = label or str(model._meta.verbose_name_plural).title()
         resource_name = normalize_resource_name(name or resource_label)
@@ -455,6 +462,7 @@ class SemanticResource:
             name=resource_name,
             label=resource_label,
             scope_mode=validated_scope_mode,
+            timezone=normalized_timezone,
             description=description,
             synonyms=normalized_synonyms,
             default_date_field=default_date_field,
@@ -467,6 +475,12 @@ class SemanticResource:
             scope_resource=scope_resource,
             examples_enabled=examples_enabled,
         )
+
+    @property
+    def timezone_info(self) -> ZoneInfo:
+        """Return the validated server-owned resource timezone."""
+
+        return ZoneInfo(self.timezone)
 
     def get_scope_queryset(self, request: Any) -> QuerySet:
         """Resolve the explicitly declared resource scope without evaluating it."""
@@ -535,6 +549,7 @@ class SemanticResource:
             "description": self.description,
             "synonyms": list(self.synonyms),
             "default_date_field": self.default_date_field,
+            "timezone": self.timezone,
             "fields": visible_fields,
             "metrics": visible_metrics,
         }
@@ -616,6 +631,22 @@ def resolve_scope_mode(scope_mode: object) -> object:
     if scope_mode is not None:
         return scope_mode
     return default_scope_mode
+
+
+def validate_resource_timezone(value: object) -> str:
+    """Return one explicit valid server-owned IANA timezone name."""
+
+    if value is None:
+        msg = "timezone is required; provide an explicit IANA timezone name."
+        raise InvalidResourceError(msg)
+    if not isinstance(value, str) or not value:
+        msg = "timezone must be a valid IANA timezone name."
+        raise InvalidResourceError(msg)
+    try:
+        return ZoneInfo(value).key
+    except (ValueError, ZoneInfoNotFoundError) as exc:
+        msg = "timezone must be a valid IANA timezone name."
+        raise InvalidResourceError(msg) from exc
 
 
 def validate_scope_policy(

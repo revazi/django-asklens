@@ -99,6 +99,7 @@ def compact_capability_resource(resource: Mapping[str, Any]) -> dict[str, Any]:
         "description": resource.get("description", ""),
         "synonyms": resource.get("synonyms", []),
         "default_date_field": resource.get("default_date_field"),
+        "timezone": resource.get("timezone"),
         "scope": resource.get("scope", {}),
         "fields": [
             compact_capability_field(field)

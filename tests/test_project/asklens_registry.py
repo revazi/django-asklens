@@ -105,6 +105,7 @@ def register_facilities() -> None:
     """Register tenant/facility metadata."""
 
     register(
+        timezone="UTC",
         model=Facility,
         name="facilities",
         label="Facilities",
@@ -166,6 +167,7 @@ def register_staff_resources() -> None:
     """Register owner-specific facility staff resources."""
 
     register(
+        timezone="UTC",
         model=StaffAssignment,
         name="facility_owners",
         label="Facility owners",
@@ -238,6 +240,7 @@ def register_member_resources() -> None:
     """Register member, member-contact, status, and subscription resources."""
 
     register(
+        timezone="UTC",
         model=MemberProfile,
         name="members",
         label="Members",
@@ -292,6 +295,7 @@ def register_member_resources() -> None:
     )
 
     register(
+        timezone="UTC",
         model=MemberProfile,
         name="member_contacts",
         label="Member contacts",
@@ -379,6 +383,7 @@ def register_member_resources() -> None:
     )
 
     register(
+        timezone="UTC",
         model=MemberStatus,
         name="member_statuses",
         label="Member statuses",
@@ -422,6 +427,7 @@ def register_member_resources() -> None:
     )
 
     register(
+        timezone="UTC",
         model=MemberSubscription,
         name="member_subscriptions",
         label="Member subscriptions",
@@ -500,6 +506,7 @@ def register_billing_resources() -> None:
     """Register billing-line and payment resources."""
 
     register(
+        timezone="UTC",
         model=BillingLine,
         name="billing_lines",
         label="Billing lines",
@@ -607,6 +614,7 @@ def register_billing_resources() -> None:
     )
 
     register(
+        timezone="UTC",
         model=PaymentAttempt,
         name="payment_attempts",
         label="Payment attempts",
@@ -688,6 +696,7 @@ def register_growth_resources() -> None:
     """Register marketing and lead pipeline resources."""
 
     register(
+        timezone="UTC",
         model=MarketingCampaign,
         name="marketing_campaigns",
         label="Marketing campaigns",
@@ -814,6 +823,7 @@ def register_growth_resources() -> None:
     )
 
     register(
+        timezone="UTC",
         model=Lead,
         name="leads",
         label="Leads",
@@ -885,6 +895,7 @@ def register_schedule_resources() -> None:
     """Register schedule/session resources."""
 
     register(
+        timezone="UTC",
         model=StaffShift,
         name="staff_shifts",
         label="Staff shifts",
@@ -980,6 +991,7 @@ def register_schedule_resources() -> None:
     )
 
     register(
+        timezone="UTC",
         model=ScheduleSession,
         name="schedule_sessions",
         label="Schedule sessions",
@@ -1052,6 +1064,7 @@ def register_schedule_resources() -> None:
     )
 
     register(
+        timezone="UTC",
         model=SessionBooking,
         name="session_bookings",
         label="Session bookings",
@@ -1145,6 +1158,7 @@ def register_support_resources() -> None:
     """Register support/operations resources."""
 
     register(
+        timezone="UTC",
         model=SupportTicket,
         name="support_tickets",
         label="Support tickets",

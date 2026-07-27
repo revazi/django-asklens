@@ -70,6 +70,7 @@ def visible_orders(request):
 
 
 register(
+    timezone="UTC",
     model=Order,
     name="orders",
     label="Orders",
@@ -131,7 +132,7 @@ register(
 )
 ```
 
-Field mapping keys are stable public semantic names. Each field explicitly declares its private Django `binding`, canonical `type`, and `nullable` contract; bindings use Django `__` traversal syntax and are never serialized to catalogs or providers. Metrics also own their private binding, operation, result type, permission, and relationship-cardinality policy; plans reference only the registered metric name. `requires_permission` on the resource gates catalog visibility and query validation for the whole resource. Field- and metric-level `requires_permission` gate individual members without exposing permission tokens in public metadata.
+Field mapping keys are stable public semantic names. Each field explicitly declares its private Django `binding`, canonical `type`, and `nullable` contract; bindings use Django `__` traversal syntax and are never serialized to catalogs or providers. Every resource also declares a server-owned IANA `timezone`; there is no client or implicit Django `TIME_ZONE` fallback. Metrics own their private binding, operation, result type, permission, and relationship-cardinality policy; plans reference only the registered metric name. `requires_permission` on the resource gates catalog visibility and query validation for the whole resource. Field- and metric-level `requires_permission` gate individual members without exposing permission tokens in public metadata.
 
 Start with the deterministic dummy provider:
 

@@ -18,6 +18,7 @@ DJANGO_ASKLENS = {
 from django_asklens import Metric, register
 
 resource = register(
+    timezone="UTC",
     model=Order,
     name="orders",
     label="Orders",
@@ -80,6 +81,10 @@ resource = register(
 - `description`: optional planner/user-facing description.
 - `synonyms`: optional alternate words for the resource.
 - `default_date_field`: registered date/datetime field used by date-oriented planning.
+- `timezone`: required server-owned IANA timezone name, such as `"UTC"` or
+  `"America/New_York"`. It is included in catalog/capability metadata so
+  consumers can interpret calendar buckets, but plans cannot override it and
+  AskLens never falls back to Django's `TIME_ZONE`.
 - `metrics`: explicit aggregate metrics available to plans.
 - `default_order`: optional semantic `(field, "asc" | "desc")` pairs used when a list plan omits ordering. Fields must be unrestricted, result-visible registered fields.
 - `row_identity`: optional private concrete non-null unique model field used as a final list tie-breaker. Defaults to the model primary key and is not serialized to catalogs/providers.
@@ -124,6 +129,19 @@ Capabilities list the supported operators for each visible field. The current ma
 
 Every filter requires a non-null `value`. String containment is not available on enums or other types. `eq: null` and `neq: null` are rejected; use `isnull` with a boolean value. `neq` excludes null rows. Integer inputs are JSON integers excluding booleans, decimal inputs are finite strings, float inputs are finite JSON numbers, UUID inputs normalize to canonical strings, and `in` validates every element against the field type.
 
+Date values use strict `YYYY-MM-DD` strings, local time values use offset-free
+`HH:MM:SS[.ffffff]` strings, and datetime values require RFC 3339 strings with
+an explicit offset. Date ranges include both calendar dates;
+datetime ranges are half-open `[start, end)`. Relative datetime filters use the
+injected aware request clock: `last_n_days(N)` is the previous `N*24` hours and
+`last_n_months(N)` subtracts calendar months at the same resource-local wall
+clock time with month-end clamping. Both exclude `now` and future rows. For a
+`date` field, relative instant bounds project to inclusive calendar dates in the
+resource timezone. Day/month/quarter/year buckets use the resource timezone and
+weeks begin Monday. If calendar-month subtraction lands in a nonexistent DST
+wall time, the boundary moves forward by the transition gap; an ambiguous wall
+time uses its earlier occurrence.
+
 ### Explicit enums
 
 Enum metadata is mandatory when `type="enum"` and invalid on other field types:
@@ -162,7 +180,8 @@ fields = {
 }
 ```
 
-The 0.2 form separates those responsibilities explicitly:
+The 0.2 form separates those responsibilities explicitly and every resource
+also adds `timezone="<IANA name>"` to its `register()` call:
 
 ```python
 fields = {
@@ -189,6 +208,7 @@ Use resource-level `requires_permission` when the entire resource should be visi
 
 ```python
 register(
+    timezone="UTC",
     model=Order,
     name="orders",
     fields={
@@ -298,6 +318,7 @@ Every resource must resolve to one mode. A resource can declare it directly, or 
 ```python
 # Reviewed as intentionally unrestricted across rows.
 register(
+    timezone="UTC",
     model=Currency,
     fields={
         "code": {"binding": "code", "type": "string", "nullable": False},
@@ -313,6 +334,7 @@ def visible_orders(request):
 
 
 register(
+    timezone="UTC",
     model=Order,
     fields={
         "id": {"binding": "id", "type": "integer", "nullable": False},
@@ -333,6 +355,7 @@ When a list plan omits `order_by`, AskLens applies the registered semantic `defa
 
 ```python
 register(
+    timezone="UTC",
     model=Order,
     fields={
         "status": {"binding": "status", "type": "string", "nullable": False},

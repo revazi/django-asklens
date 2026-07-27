@@ -137,6 +137,7 @@ def tenant_order_context():
 
     registry = CatalogRegistry()
     registry.register(
+        timezone="UTC",
         model=Order,
         name="orders",
         label="Orders",

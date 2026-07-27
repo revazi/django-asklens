@@ -27,6 +27,7 @@ def build_registry() -> CatalogRegistry:
 
     registry = CatalogRegistry()
     registry.register(
+        timezone="UTC",
         model=Order,
         name="orders",
         scope_mode="global",
@@ -235,7 +236,7 @@ def test_total_filter_scalar_count_below_at_and_above_boundary() -> None:
         {
             "field": "created_at",
             "op": "date_range",
-            "value": ["2026-01-01", "2026-01-31"],
+            "value": ["2026-01-01T00:00:00Z", "2026-02-01T00:00:00Z"],
         },
         {"field": "id", "op": "gte", "value": 1},
     ]

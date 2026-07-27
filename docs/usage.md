@@ -22,6 +22,7 @@ def visible_orders(request):
 
 
 register(
+    timezone="UTC",
     model=Order,
     name="orders",
     label="Orders",
@@ -91,7 +92,7 @@ register(
 
 Resource-level `requires_permission` gates the whole resource. Field- and metric-level `requires_permission` gate individual members. Sensitive fields are hidden from the default catalog serialization. Private Django bindings, metric operations, distinct keys, permission tokens, hidden fields, and internal model names are never sent to the planner prompt. Field mapping keys and metric names are public semantics; they are not translated into ORM paths.
 
-Every resource must resolve to `global` or `context_scoped`. `DEFAULT_SCOPE_MODE` can only be `context_scoped`; global resources must declare `scope_mode="global"` individually. Context-scoped resources require a trusted `scope_provider`; missing or invalid scope never falls back to the default manager.
+Every resource must resolve to `global` or `context_scoped`. `DEFAULT_SCOPE_MODE` can only be `context_scoped`; global resources must declare `scope_mode="global"` individually. Context-scoped resources require a trusted `scope_provider`; missing or invalid scope never falls back to the default manager. Every resource must also declare a valid server-owned IANA `timezone`; plans cannot override it and AskLens does not inherit Django's `TIME_ZONE`.
 
 ## 2. Configure a provider
 
@@ -132,6 +133,7 @@ A response includes visible resources, exposed fields, metrics, date fields, exa
     {
       "name": "orders",
       "label": "Orders",
+      "timezone": "UTC",
       "fields": [
         {
           "name": "status",

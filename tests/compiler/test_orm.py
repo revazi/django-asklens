@@ -86,6 +86,7 @@ def build_registry(*, paid_only: bool = False) -> CatalogRegistry:
 
     registry = CatalogRegistry()
     registry.register(
+        timezone="UTC",
         model=Order,
         name="orders",
         label="Orders",
@@ -210,6 +211,7 @@ def test_semantic_keys_bind_privately_across_query_positions(
 
     registry = CatalogRegistry()
     registry.register(
+        timezone="UTC",
         model=Order,
         name="orders",
         scope_mode="global",
@@ -299,6 +301,7 @@ def test_metric_semantic_key_and_private_binding_are_orm_independent(
     def registry_for(binding: str) -> CatalogRegistry:
         registry = CatalogRegistry()
         registry.register(
+            timezone="UTC",
             model=Order,
             name="orders",
             scope_mode="global",
@@ -342,6 +345,7 @@ def test_changing_private_binding_does_not_change_public_plan(
     def registry_for(binding: str) -> CatalogRegistry:
         registry = CatalogRegistry()
         registry.register(
+            timezone="UTC",
             model=Order,
             name="orders",
             scope_mode="global",
@@ -477,6 +481,7 @@ def test_registered_to_many_count_policies_compile_from_private_keys(
 ) -> None:
     registry = CatalogRegistry()
     registry.register(
+        timezone="UTC",
         model=Customer,
         name="customers",
         scope_mode="global",
@@ -532,6 +537,7 @@ def test_to_many_metric_starts_from_current_trusted_root_scope(
 ) -> None:
     registry = CatalogRegistry()
     registry.register(
+        timezone="UTC",
         model=Customer,
         name="customers",
         scope_mode="context_scoped",
@@ -729,6 +735,7 @@ def test_neq_explicitly_excludes_null_rows() -> None:
     )
     registry = CatalogRegistry()
     registry.register(
+        timezone="UTC",
         model=Order,
         name="orders",
         scope_mode="global",

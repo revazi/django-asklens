@@ -40,6 +40,7 @@ def build_registry(
     registration: dict[str, Any] = {
         "model": Order,
         "name": "orders",
+        "timezone": "UTC",
         "scope_mode": "global",
         "fields": {
             "id": {"binding": "id", "type": "integer", "nullable": False},
@@ -334,6 +335,7 @@ def test_default_order_registration_is_validated() -> None:
 
     with pytest.raises(InvalidResourceError, match="sequence.*pairs"):
         registry.register(
+            timezone="UTC",
             model=Order,
             fields={
                 "id": {"binding": "id", "type": "integer", "nullable": False},
@@ -345,6 +347,7 @@ def test_default_order_registration_is_validated() -> None:
 
     with pytest.raises(InvalidResourceError, match="default_order.*registered"):
         registry.register(
+            timezone="UTC",
             model=Order,
             fields={"id": {"binding": "id", "type": "integer", "nullable": False}},
             scope_mode="global",
@@ -353,6 +356,7 @@ def test_default_order_registration_is_validated() -> None:
 
     with pytest.raises(InvalidResourceError, match="Duplicate default_order"):
         registry.register(
+            timezone="UTC",
             model=Order,
             fields={
                 "id": {"binding": "id", "type": "integer", "nullable": False},
@@ -364,6 +368,7 @@ def test_default_order_registration_is_validated() -> None:
 
     with pytest.raises(InvalidResourceError, match="asc.*desc"):
         registry.register(
+            timezone="UTC",
             model=Order,
             fields={
                 "id": {"binding": "id", "type": "integer", "nullable": False},
@@ -375,6 +380,7 @@ def test_default_order_registration_is_validated() -> None:
 
     with pytest.raises(InvalidResourceError, match="unrestricted result-visible"):
         registry.register(
+            timezone="UTC",
             model=Order,
             fields={
                 "id": {"binding": "id", "type": "integer", "nullable": False},
@@ -396,6 +402,7 @@ def test_alternate_row_identity_requires_non_null_unique_field() -> None:
     registry = CatalogRegistry()
     with pytest.raises(InvalidResourceError, match="one concrete field"):
         registry.register(
+            timezone="UTC",
             model=Order,
             fields={
                 "id": {"binding": "id", "type": "integer", "nullable": False},
@@ -407,6 +414,7 @@ def test_alternate_row_identity_requires_non_null_unique_field() -> None:
 
     with pytest.raises(InvalidResourceError, match="non-null.*unique"):
         registry.register(
+            timezone="UTC",
             model=Order,
             fields={
                 "id": {"binding": "id", "type": "integer", "nullable": False},
@@ -418,6 +426,7 @@ def test_alternate_row_identity_requires_non_null_unique_field() -> None:
 
     account_registry = CatalogRegistry()
     resource = account_registry.register(
+        timezone="UTC",
         model=Account,
         fields={"name": {"binding": "name", "type": "string", "nullable": False}},
         scope_mode="global",

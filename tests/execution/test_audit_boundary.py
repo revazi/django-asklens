@@ -54,6 +54,7 @@ def register_default_orders() -> None:
     """Register the audit Order resource in shared orchestration."""
 
     default_registry.register(
+        timezone="UTC",
         model=Order,
         name="orders",
         fields={

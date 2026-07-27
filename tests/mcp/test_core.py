@@ -32,6 +32,7 @@ def test_mcp_capabilities_are_permission_scoped(
     assert payload["executed"] is False
     assert "query_plan_schema" in payload
     [resource] = payload["capabilities"]["resources"]
+    assert resource["timezone"] == "UTC"
     assert {field["name"] for field in resource["fields"]} == {
         "id",
         "status",
@@ -67,6 +68,7 @@ def test_mcp_capabilities_can_return_compact_resource_summaries(
     assert payload["response_type"] == "capabilities"
     assert "query_plan_schema" not in payload
     [resource] = payload["capabilities"]["resources"]
+    assert resource["timezone"] == "UTC"
     assert resource["field_names"] == ["id", "status", "created_at"]
     assert resource["metric_names"] == ["order_count"]
     assert "fields" not in resource
@@ -285,6 +287,7 @@ def test_mcp_execution_rejects_invalid_current_scope_before_sql(
 
     settings.DJANGO_ASKLENS["AUDIT_MODE"] = "disabled"
     default_registry.register(
+        timezone="UTC",
         model=Order,
         name="orders",
         fields={

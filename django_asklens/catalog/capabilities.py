@@ -67,6 +67,7 @@ class CapabilityResource(TypedDict):
     description: str
     synonyms: list[str]
     default_date_field: str | None
+    timezone: str
     fields: list[CapabilityField]
     metrics: list[CapabilityMetric]
     date_fields: list[CapabilityField]
@@ -218,6 +219,7 @@ def build_resource_capability(
         "description": resource.get("description", ""),
         "synonyms": resource.get("synonyms", []),
         "default_date_field": resource.get("default_date_field"),
+        "timezone": resource["timezone"],
         "fields": fields,
         "metrics": metrics,
         "date_fields": date_fields,

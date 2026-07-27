@@ -33,7 +33,7 @@ GET /asklens/capabilities/
 Accept: application/json
 ```
 
-The response is metadata only. It contains visible resources, fields, metrics, date fields, supported query patterns, limitations, and example questions. It does **not** include database rows or sample values.
+The response is metadata only. It contains visible resources, their server-owned timezones, fields, metrics, date fields, supported query patterns, limitations, and example questions. It does **not** include database rows or sample values.
 
 ```json
 {

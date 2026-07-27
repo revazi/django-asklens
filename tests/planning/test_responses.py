@@ -43,6 +43,7 @@ def build_registry() -> CatalogRegistry:
 
     registry = CatalogRegistry()
     registry.register(
+        timezone="UTC",
         model=Order,
         name="orders",
         label="Orders",
