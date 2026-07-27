@@ -20,7 +20,7 @@ def valid_aggregate_plan_payload() -> dict[str, object]:
         "intent": "aggregate",
         "filters": [{"field": "created_at", "op": "last_n_days", "value": 30}],
         "group_by": [{"field": "status"}],
-        "metrics": [{"name": "order_count", "op": "count", "field": "id"}],
+        "metrics": [{"metric": "order_count"}],
         "select": [],
         "order_by": [{"metric": "order_count", "direction": "desc"}],
         "limit": 50,
@@ -48,6 +48,26 @@ def test_valid_query_plan_parses_to_immutable_typed_model() -> None:
 
     with pytest.raises(TypeError):
         plan.filters[0] = plan.filters[0]
+
+
+def test_metric_requests_contain_only_the_registered_semantic_name() -> None:
+    schema = get_query_plan_json_schema()
+    metric_schema = schema["$defs"]["MetricSpec"]
+
+    assert metric_schema["required"] == ["metric"]
+    assert set(metric_schema["properties"]) == {"metric"}
+
+    payload = valid_aggregate_plan_payload()
+    payload["metrics"] = [
+        {
+            "metric": "order_count",
+            "op": "count",
+            "field": "id",
+            "distinct": True,
+        }
+    ]
+    with pytest.raises(PlanValidationError, match="metrics"):
+        parse_query_plan(payload)
 
 
 def test_invalid_json_fails_safely() -> None:

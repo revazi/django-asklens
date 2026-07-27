@@ -4,6 +4,7 @@ from dataclasses import dataclass
 
 from django.core.exceptions import FieldDoesNotExist
 from django.db import models
+from django.db.models.fields.reverse_related import ForeignObjectRel
 
 from django_asklens.exceptions import UnknownFieldError
 
@@ -13,9 +14,10 @@ class FieldResolution:
     """Resolved metadata for a private Django model field binding."""
 
     path: str
-    field: models.Field
+    field: models.Field | ForeignObjectRel
     relation_depth: int
     relationship_edges: tuple[str, ...]
+    to_many_relationship_edges: tuple[str, ...]
     nullable: bool
 
 
@@ -29,6 +31,7 @@ def resolve_field_path(model: type[models.Model], path: str) -> FieldResolution:
 
     current_model = model
     relationship_edges: list[str] = []
+    to_many_relationship_edges: list[str] = []
     relationship_nullable = False
 
     for index, part in enumerate(parts):
@@ -40,12 +43,23 @@ def resolve_field_path(model: type[models.Model], path: str) -> FieldResolution:
 
         is_last_part = index == len(parts) - 1
         if is_last_part:
+            # Reverse and many-to-many terminal references compile as joins even
+            # though no additional path segment follows them. Forward foreign
+            # keys remain local concrete columns when referenced directly.
+            terminal_is_join = bool(field.many_to_many) or isinstance(
+                field, ForeignObjectRel
+            )
+            if terminal_is_join:
+                relationship_edges.append(path)
+                if field.one_to_many or field.many_to_many:
+                    to_many_relationship_edges.append(path)
             return FieldResolution(
                 path=path,
                 field=field,
                 relation_depth=len(relationship_edges),
                 relationship_edges=tuple(relationship_edges),
-                nullable=relationship_nullable or bool(field.null),
+                to_many_relationship_edges=tuple(to_many_relationship_edges),
+                nullable=relationship_nullable or bool(getattr(field, "null", True)),
             )
 
         related_model = getattr(field, "related_model", None)
@@ -57,10 +71,13 @@ def resolve_field_path(model: type[models.Model], path: str) -> FieldResolution:
             )
             raise UnknownFieldError(msg)
 
-        relationship_edges.append("__".join(parts[: index + 1]))
+        relationship_edge = "__".join(parts[: index + 1])
+        relationship_edges.append(relationship_edge)
+        if field.one_to_many or field.many_to_many:
+            to_many_relationship_edges.append(relationship_edge)
         relationship_nullable = relationship_nullable or any(
             (
-                bool(field.null),
+                bool(getattr(field, "null", True)),
                 bool(field.one_to_many),
                 bool(field.many_to_many),
             )
@@ -71,7 +88,7 @@ def resolve_field_path(model: type[models.Model], path: str) -> FieldResolution:
     raise UnknownFieldError(msg)
 
 
-def get_field_type(field: models.Field) -> str:
+def get_field_type(field: models.Field | ForeignObjectRel) -> str:
     """Return a stable, broad type label for catalog serialization."""
 
     if isinstance(field, models.BooleanField):

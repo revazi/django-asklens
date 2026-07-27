@@ -11,7 +11,7 @@ from django_asklens.catalog.registry import CatalogRegistry
 from django_asklens.exceptions import PublicAskLensError
 from django_asklens.execution import execute_plan, run_query_plan
 from django_asklens.planning import parse_query_plan
-from tests.test_project.models import Customer, Order
+from tests.test_project.models import Customer, Facility, Order
 
 pytestmark = pytest.mark.django_db
 
@@ -74,7 +74,9 @@ def build_registry() -> CatalogRegistry:
                 "requires_permission": "shop.view_customer_pii",
             },
         },
-        metrics=[Metric("order_count", op="count", field="id")],
+        metrics=[
+            Metric("order_count", op="count", binding="id", result_type="integer")
+        ],
         requires_permission="shop.view_orders",
         scope_mode="context_scoped",
         scope_provider=lambda request: Order.objects.filter(
@@ -91,6 +93,41 @@ def request_with(*permissions: str, visible_status: str = "paid") -> RequestCont
         user=RequestUser(frozenset(permissions)),
         visible_status=visible_status,
     )
+
+
+def build_independent_fanout_registry() -> CatalogRegistry:
+    """Return two independently safe metrics that are unsafe together."""
+
+    registry = CatalogRegistry()
+    registry.register(
+        model=Facility,
+        name="facilities",
+        scope_mode="global",
+        fields={
+            "name": {
+                "binding": "name",
+                "type": "string",
+                "nullable": False,
+            }
+        },
+        metrics=[
+            Metric(
+                "member_count",
+                op="count",
+                binding="members__member_id",
+                result_type="integer",
+                cardinality_policy="count_rows",
+            ),
+            Metric(
+                "staff_count",
+                op="count",
+                binding="staff_assignments__id",
+                result_type="integer",
+                cardinality_policy="count_rows",
+            ),
+        ],
+    )
+    return registry
 
 
 def sensitive_plan():
@@ -130,6 +167,56 @@ def create_order(*, email: str, status: str, total: str) -> None:
         created_at=datetime(2026, 1, 1, 12, tzinfo=UTC),
         total=Decimal(total),
     )
+
+
+def test_execute_plan_rejects_client_metric_redefinition_before_sql(
+    django_assert_num_queries,
+) -> None:
+    plan = {
+        "resource": "orders",
+        "intent": "aggregate",
+        "metrics": [
+            {
+                "metric": "order_count",
+                "op": "count",
+                "field": "customer__email",
+                "distinct": True,
+            }
+        ],
+    }
+
+    with django_assert_num_queries(0):
+        with pytest.raises(PublicAskLensError) as exc_info:
+            execute_plan(
+                plan,
+                request=request_with("shop.view_orders"),
+                registry=build_registry(),
+            )
+
+    assert exc_info.value.code == "asklens.parse.invalid"
+
+
+def test_execute_plan_rejects_independent_metric_fanout_before_sql(
+    django_assert_num_queries,
+) -> None:
+    plan = {
+        "resource": "facilities",
+        "intent": "aggregate",
+        "metrics": [
+            {"metric": "member_count"},
+            {"metric": "staff_count"},
+        ],
+    }
+
+    with django_assert_num_queries(0):
+        with pytest.raises(PublicAskLensError) as exc_info:
+            execute_plan(
+                plan,
+                request=request_with(),
+                registry=build_independent_fanout_registry(),
+            )
+
+    assert exc_info.value.code == "asklens.plan.invalid"
 
 
 def test_execute_plan_revalidates_direct_query_plan_permissions(

@@ -62,7 +62,9 @@ def build_registry() -> CatalogRegistry:
                 "label": "Created date",
             },
         },
-        metrics=[Metric("order_count", op="count", field="status")],
+        metrics=[
+            Metric("order_count", op="count", binding="status", result_type="integer")
+        ],
     )
     return registry
 
@@ -74,7 +76,7 @@ def capabilities_payload() -> dict[str, Any]:
         "summary": "You can query Orders.",
         "query_patterns": [],
         "limitations": [],
-        "examples": ["Show count of Orders by Status"],
+        "examples": ["Show Order count by Status"],
         "resources": [
             {
                 "name": "orders",
@@ -110,8 +112,7 @@ def capabilities_payload() -> dict[str, Any]:
                     {
                         "name": "order_count",
                         "label": "Order count",
-                        "op": "count",
-                        "field": "status",
+                        "result_type": "integer",
                     }
                 ],
                 "date_fields": [
@@ -127,7 +128,7 @@ def capabilities_payload() -> dict[str, Any]:
                         "can_date_bucket": True,
                     }
                 ],
-                "examples": ["Show count of Orders by Status"],
+                "examples": ["Show Order count by Status"],
                 "guidance": [],
                 "scope": {"level": "unknown", "guidance": "Use visible rows."},
             }
@@ -143,7 +144,7 @@ def valid_query_plan_payload() -> dict[str, Any]:
         "intent": "aggregate",
         "filters": [],
         "group_by": [{"field": "status"}],
-        "metrics": [{"name": "order_count", "op": "count", "field": "status"}],
+        "metrics": [{"metric": "order_count"}],
         "select": [],
         "order_by": [{"metric": "order_count", "direction": "desc"}],
         "limit": 10,
@@ -316,8 +317,7 @@ def multi_resource_capabilities_payload() -> dict[str, Any]:
                 {
                     "name": "payment_amount",
                     "label": "Payment amount",
-                    "op": "sum",
-                    "field": "status",
+                    "result_type": "decimal",
                 }
             ],
             "date_fields": [
@@ -339,7 +339,7 @@ def multi_resource_capabilities_payload() -> dict[str, Any]:
         },
     ]
     capabilities["examples"] = [
-        "Show count of Orders by Status",
+        "Show Order count by Status",
         "Show payment amount by Status",
     ]
     return capabilities

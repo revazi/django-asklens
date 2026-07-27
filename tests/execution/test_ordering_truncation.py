@@ -65,8 +65,8 @@ def build_registry(
             },
         },
         "metrics": [
-            Metric("order_count", op="count", field="id"),
-            Metric("revenue", op="sum", field="total"),
+            Metric("order_count", op="count", binding="id", result_type="integer"),
+            Metric("revenue", op="sum", binding="total", result_type="decimal"),
         ],
         "default_order": default_order,
     }
@@ -117,7 +117,7 @@ def grouped_plan(**updates: object) -> dict[str, Any]:
         "resource": "orders",
         "intent": "aggregate",
         "group_by": [{"field": "status"}],
-        "metrics": [{"name": "order_count", "op": "count", "field": "id"}],
+        "metrics": [{"metric": "order_count"}],
         "limit": 2,
     }
     payload.update(updates)
@@ -314,7 +314,7 @@ def test_ungrouped_aggregate_has_effective_limit_one_and_never_truncates() -> No
         {
             "resource": "orders",
             "intent": "aggregate",
-            "metrics": [{"name": "order_count", "op": "count", "field": "id"}],
+            "metrics": [{"metric": "order_count"}],
             "limit": 10,
         },
         request=request_context(),

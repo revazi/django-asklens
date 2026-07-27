@@ -18,7 +18,7 @@ from django_asklens.planning import (
     validate_query_plan,
 )
 from tests.planning.test_schemas import valid_aggregate_plan_payload
-from tests.test_project.models import BillingLine, Order
+from tests.test_project.models import BillingLine, Facility, Order
 
 
 def build_registry() -> CatalogRegistry:
@@ -63,7 +63,6 @@ def build_registry() -> CatalogRegistry:
                 "type": "decimal",
                 "nullable": False,
                 "label": "Order total",
-                "metric": True,
                 "requires_permission": "shop.view_financials",
             },
             "internal_notes": {
@@ -82,9 +81,28 @@ def build_registry() -> CatalogRegistry:
             },
         },
         metrics=[
-            Metric("order_count", op="count", field="id", label="Number of orders"),
-            Metric("revenue", op="sum", field="total", label="Revenue"),
-            Metric("email_count", op="count", field="customer.email"),
+            Metric(
+                "order_count",
+                op="count",
+                binding="id",
+                result_type="integer",
+                label="Number of orders",
+            ),
+            Metric(
+                "revenue",
+                op="sum",
+                binding="total",
+                result_type="decimal",
+                label="Revenue",
+                requires_permission="shop.view_financials",
+            ),
+            Metric(
+                "email_count",
+                op="count",
+                binding="customer__email",
+                result_type="integer",
+                requires_permission="shop.view_pii",
+            ),
         ],
     )
     return registry
@@ -131,7 +149,8 @@ def build_billing_registry() -> CatalogRegistry:
             Metric(
                 "gross_revenue",
                 op="sum",
-                field="total_amount_cents",
+                binding="total_amount_cents",
+                result_type="integer",
                 label="Gross revenue",
             )
         ],
@@ -147,9 +166,7 @@ def valid_billing_revenue_payload(**updates: object) -> dict[str, object]:
         "intent": "aggregate",
         "filters": [],
         "group_by": [{"field": "product_name"}],
-        "metrics": [
-            {"name": "gross_revenue", "op": "sum", "field": "total_amount_cents"}
-        ],
+        "metrics": [{"metric": "gross_revenue"}],
         "order_by": [{"metric": "gross_revenue", "direction": "desc"}],
         "limit": 10,
         "visualization": {"type": "bar", "x": "product_name", "y": "gross_revenue"},
@@ -236,13 +253,15 @@ def test_resource_permission_fails_without_matching_permission() -> None:
                 "label": "Status",
             },
         },
-        metrics=[Metric("order_count", op="count", field="id")],
+        metrics=[
+            Metric("order_count", op="count", binding="id", result_type="integer")
+        ],
         requires_permission="shop.view_orders",
     )
     plan = parse_valid_plan(
         filters=[],
         group_by=[{"field": "status"}],
-        metrics=[{"name": "order_count", "op": "count", "field": "id"}],
+        metrics=[{"metric": "order_count"}],
         visualization={"type": "bar", "x": "status", "y": "order_count"},
     )
 
@@ -279,19 +298,117 @@ def test_raw_sql_like_field_name_fails_as_unknown_field() -> None:
 
 
 def test_unknown_metric_fails() -> None:
-    plan = parse_valid_plan(metrics=[{"name": "profit", "op": "sum", "field": "total"}])
+    plan = parse_valid_plan(metrics=[{"metric": "profit"}])
 
     with pytest.raises(UnknownMetricError, match="profit"):
         validate_query_plan(plan, registry=build_registry())
 
 
-def test_metric_plan_must_match_registered_metric() -> None:
-    plan = parse_valid_plan(
-        metrics=[{"name": "revenue", "op": "avg", "field": "total"}]
+def test_metric_plan_cannot_redefine_registered_metric() -> None:
+    payload = valid_aggregate_plan_payload()
+    payload["metrics"] = [{"metric": "revenue", "op": "avg", "field": "total"}]
+
+    with pytest.raises(PlanValidationError, match="metrics"):
+        parse_query_plan(payload)
+
+
+def build_facility_fanout_registry() -> CatalogRegistry:
+    """Return metrics over two independent reverse relationship paths."""
+
+    registry = CatalogRegistry()
+    registry.register(
+        model=Facility,
+        name="facilities",
+        scope_mode="global",
+        fields={
+            "name": {
+                "binding": "name",
+                "type": "string",
+                "nullable": False,
+            },
+            "member.gender": {
+                "binding": "members__gender",
+                "type": "string",
+                "nullable": True,
+            },
+        },
+        metrics=[
+            Metric(
+                "member_count",
+                op="count",
+                binding="members__member_id",
+                result_type="integer",
+                cardinality_policy="count_rows",
+            ),
+            Metric(
+                "staff_count",
+                op="count",
+                binding="staff_assignments__id",
+                result_type="integer",
+                cardinality_policy="count_rows",
+            ),
+            Metric(
+                "facility_count",
+                op="count",
+                binding="id",
+                result_type="integer",
+            ),
+        ],
+    )
+    return registry
+
+
+def test_aggregate_rejects_independent_to_many_metric_paths() -> None:
+    plan = parse_query_plan(
+        {
+            "resource": "facilities",
+            "intent": "aggregate",
+            "metrics": [
+                {"metric": "member_count"},
+                {"metric": "staff_count"},
+            ],
+        }
     )
 
-    with pytest.raises(PlanValidationError, match="does not match"):
-        validate_query_plan(plan, registry=build_registry())
+    with pytest.raises(PlanValidationError, match="independent to-many"):
+        validate_query_plan(plan, registry=build_facility_fanout_registry())
+
+
+def test_to_one_metric_rejects_plan_level_to_many_traversal() -> None:
+    plan = parse_query_plan(
+        {
+            "resource": "facilities",
+            "intent": "aggregate",
+            "group_by": [{"field": "member.gender"}],
+            "metrics": [{"metric": "facility_count"}],
+        }
+    )
+
+    with pytest.raises(PlanValidationError, match="to-many field traversal"):
+        validate_query_plan(plan, registry=build_facility_fanout_registry())
+
+
+def test_private_metric_relationships_count_toward_budgets() -> None:
+    plan = parse_query_plan(
+        {
+            "resource": "facilities",
+            "intent": "aggregate",
+            "metrics": [{"metric": "member_count"}],
+        }
+    )
+
+    with pytest.raises(PlanValidationError, match="relationship edges"):
+        validate_query_plan(
+            plan,
+            registry=build_facility_fanout_registry(),
+            limits=PlanLimits(
+                max_rows=100,
+                max_joins=2,
+                max_metrics=5,
+                max_group_by=3,
+                max_relationship_edges=0,
+            ),
+        )
 
 
 def test_sensitive_field_fails_without_explicit_permission() -> None:
@@ -311,7 +428,7 @@ def test_sensitive_field_fails_without_explicit_permission() -> None:
 
 def test_permission_gated_metric_field_fails_without_permission() -> None:
     plan = parse_valid_plan(
-        metrics=[{"name": "revenue", "op": "sum", "field": "total"}],
+        metrics=[{"metric": "revenue"}],
         order_by=[{"metric": "revenue", "direction": "desc"}],
         visualization={"type": "bar", "x": "status", "y": "revenue"},
     )
@@ -388,8 +505,8 @@ def test_too_many_metrics_and_groupings_fail() -> None:
     plan = parse_valid_plan(
         group_by=[{"field": "status"}, {"field": "created_at", "date_trunc": "month"}],
         metrics=[
-            {"name": "order_count", "op": "count", "field": "id"},
-            {"name": "revenue", "op": "sum", "field": "total"},
+            {"metric": "order_count"},
+            {"metric": "revenue"},
         ],
         visualization={"type": "bar", "x": "status", "y": "order_count"},
     )
@@ -489,8 +606,8 @@ def test_single_metric_visualization_y_is_inferred() -> None:
 def test_metric_visualization_without_y_still_fails_when_ambiguous() -> None:
     plan = parse_valid_plan(
         metrics=[
-            {"name": "order_count", "op": "count", "field": "id"},
-            {"name": "revenue", "op": "sum", "field": "total"},
+            {"metric": "order_count"},
+            {"metric": "revenue"},
         ],
         visualization={"type": "metric"},
     )

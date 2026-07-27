@@ -15,7 +15,7 @@ from django_asklens.exceptions import (
     InvalidResourceError,
     UnknownFieldError,
 )
-from tests.test_project.models import Order
+from tests.test_project.models import Facility, MemberProfile, Order
 
 
 @pytest.fixture(autouse=True)
@@ -61,7 +61,6 @@ def order_fields() -> dict[str, dict[str, object]]:
             "type": "decimal",
             "nullable": False,
             "label": "Order total",
-            "metric": True,
         },
         "internal_notes": {
             "binding": "internal_notes",
@@ -88,8 +87,20 @@ def test_public_register_api_registers_resource() -> None:
         default_date_field="created_at",
         fields=order_fields(),
         metrics=[
-            Metric("order_count", op="count", field="id", label="Number of orders"),
-            Metric("revenue", op="sum", field="total", label="Revenue"),
+            Metric(
+                "order_count",
+                op="count",
+                binding="id",
+                result_type="integer",
+                label="Number of orders",
+            ),
+            Metric(
+                "revenue",
+                op="sum",
+                binding="total",
+                result_type="decimal",
+                label="Revenue",
+            ),
         ],
         scope_mode="context_scoped",
         scope_provider=scoped_orders,
@@ -406,8 +417,14 @@ def test_sensitive_and_hidden_fields_are_excluded_from_default_catalog() -> None
         scope_mode="global",
         fields=order_fields(),
         metrics=[
-            Metric("revenue", op="sum", field="total"),
-            Metric("email_count", op="count", field="customer.email"),
+            Metric("revenue", op="sum", binding="total", result_type="decimal"),
+            Metric(
+                "email_count",
+                op="count",
+                binding="customer__email",
+                result_type="integer",
+                requires_permission="shop.view_pii",
+            ),
         ],
     )
 
@@ -423,6 +440,7 @@ def test_sensitive_and_hidden_fields_are_excluded_from_default_catalog() -> None
     full_resource = registry.to_dict(
         include_sensitive=True,
         include_hidden=True,
+        permissions={"shop.view_pii"},
     )["resources"][0]
     full_field_names = {field["name"] for field in full_resource["fields"]}
     full_metric_names = {metric["name"] for metric in full_resource["metrics"]}
@@ -616,6 +634,25 @@ def test_resource_config_validation() -> None:
         )
 
 
+def test_legacy_field_metric_flag_is_rejected() -> None:
+    """Metric sources are private registrations, not public field flags."""
+
+    with pytest.raises(InvalidResourceError, match="no longer supported"):
+        CatalogRegistry().register(
+            model=Order,
+            name="legacy_metric_field",
+            scope_mode="global",
+            fields={
+                "total": {
+                    "binding": "total",
+                    "type": "decimal",
+                    "nullable": False,
+                    "metric": True,
+                }
+            },
+        )
+
+
 def test_metric_registration_is_validated() -> None:
     registry = CatalogRegistry()
     resource = registry.register(
@@ -625,14 +662,13 @@ def test_metric_registration_is_validated() -> None:
             "id": {"binding": "id", "type": "integer", "nullable": False},
             "total": {"binding": "total", "type": "decimal", "nullable": False},
         },
-        metrics=[Metric("revenue", op="sum", field="total")],
+        metrics=[Metric("revenue", op="sum", binding="total", result_type="decimal")],
     )
 
     assert resource.metrics["revenue"].to_dict() == {
         "name": "revenue",
         "label": "Revenue",
-        "op": "sum",
-        "field": "total",
+        "result_type": "decimal",
     }
 
     with pytest.raises(UnknownFieldError, match="missing"):
@@ -641,11 +677,214 @@ def test_metric_registration_is_validated() -> None:
             name="bad_metric_field",
             scope_mode="global",
             fields={"id": {"binding": "id", "type": "integer", "nullable": False}},
-            metrics=[Metric("bad", op="count", field="missing")],
+            metrics=[
+                Metric("bad", op="count", binding="missing", result_type="integer")
+            ],
         )
 
     with pytest.raises(InvalidMetricError, match="Unsupported metric"):
-        Metric("median_total", op="median", field="total")
+        Metric("median_total", op="median", binding="total", result_type="decimal")
+
+
+def test_metric_registration_enforces_private_cardinality_policy() -> None:
+    registry = CatalogRegistry()
+    resource = registry.register(
+        model=Facility,
+        name="facilities",
+        scope_mode="global",
+        fields={
+            "name": {
+                "binding": "name",
+                "type": "string",
+                "nullable": False,
+            }
+        },
+        metrics=[
+            Metric(
+                "member_rows",
+                op="count",
+                binding="members__member_id",
+                result_type="integer",
+                cardinality_policy="count_rows",
+            ),
+            Metric(
+                "distinct_members",
+                op="count",
+                binding="members__member_id",
+                result_type="integer",
+                cardinality_policy="count_distinct",
+                distinct_key="members__member_id",
+            ),
+        ],
+    )
+
+    assert resource.metrics["member_rows"].to_many_relationship_edges == ("members",)
+    assert resource.metrics["distinct_members"].distinct_key == ("members__member_id")
+    assert resource.to_dict()["metrics"] == [
+        {
+            "name": "member_rows",
+            "label": "Member Rows",
+            "result_type": "integer",
+        },
+        {
+            "name": "distinct_members",
+            "label": "Distinct Members",
+            "result_type": "integer",
+        },
+    ]
+    assert "members__member_id" not in str(resource.to_dict())
+
+
+def test_metric_registration_rejects_unsafe_to_many_policies() -> None:
+    fields = {
+        "member_id": {
+            "binding": "member_id",
+            "type": "uuid",
+            "nullable": False,
+        }
+    }
+
+    with pytest.raises(InvalidMetricError, match="cannot cross a to-many"):
+        CatalogRegistry().register(
+            model=MemberProfile,
+            name="members_default_fanout",
+            scope_mode="global",
+            fields=fields,
+            metrics=[
+                Metric(
+                    "booking_count",
+                    op="count",
+                    binding="session_bookings__booking_id",
+                    result_type="integer",
+                )
+            ],
+        )
+
+    with pytest.raises(InvalidMetricError, match="Numeric metric"):
+        CatalogRegistry().register(
+            model=MemberProfile,
+            name="members_numeric_fanout",
+            scope_mode="global",
+            fields=fields,
+            metrics=[
+                Metric(
+                    "party_size",
+                    op="sum",
+                    binding="session_bookings__party_size",
+                    result_type="integer",
+                    cardinality_policy="count_rows",
+                )
+            ],
+        )
+
+    with pytest.raises(InvalidMetricError, match="non-null unique"):
+        CatalogRegistry().register(
+            model=MemberProfile,
+            name="members_non_unique_grain",
+            scope_mode="global",
+            fields=fields,
+            metrics=[
+                Metric(
+                    "booking_rows",
+                    op="count",
+                    binding="session_bookings__status",
+                    result_type="integer",
+                    cardinality_policy="count_rows",
+                )
+            ],
+        )
+
+    with pytest.raises(InvalidMetricError, match="requires distinct_key"):
+        CatalogRegistry().register(
+            model=MemberProfile,
+            name="members_missing_distinct_key",
+            scope_mode="global",
+            fields=fields,
+            metrics=[
+                Metric(
+                    "distinct_bookings",
+                    op="count",
+                    binding="session_bookings__booking_id",
+                    result_type="integer",
+                    cardinality_policy="count_distinct",
+                )
+            ],
+        )
+
+    with pytest.raises(InvalidMetricError, match="non-null unique"):
+        CatalogRegistry().register(
+            model=MemberProfile,
+            name="members_non_unique_distinct_key",
+            scope_mode="global",
+            fields=fields,
+            metrics=[
+                Metric(
+                    "distinct_bookings",
+                    op="count",
+                    binding="session_bookings__booking_id",
+                    result_type="integer",
+                    cardinality_policy="count_distinct",
+                    distinct_key="session_bookings__status",
+                )
+            ],
+        )
+
+    with pytest.raises(InvalidMetricError, match="exactly one to-many"):
+        CatalogRegistry().register(
+            model=MemberProfile,
+            name="members_root_count_rows",
+            scope_mode="global",
+            fields=fields,
+            metrics=[
+                Metric(
+                    "member_rows",
+                    op="count",
+                    binding="member_id",
+                    result_type="integer",
+                    cardinality_policy="count_rows",
+                )
+            ],
+        )
+
+
+def test_metric_registration_validates_result_type_and_permission_metadata() -> None:
+    with pytest.raises(InvalidMetricError, match="result_type='integer'"):
+        CatalogRegistry().register(
+            model=Order,
+            name="bad_count_type",
+            scope_mode="global",
+            fields={"id": {"binding": "id", "type": "integer", "nullable": False}},
+            metrics=[
+                Metric(
+                    "bad_count",
+                    op="count",
+                    binding="id",
+                    result_type="decimal",
+                )
+            ],
+        )
+
+    metric = Metric(
+        "revenue",
+        op="sum",
+        binding="total",
+        result_type="decimal",
+        requires_permission="shop.view_financials",
+    )
+    registry = CatalogRegistry()
+    resource = registry.register(
+        model=Order,
+        scope_mode="global",
+        fields={"id": {"binding": "id", "type": "integer", "nullable": False}},
+        metrics=[metric],
+    )
+
+    assert resource.to_dict()["metrics"] == []
+    assert resource.to_dict(permissions={"shop.view_financials"})["metrics"] == [
+        {"name": "revenue", "label": "Revenue", "result_type": "decimal"}
+    ]
+    assert "total" not in repr(resource.metrics["revenue"])
+    assert "shop.view_financials" not in repr(resource.metrics["revenue"])
 
 
 def test_default_date_field_must_be_allowlisted_and_date_like() -> None:

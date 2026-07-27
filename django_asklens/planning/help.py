@@ -441,15 +441,8 @@ def build_aggregate_suggestion_plan(
             if field_lookup.get(field_name, {}).get("can_group")
         )
 
-    metric_payloads = [
-        {
-            "name": metric["name"],
-            "op": metric["op"],
-            "field": metric["field"],
-        }
-        for metric in metrics
-    ]
-    first_metric_name = metric_payloads[0]["name"]
+    metric_payloads = [{"metric": metric["name"]} for metric in metrics]
+    first_metric_name = metric_payloads[0]["metric"]
     order_by: list[dict[str, str]] = []
     if suggestion.date_fields and group_by:
         order_by.append({"field": group_by[0]["field"], "direction": "asc"})
@@ -558,7 +551,7 @@ def validate_plan_uses_capabilities(
         resource_name=resource["name"],
     )
 
-    metric_names = {metric.name for metric in plan.metrics}
+    metric_names = {metric.metric for metric in plan.metrics}
     validate_references(
         tuple(sorted(metric_names)),
         allowed={metric["name"] for metric in resource.get("metrics", [])},
@@ -718,7 +711,6 @@ def enrich_deterministic_suggestion_references(
         metric = metrics[0]
         group_field = group_fields[0]
         if suggestion.question == build_metric_by_field_example(
-            resource,
             metric,
             group_field,
         ):

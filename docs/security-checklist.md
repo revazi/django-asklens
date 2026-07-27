@@ -9,7 +9,8 @@ Use this checklist before enabling AskLens outside local development.
 - [ ] Confirm public catalogs, capabilities, and provider prompts contain no Django bindings, model labels, or permission-token formats.
 - [ ] Mark PII/secrets/internal fields as `sensitive=True` or hide them with `llm_visible=False` / `result_visible=False`.
 - [ ] Use `requires_permission` for fields that need explicit permissions.
-- [ ] Review every registered metric for business meaning and data sensitivity.
+- [ ] Review every registered metric's private binding, result type, permission, and relationship-cardinality policy for business meaning and data sensitivity.
+- [ ] Keep the default `to_one_only` policy unless an explicit one-grain `count_rows` or private-key `count_distinct` metric has been reviewed; never use a numeric to-many aggregate.
 - [ ] Require every resource to resolve to `global` or `context_scoped`; if using `DEFAULT_SCOPE_MODE`, keep it `context_scoped`.
 - [ ] Review every `global` resource as intentionally unrestricted across rows and declare it explicitly on that resource.
 - [ ] Keep tenant and row-level restrictions in trusted `scope_provider(request)` callables for `context_scoped` resources.

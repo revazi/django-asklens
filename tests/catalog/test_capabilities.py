@@ -54,8 +54,7 @@ def test_build_capabilities_describes_visible_fields_metrics_and_examples() -> N
                         {
                             "name": "order_count",
                             "label": "Order count",
-                            "op": "count",
-                            "field": "status",
+                            "result_type": "integer",
                         }
                     ],
                 }
@@ -72,15 +71,14 @@ def test_build_capabilities_describes_visible_fields_metrics_and_examples() -> N
         {
             "name": "order_count",
             "label": "Order count",
-            "op": "count",
-            "field": "status",
+            "result_type": "integer",
         }
     ]
     assert (
         "List Orders with Status, Created date, and Internal code"
         not in resource["examples"]
     )
-    assert "Show count of Orders by Status" in resource["examples"]
+    assert "Show Order count by Status" in resource["examples"]
     assert "Trend Order count by month using Created date" in resource["examples"]
     assert capabilities["examples"] == resource["examples"]
 
@@ -134,8 +132,7 @@ def test_build_capabilities_adds_sanitized_single_scope_guidance() -> None:
                         {
                             "name": "gross_revenue",
                             "label": "Gross revenue",
-                            "op": "sum",
-                            "field": "product_name",
+                            "result_type": "decimal",
                         }
                     ],
                 }
@@ -190,8 +187,7 @@ def test_build_capabilities_omits_single_scope_resource_examples() -> None:
                         {
                             "name": "facility_count",
                             "label": "Facilities",
-                            "op": "count",
-                            "field": "name",
+                            "result_type": "integer",
                         }
                     ],
                 }
@@ -276,8 +272,7 @@ def test_build_capabilities_uses_explicit_scope_metadata_for_arbitrary_names() -
                         {
                             "name": "studio_count",
                             "label": "Studios",
-                            "op": "count",
-                            "field": "display_name",
+                            "result_type": "integer",
                         }
                     ],
                 },
@@ -312,8 +307,7 @@ def test_build_capabilities_uses_explicit_scope_metadata_for_arbitrary_names() -
                         {
                             "name": "booking_count",
                             "label": "Bookings",
-                            "op": "count",
-                            "field": "status",
+                            "result_type": "integer",
                         }
                     ],
                 },
@@ -326,4 +320,4 @@ def test_build_capabilities_uses_explicit_scope_metadata_for_arbitrary_names() -
     assert resources["locations"]["examples"] == []
     assert resources["bookings"]["fields"][0]["scope_dimension"] is True
     assert "Home box" not in str(resources["bookings"]["examples"])
-    assert "Show count of Bookings by Status" in resources["bookings"]["examples"]
+    assert "Show Bookings by Status" in resources["bookings"]["examples"]

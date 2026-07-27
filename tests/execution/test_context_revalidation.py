@@ -80,7 +80,9 @@ def test_previewed_plan_is_revalidated_against_current_catalog(
                 "label": "Order ID",
             }
         },
-        metrics=[Metric("order_count", op="count", field="id")],
+        metrics=[
+            Metric("order_count", op="count", binding="id", result_type="integer")
+        ],
         scope_mode="context_scoped",
         scope_provider=lambda _request: Order.objects.all(),
     )
@@ -145,11 +147,18 @@ def test_resource_and_metric_permissions_are_rechecked_before_sql(
                 "type": "decimal",
                 "nullable": False,
                 "label": "Order total",
-                "metric": True,
                 "requires_permission": "shop.view_financials",
             },
         },
-        metrics=[Metric("revenue", op="sum", field="total")],
+        metrics=[
+            Metric(
+                "revenue",
+                op="sum",
+                binding="total",
+                result_type="decimal",
+                requires_permission="shop.view_financials",
+            )
+        ],
         scope_mode="context_scoped",
         scope_provider=lambda _request: Order.objects.all(),
     )
@@ -157,7 +166,7 @@ def test_resource_and_metric_permissions_are_rechecked_before_sql(
         {
             "resource": "orders",
             "intent": "aggregate",
-            "metrics": [{"name": "revenue", "op": "sum", "field": "total"}],
+            "metrics": [{"metric": "revenue"}],
             "limit": 1,
         }
     )

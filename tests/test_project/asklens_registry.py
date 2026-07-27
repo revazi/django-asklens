@@ -107,7 +107,13 @@ def register_facilities() -> None:
             ),
         },
         metrics=[
-            Metric("facility_count", op="count", field="name", label="Facilities")
+            Metric(
+                "facility_count",
+                op="count",
+                binding="name",
+                result_type="integer",
+                label="Facilities",
+            )
         ],
         scope_mode="context_scoped",
         scope_provider=queryset_for_permission(Facility, StaffGrant.FACILITY_VIEW),
@@ -176,7 +182,8 @@ def register_staff_resources() -> None:
             Metric(
                 "facility_owner_count",
                 op="count",
-                field="user.username",
+                binding="user__username",
+                result_type="integer",
                 label="Facility owners",
             )
         ],
@@ -228,7 +235,15 @@ def register_member_resources() -> None:
                 label="Created via portal",
             ),
         },
-        metrics=[Metric("member_count", op="count", field="gender", label="Members")],
+        metrics=[
+            Metric(
+                "member_count",
+                op="count",
+                binding="gender",
+                result_type="integer",
+                label="Members",
+            )
+        ],
         scope_mode="context_scoped",
         scope_provider=queryset_for_permission(
             MemberProfile, StaffGrant.MEMBER_REPORTS_VIEW
@@ -308,7 +323,13 @@ def register_member_resources() -> None:
             ),
         },
         metrics=[
-            Metric("contact_count", op="count", field="member_id", label="Contacts")
+            Metric(
+                "contact_count",
+                op="count",
+                binding="member_id",
+                result_type="integer",
+                label="Contacts",
+            )
         ],
         scope_mode="context_scoped",
         scope_provider=queryset_for_permission(
@@ -344,7 +365,15 @@ def register_member_resources() -> None:
                 "member__member_since", "datetime", nullable=True, label="Member since"
             ),
         },
-        metrics=[Metric("status_count", op="count", field="status", label="Statuses")],
+        metrics=[
+            Metric(
+                "status_count",
+                op="count",
+                binding="status",
+                result_type="integer",
+                label="Statuses",
+            )
+        ],
         scope_mode="context_scoped",
         scope_provider=queryset_for_permission(
             MemberStatus, StaffGrant.MEMBER_REPORTS_VIEW
@@ -410,7 +439,8 @@ def register_member_resources() -> None:
             Metric(
                 "subscription_count",
                 op="count",
-                field="status",
+                binding="status",
+                result_type="integer",
                 label="Subscriptions",
             )
         ],
@@ -465,14 +495,13 @@ def register_billing_resources() -> None:
                 "plan__name", "string", nullable=True, label="Plan"
             ),
             "quantity": semantic_field(
-                "quantity", "integer", nullable=False, label="Quantity", metric=True
+                "quantity", "integer", nullable=False, label="Quantity"
             ),
             "item_price_cents": semantic_field(
                 "item_price_cents",
                 "integer",
                 nullable=False,
                 label="Item price in cents",
-                metric=True,
                 requires_permission=StaffGrant.BILLING_REPORTS_VIEW,
             ),
             "pretax_amount_cents": semantic_field(
@@ -480,7 +509,6 @@ def register_billing_resources() -> None:
                 "integer",
                 nullable=False,
                 label="Pre-tax amount in cents",
-                metric=True,
                 requires_permission=StaffGrant.BILLING_REPORTS_VIEW,
             ),
             "tax_cents": semantic_field(
@@ -488,7 +516,6 @@ def register_billing_resources() -> None:
                 "integer",
                 nullable=False,
                 label="Tax in cents",
-                metric=True,
                 requires_permission=StaffGrant.BILLING_REPORTS_VIEW,
             ),
             "total_amount_cents": semantic_field(
@@ -496,7 +523,6 @@ def register_billing_resources() -> None:
                 "integer",
                 nullable=False,
                 label="Total amount in cents",
-                metric=True,
                 requires_permission=StaffGrant.BILLING_REPORTS_VIEW,
             ),
         },
@@ -504,22 +530,31 @@ def register_billing_resources() -> None:
             Metric(
                 "billing_line_count",
                 op="count",
-                field="product_name",
+                binding="product_name",
+                result_type="integer",
                 label="Billing lines",
             ),
             Metric(
                 "gross_revenue",
                 op="sum",
-                field="total_amount_cents",
+                binding="total_amount_cents",
+                result_type="integer",
                 label="Gross revenue",
             ),
             Metric(
                 "pretax_revenue",
                 op="sum",
-                field="pretax_amount_cents",
+                binding="pretax_amount_cents",
+                result_type="integer",
                 label="Pre-tax revenue",
             ),
-            Metric("tax_collected", op="sum", field="tax_cents", label="Tax collected"),
+            Metric(
+                "tax_collected",
+                op="sum",
+                binding="tax_cents",
+                result_type="integer",
+                label="Tax collected",
+            ),
         ],
         scope_mode="context_scoped",
         scope_provider=queryset_for_permission(
@@ -559,7 +594,6 @@ def register_billing_resources() -> None:
                 "integer",
                 nullable=False,
                 label="Amount in cents",
-                metric=True,
                 requires_permission=StaffGrant.PAYMENT_REPORTS_VIEW,
             ),
             "amount_refunded_cents": semantic_field(
@@ -567,7 +601,6 @@ def register_billing_resources() -> None:
                 "integer",
                 nullable=False,
                 label="Refunded amount in cents",
-                metric=True,
                 requires_permission=StaffGrant.PAYMENT_REPORTS_VIEW,
             ),
             "refunded": semantic_field(
@@ -575,14 +608,25 @@ def register_billing_resources() -> None:
             ),
         },
         metrics=[
-            Metric("payment_count", op="count", field="status", label="Payments"),
             Metric(
-                "payment_amount", op="sum", field="amount_cents", label="Payment amount"
+                "payment_count",
+                op="count",
+                binding="status",
+                result_type="integer",
+                label="Payments",
+            ),
+            Metric(
+                "payment_amount",
+                op="sum",
+                binding="amount_cents",
+                result_type="integer",
+                label="Payment amount",
             ),
             Metric(
                 "refunded_amount",
                 op="sum",
-                field="amount_refunded_cents",
+                binding="amount_refunded_cents",
+                result_type="integer",
                 label="Refunded amount",
             ),
         ],
@@ -640,53 +684,71 @@ def register_growth_resources() -> None:
                 "integer",
                 nullable=False,
                 label="Budget in cents",
-                metric=True,
             ),
             "spend_cents": semantic_field(
                 "spend_cents",
                 "integer",
                 nullable=False,
                 label="Spend in cents",
-                metric=True,
             ),
             "impressions": semantic_field(
                 "impressions",
                 "integer",
                 nullable=False,
                 label="Impressions",
-                metric=True,
             ),
             "clicks": semantic_field(
-                "clicks", "integer", nullable=False, label="Clicks", metric=True
+                "clicks", "integer", nullable=False, label="Clicks"
             ),
             "conversions": semantic_field(
                 "conversions",
                 "integer",
                 nullable=False,
                 label="Conversions",
-                metric=True,
             ),
         },
         metrics=[
-            Metric("campaign_count", op="count", field="status", label="Campaigns"),
+            Metric(
+                "campaign_count",
+                op="count",
+                binding="status",
+                result_type="integer",
+                label="Campaigns",
+            ),
             Metric(
                 "marketing_budget",
                 op="sum",
-                field="budget_cents",
+                binding="budget_cents",
+                result_type="integer",
                 label="Marketing budget",
             ),
             Metric(
                 "marketing_spend",
                 op="sum",
-                field="spend_cents",
+                binding="spend_cents",
+                result_type="integer",
                 label="Marketing spend",
             ),
             Metric(
-                "total_impressions", op="sum", field="impressions", label="Impressions"
+                "total_impressions",
+                op="sum",
+                binding="impressions",
+                result_type="integer",
+                label="Impressions",
             ),
-            Metric("total_clicks", op="sum", field="clicks", label="Clicks"),
             Metric(
-                "total_conversions", op="sum", field="conversions", label="Conversions"
+                "total_clicks",
+                op="sum",
+                binding="clicks",
+                result_type="integer",
+                label="Clicks",
+            ),
+            Metric(
+                "total_conversions",
+                op="sum",
+                binding="conversions",
+                result_type="integer",
+                label="Conversions",
             ),
         ],
         scope_mode="context_scoped",
@@ -740,15 +802,21 @@ def register_growth_resources() -> None:
                 "integer",
                 nullable=False,
                 label="Estimated value in cents",
-                metric=True,
             ),
         },
         metrics=[
-            Metric("lead_count", op="count", field="status", label="Leads"),
+            Metric(
+                "lead_count",
+                op="count",
+                binding="status",
+                result_type="integer",
+                label="Leads",
+            ),
             Metric(
                 "pipeline_value",
                 op="sum",
-                field="estimated_value_cents",
+                binding="estimated_value_cents",
+                result_type="integer",
                 label="Pipeline value",
             ),
         ],
@@ -800,39 +868,48 @@ def register_schedule_resources() -> None:
                 "integer",
                 nullable=False,
                 label="Planned minutes",
-                metric=True,
             ),
             "actual_minutes": semantic_field(
                 "actual_minutes",
                 "integer",
                 nullable=False,
                 label="Actual minutes",
-                metric=True,
             ),
             "labor_cost_cents": semantic_field(
                 "labor_cost_cents",
                 "integer",
                 nullable=False,
                 label="Labor cost in cents",
-                metric=True,
             ),
         },
         metrics=[
-            Metric("shift_count", op="count", field="status", label="Shifts"),
+            Metric(
+                "shift_count",
+                op="count",
+                binding="status",
+                result_type="integer",
+                label="Shifts",
+            ),
             Metric(
                 "planned_minutes",
                 op="sum",
-                field="planned_minutes",
+                binding="planned_minutes",
+                result_type="integer",
                 label="Planned minutes",
             ),
             Metric(
                 "actual_minutes",
                 op="sum",
-                field="actual_minutes",
+                binding="actual_minutes",
+                result_type="integer",
                 label="Actual minutes",
             ),
             Metric(
-                "labor_cost", op="sum", field="labor_cost_cents", label="Labor cost"
+                "labor_cost",
+                op="sum",
+                binding="labor_cost_cents",
+                result_type="integer",
+                label="Labor cost",
             ),
         ],
         scope_mode="context_scoped",
@@ -867,17 +944,15 @@ def register_schedule_resources() -> None:
                 "integer",
                 nullable=False,
                 label="Duration minutes",
-                metric=True,
             ),
             "capacity": semantic_field(
-                "capacity", "integer", nullable=False, label="Capacity", metric=True
+                "capacity", "integer", nullable=False, label="Capacity"
             ),
             "waitlist_limit": semantic_field(
                 "waitlist_limit",
                 "integer",
                 nullable=True,
                 label="Waitlist limit",
-                metric=True,
             ),
             "session_type.name": semantic_field(
                 "session_type__name", "string", nullable=False, label="Session type"
@@ -887,14 +962,25 @@ def register_schedule_resources() -> None:
             ),
         },
         metrics=[
-            Metric("session_count", op="count", field="start_date", label="Sessions"),
             Metric(
-                "total_capacity", op="sum", field="capacity", label="Total capacity"
+                "session_count",
+                op="count",
+                binding="start_date",
+                result_type="integer",
+                label="Sessions",
+            ),
+            Metric(
+                "total_capacity",
+                op="sum",
+                binding="capacity",
+                result_type="integer",
+                label="Total capacity",
             ),
             Metric(
                 "average_duration",
                 op="avg",
-                field="duration_minutes",
+                binding="duration_minutes",
+                result_type="float",
                 label="Average duration",
             ),
         ],
@@ -937,14 +1023,13 @@ def register_schedule_resources() -> None:
                 "source", "string", nullable=False, label="Booking source"
             ),
             "party_size": semantic_field(
-                "party_size", "integer", nullable=False, label="Party size", metric=True
+                "party_size", "integer", nullable=False, label="Party size"
             ),
             "price_cents": semantic_field(
                 "price_cents",
                 "integer",
                 nullable=False,
                 label="Booking price in cents",
-                metric=True,
             ),
             "session.start_date": semantic_field(
                 "session__start_date", "date", nullable=False, label="Session date"
@@ -960,14 +1045,25 @@ def register_schedule_resources() -> None:
             ),
         },
         metrics=[
-            Metric("booking_count", op="count", field="status", label="Bookings"),
             Metric(
-                "total_party_size", op="sum", field="party_size", label="Party size"
+                "booking_count",
+                op="count",
+                binding="status",
+                result_type="integer",
+                label="Bookings",
+            ),
+            Metric(
+                "total_party_size",
+                op="sum",
+                binding="party_size",
+                result_type="integer",
+                label="Party size",
             ),
             Metric(
                 "booking_revenue",
                 op="sum",
-                field="price_cents",
+                binding="price_cents",
+                result_type="integer",
                 label="Booking revenue",
             ),
         ],
@@ -1033,23 +1129,34 @@ def register_support_resources() -> None:
                 "integer",
                 nullable=True,
                 label="Satisfaction score",
-                metric=True,
             ),
             "messages_count": semantic_field(
                 "messages_count",
                 "integer",
                 nullable=False,
                 label="Message count",
-                metric=True,
             ),
         },
         metrics=[
-            Metric("ticket_count", op="count", field="status", label="Tickets"),
-            Metric("message_count", op="sum", field="messages_count", label="Messages"),
+            Metric(
+                "ticket_count",
+                op="count",
+                binding="status",
+                result_type="integer",
+                label="Tickets",
+            ),
+            Metric(
+                "message_count",
+                op="sum",
+                binding="messages_count",
+                result_type="integer",
+                label="Messages",
+            ),
             Metric(
                 "average_satisfaction",
                 op="avg",
-                field="satisfaction_score",
+                binding="satisfaction_score",
+                result_type="float",
                 label="Average satisfaction",
             ),
         ],

@@ -91,7 +91,7 @@ register(
             "label": "Username",
         },
     },
-    metrics=[Metric("user_count", op="count", field="id")],
+    metrics=[Metric("user_count", op="count", binding="id", result_type="integer")],
 )
 
 request = SimpleNamespace(

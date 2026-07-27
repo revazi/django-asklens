@@ -61,7 +61,7 @@ def test_openai_compatible_provider_sends_schema_request_and_parses_json() -> No
             {
                 "resource": "orders",
                 "intent": "aggregate",
-                "metrics": [{"name": "order_count", "op": "count", "field": "id"}],
+                "metrics": [{"metric": "order_count"}],
             }
         )
     )
@@ -107,7 +107,7 @@ def test_openai_provider_logs_request_and_response_when_enabled(
             {
                 "resource": "orders",
                 "intent": "aggregate",
-                "metrics": [{"name": "order_count", "op": "count", "field": "id"}],
+                "metrics": [{"metric": "order_count"}],
             }
         )
     )

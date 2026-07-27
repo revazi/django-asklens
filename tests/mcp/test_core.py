@@ -224,6 +224,27 @@ def test_mcp_validate_plan_returns_stable_parse_code(
     assert SemanticQueryRun.objects.count() == 0
 
 
+def test_mcp_rejects_client_controlled_metric_backing_before_sql(
+    registered_orders: None,
+    mcp_request,
+    django_assert_num_queries,
+) -> None:
+    plan = valid_aggregate_plan()
+    plan["metrics"] = [
+        {"metric": "order_count", "op": "count", "field": "customer__email"}
+    ]
+
+    with django_assert_num_queries(0):
+        payload = asklens_validate_plan(mcp_request, plan)
+
+    assert payload["valid"] is False
+    assert payload["executed"] is False
+    assert payload["error"] == {
+        "code": "asklens.parse.invalid",
+        "message": "The query plan could not be parsed.",
+    }
+
+
 def test_mcp_execution_rejects_invalid_current_scope_before_sql(
     settings,
     mcp_request,
@@ -239,7 +260,9 @@ def test_mcp_execution_rejects_invalid_current_scope_before_sql(
             "id": {"binding": "id", "type": "integer", "nullable": False},
             "status": {"binding": "status", "type": "string", "nullable": False},
         },
-        metrics=[Metric("order_count", op="count", field="id")],
+        metrics=[
+            Metric("order_count", op="count", binding="id", result_type="integer")
+        ],
         scope_mode="context_scoped",
         scope_provider=lambda _request: None,
     )
@@ -297,7 +320,7 @@ def test_mcp_execute_plan_omits_rows_by_default(
     assert payload["row_count"] == 2
     assert payload["columns"] == [
         {"key": "status", "label": "Status", "type": "string"},
-        {"key": "order_count", "label": "Order Count", "type": "number"},
+        {"key": "order_count", "label": "Order Count", "type": "integer"},
     ]
     assert payload["data"] == []
     assert payload["rows_omitted"] is True

@@ -44,8 +44,7 @@ class CapabilityMetric(TypedDict):
 
     name: str
     label: str
-    op: str
-    field: str
+    result_type: str
 
 
 class CapabilityScope(TypedDict):
@@ -379,8 +378,7 @@ def build_metric_capability(metric: MetricCatalogItem) -> CapabilityMetric:
     return {
         "name": metric["name"],
         "label": metric["label"],
-        "op": metric["op"],
-        "field": metric["field"],
+        "result_type": metric["result_type"],
     }
 
 
@@ -435,9 +433,7 @@ def build_resource_examples(
     if selectable_fields:
         examples.append(build_list_example(resource, selectable_fields))
     if metrics and group_fields:
-        examples.append(
-            build_metric_by_field_example(resource, metrics[0], group_fields[0])
-        )
+        examples.append(build_metric_by_field_example(metrics[0], group_fields[0]))
     if metrics and date_fields:
         examples.append(build_metric_trend_example(metrics[0], date_fields[0]))
 
@@ -537,14 +533,12 @@ def build_list_example(
 
 
 def build_metric_by_field_example(
-    resource: ResourceCatalogItem,
     metric: CapabilityMetric,
     field: CapabilityField,
 ) -> str:
     """Return an aggregate-by-field example question."""
 
-    metric_phrase = metric_label_for_question(resource, metric)
-    return f"Show {metric_phrase} by {field['label']}"
+    return f"Show {metric['label']} by {field['label']}"
 
 
 def build_metric_trend_example(
@@ -554,17 +548,6 @@ def build_metric_trend_example(
     """Return an aggregate trend example question."""
 
     return f"Trend {metric['label']} by month using {field['label']}"
-
-
-def metric_label_for_question(
-    resource: ResourceCatalogItem,
-    metric: CapabilityMetric,
-) -> str:
-    """Return a readable metric phrase for generated examples."""
-
-    if metric["op"] == "count":
-        return f"count of {resource['label']}"
-    return metric["label"]
 
 
 def join_labels(labels: Sequence[str]) -> str:

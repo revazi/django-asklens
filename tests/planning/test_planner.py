@@ -22,7 +22,7 @@ def valid_plan_payload() -> dict[str, object]:
         "resource": "orders",
         "intent": "aggregate",
         "group_by": [{"field": "status"}],
-        "metrics": [{"name": "order_count", "op": "count", "field": "id"}],
+        "metrics": [{"metric": "order_count"}],
         "order_by": [{"metric": "order_count", "direction": "desc"}],
         "limit": 10,
         "visualization": {"type": "bar", "x": "status", "y": "order_count"},
@@ -72,7 +72,16 @@ def build_registry() -> CatalogRegistry:
                 "llm_visible": False,
             },
         },
-        metrics=[Metric("order_count", op="count", field="id")],
+        metrics=[
+            Metric("order_count", op="count", binding="id", result_type="integer"),
+            Metric(
+                "customer_email_count",
+                op="count",
+                binding="customer__email",
+                result_type="integer",
+                requires_permission="customers.view_pii",
+            ),
+        ],
     )
     return registry
 
@@ -103,7 +112,7 @@ def test_dummy_provider_returns_deterministic_plan() -> None:
 
     assert result.question == QUESTION
     assert result.plan.resource == "orders"
-    assert result.plan.metrics[0].name == "order_count"
+    assert result.plan.metrics[0].metric == "order_count"
 
 
 def test_dummy_provider_without_configured_plan_fails() -> None:
@@ -126,6 +135,7 @@ def test_planner_sends_safe_catalog_metadata_and_schema() -> None:
     assert QUESTION in prompt_text
     assert "status" in prompt_text
     assert "order_count" in prompt_text
+    assert "customer_email_count" not in prompt_text
     assert "start_date_month" in prompt_text
     assert "original group_by field name" in prompt_text
     assert "customer.email" not in prompt_text
@@ -159,9 +169,13 @@ def test_permissioned_planner_metadata_still_omits_private_policy_and_binding() 
     prompt_text = "\n".join(message["content"] for message in request.messages)
 
     assert "customer.email" in prompt_text
+    assert "customer_email_count" in prompt_text
     assert "customer__email" not in prompt_text
     assert "customers.view_pii" not in prompt_text
     assert '"binding"' not in prompt_text
+    assert '"op"' not in prompt_text
+    assert "distinct_key" not in prompt_text
+    assert "cardinality_policy" not in prompt_text
 
 
 def test_provider_output_is_always_validated() -> None:

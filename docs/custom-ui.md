@@ -47,7 +47,7 @@ The response is metadata only. It contains visible resources, fields, metrics, d
         {"name": "created_at", "label": "Created date", "can_date_bucket": true}
       ],
       "metrics": [
-        {"name": "order_count", "label": "Orders", "op": "count", "field": "id"}
+        {"name": "order_count", "label": "Orders", "result_type": "integer"}
       ],
       "examples": ["Show count of Orders by Status"]
     }

@@ -44,7 +44,9 @@ def registered_orders() -> None:
                 "label": "Created date",
             },
         },
-        metrics=[Metric("order_count", op="count", field="status")],
+        metrics=[
+            Metric("order_count", op="count", binding="status", result_type="integer")
+        ],
     )
     yield
     default_registry.clear()
@@ -76,7 +78,7 @@ def capabilities_payload() -> dict[str, Any]:
         "summary": "You can query Orders.",
         "query_patterns": [],
         "limitations": [],
-        "examples": ["Show count of Orders by Status"],
+        "examples": ["Show Order count by Status"],
         "resources": [
             {
                 "name": "orders",
@@ -112,8 +114,7 @@ def capabilities_payload() -> dict[str, Any]:
                     {
                         "name": "order_count",
                         "label": "Order count",
-                        "op": "count",
-                        "field": "status",
+                        "result_type": "integer",
                     }
                 ],
                 "date_fields": [
@@ -129,7 +130,7 @@ def capabilities_payload() -> dict[str, Any]:
                         "can_date_bucket": True,
                     }
                 ],
-                "examples": ["Show count of Orders by Status"],
+                "examples": ["Show Order count by Status"],
                 "guidance": [],
             }
         ],
@@ -144,7 +145,7 @@ def aggregate_help_plan_payload(**updates: Any) -> dict[str, Any]:
         "intent": "aggregate",
         "filters": [],
         "group_by": [{"field": "status"}],
-        "metrics": [{"name": "order_count", "op": "count", "field": "status"}],
+        "metrics": [{"metric": "order_count"}],
         "select": [],
         "order_by": [{"metric": "order_count", "direction": "desc"}],
         "limit": 50,
@@ -173,9 +174,12 @@ def many_examples_capabilities_payload() -> dict[str, Any]:
         resource = dict(payload["resources"][0])
         resource["name"] = f"orders_{index}"
         resource["label"] = f"Orders {index}"
+        resource["metrics"] = [
+            {**resource["metrics"][0], "label": f"Order count {index}"}
+        ]
         resource["examples"] = [
-            f"Show count of Orders {index} by Status",
-            f"Trend Orders {index} by month using Created date",
+            f"Show Order count {index} by Status",
+            f"Trend Order count {index} by month using Created date",
         ]
         resources.append(resource)
     payload["resources"] = resources
@@ -402,7 +406,7 @@ def test_build_query_help_synthesizes_missing_executable_plan() -> None:
     assert suggestion.plan["resource"] == "orders"
     assert suggestion.plan["intent"] == "aggregate"
     assert suggestion.plan["group_by"] == [{"field": "status", "date_trunc": None}]
-    assert suggestion.plan["metrics"][0]["name"] == "order_count"
+    assert suggestion.plan["metrics"][0]["metric"] == "order_count"
 
 
 def test_build_query_help_rejects_unknown_references() -> None:
@@ -766,7 +770,7 @@ def test_deterministic_query_help_uses_capabilities_examples() -> None:
     result = build_deterministic_query_help(capabilities=capabilities_payload())
 
     assert result.answer == "You can query Orders."
-    assert result.suggestions[0].question == "Show count of Orders by Status"
+    assert result.suggestions[0].question == "Show Order count by Status"
     assert result.suggestions[0].resource_name == "orders"
     assert result.suggestions[0].fields == ("status",)
     assert result.suggestions[0].metrics == ("order_count",)
@@ -785,7 +789,7 @@ def test_deterministic_query_help_honors_requested_example_count() -> None:
     )
 
     assert len(result.suggestions) == 10
-    assert result.suggestions[0].question == "Show count of Orders 1 by Status"
+    assert result.suggestions[0].question == "Show Order count 1 by Status"
     assert result.suggestions[-1].question == (
-        "Trend Orders 5 by month using Created date"
+        "Trend Order count 5 by month using Created date"
     )
