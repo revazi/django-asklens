@@ -83,8 +83,13 @@ A data-query response includes `response_type: "query"`, normalized rows, column
   "response_type": "query",
   "plan": {"resource": "orders", "intent": "aggregate", "limit": 10},
   "columns": [
-    {"key": "status", "label": "Status", "type": "string"},
-    {"key": "order_count", "label": "Orders", "type": "number"}
+    {"key": "status", "label": "Status", "type": "string", "nullable": false},
+    {
+      "key": "order_count",
+      "label": "Orders",
+      "type": "integer",
+      "nullable": false
+    }
   ],
   "data": [
     {"status": "paid", "order_count": 120},
@@ -102,6 +107,8 @@ A data-query response includes `response_type: "query"`, normalized rows, column
 ```
 
 For grouped aggregate/chart responses, `result_metadata.limit` caps returned groups or slices. For list/table responses, it caps returned rows. If `result_metadata.truncated` is true, another matching row/group exists beyond the returned limit; show a message such as “Showing the first N results. Refine filters or increase the limit.” Ungrouped aggregates have effective limit one and are never truncated. AskLens does not provide cursor pagination.
+
+Use each column's canonical `type` and `nullable` metadata rather than inferring types from the first row. Decimal values are strings to preserve precision. Empty ungrouped aggregates contain one row (`count=0`, other aggregate values `null`); empty grouped aggregates contain no rows.
 
 Render tables by iterating `columns` for headers and `data` for row values:
 

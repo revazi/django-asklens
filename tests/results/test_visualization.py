@@ -1,5 +1,8 @@
 """Tests for visualization hint normalization."""
 
+from datetime import UTC, datetime
+from decimal import Decimal
+
 import pytest
 
 from django_asklens.compiler import ResultColumn
@@ -8,10 +11,10 @@ from django_asklens.results import serialize_query_result
 from django_asklens.results.visualization import normalize_visualization_hint
 
 COLUMNS = (
-    ResultColumn("status", "Status", "string"),
-    ResultColumn("created_at", "Created", "datetime"),
-    ResultColumn("order_count", "Orders", "integer"),
-    ResultColumn("revenue", "Revenue", "number"),
+    ResultColumn("status", "Status", "string", nullable=False),
+    ResultColumn("created_at", "Created", "datetime", nullable=False),
+    ResultColumn("order_count", "Orders", "integer", nullable=False),
+    ResultColumn("revenue", "Revenue", "decimal", nullable=True),
 )
 
 
@@ -38,7 +41,7 @@ def test_normalize_bar_line_and_pie_visualization_hints() -> None:
     ) == {
         "type": "bar",
         "x": {"field": "status", "label": "Status", "type": "string"},
-        "y": {"field": "revenue", "label": "Revenue", "type": "number"},
+        "y": {"field": "revenue", "label": "Revenue", "type": "decimal"},
     }
     assert (
         normalize_visualization_hint(
@@ -83,15 +86,37 @@ def test_visualization_hint_validation_fails_closed() -> None:
         )
 
 
+def result_row() -> dict[str, object]:
+    """Return one complete row matching the declared result columns."""
+
+    return {
+        "status": "paid",
+        "created_at": datetime(2026, 1, 1, tzinfo=UTC),
+        "order_count": 2,
+        "revenue": Decimal("10"),
+    }
+
+
+def serialized_result_row() -> dict[str, object]:
+    """Return the canonical JSON representation of ``result_row``."""
+
+    return {
+        "status": "paid",
+        "created_at": "2026-01-01T00:00:00+00:00",
+        "order_count": 2,
+        "revenue": "10",
+    }
+
+
 def test_serialize_query_result_combines_rows_and_visualization_hint() -> None:
     payload = serialize_query_result(
         columns=COLUMNS,
-        rows=({"status": "paid", "order_count": 2, "revenue": 10},),
+        rows=(result_row(),),
         visualization={"type": "bar", "x": "status", "y": "revenue"},
     )
 
     assert payload["row_count"] == 1
-    assert payload["data"] == [{"status": "paid", "order_count": 2, "revenue": 10}]
+    assert payload["data"] == [serialized_result_row()]
     assert payload["visualization"]["type"] == "bar"
     assert payload["visualization"]["x"]["field"] == "status"
 
@@ -99,12 +124,12 @@ def test_serialize_query_result_combines_rows_and_visualization_hint() -> None:
 def test_serialize_query_result_can_return_data_without_visualization_hint() -> None:
     payload = serialize_query_result(
         columns=COLUMNS,
-        rows=({"status": "paid", "order_count": 2, "revenue": 10},),
+        rows=(result_row(),),
         visualization={"type": "bar", "x": "status", "y": "revenue"},
         include_visualization=False,
     )
 
     assert payload["row_count"] == 1
     assert payload["columns"]
-    assert payload["data"] == [{"status": "paid", "order_count": 2, "revenue": 10}]
+    assert payload["data"] == [serialized_result_row()]
     assert "visualization" not in payload

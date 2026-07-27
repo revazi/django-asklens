@@ -35,6 +35,9 @@ def test_supported_constants_and_json_schema_are_available() -> None:
     assert "bar" in SUPPORTED_VISUALIZATION_TYPES
     assert schema["title"] == "QueryPlan"
     assert "resource" in schema["properties"]
+    filter_schema = schema["$defs"]["FilterSpec"]
+    assert set(filter_schema["required"]) == {"field", "op", "value"}
+    assert "null" not in str(filter_schema["properties"]["value"])
 
 
 def test_valid_query_plan_parses_to_immutable_typed_model() -> None:
@@ -108,6 +111,11 @@ def test_unsupported_filter_operator_fails_schema_validation() -> None:
 
 def test_filter_operator_values_are_strictly_validated() -> None:
     payload = valid_aggregate_plan_payload()
+    payload["filters"] = [{"field": "status", "op": "eq"}]
+
+    with pytest.raises(PlanValidationError, match="value"):
+        parse_query_plan(payload)
+
     payload["filters"] = [{"field": "status", "op": "in", "value": "paid"}]
 
     with pytest.raises(PlanValidationError, match="non-empty list"):
@@ -123,11 +131,16 @@ def test_filter_operator_values_are_strictly_validated() -> None:
     with pytest.raises(PlanValidationError, match="scalar"):
         parse_query_plan(payload)
 
+    for operator in ("eq", "neq"):
+        payload["filters"] = [{"field": "status", "op": operator, "value": None}]
+        with pytest.raises(PlanValidationError, match="filters"):
+            parse_query_plan(payload)
+
     payload["filters"] = [
         {"field": "created_at", "op": "date_range", "value": ["2026-01-01", None]}
     ]
 
-    with pytest.raises(PlanValidationError, match="non-empty string"):
+    with pytest.raises(PlanValidationError, match="filters"):
         parse_query_plan(payload)
 
 

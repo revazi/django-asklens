@@ -46,9 +46,16 @@ def build_registry() -> CatalogRegistry:
             },
             "status": {
                 "binding": "status",
-                "type": "string",
+                "type": "enum",
                 "nullable": False,
                 "label": "Status",
+                "enum": {
+                    "type": "string",
+                    "values": [
+                        {"value": "paid", "label": "Paid", "aliases": ["settled"]},
+                        {"value": "pending", "label": "Pending"},
+                    ],
+                },
             },
             "created_at": {
                 "binding": "created_at",
@@ -134,6 +141,9 @@ def test_planner_sends_safe_catalog_metadata_and_schema() -> None:
     prompt_text = "\n".join(message["content"] for message in provider.messages)
     assert QUESTION in prompt_text
     assert "status" in prompt_text
+    assert '"enum"' in prompt_text
+    assert '"settled"' in prompt_text
+    assert "contains/icontains only" in prompt_text
     assert "order_count" in prompt_text
     assert "customer_email_count" not in prompt_text
     assert "start_date_month" in prompt_text

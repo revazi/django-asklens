@@ -1778,7 +1778,7 @@
     function getNumericColumns(payload) {
       const rows = payload.data || [];
       return (payload.columns || []).filter((column) => {
-        if (["integer", "number", "float", "decimal"].includes(column.type)) {
+        if (["integer", "float", "decimal"].includes(column.type)) {
           return true;
         }
         return rows.some((row) => typeof row[column.key] === "number");

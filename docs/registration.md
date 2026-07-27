@@ -33,9 +33,16 @@ resource = register(
         },
         "status": {
             "binding": "status",
-            "type": "string",
+            "type": "enum",
             "nullable": False,
             "label": "Status",
+            "enum": {
+                "type": "string",
+                "values": [
+                    {"value": "pending", "label": "Pending"},
+                    {"value": "paid", "label": "Paid", "aliases": ["settled"]},
+                ],
+            },
         },
         "created_at": {
             "binding": "created_at",
@@ -101,7 +108,46 @@ Supported field config keys:
 }
 ```
 
-`binding`, model metadata, and permission tokens remain server-owned and are never serialized into public catalogs, capabilities, or provider prompts. A binding change does not require a plan change. Registration rejects omitted bindings/types/nullability, invalid Django paths, unsupported type labels, and a non-null semantic declaration backed by a nullable field or traversal. Canonical type labels are `string`, `boolean`, `integer`, `decimal`, `float`, `date`, `datetime`, `time`, `uuid`, and `enum`; enum value registration is completed separately in the remaining 0.2 semantic work.
+`binding`, model metadata, and permission tokens remain server-owned and are never serialized into public catalogs, capabilities, or provider prompts. A binding change does not require a plan change. Registration rejects omitted bindings/types/nullability, invalid Django paths, unsupported type labels, and a non-null semantic declaration backed by a nullable field or traversal. Canonical type labels are `string`, `boolean`, `integer`, `decimal`, `float`, `date`, `datetime`, `time`, `uuid`, and `enum`.
+
+### Canonical operators and values
+
+Capabilities list the supported operators for each visible field. The current matrix is:
+
+| Type | Operators |
+| --- | --- |
+| `string` | `eq`, `neq`, `contains`, `icontains`, `in`, `isnull` |
+| `boolean` | `eq`, `neq`, `in`, `isnull` |
+| `integer`, `decimal`, `float`, `time` | `eq`, `neq`, `gt`, `gte`, `lt`, `lte`, `in`, `isnull` |
+| `date`, `datetime` | `eq`, `neq`, `gt`, `gte`, `lt`, `lte`, `in`, `isnull`, `date_range`, `last_n_days`, `last_n_months` |
+| `uuid`, `enum` | `eq`, `neq`, `in`, `isnull` |
+
+Every filter requires a non-null `value`. String containment is not available on enums or other types. `eq: null` and `neq: null` are rejected; use `isnull` with a boolean value. `neq` excludes null rows. Integer inputs are JSON integers excluding booleans, decimal inputs are finite strings, float inputs are finite JSON numbers, UUID inputs normalize to canonical strings, and `in` validates every element against the field type.
+
+### Explicit enums
+
+Enum metadata is mandatory when `type="enum"` and invalid on other field types:
+
+```python
+"status": {
+    "binding": "status",
+    "type": "enum",
+    "nullable": False,
+    "enum": {
+        "type": "string",  # or "integer"; must match the private binding
+        "values": [
+            {"value": "pending", "label": "Pending"},
+            {
+                "value": "paid",
+                "label": "Paid",
+                "aliases": ["settled", "complete"],
+            },
+        ],
+    },
+}
+```
+
+Only canonical values and explicitly listed aliases are accepted in `eq`, `neq`, and `in`. Aliases normalize to the canonical value; labels are display metadata and are not accepted unless also listed as aliases. Ambiguous aliases and duplicate canonical values fail registration. Django model `choices` are never copied or treated as aliases automatically. Projects migrating choice-backed fields must either register an explicit enum or retain open `string`/`integer` semantics deliberately.
 
 Defaults remain conservative for catalog exposure: sensitive fields and hidden fields are not included in normal planner catalog serialization. The legacy field-level `metric=True` flag is rejected; aggregate backing is declared only on `Metric` registrations.
 

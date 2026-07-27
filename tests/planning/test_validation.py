@@ -1,5 +1,7 @@
 """Tests for QueryPlan semantic validation against the catalog."""
 
+from uuid import UUID
+
 import pytest
 
 from django_asklens import Metric
@@ -18,7 +20,12 @@ from django_asklens.planning import (
     validate_query_plan,
 )
 from tests.planning.test_schemas import valid_aggregate_plan_payload
-from tests.test_project.models import BillingLine, Facility, Order
+from tests.test_project.models import (
+    BillingLine,
+    CanonicalValueFixture,
+    Facility,
+    Order,
+)
 
 
 def build_registry() -> CatalogRegistry:
@@ -128,9 +135,24 @@ def build_billing_registry() -> CatalogRegistry:
         fields={
             "billing_document.status": {
                 "binding": "billing_document__status",
-                "type": "string",
+                "type": "enum",
                 "nullable": False,
                 "label": "Billing status",
+                "enum": {
+                    "type": "string",
+                    "values": [
+                        {
+                            "value": "PAID",
+                            "label": "Paid",
+                            "aliases": ["Paid", "paid"],
+                        },
+                        {
+                            "value": "PAST_DUE",
+                            "label": "Past due",
+                            "aliases": ["Past due", "past_due"],
+                        },
+                    ],
+                },
             },
             "product_name": {
                 "binding": "product_name",
@@ -156,6 +178,109 @@ def build_billing_registry() -> CatalogRegistry:
         ],
     )
     return registry
+
+
+def build_canonical_registry() -> CatalogRegistry:
+    """Return one resource covering every canonical field type."""
+
+    registry = CatalogRegistry()
+    registry.register(
+        model=CanonicalValueFixture,
+        name="canonical_values",
+        scope_mode="global",
+        fields={
+            "text": {
+                "binding": "text_value",
+                "type": "string",
+                "nullable": False,
+            },
+            "flag": {
+                "binding": "boolean_value",
+                "type": "boolean",
+                "nullable": False,
+            },
+            "count": {
+                "binding": "integer_value",
+                "type": "integer",
+                "nullable": False,
+            },
+            "amount": {
+                "binding": "decimal_value",
+                "type": "decimal",
+                "nullable": False,
+            },
+            "ratio": {
+                "binding": "float_value",
+                "type": "float",
+                "nullable": False,
+            },
+            "day": {
+                "binding": "date_value",
+                "type": "date",
+                "nullable": False,
+            },
+            "instant": {
+                "binding": "datetime_value",
+                "type": "datetime",
+                "nullable": False,
+            },
+            "clock": {
+                "binding": "time_value",
+                "type": "time",
+                "nullable": False,
+            },
+            "identifier": {
+                "binding": "uuid_value",
+                "type": "uuid",
+                "nullable": False,
+            },
+            "state": {
+                "binding": "enum_text_value",
+                "type": "enum",
+                "nullable": False,
+                "enum": {
+                    "type": "string",
+                    "values": [
+                        {
+                            "value": "draft",
+                            "label": "Draft",
+                            "aliases": ["DRAFT", "pending"],
+                        },
+                        {
+                            "value": "active",
+                            "label": "Active",
+                            "aliases": ["ACTIVE"],
+                        },
+                    ],
+                },
+            },
+            "state_code": {
+                "binding": "enum_integer_value",
+                "type": "enum",
+                "nullable": False,
+                "enum": {
+                    "type": "integer",
+                    "values": [
+                        {"value": 1, "label": "Draft", "aliases": ["draft"]},
+                        {"value": 2, "label": "Active", "aliases": ["current"]},
+                    ],
+                },
+            },
+        },
+    )
+    return registry
+
+
+def canonical_list_payload(*, field: str, op: str, value: object) -> dict[str, object]:
+    """Return a list plan with one canonical-value filter."""
+
+    return {
+        "resource": "canonical_values",
+        "intent": "list",
+        "filters": [{"field": field, "op": op, "value": value}],
+        "select": [field],
+        "limit": 10,
+    }
 
 
 def valid_billing_revenue_payload(**updates: object) -> dict[str, object]:
@@ -224,6 +349,221 @@ def test_choice_filter_value_case_and_in_lists_are_canonicalized() -> None:
 
     [filter_spec] = validated.filters
     assert filter_spec.value == ["PAID", "PAST_DUE"]
+
+
+CANONICAL_OPERATOR_MATRIX = {
+    "text": {"eq", "neq", "contains", "icontains", "in", "isnull"},
+    "flag": {"eq", "neq", "in", "isnull"},
+    "count": {"eq", "neq", "gt", "gte", "lt", "lte", "in", "isnull"},
+    "amount": {"eq", "neq", "gt", "gte", "lt", "lte", "in", "isnull"},
+    "ratio": {"eq", "neq", "gt", "gte", "lt", "lte", "in", "isnull"},
+    "day": {
+        "eq",
+        "neq",
+        "gt",
+        "gte",
+        "lt",
+        "lte",
+        "in",
+        "isnull",
+        "date_range",
+        "last_n_days",
+        "last_n_months",
+    },
+    "instant": {
+        "eq",
+        "neq",
+        "gt",
+        "gte",
+        "lt",
+        "lte",
+        "in",
+        "isnull",
+        "date_range",
+        "last_n_days",
+        "last_n_months",
+    },
+    "clock": {"eq", "neq", "gt", "gte", "lt", "lte", "in", "isnull"},
+    "identifier": {"eq", "neq", "in", "isnull"},
+    "state": {"eq", "neq", "in", "isnull"},
+    "state_code": {"eq", "neq", "in", "isnull"},
+}
+ALL_FILTER_OPERATORS = {
+    "eq",
+    "neq",
+    "contains",
+    "icontains",
+    "gt",
+    "gte",
+    "lt",
+    "lte",
+    "in",
+    "isnull",
+    "date_range",
+    "last_n_days",
+    "last_n_months",
+}
+CANONICAL_SAMPLES = {
+    "text": "alpha",
+    "flag": True,
+    "count": 2,
+    "amount": "12.3400",
+    "ratio": 1.5,
+    "day": "2026-01-15",
+    "instant": "2026-01-15T12:00:00Z",
+    "clock": "12:30:00",
+    "identifier": "9D4D8F5A-9E2B-4AA7-92A7-75C74DA6F648",
+    "state": "draft",
+    "state_code": 1,
+}
+
+
+def operator_value(field: str, operator: str) -> object:
+    """Return a structurally valid test value for one field/operator pair."""
+
+    if operator == "isnull":
+        return False
+    if operator in {"contains", "icontains"}:
+        return "alpha"
+    if operator == "in":
+        return [CANONICAL_SAMPLES[field]]
+    if operator == "date_range":
+        if field == "day":
+            return ["2026-01-01", "2026-01-31"]
+        return ["2026-01-01T00:00:00Z", "2026-02-01T00:00:00Z"]
+    if operator in {"last_n_days", "last_n_months"}:
+        return 2
+    return CANONICAL_SAMPLES[field]
+
+
+@pytest.mark.parametrize(
+    ("field", "operator", "is_supported"),
+    [
+        (field, operator, operator in supported)
+        for field, supported in CANONICAL_OPERATOR_MATRIX.items()
+        for operator in sorted(ALL_FILTER_OPERATORS)
+    ],
+)
+def test_canonical_operator_matrix_is_enforced(
+    field: str,
+    operator: str,
+    is_supported: bool,
+) -> None:
+    """Every retained operator has an explicit canonical field-type policy."""
+
+    payload = canonical_list_payload(
+        field=field,
+        op=operator,
+        value=operator_value(field, operator),
+    )
+    if is_supported:
+        parse_and_validate_query_plan(payload, registry=build_canonical_registry())
+        return
+
+    with pytest.raises(PlanValidationError, match="is not supported for canonical"):
+        parse_and_validate_query_plan(payload, registry=build_canonical_registry())
+
+
+@pytest.mark.parametrize(
+    ("field", "value", "message"),
+    [
+        ("text", 1, "must be a string"),
+        ("flag", 1, "must be a boolean"),
+        ("count", True, "must be an integer"),
+        ("count", 1.5, "must be an integer"),
+        ("amount", 1.25, "must be a decimal string"),
+        ("amount", "NaN", "finite decimal string"),
+        ("ratio", "1.25", "must be a JSON number"),
+        ("ratio", float("inf"), "finite JSON number"),
+        ("ratio", 10**1000, "finite JSON number"),
+        ("identifier", "not-a-uuid", "valid UUID string"),
+        ("state", "missing", "registered enum value or alias"),
+        ("state_code", "2", "registered enum value or alias"),
+    ],
+)
+def test_canonical_filter_values_reject_wrong_or_unsafe_types(
+    field: str,
+    value: object,
+    message: str,
+) -> None:
+    """Django coercion must not define public filter value semantics."""
+
+    with pytest.raises(PlanValidationError, match=message):
+        parse_and_validate_query_plan(
+            canonical_list_payload(field=field, op="eq", value=value),
+            registry=build_canonical_registry(),
+        )
+
+
+def test_canonical_filter_values_normalize_float_uuid_and_enum_aliases() -> None:
+    """Safe aliases normalize without changing the public field or operation."""
+
+    identifier = "9D4D8F5A-9E2B-4AA7-92A7-75C74DA6F648"
+    validated_float = parse_and_validate_query_plan(
+        canonical_list_payload(field="ratio", op="eq", value=1),
+        registry=build_canonical_registry(),
+    )
+    validated_uuid = parse_and_validate_query_plan(
+        canonical_list_payload(field="identifier", op="eq", value=identifier),
+        registry=build_canonical_registry(),
+    )
+    validated_enum = parse_and_validate_query_plan(
+        canonical_list_payload(field="state", op="in", value=["pending", "ACTIVE"]),
+        registry=build_canonical_registry(),
+    )
+    validated_integer_enum = parse_and_validate_query_plan(
+        canonical_list_payload(field="state_code", op="eq", value="current"),
+        registry=build_canonical_registry(),
+    )
+
+    assert validated_float.filters[0].value == 1.0
+    assert validated_uuid.filters[0].value == str(UUID(identifier))
+    assert validated_enum.filters[0].value == ["draft", "active"]
+    assert validated_integer_enum.filters[0].value == 2
+
+
+def test_enum_alias_normalization_cannot_create_duplicate_in_values() -> None:
+    """Alias normalization cannot bypass the existing structural value budget."""
+
+    with pytest.raises(PlanValidationError, match="Duplicate in filter value"):
+        parse_and_validate_query_plan(
+            canonical_list_payload(
+                field="state",
+                op="in",
+                value=["draft", "pending"],
+            ),
+            registry=build_canonical_registry(),
+        )
+
+
+def test_django_choices_are_not_automatic_enum_aliases() -> None:
+    """Choice labels remain ordinary strings unless an enum is registered."""
+
+    registry = CatalogRegistry()
+    registry.register(
+        model=BillingLine,
+        name="billing_lines",
+        scope_mode="global",
+        fields={
+            "status": {
+                "binding": "billing_document__status",
+                "type": "string",
+                "nullable": False,
+            }
+        },
+    )
+
+    validated = parse_and_validate_query_plan(
+        {
+            "resource": "billing_lines",
+            "intent": "list",
+            "filters": [{"field": "status", "op": "eq", "value": "Paid"}],
+            "select": ["status"],
+        },
+        registry=registry,
+    )
+
+    assert validated.filters[0].value == "Paid"
 
 
 def test_unknown_resource_fails() -> None:

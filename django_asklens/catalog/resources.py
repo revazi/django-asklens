@@ -25,7 +25,7 @@ from django_asklens.settings import get_asklens_setting
 
 type MetricOp = Literal["count", "sum", "avg", "min", "max"]
 type MetricCardinalityPolicy = Literal["to_one_only", "count_rows", "count_distinct"]
-type FieldConfig = Mapping[str, str | bool | None]
+type FieldConfig = Mapping[str, object]
 type ScopeMode = Literal["global", "context_scoped"]
 type ResourceOrderDirection = Literal["asc", "desc"]
 type DefaultOrder = tuple[tuple[str, ResourceOrderDirection], ...]
@@ -43,6 +43,21 @@ class MetricCatalogItem(TypedDict):
     result_type: str
 
 
+class EnumValueCatalogItem(TypedDict):
+    """One safe registered enum value exposed to catalog consumers."""
+
+    value: str | int
+    label: NotRequired[str]
+    aliases: NotRequired[list[str | int]]
+
+
+class EnumCatalogItem(TypedDict):
+    """Safe explicit enum metadata exposed to catalog consumers."""
+
+    type: Literal["string", "integer"]
+    values: list[EnumValueCatalogItem]
+
+
 class FieldCatalogItem(TypedDict):
     """Serialized field metadata included in catalog output."""
 
@@ -51,6 +66,7 @@ class FieldCatalogItem(TypedDict):
     type: str
     nullable: bool
     relation_depth: int
+    enum: NotRequired[EnumCatalogItem]
     sensitive: NotRequired[bool]
     llm_visible: NotRequired[bool]
     result_visible: NotRequired[bool]
@@ -80,6 +96,44 @@ class CatalogSnapshot(TypedDict):
 
 
 SUPPORTED_METRIC_OPS = {"count", "sum", "avg", "min", "max"}
+OPERATORS_BY_FIELD_TYPE: Mapping[str, tuple[str, ...]] = MappingProxyType(
+    {
+        "string": ("eq", "neq", "contains", "icontains", "in", "isnull"),
+        "boolean": ("eq", "neq", "in", "isnull"),
+        "integer": ("eq", "neq", "gt", "gte", "lt", "lte", "in", "isnull"),
+        "decimal": ("eq", "neq", "gt", "gte", "lt", "lte", "in", "isnull"),
+        "float": ("eq", "neq", "gt", "gte", "lt", "lte", "in", "isnull"),
+        "date": (
+            "eq",
+            "neq",
+            "gt",
+            "gte",
+            "lt",
+            "lte",
+            "in",
+            "isnull",
+            "date_range",
+            "last_n_days",
+            "last_n_months",
+        ),
+        "datetime": (
+            "eq",
+            "neq",
+            "gt",
+            "gte",
+            "lt",
+            "lte",
+            "in",
+            "isnull",
+            "date_range",
+            "last_n_days",
+            "last_n_months",
+        ),
+        "time": ("eq", "neq", "gt", "gte", "lt", "lte", "in", "isnull"),
+        "uuid": ("eq", "neq", "in", "isnull"),
+        "enum": ("eq", "neq", "in", "isnull"),
+    }
+)
 SUPPORTED_METRIC_CARDINALITY_POLICIES = {
     "to_one_only",
     "count_rows",
@@ -100,6 +154,7 @@ SUPPORTED_FIELD_TYPES = {
 }
 ALLOWED_FIELD_CONFIG_KEYS = {
     "binding",
+    "enum",
     "filter_only",
     "label",
     "llm_visible",
@@ -111,6 +166,41 @@ ALLOWED_FIELD_CONFIG_KEYS = {
     "type",
 }
 DATE_FIELD_TYPES = {"date", "datetime"}
+
+
+@dataclass(frozen=True, slots=True)
+class EnumValue:
+    """One immutable canonical enum value and its accepted aliases."""
+
+    value: str | int
+    label: str | None = None
+    aliases: tuple[str | int, ...] = ()
+
+    def to_dict(self) -> EnumValueCatalogItem:
+        """Serialize only explicitly registered safe enum metadata."""
+
+        data: EnumValueCatalogItem = {"value": self.value}
+        if self.label is not None:
+            data["label"] = self.label
+        if self.aliases:
+            data["aliases"] = list(self.aliases)
+        return data
+
+
+@dataclass(frozen=True, slots=True)
+class EnumDefinition:
+    """Immutable explicit enum definition for one semantic field."""
+
+    type: Literal["string", "integer"]
+    values: tuple[EnumValue, ...]
+
+    def to_dict(self) -> EnumCatalogItem:
+        """Serialize this safe semantic enum definition."""
+
+        return {
+            "type": self.type,
+            "values": [value.to_dict() for value in self.values],
+        }
 
 
 @dataclass(frozen=True, slots=True)
@@ -205,6 +295,7 @@ class FieldSpec:
     relation_depth: int = field(repr=False)
     relationship_edges: tuple[str, ...] = field(default=(), repr=False)
     to_many_relationship_edges: tuple[str, ...] = field(default=(), repr=False)
+    enum: EnumDefinition | None = None
     sensitive: bool = False
     llm_visible: bool = True
     result_visible: bool = True
@@ -252,6 +343,8 @@ class FieldSpec:
             "nullable": self.nullable,
             "relation_depth": self.relation_depth,
         }
+        if self.enum is not None:
+            data["enum"] = self.enum.to_dict()
         if self.sensitive:
             data["sensitive"] = True
         if not self.llm_visible:
@@ -744,6 +837,12 @@ def validate_field_spec(
     validate_binding_type(
         key, configured_type=field_spec.type, binding_type=binding_type
     )
+    enum_definition = validate_enum_definition(
+        key,
+        configured_type=field_spec.type,
+        binding_type=binding_type,
+        raw_definition=field_spec.enum,
+    )
     if not isinstance(field_spec.nullable, bool):
         msg = f"FieldSpec nullable must be a boolean for semantic key {key!r}."
         raise InvalidResourceError(msg)
@@ -755,6 +854,7 @@ def validate_field_spec(
         relation_depth=relation_depth,
         relationship_edges=relationship_edges,
         to_many_relationship_edges=to_many_relationship_edges,
+        enum=enum_definition,
     )
 
 
@@ -775,6 +875,151 @@ def validate_binding_type(
         f"its private binding type {binding_type!r}."
     )
     raise InvalidResourceError(msg)
+
+
+def validate_enum_definition(
+    key: str,
+    *,
+    configured_type: str,
+    binding_type: str,
+    raw_definition: object,
+) -> EnumDefinition | None:
+    """Validate explicit enum metadata without inspecting Django choices."""
+
+    if configured_type != "enum":
+        if raw_definition is not None:
+            msg = f"Enum metadata is only supported for canonical type 'enum': {key!r}."
+            raise InvalidResourceError(msg)
+        return None
+    if raw_definition is None:
+        msg = f"Canonical enum field {key!r} requires explicit enum metadata."
+        raise InvalidResourceError(msg)
+
+    if isinstance(raw_definition, EnumDefinition):
+        definition: object = raw_definition.to_dict()
+    else:
+        definition = raw_definition
+    if not isinstance(definition, Mapping):
+        msg = f"Enum metadata for field {key!r} must be a mapping."
+        raise InvalidResourceError(msg)
+    unknown_definition_keys = set(definition) - {"type", "values"}
+    if unknown_definition_keys:
+        msg = f"Unknown enum metadata keys for field {key!r}."
+        raise InvalidResourceError(msg)
+
+    underlying_type = definition.get("type")
+    if underlying_type not in {"string", "integer"}:
+        msg = f"Enum field {key!r} type must be 'string' or 'integer'."
+        raise InvalidResourceError(msg)
+    if underlying_type != binding_type:
+        msg = (
+            f"Enum underlying type {underlying_type!r} for field {key!r} does not "
+            f"match its private binding type {binding_type!r}."
+        )
+        raise InvalidResourceError(msg)
+
+    raw_values = definition.get("values")
+    if (
+        not isinstance(raw_values, Sequence)
+        or isinstance(raw_values, (str, bytes))
+        or not raw_values
+    ):
+        msg = f"Enum field {key!r} requires a non-empty values sequence."
+        raise InvalidResourceError(msg)
+
+    values: list[EnumValue] = []
+    canonical_keys: set[tuple[type[object], object]] = set()
+    accepted_tokens: dict[tuple[type[object], object], object] = {}
+    for raw_value in raw_values:
+        if not isinstance(raw_value, Mapping):
+            msg = f"Enum values for field {key!r} must be mappings."
+            raise InvalidResourceError(msg)
+        if set(raw_value) - {"value", "label", "aliases"}:
+            msg = f"Unknown enum value metadata keys for field {key!r}."
+            raise InvalidResourceError(msg)
+
+        canonical = raw_value.get("value")
+        validate_enum_scalar(
+            canonical,
+            underlying_type=underlying_type,
+            key=key,
+            label="canonical value",
+        )
+        canonical_key = enum_token_key(canonical)
+        if canonical_key in canonical_keys:
+            msg = f"Duplicate canonical enum value for field {key!r}."
+            raise InvalidResourceError(msg)
+        canonical_keys.add(canonical_key)
+
+        label = raw_value.get("label")
+        if label is not None and (not isinstance(label, str) or not label.strip()):
+            msg = f"Enum labels for field {key!r} must be non-empty strings."
+            raise InvalidResourceError(msg)
+
+        raw_aliases = raw_value.get("aliases", ())
+        if not isinstance(raw_aliases, Sequence) or isinstance(
+            raw_aliases, (str, bytes)
+        ):
+            msg = f"Enum aliases for field {key!r} must be a sequence."
+            raise InvalidResourceError(msg)
+        aliases: list[str | int] = []
+        for alias in raw_aliases:
+            validate_enum_alias(alias, key=key)
+            aliases.append(alias)
+
+        for token in (canonical, *aliases):
+            token_key = enum_token_key(token)
+            existing = accepted_tokens.get(token_key)
+            if existing is not None and enum_token_key(existing) != canonical_key:
+                msg = f"Ambiguous enum alias for field {key!r}."
+                raise InvalidResourceError(msg)
+            accepted_tokens[token_key] = canonical
+
+        values.append(
+            EnumValue(
+                value=canonical,
+                label=label.strip() if isinstance(label, str) else None,
+                aliases=tuple(aliases),
+            )
+        )
+
+    return EnumDefinition(type=underlying_type, values=tuple(values))
+
+
+def validate_enum_scalar(
+    value: object,
+    *,
+    underlying_type: str,
+    key: str,
+    label: str,
+) -> None:
+    """Validate one canonical enum scalar against its declared type."""
+
+    if underlying_type == "string":
+        if not isinstance(value, str) or not value:
+            msg = f"Enum {label} for field {key!r} must be a non-empty string."
+            raise InvalidResourceError(msg)
+        return
+    if not isinstance(value, int) or isinstance(value, bool):
+        msg = f"Enum {label} for field {key!r} must be an integer."
+        raise InvalidResourceError(msg)
+
+
+def validate_enum_alias(value: object, *, key: str) -> None:
+    """Validate one explicit enum input alias."""
+
+    if isinstance(value, bool) or not isinstance(value, (str, int)):
+        msg = f"Enum aliases for field {key!r} must be strings or integers."
+        raise InvalidResourceError(msg)
+    if isinstance(value, str) and not value:
+        msg = f"Enum aliases for field {key!r} must not be empty."
+        raise InvalidResourceError(msg)
+
+
+def enum_token_key(value: object) -> tuple[type[object], object]:
+    """Return a type-aware enum token key so booleans never alias integers."""
+
+    return (type(value), value)
 
 
 def get_bool_field_config(
@@ -853,10 +1098,17 @@ def build_field_specs(
         if configured_type not in SUPPORTED_FIELD_TYPES:
             msg = f"Unsupported canonical type {configured_type!r} for field {key!r}."
             raise InvalidResourceError(msg)
+        binding_type = get_field_type(resolution.field)
         validate_binding_type(
             key,
             configured_type=configured_type,
-            binding_type=get_field_type(resolution.field),
+            binding_type=binding_type,
+        )
+        enum_definition = validate_enum_definition(
+            key,
+            configured_type=configured_type,
+            binding_type=binding_type,
+            raw_definition=field_config.get("enum"),
         )
         configured_nullable = field_config.get("nullable")
         if not isinstance(configured_nullable, bool):
@@ -892,6 +1144,7 @@ def build_field_specs(
             relation_depth=resolution.relation_depth,
             relationship_edges=resolution.relationship_edges,
             to_many_relationship_edges=resolution.to_many_relationship_edges,
+            enum=enum_definition,
             sensitive=sensitive,
             llm_visible=llm_visible,
             result_visible=result_visible,

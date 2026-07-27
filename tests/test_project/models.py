@@ -68,6 +68,37 @@ class Order(models.Model):
         app_label = "test_project"
 
 
+class CanonicalValueFixture(models.Model):
+    """Canonical scalar and enum bindings used by semantic contract tests."""
+
+    class IntegerState(models.IntegerChoices):
+        DRAFT = 1, "Draft"
+        ACTIVE = 2, "Active"
+
+    text_value = models.CharField(max_length=100)
+    nullable_text = models.CharField(max_length=100, null=True, blank=True)
+    boolean_value = models.BooleanField(default=False)
+    integer_value = models.IntegerField(default=0)
+    decimal_value = models.DecimalField(max_digits=12, decimal_places=4, default=0)
+    float_value = models.FloatField(default=0)
+    date_value = models.DateField()
+    datetime_value = models.DateTimeField()
+    time_value = models.TimeField()
+    uuid_value = models.UUIDField(default=uuid.uuid4)
+    enum_text_value = models.CharField(
+        max_length=32,
+        choices=(("draft", "Draft"), ("active", "Active")),
+        default="draft",
+    )
+    enum_integer_value = models.IntegerField(
+        choices=IntegerState.choices,
+        default=IntegerState.DRAFT,
+    )
+
+    class Meta:
+        app_label = "test_project"
+
+
 class Facility(TimestampedModel):
     """Tenant fixture for complex permission and reporting tests."""
 

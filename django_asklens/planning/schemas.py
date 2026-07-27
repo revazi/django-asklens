@@ -54,7 +54,7 @@ type FilterOperator = Literal[
 type DateTrunc = Literal["day", "week", "month", "quarter", "year"]
 type OrderDirection = Literal["asc", "desc"]
 type VisualizationType = Literal["table", "metric", "bar", "line", "pie"]
-type JsonScalar = str | int | float | bool | None
+type JsonScalar = str | int | float | bool
 type JsonValue = JsonScalar | list[JsonScalar]
 
 PLAN_MODEL_CONFIG = ConfigDict(
@@ -75,7 +75,7 @@ class FilterSpec(PlanBaseModel):
 
     field: str
     op: FilterOperator
-    value: JsonValue = None
+    value: JsonValue
 
     @field_validator("field")
     @classmethod

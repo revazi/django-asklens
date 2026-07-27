@@ -125,12 +125,16 @@ def compact_capability_field(field: Mapping[str, Any]) -> dict[str, Any]:
         "name": field.get("name"),
         "label": field.get("label"),
         "type": field.get("type"),
+        "nullable": field.get("nullable"),
+        "operators": field.get("operators", []),
         "can_filter": field.get("can_filter"),
         "can_select": field.get("can_select"),
         "can_group": field.get("can_group"),
         "can_order": field.get("can_order"),
         "can_date_bucket": field.get("can_date_bucket"),
     }
+    if field.get("enum"):
+        compact["enum"] = field["enum"]
     if field.get("scope_dimension"):
         compact["scope_dimension"] = True
     if field.get("requires_permission"):

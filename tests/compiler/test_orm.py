@@ -16,7 +16,7 @@ from django_asklens.execution.runner import (
     _prepare_query_plan,
 )
 from django_asklens.planning import PlanLimits, parse_and_validate_query_plan
-from tests.test_project.models import Customer, Order
+from tests.test_project.models import Account, Customer, Order
 
 pytestmark = pytest.mark.django_db
 
@@ -422,6 +422,24 @@ def test_filters_cover_in_contains_date_range_and_relative_dates(
     )
 
 
+def test_decimal_filter_and_result_preserve_string_precision(order_data: None) -> None:
+    """Decimal plan values/results never pass through binary float semantics."""
+
+    result = execute_test_plan(
+        {
+            "resource": "orders",
+            "intent": "list",
+            "filters": [{"field": "total", "op": "eq", "value": "100.00"}],
+            "select": ["total"],
+            "limit": 10,
+        },
+        registry=build_registry(),
+    )
+
+    assert result.rows == ({"total": Decimal("100.00")},)
+    assert result.to_dict(include_visualization=False)["data"] == [{"total": "100.00"}]
+
+
 def test_group_by_status_with_count_sum_and_order_by_metric(order_data: None) -> None:
     registry = build_registry()
     plan = validate_payload(
@@ -611,6 +629,134 @@ def test_min_and_max_metrics(order_data: None) -> None:
     )
 
 
+def test_empty_ungrouped_aggregate_returns_one_canonical_row() -> None:
+    """Empty aggregate behavior must not depend on grouped-query ORM behavior."""
+
+    result = execute_test_plan(
+        {
+            "resource": "orders",
+            "intent": "aggregate",
+            "metrics": [
+                {"metric": "order_count"},
+                {"metric": "revenue"},
+                {"metric": "avg_order_value"},
+                {"metric": "min_order_total"},
+                {"metric": "max_order_total"},
+            ],
+            "limit": 1,
+        },
+        registry=build_registry(),
+    )
+
+    assert result.rows == (
+        {
+            "order_count": 0,
+            "revenue": None,
+            "avg_order_value": None,
+            "min_order_total": None,
+            "max_order_total": None,
+        },
+    )
+    assert result.row_count == 1
+    assert [
+        (column.key, column.type, column.nullable) for column in result.columns
+    ] == [
+        ("order_count", "integer", False),
+        ("revenue", "decimal", True),
+        ("avg_order_value", "decimal", True),
+        ("min_order_total", "decimal", True),
+        ("max_order_total", "decimal", True),
+    ]
+    serialized = result.to_dict(include_visualization=False)
+    assert serialized["columns"][0]["nullable"] is False
+    assert serialized["columns"][1]["nullable"] is True
+    assert serialized["data"] == [
+        {
+            "order_count": 0,
+            "revenue": None,
+            "avg_order_value": None,
+            "min_order_total": None,
+            "max_order_total": None,
+        }
+    ]
+    assert "empty" not in serialized
+
+
+def test_empty_grouped_aggregate_returns_no_rows() -> None:
+    """A grouped aggregate has no synthetic group when the scope is empty."""
+
+    result = execute_test_plan(
+        {
+            "resource": "orders",
+            "intent": "aggregate",
+            "group_by": [{"field": "status"}],
+            "metrics": [{"metric": "order_count"}],
+            "limit": 10,
+        },
+        registry=build_registry(),
+    )
+
+    assert result.rows == ()
+    assert result.row_count == 0
+
+
+def test_neq_explicitly_excludes_null_rows() -> None:
+    """Nullable bindings must not inherit Django exclude() null behavior."""
+
+    customer = Customer.objects.create(name="Customer", email="customer@example.com")
+    first_account = Account.objects.create(name="Acme", slug="acme")
+    second_account = Account.objects.create(name="Beta", slug="beta")
+    excluded = Order.objects.create(
+        account=first_account,
+        customer=customer,
+        status="paid",
+        created_at=aware_datetime(2026, 1, 1),
+        total=Decimal("10.00"),
+    )
+    included = Order.objects.create(
+        account=second_account,
+        customer=customer,
+        status="paid",
+        created_at=aware_datetime(2026, 1, 2),
+        total=Decimal("20.00"),
+    )
+    Order.objects.create(
+        account=None,
+        customer=customer,
+        status="paid",
+        created_at=aware_datetime(2026, 1, 3),
+        total=Decimal("30.00"),
+    )
+    registry = CatalogRegistry()
+    registry.register(
+        model=Order,
+        name="orders",
+        scope_mode="global",
+        fields={
+            "id": {"binding": "id", "type": "integer", "nullable": False},
+            "account": {
+                "binding": "account__name",
+                "type": "string",
+                "nullable": True,
+            },
+        },
+    )
+
+    result = execute_test_plan(
+        {
+            "resource": "orders",
+            "intent": "list",
+            "filters": [{"field": "account", "op": "neq", "value": "Acme"}],
+            "select": ["id"],
+            "limit": 10,
+        },
+        registry=registry,
+    )
+
+    assert result.rows == ({"id": included.id},)
+    assert excluded.id not in {row["id"] for row in result.rows}
+
+
 def test_metric_query_without_group_by_returns_single_row(order_data: None) -> None:
     registry = build_registry()
     plan = validate_payload(
@@ -691,7 +837,10 @@ def test_compile_query_metadata_without_executing_result(order_data: None) -> No
     prepared = _prepare_query_plan(plan, context=context)
     compiled = _compile_prepared_query(prepared)
 
-    assert [column.key for column in compiled.columns] == ["id", "status"]
+    assert [(column.key, column.nullable) for column in compiled.columns] == [
+        ("id", False),
+        ("status", False),
+    ]
     assert compiled.key_map == {
         "_asklens_select_0": "id",
         "_asklens_select_1": "status",

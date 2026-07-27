@@ -157,9 +157,16 @@ def registered_orders() -> None:
             },
             "status": {
                 "binding": "status",
-                "type": "string",
+                "type": "enum",
                 "nullable": False,
                 "label": "Status",
+                "enum": {
+                    "type": "string",
+                    "values": [
+                        {"value": "paid", "label": "Paid", "aliases": ["settled"]},
+                        {"value": "pending", "label": "Pending"},
+                    ],
+                },
             },
             "created_at": {
                 "binding": "created_at",
@@ -598,7 +605,7 @@ def test_query_endpoint_returns_result_and_records_successful_run(
     ]
     assert response.data["visualization"] == {
         "type": "bar",
-        "x": {"field": "status", "label": "Status", "type": "string"},
+        "x": {"field": "status", "label": "Status", "type": "enum"},
         "y": {"field": "order_count", "label": "Order Count", "type": "integer"},
     }
 
@@ -665,6 +672,40 @@ def test_api_rejects_client_controlled_metric_backing_before_sql(
     assert response.data["error"] == {
         "code": "asklens.parse.invalid",
         "message": "The query plan could not be parsed.",
+    }
+
+
+def test_api_rejects_invalid_enum_alias_before_sql(
+    settings,
+    api_client: APIClient,
+    user,
+    registered_orders: None,
+    django_assert_num_queries,
+) -> None:
+    """The API shares canonical enum rejection without querying application rows."""
+
+    settings.DJANGO_ASKLENS = {"AUDIT_MODE": "disabled"}
+    plan = {
+        "resource": "orders",
+        "intent": "list",
+        "filters": [{"field": "status", "op": "eq", "value": "unknown"}],
+        "select": ["status"],
+        "limit": 10,
+    }
+    api_client.force_authenticate(user=user)
+    assert user.get_all_permissions() == set()
+
+    with django_assert_num_queries(0):
+        response = api_client.post(
+            "/asklens/query/",
+            {"question": "Submitted plan", "plan": plan},
+            format="json",
+        )
+
+    assert response.status_code == 400
+    assert response.data["error"] == {
+        "code": "asklens.plan.invalid",
+        "message": "The query plan is invalid.",
     }
 
 

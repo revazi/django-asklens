@@ -17,6 +17,11 @@ Use aggregate plans for counts, sums, averages, totals, trends, and "by ..."
 grouping questions.
 Use list plans only when the user asks to list records or fields.
 Use registered metric names exactly when a requested business concept matches a metric.
+Use filter operators only with compatible field types: contains/icontains only for
+strings; ordered comparisons only for integer, decimal, float, date, datetime,
+and time; date_range/last_n_days/last_n_months only for date or datetime; enum
+filters only with registered canonical values or aliases. Never use null with
+eq/neq; use isnull with a boolean value.
 Use date_trunc on date/datetime fields for day, week, month, quarter, or year buckets.
 Result keys are the exact select field names, group_by field names, and metric names.
 For date_trunc groupings, visualization axes and order_by fields must still

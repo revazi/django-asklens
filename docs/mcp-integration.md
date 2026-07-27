@@ -236,7 +236,9 @@ MCP clients often place tool results into an LLM context. For that reason, the a
 {
   "response_type": "query",
   "run_id": 42,
-  "columns": [{"key": "status", "label": "Status", "type": "string"}],
+  "columns": [
+    {"key": "status", "label": "Status", "type": "string", "nullable": false}
+  ],
   "data": [],
   "row_count": 2,
   "rows_omitted": true,

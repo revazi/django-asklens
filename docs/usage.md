@@ -36,9 +36,16 @@ register(
         },
         "status": {
             "binding": "status",
-            "type": "string",
+            "type": "enum",
             "nullable": False,
             "label": "Status",
+            "enum": {
+                "type": "string",
+                "values": [
+                    {"value": "pending", "label": "Pending"},
+                    {"value": "paid", "label": "Paid", "aliases": ["settled"]},
+                ],
+            },
         },
         "created_at": {
             "binding": "created_at",
@@ -125,7 +132,15 @@ A response includes visible resources, exposed fields, metrics, date fields, exa
     {
       "name": "orders",
       "label": "Orders",
-      "fields": [{"name": "status", "label": "Status", "can_group": true}],
+      "fields": [
+        {
+          "name": "status",
+          "label": "Status",
+          "type": "enum",
+          "can_group": true,
+          "operators": ["eq", "neq", "in", "isnull"]
+        }
+      ],
       "metrics": [
         {"name": "order_count", "label": "Number of orders", "result_type": "integer"}
       ],
@@ -151,7 +166,15 @@ A successful data-query response includes `response_type: "query"`, the question
   "question": "Show orders by status",
   "response_type": "query",
   "plan": {"resource": "orders", "intent": "aggregate", "limit": 10},
-  "columns": [{"key": "status", "label": "Status", "type": "string"}],
+  "columns": [
+    {"key": "status", "label": "Status", "type": "enum", "nullable": false},
+    {
+      "key": "order_count",
+      "label": "Number Of Orders",
+      "type": "integer",
+      "nullable": false
+    }
+  ],
   "data": [{"status": "paid", "order_count": 2}],
   "result_metadata": {
     "limit": 10,
@@ -160,14 +183,16 @@ A successful data-query response includes `response_type: "query"`, the question
   },
   "visualization": {
     "type": "bar",
-    "x": {"field": "status", "label": "Status", "type": "string"},
-    "y": {"field": "order_count", "label": "Number Of Orders", "type": "number"}
+    "x": {"field": "status", "label": "Status", "type": "enum"},
+    "y": {"field": "order_count", "label": "Number Of Orders", "type": "integer"}
   },
   "run_id": 1
 }
 ```
 
-For grouped aggregate/chart responses, `limit` caps returned groups/slices; for list responses it caps returned rows. AskLens fetches `limit + 1` internally and returns at most `limit`, so `result_metadata.truncated` is true only when another matching row/group exists. Ungrouped aggregates have effective limit one and always report `truncated: false`. This metadata is accurate truncation detection, not cursor pagination.
+For grouped aggregate/chart responses, `limit` caps returned groups/slices; for list responses it caps returned rows. AskLens fetches `limit + 1` internally and returns at most `limit`, so `result_metadata.truncated` is true only when another matching row/group exists. Ungrouped aggregates have effective limit one and always report `truncated: false`. On an empty scope they still return one row: count metrics are `0` and sum/average/minimum/maximum metrics are `null`; empty grouped aggregates return no rows. This metadata is accurate truncation detection, not cursor pagination.
+
+Column metadata includes canonical `type` and `nullable`. Decimal values are JSON strings, floats are JSON numbers, and unknown runtime objects are rejected rather than stringified. See [Registration](registration.md) for the per-type operator matrix and explicit enum aliases.
 
 Capability/help questions return a non-row response and do not execute a database query. In live mode, `query_help_source` is `semantic_provider` when the unified provider response chose capability help and suggestions passed catalog-reference plus locally synthesized plan validation:
 

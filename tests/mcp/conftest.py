@@ -65,9 +65,16 @@ def registered_orders() -> None:
             },
             "status": {
                 "binding": "status",
-                "type": "string",
+                "type": "enum",
                 "nullable": False,
                 "label": "Status",
+                "enum": {
+                    "type": "string",
+                    "values": [
+                        {"value": "paid", "label": "Paid", "aliases": ["settled"]},
+                        {"value": "pending", "label": "Pending"},
+                    ],
+                },
             },
             "created_at": {
                 "binding": "created_at",

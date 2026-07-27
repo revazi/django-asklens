@@ -169,7 +169,15 @@ Successful data responses include:
   "question": "Show orders by status",
   "response_type": "query",
   "plan": {"resource": "orders", "intent": "aggregate", "limit": 100},
-  "columns": [{"key": "status", "label": "Status", "type": "string"}],
+  "columns": [
+    {"key": "status", "label": "Status", "type": "string", "nullable": false},
+    {
+      "key": "order_count",
+      "label": "Orders",
+      "type": "integer",
+      "nullable": false
+    }
+  ],
   "data": [{"status": "paid", "order_count": 12}],
   "row_count": 1,
   "result_metadata": {
@@ -247,6 +255,8 @@ Live provider tests are opt-in and skipped by default. See [Provider configurati
 - Sensitive fields are hidden unless explicitly permissioned through the normal validation paths.
 - Plans are bounded before ORM compilation by UTF-8 bytes, filters, selected/order/group/metric terms, relationship depth and unique edges, `in`/total filter values, and returned rows/groups.
 - List ordering uses semantic resource defaults plus a private unique row identity; grouped queries append group-key tie-breakers, nulls sort last, and `truncated` is derived by fetching one extra row/group.
+- Filter operators and JSON values are checked against canonical field types before scope resolution; decimals remain strings, explicit enum aliases are server-registered, and Django choices are not auto-exposed.
+- Result columns include type/nullability metadata. Empty aggregates and decimal serialization are deterministic, and unsupported runtime values fail instead of being stringified.
 - Provider and submitted-plan output is untrusted and validated by the normal API, admin, and MCP orchestration before execution.
 - Use `django_asklens.execution.execute_plan()` for Python execution; it revalidates mappings and existing `QueryPlan` objects for the current request. `run_query_plan()` is a deprecated wrapper that also requires the current request. The compiler and compiled-query executor are internal and are not public exports.
 - AskLens executes read-only Django ORM queries only.
