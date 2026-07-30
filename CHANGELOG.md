@@ -20,6 +20,7 @@ The project is alpha and APIs may change before a stable release.
 - Added explicit enum definitions with string/integer canonical values, safe labels, and accepted aliases; enum metadata is catalog-visible only when deliberately registered.
 - Added a canonical per-type filter-operator matrix to permission-scoped capabilities and result-column nullability metadata.
 - Added required explicit server-owned IANA timezone registration for every resource; the timezone is safe catalog/capability metadata but cannot be supplied by a plan.
+- Added optional presentation envelopes using `{"kind": "table|metric|bar|line|pie", ...}` outside QueryPlan and normalized them only against completed result columns.
 
 ### Changed
 
@@ -40,12 +41,14 @@ The project is alpha and APIs may change before a stable release.
 - Result serialization now preserves decimal strings, verifies canonical runtime types, declared columns, nullability, and registered enum outputs, and rejects unsupported objects instead of stringifying them. Callers that directly construct the alpha `ResultColumn` helper must add `nullable=True|False`; the legacy broad `number` label is no longer canonical.
 - The compact provider response schema now correctly requests semantic-name-only metric objects.
 - Temporal filters now require strict ISO dates, offset-free local times, and offset-bearing RFC 3339 datetimes. Date ranges are inclusive, datetime ranges are half-open, relative filters use the injected aware clock with an exclusive upper bound at `now`, rolling days are exact 24-hour durations, calendar months use resource-local wall time with month-end/DST handling, and date buckets use the explicit resource timezone with Monday week starts.
+- Provider and dummy responses now separate `query_plan` from optional `presentation`. API/MCP callers use `presentation` and `include_presentation`; presentation cannot change authorization, scope, compilation, ordering, limits, or returned values.
 
 ### Removed
 
 - Removed `compile_query_plan`, `CompiledQuery`, and `execute_query` from public package exports. Python callers must use `execute_plan()`; there is no supported unsafe execution API.
 - Removed the `include_internal=True` catalog option; public catalog serialization no longer exposes Django model labels.
 - Removed the standalone `create_query_run` compatibility export so supported execution cannot bypass the configured privacy-aware audit policy/sink.
+- Removed `visualization` from QueryPlan, compiler state, core `QueryResult`, and core result serialization, along with the inert `DEFAULT_VISUALIZATION` setting. Legacy plan input is rejected with pointer `/visualization`; migrate it to the separate presentation envelope.
 
 ### Security
 

@@ -10,8 +10,9 @@ class QueryRequestSerializer(serializers.Serializer):
 
     question = serializers.CharField(allow_blank=False, trim_whitespace=True)
     debug = serializers.BooleanField(default=False, required=False)
-    include_visualization = serializers.BooleanField(default=True, required=False)
+    include_presentation = serializers.BooleanField(default=True, required=False)
     plan = serializers.JSONField(required=False)
+    presentation = serializers.JSONField(required=False)
 
 
 class SemanticQueryRunSerializer(serializers.ModelSerializer):

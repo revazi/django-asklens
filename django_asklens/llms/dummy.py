@@ -8,15 +8,15 @@ from typing import Any
 from django_asklens.exceptions import LLMProviderError
 from django_asklens.llms.base import LLMMessage
 
-type PlanPayload = Mapping[str, Any]
+type ProviderPayload = Mapping[str, Any]
 
 
 @dataclass(frozen=True, slots=True)
 class DummyProvider:
-    """Return preconfigured QueryPlan payloads without network calls."""
+    """Return preconfigured provider envelopes without network calls."""
 
-    plans: Mapping[str, PlanPayload] = field(default_factory=dict)
-    default_plan: PlanPayload | None = None
+    plans: Mapping[str, ProviderPayload] = field(default_factory=dict)
+    default_plan: ProviderPayload | None = None
 
     def complete_json(
         self,
@@ -24,7 +24,7 @@ class DummyProvider:
         messages: Sequence[LLMMessage],
         schema: Mapping[str, Any],
     ) -> Mapping[str, Any]:
-        """Return a deterministic plan for the latest user question."""
+        """Return a deterministic provider envelope for the latest question."""
 
         question = extract_question(messages)
         if question in self.plans:
@@ -48,8 +48,8 @@ def get_llm_provider():
     return get_configured_provider()
 
 
-def get_dummy_plans_setting() -> Mapping[str, PlanPayload]:
-    """Return deterministic dummy plans configured in Django settings."""
+def get_dummy_plans_setting() -> Mapping[str, ProviderPayload]:
+    """Return deterministic dummy provider envelopes from Django settings."""
 
     from django_asklens.settings import get_asklens_setting
 
@@ -70,7 +70,7 @@ def extract_question(messages: Sequence[LLMMessage]) -> str:
     raise LLMProviderError(msg)
 
 
-def copy_plan_payload(payload: PlanPayload) -> dict[str, Any]:
-    """Return a deep copied mutable dict for downstream validation."""
+def copy_plan_payload(payload: ProviderPayload) -> dict[str, Any]:
+    """Return a deep-copied mutable provider envelope for validation."""
 
     return dict(deepcopy(payload))

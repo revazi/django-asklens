@@ -142,12 +142,18 @@ DJANGO_ASKLENS = {
     "LLM_BACKEND": "dummy",
     "DUMMY_PLANS": {
         "Show orders by status": {
-            "resource": "orders",
-            "intent": "aggregate",
-            "group_by": [{"field": "status"}],
-            "metrics": [{"metric": "order_count"}],
-            "limit": 100,
-            "visualization": {"type": "bar", "x": "status", "y": "order_count"},
+            "query_plan": {
+                "resource": "orders",
+                "intent": "aggregate",
+                "group_by": [{"field": "status"}],
+                "metrics": [{"metric": "order_count"}],
+                "limit": 100,
+            },
+            "presentation": {
+                "kind": "bar",
+                "x": "status",
+                "y": "order_count",
+            },
         }
     },
 }
@@ -186,7 +192,7 @@ Successful data responses include:
     "limit_scope": "groups",
     "truncated": false
   },
-  "visualization": {"type": "bar"}
+  "presentation": {"kind": "bar"}
 }
 ```
 
@@ -287,6 +293,7 @@ Review the [security checklist](docs/security-checklist.md) and [production chec
 
 - [Installation](docs/installation.md)
 - [Usage guide](docs/usage.md)
+- [Migrating from 0.1 alpha to 0.2 alpha](docs/migrating-0.1-to-0.2.md)
 - [Core Python API](docs/core-python-api.md)
 - [Custom UI guide](docs/custom-ui.md)
 - [Registration API](docs/registration.md)

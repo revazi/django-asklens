@@ -41,7 +41,16 @@ def mcp_request(settings, user):
             "asklens_permissions",
             (),
         ),
-        "DUMMY_PLANS": {"Show orders by status": valid_aggregate_plan()},
+        "DUMMY_PLANS": {
+            "Show orders by status": {
+                "query_plan": valid_aggregate_plan(),
+                "presentation": {
+                    "kind": "bar",
+                    "x": "status",
+                    "y": "order_count",
+                },
+            }
+        },
     }
     return SimpleNamespace(user=user, asklens_permissions=frozenset())
 

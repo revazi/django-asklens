@@ -245,22 +245,26 @@ def asklens_execute_plan(
     *,
     question: str = DEFAULT_MCP_PLAN_QUESTION,
     include_rows: bool = False,
-    include_visualization: bool = True,
+    include_presentation: bool = True,
+    presentation: Mapping[str, Any] | None = None,
     debug: bool = False,
 ) -> dict[str, Any]:
     """Validate and execute an MCP/client-produced QueryPlan.
 
     Rows are omitted from the returned payload by default. The database query is
     still executed through the normal AskLens path so row counts, audit records,
-    limits, and visualization hints are accurate.
+    limits and result metadata are accurate. Presentation remains separate.
     """
 
     outcome = execute_asklens_query_request(
         request,
         question=question,
         debug=debug,
-        include_visualization=include_visualization,
+        include_presentation=include_presentation,
         provided_plan=dict(plan) if isinstance(plan, Mapping) else plan,
+        provided_presentation=(
+            dict(presentation) if presentation is not None else None
+        ),
     )
     return apply_mcp_response_policy(outcome, include_rows=include_rows)
 
@@ -270,7 +274,8 @@ def asklens_query(
     question: str,
     *,
     include_rows: bool = False,
-    include_visualization: bool = True,
+    include_presentation: bool = True,
+    presentation: Mapping[str, Any] | None = None,
     debug: bool = False,
     provided_plan: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
@@ -286,8 +291,11 @@ def asklens_query(
         request,
         question=question,
         debug=debug,
-        include_visualization=include_visualization,
+        include_presentation=include_presentation,
         provided_plan=dict(provided_plan) if provided_plan is not None else None,
+        provided_presentation=(
+            dict(presentation) if presentation is not None else None
+        ),
     )
     return apply_mcp_response_policy(outcome, include_rows=include_rows)
 

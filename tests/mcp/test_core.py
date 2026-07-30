@@ -348,10 +348,16 @@ def test_mcp_execute_plan_omits_rows_by_default(
 ) -> None:
     """MCP execution audits and returns metadata while omitting rows by default."""
 
-    payload = asklens_execute_plan(mcp_request, valid_aggregate_plan())
+    payload = asklens_execute_plan(
+        mcp_request,
+        valid_aggregate_plan(),
+        presentation={"kind": "bar", "x": "status", "y": "order_count"},
+    )
 
     assert payload["response_type"] == "query"
     assert payload["row_count"] == 2
+    assert payload["presentation"]["kind"] == "bar"
+    assert "presentation" not in payload["plan"]
     assert payload["columns"] == [
         {"key": "status", "label": "Status", "type": "enum", "nullable": False},
         {
@@ -370,6 +376,22 @@ def test_mcp_execute_plan_omits_rows_by_default(
     run = SemanticQueryRun.objects.get()
     assert run.question == ""
     assert run.plan == {"resource": "orders", "intent": "aggregate"}
+
+
+def test_mcp_execute_plan_can_omit_separate_presentation(
+    registered_orders: None,
+    order_data: None,
+    mcp_request,
+) -> None:
+    payload = asklens_execute_plan(
+        mcp_request,
+        valid_aggregate_plan(),
+        include_presentation=False,
+        presentation={"kind": "bar", "x": "status", "y": "order_count"},
+    )
+
+    assert payload["response_type"] == "query"
+    assert "presentation" not in payload
 
 
 def test_mcp_execute_plan_returns_safe_error_for_rejected_plan(
@@ -455,7 +477,6 @@ def test_mcp_execute_plan_caps_returned_rows_when_rows_are_allowed(
         "select": ["id", "status"],
         "order_by": [{"field": "id", "direction": "asc"}],
         "limit": 10,
-        "visualization": {"type": "table"},
     }
 
     payload = asklens_execute_plan(mcp_request, plan, include_rows=True)
@@ -480,5 +501,6 @@ def test_mcp_query_wrapper_uses_existing_orchestration_and_row_policy(
 
     assert payload["response_type"] == "query"
     assert payload["row_count"] == 2
+    assert payload["presentation"]["kind"] == "bar"
     assert payload["data"] == []
     assert payload["rows_omitted"] is True

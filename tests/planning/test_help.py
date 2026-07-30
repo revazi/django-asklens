@@ -150,7 +150,6 @@ def aggregate_help_plan_payload(**updates: Any) -> dict[str, Any]:
         "select": [],
         "order_by": [{"metric": "order_count", "direction": "desc"}],
         "limit": 50,
-        "visualization": {"type": "bar", "x": "status", "y": "order_count"},
     }
     payload.update(updates)
     return payload
@@ -162,7 +161,6 @@ def trend_help_plan_payload() -> dict[str, Any]:
     return aggregate_help_plan_payload(
         group_by=[{"field": "created_at", "date_trunc": "month"}],
         order_by=[{"field": "created_at", "direction": "asc"}],
-        visualization={"type": "line", "x": "created_at", "y": "order_count"},
     )
 
 

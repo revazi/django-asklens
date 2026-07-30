@@ -96,7 +96,7 @@ Every resource must resolve to `global` or `context_scoped`. `DEFAULT_SCOPE_MODE
 
 ## 2. Configure a provider
 
-AskLens ships with `DummyProvider`, which maps exact questions to deterministic `QueryPlan` payloads. It is useful for tests, local demos, and evaluation fixtures.
+AskLens ships with `DummyProvider`, which maps exact questions to deterministic envelopes containing `query_plan` plus optional `presentation`. It is useful for tests, local demos, and evaluation fixtures.
 
 ```python
 DJANGO_ASKLENS = {
@@ -104,13 +104,19 @@ DJANGO_ASKLENS = {
     "LLM_BACKEND": "dummy",
     "DUMMY_PLANS": {
         "Show orders by status": {
-            "resource": "orders",
-            "intent": "aggregate",
-            "group_by": [{"field": "status"}],
-            "metrics": [{"metric": "order_count"}],
-            "order_by": [{"metric": "order_count", "direction": "desc"}],
-            "limit": 100,
-            "visualization": {"type": "bar", "x": "status", "y": "order_count"},
+            "query_plan": {
+                "resource": "orders",
+                "intent": "aggregate",
+                "group_by": [{"field": "status"}],
+                "metrics": [{"metric": "order_count"}],
+                "order_by": [{"metric": "order_count", "direction": "desc"}],
+                "limit": 100,
+            },
+            "presentation": {
+                "kind": "bar",
+                "x": "status",
+                "y": "order_count",
+            },
         }
     },
 }
@@ -161,7 +167,7 @@ Content-Type: application/json
 {"question": "Show orders by status"}
 ```
 
-A successful data-query response includes `response_type: "query"`, the question, validated plan, column metadata, normalized rows, limit metadata, visualization hint, timing, and audit run id. In live mode, deciding between data query and capability help plus producing the data `QueryPlan` happens in one provider call. Advanced clients may submit a previously returned `query_help.suggestions[].plan` with the question; AskLens revalidates the plan against the current request permissions and executes it directly instead of making another LLM call.
+A successful data-query response includes `response_type: "query"`, the question, validated plan, column metadata, normalized rows, limit metadata, optional presentation, timing, and audit run id. Presentation is outside QueryPlan and cannot affect authorization, scope, compilation, ordering, limits, or returned values. In live mode, deciding between data query and capability help plus producing the data `QueryPlan` and optional presentation happens in one provider call. Advanced clients may submit a previously returned `query_help.suggestions[].plan` with the question; AskLens revalidates the plan against current request permissions and executes it directly instead of making another LLM call.
 
 ```json
 {
@@ -183,8 +189,8 @@ A successful data-query response includes `response_type: "query"`, the question
     "limit_scope": "groups",
     "truncated": false
   },
-  "visualization": {
-    "type": "bar",
+  "presentation": {
+    "kind": "bar",
     "x": {"field": "status", "label": "Status", "type": "enum"},
     "y": {"field": "order_count", "label": "Number Of Orders", "type": "integer"}
   },

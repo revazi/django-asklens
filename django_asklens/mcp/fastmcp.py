@@ -100,7 +100,8 @@ def create_fastmcp_server(
         plan: dict[str, Any],
         include_rows: bool = False,
         question: str = "MCP submitted QueryPlan",
-        include_visualization: bool = True,
+        include_presentation: bool = True,
+        presentation: dict[str, Any] | None = None,
         ctx: Any = current_context,
     ) -> dict[str, Any]:
         """Validate and execute an untrusted QueryPlan through safe ORM."""
@@ -110,7 +111,8 @@ def create_fastmcp_server(
             plan,
             include_rows=include_rows,
             question=question,
-            include_visualization=include_visualization,
+            include_presentation=include_presentation,
+            presentation=presentation,
         )
 
     if toolset.expose_query_tool:
@@ -119,7 +121,8 @@ def create_fastmcp_server(
         def query(
             question: str,
             include_rows: bool = False,
-            include_visualization: bool = True,
+            include_presentation: bool = True,
+            presentation: dict[str, Any] | None = None,
             provided_plan: dict[str, Any] | None = None,
             ctx: Any = current_context,
         ) -> dict[str, Any]:
@@ -129,7 +132,8 @@ def create_fastmcp_server(
                 ctx,
                 question,
                 include_rows=include_rows,
-                include_visualization=include_visualization,
+                include_presentation=include_presentation,
+                presentation=presentation,
                 provided_plan=provided_plan,
             )
 

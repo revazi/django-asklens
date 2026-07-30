@@ -144,12 +144,15 @@ payload = {
     "metrics": [{"metric": "order_count"}],
     "order_by": [{"metric": "order_count", "direction": "desc"}],
     "limit": 10,
-    "visualization": {"type": "bar", "x": "status", "y": "order_count"},
 }
 
 result = execute_plan(payload, request=request)
 response_payload = result.to_dict()
 ```
+
+`QueryResult.to_dict()` contains only core columns, rows, timing, and limit
+metadata. Optional display metadata is a separate presentation envelope and is
+never accepted by `execute_plan()` as part of QueryPlan.
 
 `execute_plan(...)` repeats current semantic validation and then resolves the resource's fail-closed scope policy. `global` uses the registered model manager only when deliberately declared on that resource. `context_scoped` may be inherited from `DEFAULT_SCOPE_MODE`, but still requires the current request and a trusted provider returning an unevaluated `QuerySet` for the registered model. Missing or invalid scope fails with `asklens.scope.unavailable` and never broadens to the default manager.
 
@@ -232,9 +235,10 @@ permissions = get_request_permissions(request)
 planner_result = plan_question("Show orders by status", permissions=permissions)
 result = execute_plan(planner_result.plan, request=request)
 payload = result.to_dict()
+presentation = planner_result.presentation  # Separate; never executable.
 ```
 
-The provider result is still untrusted: `plan_question(...)` validates provider output before returning a plan, and `execute_plan(...)` deliberately validates it again for the current request. The returned object remains an ordinary `QueryPlan`, not an authorization token.
+The provider result is still untrusted: `plan_question(...)` validates provider output before returning a plan, and `execute_plan(...)` deliberately validates it again for the current request. The returned plan remains an ordinary `QueryPlan`, not an authorization token. Optional `planner_result.presentation` is structurally separate and cannot affect query execution.
 
 ## Shared query/help orchestration
 
@@ -246,7 +250,7 @@ from django_asklens.querying import execute_asklens_query_request
 response = execute_asklens_query_request(
     request,
     question="What can I query?",
-    include_visualization=True,
+    include_presentation=True,
 )
 
 if response.response_type == "capabilities":

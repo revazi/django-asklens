@@ -5,9 +5,11 @@ import pytest
 from django_asklens.exceptions import PlanValidationError
 from django_asklens.planning import (
     SUPPORTED_FILTER_OPERATORS,
-    SUPPORTED_VISUALIZATION_TYPES,
+    SUPPORTED_PRESENTATION_KINDS,
+    PresentationSpec,
     QueryPlan,
     get_query_plan_json_schema,
+    parse_presentation,
     parse_query_plan,
 )
 
@@ -24,7 +26,6 @@ def valid_aggregate_plan_payload() -> dict[str, object]:
         "select": [],
         "order_by": [{"metric": "order_count", "direction": "desc"}],
         "limit": 50,
-        "visualization": {"type": "bar", "x": "status", "y": "order_count"},
     }
 
 
@@ -32,7 +33,7 @@ def test_supported_constants_and_json_schema_are_available() -> None:
     schema = get_query_plan_json_schema()
 
     assert "last_n_days" in SUPPORTED_FILTER_OPERATORS
-    assert "bar" in SUPPORTED_VISUALIZATION_TYPES
+    assert "bar" in SUPPORTED_PRESENTATION_KINDS
     assert schema["title"] == "QueryPlan"
     assert "resource" in schema["properties"]
     filter_schema = schema["$defs"]["FilterSpec"]
@@ -47,7 +48,7 @@ def test_valid_query_plan_parses_to_immutable_typed_model() -> None:
     assert plan.resource == "orders"
     assert plan.intent == "aggregate"
     assert plan.filters[0].op == "last_n_days"
-    assert plan.visualization.type == "bar"
+    assert "visualization" not in QueryPlan.model_fields
 
     with pytest.raises(TypeError):
         plan.filters[0] = plan.filters[0]
@@ -152,26 +153,26 @@ def test_filter_operator_values_are_strictly_validated() -> None:
         parse_query_plan(payload)
 
 
-def test_visualization_axes_are_strict_for_type() -> None:
+def test_legacy_visualization_is_rejected_with_migration_pointer() -> None:
     payload = valid_aggregate_plan_payload()
-    payload["visualization"] = {"type": "table", "x": "status"}
+    payload["visualization"] = {"type": "bar", "x": "status", "y": "order_count"}
 
-    plan = parse_query_plan(payload)
-
-    assert plan.visualization.type == "table"
-    assert plan.visualization.x == "status"
-
-    payload["visualization"] = {"type": "metric", "x": "status", "y": "order_count"}
-
-    with pytest.raises(PlanValidationError, match="must not define x"):
+    with pytest.raises(PlanValidationError, match="separate presentation") as caught:
         parse_query_plan(payload)
 
+    assert caught.value.pointer == "/visualization"
 
-def test_metric_visualization_can_omit_y_for_semantic_inference() -> None:
-    payload = valid_aggregate_plan_payload()
-    payload["visualization"] = {"type": "metric"}
 
-    plan = parse_query_plan(payload)
+def test_presentation_is_separate_and_strict() -> None:
+    presentation = parse_presentation(
+        {"kind": "bar", "x": "status", "y": "order_count"}
+    )
 
-    assert plan.visualization.type == "metric"
-    assert plan.visualization.y is None
+    assert isinstance(presentation, PresentationSpec)
+    assert presentation.kind == "bar"
+    assert presentation.x == "status"
+
+    with pytest.raises(PlanValidationError, match="must not define axes") as caught:
+        parse_presentation({"kind": "table", "x": "status"})
+
+    assert caught.value.pointer == "/presentation"

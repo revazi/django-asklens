@@ -102,7 +102,7 @@ A data-query response includes `response_type: "query"`, normalized rows, column
     "truncated": false
   },
   "duration_ms": 18,
-  "visualization": {"type": "bar", "x": {"field": "status"}, "y": {"field": "order_count"}}
+  "presentation": {"kind": "bar", "x": {"field": "status"}, "y": {"field": "order_count"}}
 }
 ```
 
@@ -135,12 +135,12 @@ function renderTable(response) {
 }
 ```
 
-Render charts with any charting library by mapping `visualization.x.field` and `visualization.y.field` to values in `data`:
+Render charts with any charting library by mapping `presentation.x.field` and `presentation.y.field` to values in `data`:
 
 ```js
 function toBarSeries(response) {
-  const x = response.visualization?.x?.field;
-  const y = response.visualization?.y?.field;
+  const x = response.presentation?.x?.field;
+  const y = response.presentation?.y?.field;
   if (!x || !y) return null;
   return response.data.map((row) => ({
     label: row[x],
@@ -149,23 +149,23 @@ function toBarSeries(response) {
 }
 ```
 
-## Visualization is only a hint
+## Presentation is separate and optional
 
-`visualization` is a display hint, not a required renderer contract. Your UI can:
+`presentation` is display metadata outside QueryPlan, not an executable renderer contract. It cannot affect authorization, scope, compilation, ordering, limits, or returned values. Your UI can:
 
 - ignore it and always render a table
 - use it to choose a chart type
 - replace it with your own chart rules
-- request no visualization hint when you only need serialized data
+- request no presentation when you only need serialized data
 
 ```http
 POST /asklens/query/
 Content-Type: application/json
 
-{"question": "Show orders by status", "include_visualization": false}
+{"question": "Show orders by status", "include_presentation": false}
 ```
 
-When `include_visualization` is false, the response still includes `columns`, `data`, `row_count`, and audit metadata.
+When `include_presentation` is false, the response still includes `columns`, `data`, `row_count`, and audit metadata.
 
 ## Handle help responses
 

@@ -84,7 +84,8 @@ class AskLensMCPToolSet:
         *,
         question: str = DEFAULT_MCP_PLAN_QUESTION,
         include_rows: bool | None = None,
-        include_visualization: bool = True,
+        include_presentation: bool = True,
+        presentation: Mapping[str, Any] | None = None,
     ) -> dict[str, Any]:
         """Validate and execute a client-produced QueryPlan."""
 
@@ -93,7 +94,8 @@ class AskLensMCPToolSet:
             plan,
             question=question,
             include_rows=self._resolve_include_rows(include_rows),
-            include_visualization=include_visualization,
+            include_presentation=include_presentation,
+            presentation=presentation,
         )
 
     def asklens_query(
@@ -102,7 +104,8 @@ class AskLensMCPToolSet:
         question: str,
         *,
         include_rows: bool | None = None,
-        include_visualization: bool = True,
+        include_presentation: bool = True,
+        presentation: Mapping[str, Any] | None = None,
         provided_plan: Mapping[str, Any] | None = None,
     ) -> dict[str, Any]:
         """Run optional AskLens-managed question orchestration.
@@ -124,7 +127,8 @@ class AskLensMCPToolSet:
             self.request_factory(context),
             question,
             include_rows=self._resolve_include_rows(include_rows),
-            include_visualization=include_visualization,
+            include_presentation=include_presentation,
+            presentation=presentation,
             provided_plan=provided_plan,
         )
 

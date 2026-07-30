@@ -167,8 +167,8 @@ class ResultSerializationError(ExecutionError):
     """Raised when result data cannot be serialized safely."""
 
 
-class VisualizationHintError(ResultSerializationError):
-    """Raised when visualization hint metadata is invalid."""
+class PresentationHintError(ResultSerializationError):
+    """Raised when optional presentation metadata is invalid."""
 
 
 def safe_json_pointer(pointer: str | None) -> str | None:

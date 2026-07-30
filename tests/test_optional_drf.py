@@ -40,12 +40,14 @@ settings.configure(
         "LLM_BACKEND": "dummy",
         "DUMMY_PLANS": {
             "List users": {
-                "resource": "users",
-                "intent": "list",
-                "select": ["username"],
-                "order_by": [{"field": "username", "direction": "asc"}],
-                "limit": 10,
-                "visualization": {"type": "table"},
+                "query_plan": {
+                    "resource": "users",
+                    "intent": "list",
+                    "select": ["username"],
+                    "order_by": [{"field": "username", "direction": "asc"}],
+                    "limit": 10,
+                },
+                "presentation": {"kind": "table"},
             }
         },
     },
@@ -113,7 +115,6 @@ query_result = execute_plan(validated_plan, request=request)
 serialized = serialize_query_result(
     columns=query_result.columns,
     rows=query_result.rows,
-    visualization=validated_plan.visualization.model_dump(mode="json"),
 )
 
 assert serialized["data"] == [{"username": "alice"}, {"username": "bob"}]

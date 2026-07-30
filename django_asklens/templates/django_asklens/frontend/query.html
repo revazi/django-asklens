@@ -1402,7 +1402,7 @@
         renderPill(`Run #${payload.run_id || "—"}`),
         renderPill(`${payload.row_count ?? 0} rows`),
         renderPill(`${payload.duration_ms ?? "—"} ms`),
-        renderPill(`Display hint: ${payload.visualization?.type || "table"}`),
+        renderPill(`Presentation: ${payload.presentation?.kind || "table"}`),
       );
       wrapper.appendChild(meta);
       wrapper.appendChild(renderQueryActions(question, payload.plan || null));
@@ -1685,8 +1685,8 @@
         return null;
       }
       const columns = payload.columns || [];
-      const xField = getHintField(payload.visualization?.x) || getLabelColumns(payload)[0]?.key;
-      const yField = getHintField(payload.visualization?.y) || getNumericColumns(payload)[0]?.key;
+      const xField = getHintField(payload.presentation?.x) || getLabelColumns(payload)[0]?.key;
+      const yField = getHintField(payload.presentation?.y) || getNumericColumns(payload)[0]?.key;
       if (!xField || !yField || rows.length < 2) {
         return null;
       }

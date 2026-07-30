@@ -3,7 +3,7 @@
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any, Literal, Never
+from typing import Literal, Never
 
 from django.db.models import F, QuerySet
 from django.db.models.aggregates import Aggregate
@@ -57,7 +57,6 @@ class _CompiledQuery:
     queryset: QuerySet
     columns: tuple[ResultColumn, ...]
     key_map: Mapping[str, str]
-    visualization: dict[str, Any]
     limit: int
     limit_scope: LimitScope
     detects_truncation: bool
@@ -123,7 +122,6 @@ def _compile_list_query(
             field_column(resource.fields[field_name]) for field_name in plan.select
         ),
         key_map=key_map,
-        visualization=plan.visualization.model_dump(exclude_none=True),
         limit=plan.limit,
         limit_scope="rows",
         detects_truncation=True,
@@ -178,7 +176,6 @@ def _compile_aggregate_query(
         queryset=compiled,
         columns=build_aggregate_columns(resource, plan.group_by, plan.metrics),
         key_map=key_map,
-        visualization=plan.visualization.model_dump(exclude_none=True),
         limit=effective_limit,
         limit_scope="groups",
         detects_truncation=detects_truncation,

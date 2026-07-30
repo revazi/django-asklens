@@ -29,7 +29,6 @@ DEFAULTS: dict[str, Any] = {
     "PROMPT_RESOURCE_SHORTLIST_LIMIT": 0,
     "ALLOW_RAW_SQL": False,
     "SEND_SAMPLE_ROWS_TO_LLM": False,
-    "DEFAULT_VISUALIZATION": "table",
     "API_PERMISSION_CLASSES": ["django_asklens.access.IsAuthenticated"],
     "REQUEST_PERMISSIONS_GETTER": None,
     "AUDIT_MODE": "database",

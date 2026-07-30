@@ -22,7 +22,6 @@ def valid_aggregate_plan() -> dict[str, Any]:
         "metrics": [{"metric": "order_count"}],
         "order_by": [{"metric": "order_count", "direction": "desc"}],
         "limit": 10,
-        "visualization": {"type": "bar", "x": "status", "y": "order_count"},
     }
 
 
@@ -34,5 +33,4 @@ def sensitive_list_plan() -> dict[str, Any]:
         "intent": "list",
         "select": ["customer.email"],
         "limit": 10,
-        "visualization": {"type": "table"},
     }

@@ -56,8 +56,12 @@ def smoke_core_install() -> None:
         public_error_payload,
     )
     from django_asklens.mcp import AskLensMCPToolSet
-    from django_asklens.planning import parse_query_plan
-    from django_asklens.results import serialize_rows
+    from django_asklens.planning import (
+        get_query_plan_json_schema,
+        parse_presentation,
+        parse_query_plan,
+    )
+    from django_asklens.results import normalize_presentation, serialize_rows
     from django_asklens.settings import get_asklens_setting
 
     request = SimpleNamespace(user=SimpleNamespace(is_authenticated=True))
@@ -199,6 +203,20 @@ def smoke_core_install() -> None:
     assert "binding" not in str(resource_metadata)
     assert resource.get_scope_queryset(request).model is user_model
 
+    query_schema = get_query_plan_json_schema()
+    assert "visualization" not in query_schema["properties"]
+    presentation = parse_presentation({"kind": "metric", "y": "user_count"})
+    assert presentation is not None and presentation.kind == "metric"
+    assert (
+        normalize_presentation(
+            presentation.model_dump(mode="json", exclude_none=True),
+            columns=(
+                compiler_package.ResultColumn("user_count", "Users", "integer", False),
+            ),
+        )["kind"]
+        == "metric"
+    )
+
     parsed_metric_plan = parse_query_plan(
         {
             "resource": "users",
@@ -219,6 +237,20 @@ def smoke_core_install() -> None:
         pass
     else:
         raise AssertionError("QueryPlan accepted client-controlled metric backing")
+
+    try:
+        parse_query_plan(
+            {
+                "resource": "users",
+                "intent": "list",
+                "select": ["id"],
+                "visualization": {"type": "table"},
+            }
+        )
+    except PlanValidationError as exc:
+        assert exc.pointer == "/visualization"
+    else:
+        raise AssertionError("QueryPlan accepted legacy visualization metadata")
 
     assert (
         parse_query_plan(

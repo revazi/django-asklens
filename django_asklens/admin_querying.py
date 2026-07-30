@@ -18,7 +18,7 @@ def execute_admin_query(
         request,
         question=question,
         debug=False,
-        include_visualization=True,
+        include_presentation=True,
     )
     if outcome.response_type == "error":
         error = outcome.payload.get("error", {})
@@ -50,7 +50,7 @@ def build_admin_query_result(result: dict[str, Any]) -> dict[str, Any]:
         ],
         "row_count": result["row_count"],
         "duration_ms": result["duration_ms"],
-        "visualization": result.get("visualization"),
+        "presentation": result.get("presentation"),
     }
 
 

@@ -45,7 +45,16 @@ def mcp_settings(settings) -> None:
         "REQUEST_PERMISSIONS_GETTER": (
             "tests.test_project.mcp.get_asklens_mcp_request_permissions"
         ),
-        "DUMMY_PLANS": {"Show orders by status": valid_aggregate_plan()},
+        "DUMMY_PLANS": {
+            "Show orders by status": {
+                "query_plan": valid_aggregate_plan(),
+                "presentation": {
+                    "kind": "bar",
+                    "x": "status",
+                    "y": "order_count",
+                },
+            }
+        },
     }
 
 
@@ -159,7 +168,6 @@ def valid_aggregate_plan() -> dict[str, Any]:
         "metrics": [{"metric": "order_count"}],
         "order_by": [{"metric": "order_count", "direction": "desc"}],
         "limit": 10,
-        "visualization": {"type": "bar", "x": "status", "y": "order_count"},
     }
 
 
@@ -171,7 +179,6 @@ def sensitive_plan() -> dict[str, Any]:
         "intent": "list",
         "select": ["customer.email"],
         "limit": 10,
-        "visualization": {"type": "table"},
     }
 
 

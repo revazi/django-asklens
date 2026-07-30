@@ -11,14 +11,19 @@ from django_asklens.exceptions import (
     PublicErrorPayload,
     public_error_payload,
 )
-from django_asklens.execution import execute_plan
+from django_asklens.execution import QueryResult, execute_plan
 from django_asklens.execution.audit import (
     _audit_external_rejection,
     _execution_audit_content,
 )
 from django_asklens.models import SemanticQueryRun
 from django_asklens.permissions import get_request_permissions
-from django_asklens.planning import plan_asklens_response, plan_question
+from django_asklens.planning import (
+    PresentationSpec,
+    parse_presentation,
+    plan_asklens_response,
+    plan_question,
+)
 from django_asklens.planning.help import (
     QueryHelp,
     build_deterministic_query_help,
@@ -31,6 +36,7 @@ from django_asklens.planning.intents import (
     is_capabilities_fallback_question,
     route_question_intent,
 )
+from django_asklens.results import normalize_presentation
 from django_asklens.settings import get_asklens_setting
 
 QueryResponseType = Literal["query", "capabilities", "error"]
@@ -69,8 +75,9 @@ def execute_asklens_query_request(
     *,
     question: str,
     debug: bool = False,
-    include_visualization: bool = True,
+    include_presentation: bool = True,
     provided_plan: str | bytes | dict[str, Any] | None = None,
+    provided_presentation: dict[str, Any] | None = None,
 ) -> AskLensQueryResponse:
     """Plan, execute, help, and audit one AskLens request.
 
@@ -84,6 +91,7 @@ def execute_asklens_query_request(
 
     try:
         with _execution_audit_content(question=question):
+            presentation = parse_presentation(provided_presentation)
             if provided_plan is not None:
                 untrusted_plan = provided_plan
             elif should_use_unified_provider_response():
@@ -108,6 +116,8 @@ def execute_asklens_query_request(
                     )
                 assert provider_result.query_plan is not None
                 untrusted_plan = provider_result.query_plan
+                if presentation is None:
+                    presentation = provider_result.presentation
             else:
                 routing_result = route_question_intent(
                     question,
@@ -142,6 +152,8 @@ def execute_asklens_query_request(
 
                 planner_result = plan_question(question, permissions=permissions)
                 untrusted_plan = planner_result.plan
+                if presentation is None:
+                    presentation = planner_result.presentation
 
             query_result = execute_plan(untrusted_plan, request=request)
             plan = query_result._validated_plan
@@ -151,8 +163,11 @@ def execute_asklens_query_request(
                 run=run,
                 question=question,
                 plan=plan.model_dump(mode="json"),
-                query_result=query_result.to_dict(
-                    include_visualization=include_visualization,
+                query_result=query_result.to_dict(),
+                presentation=build_presentation_payload(
+                    presentation,
+                    query_result=query_result,
+                    include_presentation=include_presentation,
                 ),
                 debug=debug,
             )
@@ -322,6 +337,7 @@ def build_success_payload(
     question: str,
     plan: dict[str, Any],
     query_result: dict[str, Any],
+    presentation: dict[str, Any] | None,
     debug: bool,
 ) -> dict[str, Any]:
     """Build a user-facing successful query response."""
@@ -343,11 +359,37 @@ def build_success_payload(
     }
     if run is not None:
         payload["run_id"] = run.pk
-    if "visualization" in query_result:
-        payload["visualization"] = query_result["visualization"]
+    if presentation is not None:
+        payload["presentation"] = presentation
     if debug:
         payload["debug"] = {"validated_plan": plan}
     return payload
+
+
+def build_presentation_payload(
+    presentation: PresentationSpec | None,
+    *,
+    query_result: QueryResult,
+    include_presentation: bool,
+) -> dict[str, Any] | None:
+    """Normalize optional display metadata without changing query execution."""
+
+    if not include_presentation:
+        return None
+    raw_presentation = (
+        presentation.model_dump(mode="json", exclude_none=True)
+        if presentation is not None
+        else None
+    )
+    try:
+        return dict(
+            normalize_presentation(
+                raw_presentation,
+                columns=query_result.columns,
+            )
+        )
+    except AskLensError:
+        return {"kind": "table"}
 
 
 def build_result_metadata(
