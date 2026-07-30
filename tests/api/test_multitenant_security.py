@@ -196,7 +196,12 @@ def configure_dummy_plan(settings, *, question: str, plan: dict[str, Any]) -> No
     """Configure the default dummy provider for one question."""
 
     settings.DJANGO_ASKLENS = {
-        "DUMMY_PLANS": {question: plan},
+        "DUMMY_PLANS": {
+            question: {
+                "query_plan": plan,
+                "presentation": {"kind": "table"},
+            }
+        },
         "MAX_ROWS": 50,
         "MAX_JOINS": 2,
         "MAX_METRICS": 5,
@@ -214,7 +219,6 @@ def orders_by_status_plan() -> dict[str, Any]:
         "metrics": [{"metric": "order_count"}],
         "order_by": [{"metric": "order_count", "direction": "desc"}],
         "limit": 10,
-        "visualization": {"type": "bar", "x": "status", "y": "order_count"},
     }
 
 
@@ -227,7 +231,6 @@ def tenant_filter_plan() -> dict[str, Any]:
         "filters": [{"field": "account.slug", "op": "eq", "value": "beta"}],
         "select": ["status"],
         "limit": 10,
-        "visualization": {"type": "table"},
     }
 
 
@@ -240,7 +243,6 @@ def tenant_field_plan() -> dict[str, Any]:
         "select": ["account.slug", "status"],
         "order_by": [{"field": "status", "direction": "asc"}],
         "limit": 10,
-        "visualization": {"type": "table"},
     }
 
 
@@ -418,7 +420,12 @@ def test_configured_request_permission_getter_scopes_catalog_and_query(
         "REQUEST_PERMISSIONS_GETTER": (
             "tests.test_project.permissions.get_request_permissions"
         ),
-        "DUMMY_PLANS": {QUESTION_TENANT_FIELD: tenant_field_plan()},
+        "DUMMY_PLANS": {
+            QUESTION_TENANT_FIELD: {
+                "query_plan": tenant_field_plan(),
+                "presentation": {"kind": "table"},
+            }
+        },
     }
     tenant_data.alpha_user.asklens_extra_permissions = {ACCOUNT_VIEW_PERMISSION}
     api_client.force_authenticate(user=tenant_data.alpha_user)
@@ -448,7 +455,12 @@ def test_configured_api_permission_class_applies_to_all_asklens_routes(
         "API_PERMISSION_CLASSES": [
             "tests.test_project.permissions.DenyAskLensAccess",
         ],
-        "DUMMY_PLANS": {QUESTION_BY_STATUS: orders_by_status_plan()},
+        "DUMMY_PLANS": {
+            QUESTION_BY_STATUS: {
+                "query_plan": orders_by_status_plan(),
+                "presentation": {"kind": "table"},
+            }
+        },
     }
     run = SemanticQueryRun.objects.create(
         user=tenant_data.alpha_user,

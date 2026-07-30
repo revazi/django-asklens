@@ -55,7 +55,6 @@ def revenue_by_product_plan() -> dict[str, Any]:
         "metrics": [{"metric": "gross_revenue"}],
         "order_by": [{"metric": "gross_revenue", "direction": "desc"}],
         "limit": 10,
-        "visualization": {"type": "bar", "x": "product_name", "y": "gross_revenue"},
     }
 
 
@@ -77,7 +76,6 @@ def facility_owner_names_plan() -> dict[str, Any]:
         "select": ["facility.name", "user.first_name", "user.last_name"],
         "order_by": [{"field": "facility.name", "direction": "asc"}],
         "limit": 20,
-        "visualization": {"type": "table"},
     }
 
 
@@ -92,9 +90,22 @@ def configure_complex_query_settings(settings) -> None:
             "tests.test_project.permissions.get_request_permissions"
         ),
         "DUMMY_PLANS": {
-            QUESTION_REVENUE_BY_PRODUCT: revenue_by_product_plan(),
-            QUESTION_FACILITY_OWNER_NAMES: facility_owner_names_plan(),
-            QUESTION_FACILITY_OWNER_NAMES_ALT: facility_owner_names_plan(),
+            QUESTION_REVENUE_BY_PRODUCT: {
+                "query_plan": revenue_by_product_plan(),
+                "presentation": {
+                    "kind": "bar",
+                    "x": "product_name",
+                    "y": "gross_revenue",
+                },
+            },
+            QUESTION_FACILITY_OWNER_NAMES: {
+                "query_plan": facility_owner_names_plan(),
+                "presentation": {"kind": "table"},
+            },
+            QUESTION_FACILITY_OWNER_NAMES_ALT: {
+                "query_plan": facility_owner_names_plan(),
+                "presentation": {"kind": "table"},
+            },
         },
         "MAX_ROWS": 100,
         "MAX_JOINS": 2,

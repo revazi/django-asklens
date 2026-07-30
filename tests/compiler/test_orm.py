@@ -186,7 +186,6 @@ def test_compile_list_query_returns_selected_public_keys(order_data: None) -> No
             "select": ["customer.name", "status", "total"],
             "order_by": [{"field": "total", "direction": "desc"}],
             "limit": 10,
-            "visualization": {"type": "table"},
         },
         registry=registry,
     )
@@ -407,7 +406,6 @@ def test_filters_cover_in_contains_date_range_and_relative_dates(
             "select": ["customer.name", "status"],
             "order_by": [{"field": "status"}],
             "limit": 10,
-            "visualization": {"type": "table"},
         },
         registry=registry,
     )
@@ -441,7 +439,7 @@ def test_decimal_filter_and_result_preserve_string_precision(order_data: None) -
     )
 
     assert result.rows == ({"total": Decimal("100.00")},)
-    assert result.to_dict(include_visualization=False)["data"] == [{"total": "100.00"}]
+    assert result.to_dict()["data"] == [{"total": "100.00"}]
 
 
 def test_group_by_status_with_count_sum_and_order_by_metric(order_data: None) -> None:
@@ -457,7 +455,6 @@ def test_group_by_status_with_count_sum_and_order_by_metric(order_data: None) ->
             ],
             "order_by": [{"metric": "revenue", "direction": "desc"}],
             "limit": 10,
-            "visualization": {"type": "bar", "x": "status", "y": "revenue"},
         },
         registry=registry,
     )
@@ -586,11 +583,6 @@ def test_group_by_month_and_average_metric(order_data: None) -> None:
             "metrics": [{"metric": "avg_order_value"}],
             "order_by": [{"field": "created_at"}],
             "limit": 10,
-            "visualization": {
-                "type": "line",
-                "x": "created_at",
-                "y": "avg_order_value",
-            },
         },
         registry=registry,
     )
@@ -620,7 +612,6 @@ def test_min_and_max_metrics(order_data: None) -> None:
                 {"metric": "max_order_total"},
             ],
             "limit": 1,
-            "visualization": {"type": "metric", "y": "max_order_total"},
         },
         registry=registry,
     )
@@ -673,7 +664,7 @@ def test_empty_ungrouped_aggregate_returns_one_canonical_row() -> None:
         ("min_order_total", "decimal", True),
         ("max_order_total", "decimal", True),
     ]
-    serialized = result.to_dict(include_visualization=False)
+    serialized = result.to_dict()
     assert serialized["columns"][0]["nullable"] is False
     assert serialized["columns"][1]["nullable"] is True
     assert serialized["data"] == [
@@ -772,7 +763,6 @@ def test_metric_query_without_group_by_returns_single_row(order_data: None) -> N
             "intent": "aggregate",
             "metrics": [{"metric": "order_count"}],
             "limit": 1,
-            "visualization": {"type": "metric", "y": "order_count"},
         },
         registry=registry,
     )
@@ -792,7 +782,6 @@ def test_limit_is_applied_to_result_rows(order_data: None) -> None:
             "metrics": [{"metric": "revenue"}],
             "order_by": [{"metric": "revenue", "direction": "desc"}],
             "limit": 1,
-            "visualization": {"type": "bar", "x": "status", "y": "revenue"},
         },
         registry=registry,
     )
@@ -811,7 +800,6 @@ def test_compiler_starts_from_context_scope_provider(order_data: None) -> None:
             "intent": "aggregate",
             "metrics": [{"metric": "order_count"}],
             "limit": 1,
-            "visualization": {"type": "metric", "y": "order_count"},
         },
         registry=registry,
     )
@@ -830,7 +818,6 @@ def test_compile_query_metadata_without_executing_result(order_data: None) -> No
             "select": ["id", "status"],
             "order_by": [{"field": "id"}],
             "limit": 2,
-            "visualization": {"type": "table"},
         },
         registry=registry,
     )

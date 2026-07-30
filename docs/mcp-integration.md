@@ -62,8 +62,8 @@ asklens_capabilities(include_query_plan_schema=false, resource_detail="summary")
 asklens_query_plan_schema()
 asklens_describe_resource(resource)
 asklens_validate_plan(plan)
-asklens_execute_plan(plan, include_rows=false)
-asklens_query(question, include_rows=false)  # optional convenience tool
+asklens_execute_plan(plan, presentation=null, include_rows=false)
+asklens_query(question, presentation=null, include_rows=false)  # optional convenience tool
 ```
 
 `asklens_capabilities(request)` returns permission-scoped metadata only: visible resources, their server-owned timezones, fields, metrics, supported patterns, limitations, example questions, and optionally the `QueryPlan` JSON schema. It does not return database rows or sample values, execute a query, or call an LLM provider. For MCP transports, prefer `resource_detail="summary"` and `include_query_plan_schema=False` during discovery to keep tool output compact.
@@ -74,7 +74,7 @@ asklens_query(question, include_rows=false)  # optional convenience tool
 
 `asklens_validate_plan(request, plan)` validates a client-produced plan against the current catalog, permissions, settings, and safety rules without executing a database query or creating an audit row.
 
-`asklens_execute_plan(request, plan, include_rows=False)` revalidates the plan, resolves the resource's explicit global/context scope, compiles it to Django ORM, applies the configured audit mode, and returns metadata such as columns, row count, and visualization hints. Database audit mode also returns a run id. Default audit records omit the MCP question and complete plan; they retain operational resource/intent/status/error/row-count/duration metadata only.
+`asklens_execute_plan(request, plan, presentation=None, include_rows=False)` revalidates the plan, resolves the resource's explicit global/context scope, compiles it to Django ORM, and applies the configured audit mode. Optional presentation is a separate envelope and cannot affect execution. Database audit mode also returns a run id. Default audit records omit the MCP question and complete plan; they retain operational resource/intent/status/error/row-count/duration metadata only.
 
 `asklens_query(request, question, include_rows=False)` is a convenience wrapper around AskLens' existing query orchestration for deployments that still want AskLens to call its configured provider.
 
@@ -242,7 +242,7 @@ MCP clients often place tool results into an LLM context. For that reason, the a
   "data": [],
   "row_count": 2,
   "rows_omitted": true,
-  "visualization": {"type": "bar"}
+  "presentation": {"kind": "bar"}
 }
 ```
 

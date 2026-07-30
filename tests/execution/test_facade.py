@@ -256,6 +256,28 @@ def test_execute_plan_rejects_client_controlled_timezone_before_sql(
     assert exc_info.value.code == "asklens.parse.invalid"
 
 
+def test_execute_plan_rejects_legacy_visualization_with_migration_pointer(
+    django_assert_num_queries,
+) -> None:
+    plan = {
+        "resource": "orders",
+        "intent": "list",
+        "select": ["status"],
+        "visualization": {"type": "table"},
+    }
+
+    with django_assert_num_queries(0):
+        with pytest.raises(PublicAskLensError) as exc_info:
+            execute_plan(
+                plan,
+                request=request_with("shop.view_orders"),
+                registry=build_registry(),
+            )
+
+    assert exc_info.value.code == "asklens.parse.invalid"
+    assert exc_info.value.pointer == "/visualization"
+
+
 def test_execute_plan_rejects_independent_metric_fanout_before_sql(
     django_assert_num_queries,
 ) -> None:

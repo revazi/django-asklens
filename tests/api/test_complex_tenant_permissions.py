@@ -10,6 +10,7 @@ from rest_framework.test import APIClient
 
 from django_asklens.catalog.registry import default_registry
 from django_asklens.models import SemanticQueryRun
+from django_asklens.planning import parse_presentation
 from django_asklens.planning.validation import parse_and_validate_query_plan
 from tests.test_project.asklens_registry import register_complex_resources
 from tests.test_project.models import (
@@ -239,7 +240,13 @@ def configure_complex_dummy_plans(settings, plans: dict[str, dict[str, Any]]) ->
         "REQUEST_PERMISSIONS_GETTER": (
             "tests.test_project.permissions.get_request_permissions"
         ),
-        "DUMMY_PLANS": plans,
+        "DUMMY_PLANS": {
+            question: {
+                "query_plan": plan,
+                "presentation": {"kind": "table"},
+            }
+            for question, plan in plans.items()
+        },
         "MAX_ROWS": 50,
         "MAX_JOINS": 2,
         "MAX_METRICS": 5,
@@ -258,7 +265,6 @@ def revenue_by_product_plan() -> dict[str, Any]:
         "metrics": [{"metric": "gross_revenue"}],
         "order_by": [{"field": "product_name", "direction": "asc"}],
         "limit": 10,
-        "visualization": {"type": "bar", "x": "product_name", "y": "gross_revenue"},
     }
 
 
@@ -271,7 +277,6 @@ def member_contacts_plan() -> dict[str, Any]:
         "select": ["facility.name", "first_name", "email"],
         "order_by": [{"field": "email", "direction": "asc"}],
         "limit": 10,
-        "visualization": {"type": "table"},
     }
 
 
@@ -285,11 +290,6 @@ def member_subscriptions_plan() -> dict[str, Any]:
         "metrics": [{"metric": "subscription_count"}],
         "order_by": [{"metric": "subscription_count", "direction": "desc"}],
         "limit": 10,
-        "visualization": {
-            "type": "bar",
-            "x": "plan.name",
-            "y": "subscription_count",
-        },
     }
 
 
@@ -302,7 +302,6 @@ def hidden_tenant_field_plan() -> dict[str, Any]:
         "filters": [{"field": "facility.slug", "op": "eq", "value": "south-studio"}],
         "select": ["product_name"],
         "limit": 10,
-        "visualization": {"type": "table"},
     }
 
 
@@ -521,5 +520,8 @@ def test_demo_settings_include_valid_dummy_plans(
     dummy_plans = DJANGO_ASKLENS["DUMMY_PLANS"]
     assert len(dummy_plans) == 12
 
-    for plan in dummy_plans.values():
-        parse_and_validate_query_plan(plan, permissions=all_staff_grant_names())
+    for response in dummy_plans.values():
+        parse_and_validate_query_plan(
+            response["query_plan"], permissions=all_staff_grant_names()
+        )
+        parse_presentation(response.get("presentation"))

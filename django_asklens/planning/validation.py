@@ -2,7 +2,6 @@
 
 import json
 import math
-import re
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from decimal import Decimal, InvalidOperation
@@ -118,8 +117,6 @@ def _validate_query_plan(
     validate_plan_shape(normalized_plan)
     validate_plan_limits(normalized_plan, resource=resource, limits=limits)
 
-    normalized_plan = normalize_visualization_date_trunc_aliases(normalized_plan)
-    normalized_plan = normalize_visualization_defaults(normalized_plan)
     validate_no_meaningless_duplicates(normalized_plan)
     validate_plan_fields(
         normalized_plan,
@@ -382,83 +379,6 @@ def raise_invalid_filter_value(field: FieldSpec, detail: str) -> Never:
     raise PlanValidationError(msg)
 
 
-def normalize_visualization_defaults(plan: QueryPlan) -> QueryPlan:
-    """Infer safe visualization defaults from unambiguous plan result keys."""
-
-    if plan.visualization.type == "table":
-        if plan.visualization.x is None and plan.visualization.y is None:
-            return plan
-        return plan.model_copy(
-            update={
-                "visualization": plan.visualization.model_copy(
-                    update={"x": None, "y": None}
-                )
-            }
-        )
-
-    if plan.visualization.type == "metric" and plan.visualization.y is None:
-        if len(plan.metrics) != 1:
-            return plan
-        return plan.model_copy(
-            update={
-                "visualization": plan.visualization.model_copy(
-                    update={"y": plan.metrics[0].metric}
-                )
-            }
-        )
-
-    return plan
-
-
-def normalize_visualization_date_trunc_aliases(plan: QueryPlan) -> QueryPlan:
-    """Normalize safe date-bucket visualization aliases to real result keys.
-
-    Query results use the original grouped field name as the public result key,
-    even when ``date_trunc`` is applied. Some providers naturally emit aliases
-    such as ``start_date_month``. Accept only aliases that exactly match a
-    date-truncated group_by field and canonicalize them before normal semantic
-    validation.
-    """
-
-    alias_map = build_date_trunc_alias_map(plan)
-    if not alias_map:
-        return plan
-
-    updates = {}
-    if plan.visualization.x in alias_map:
-        updates["x"] = alias_map[plan.visualization.x]
-    if plan.visualization.y in alias_map:
-        updates["y"] = alias_map[plan.visualization.y]
-    if not updates:
-        return plan
-
-    return plan.model_copy(
-        update={"visualization": plan.visualization.model_copy(update=updates)}
-    )
-
-
-def build_date_trunc_alias_map(plan: QueryPlan) -> dict[str, str]:
-    """Return accepted visualization aliases for date-truncated groupings."""
-
-    aliases: dict[str, str] = {}
-    for group in plan.group_by:
-        if group.date_trunc is None:
-            continue
-        for alias in date_trunc_aliases(group.field, group.date_trunc):
-            aliases[alias] = group.field
-    return aliases
-
-
-def date_trunc_aliases(field_name: str, date_trunc: str) -> set[str]:
-    """Return conservative aliases for one date-truncated grouping field."""
-
-    normalized_field = re.sub(r"[^A-Za-z0-9]+", "_", field_name).strip("_")
-    return {
-        f"{field_name}_{date_trunc}",
-        f"{normalized_field}_{date_trunc}",
-    }
-
-
 def validate_plan_shape(plan: QueryPlan) -> None:
     """Validate intent-specific QueryPlan structure."""
 
@@ -632,7 +552,7 @@ def validate_plan_fields(
     allow_hidden_fields: bool,
     permissions: frozenset[str],
 ) -> None:
-    """Validate all plan field, metric, ordering, and visualization references."""
+    """Validate all executable plan field, metric, and ordering references."""
 
     for field_name in plan.select:
         validate_field_usage(
@@ -684,11 +604,6 @@ def validate_plan_fields(
         allow_sensitive_fields=allow_sensitive_fields,
         allow_hidden_fields=allow_hidden_fields,
         permissions=permissions,
-    )
-    validate_visualization_refs(
-        plan,
-        available_keys=visible_field_keys | metric_names,
-        metric_names=metric_names,
     )
 
 
@@ -858,26 +773,6 @@ def validate_order_by(
         if order_spec.metric is not None and order_spec.metric not in metric_names:
             msg = f"order_by metric {order_spec.metric!r} must be requested in metrics."
             raise PlanValidationError(msg)
-
-
-def validate_visualization_refs(
-    plan: QueryPlan,
-    *,
-    available_keys: set[str],
-    metric_names: set[str],
-) -> None:
-    """Validate visualization references against plan result keys."""
-
-    visualization = plan.visualization
-    if visualization.x is not None and visualization.x not in available_keys:
-        msg = f"Visualization x references unknown result key {visualization.x!r}."
-        raise PlanValidationError(msg)
-    if visualization.y is not None and visualization.y not in available_keys:
-        msg = f"Visualization y references unknown result key {visualization.y!r}."
-        raise PlanValidationError(msg)
-    if visualization.type == "metric" and visualization.y not in metric_names:
-        msg = "Metric visualization y must reference a requested metric."
-        raise PlanValidationError(msg)
 
 
 def validate_field_usage(

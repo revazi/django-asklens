@@ -100,7 +100,7 @@ class Command(BaseCommand):
             for question in questions:
                 response = client.post(
                     "/asklens/query/",
-                    {"question": question, "include_visualization": False},
+                    {"question": question, "include_presentation": False},
                     format="json",
                 )
                 self.stdout.write(f"  Q: {question}")

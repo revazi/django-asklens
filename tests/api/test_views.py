@@ -199,15 +199,25 @@ def valid_plan_payload() -> dict[str, Any]:
         "metrics": [{"metric": "order_count"}],
         "order_by": [{"metric": "order_count", "direction": "desc"}],
         "limit": 10,
-        "visualization": {"type": "bar", "x": "status", "y": "order_count"},
     }
 
 
-def configure_dummy_plan(settings, plan: dict[str, Any]) -> None:
-    """Configure the default dummy provider for one question."""
+def configure_dummy_plan(
+    settings,
+    plan: dict[str, Any],
+    *,
+    presentation: dict[str, Any] | None = None,
+) -> None:
+    """Configure one plan plus separate optional presentation metadata."""
 
     settings.DJANGO_ASKLENS = {
-        "DUMMY_PLANS": {QUESTION: plan},
+        "DUMMY_PLANS": {
+            QUESTION: {
+                "query_plan": plan,
+                "presentation": presentation
+                or {"kind": "bar", "x": "status", "y": "order_count"},
+            }
+        },
         "MAX_ROWS": 50,
         "MAX_JOINS": 2,
         "MAX_METRICS": 5,
@@ -605,8 +615,9 @@ def test_query_endpoint_returns_result_and_records_successful_run(
         {"status": "paid", "order_count": 2},
         {"status": "pending", "order_count": 1},
     ]
-    assert response.data["visualization"] == {
-        "type": "bar",
+    assert "presentation" not in response.data["plan"]
+    assert response.data["presentation"] == {
+        "kind": "bar",
         "x": {"field": "status", "label": "Status", "type": "enum"},
         "y": {"field": "order_count", "label": "Order Count", "type": "integer"},
     }
@@ -617,6 +628,8 @@ def test_query_endpoint_returns_result_and_records_successful_run(
     assert run.row_count == 2
     assert run.error == ""
     assert run.plan["resource"] == "orders"
+    assert "presentation" not in run.plan
+    assert "visualization" not in run.plan
 
 
 def test_query_endpoint_executes_provided_valid_plan_without_planner(
@@ -674,6 +687,34 @@ def test_api_rejects_client_controlled_metric_backing_before_sql(
     assert response.data["error"] == {
         "code": "asklens.parse.invalid",
         "message": "The query plan could not be parsed.",
+    }
+
+
+def test_api_rejects_legacy_plan_visualization_with_migration_pointer(
+    settings,
+    api_client: APIClient,
+    user,
+    registered_orders: None,
+    django_assert_num_queries,
+) -> None:
+    settings.DJANGO_ASKLENS = {"AUDIT_MODE": "disabled"}
+    plan = valid_plan_payload()
+    plan["visualization"] = {"type": "table"}
+    api_client.force_authenticate(user=user)
+    assert user.get_all_permissions() == set()
+
+    with django_assert_num_queries(0):
+        response = api_client.post(
+            "/asklens/query/",
+            {"question": "Submitted plan", "plan": plan},
+            format="json",
+        )
+
+    assert response.status_code == 400
+    assert response.data["error"] == {
+        "code": "asklens.parse.invalid",
+        "message": "The query plan could not be parsed.",
+        "pointer": "/visualization",
     }
 
 
@@ -784,18 +825,17 @@ def test_api_execution_reaches_trusted_facade(
     assert len(calls) == 1
 
 
-def test_query_endpoint_ignores_table_visualization_axes(
+def test_query_endpoint_keeps_table_presentation_outside_plan(
     settings,
     api_client: APIClient,
     user,
     order_data: None,
     registered_orders: None,
 ) -> None:
-    """Provider plans should not fail only because table hints include axes."""
+    """Presentation is normalized independently from the executable plan."""
 
     plan = valid_plan_payload()
-    plan["visualization"] = {"type": "table", "x": "status", "y": "order_count"}
-    configure_dummy_plan(settings, plan)
+    configure_dummy_plan(settings, plan, presentation={"kind": "table"})
     api_client.force_authenticate(user=user)
 
     response = api_client.post(
@@ -805,15 +845,42 @@ def test_query_endpoint_ignores_table_visualization_axes(
     )
 
     assert response.status_code == 200
-    assert response.data["plan"]["visualization"] == {
-        "type": "table",
-        "x": None,
-        "y": None,
-    }
-    assert response.data["visualization"] == {"type": "table"}
+    assert "presentation" not in response.data["plan"]
+    assert "visualization" not in response.data["plan"]
+    assert response.data["presentation"] == {"kind": "table"}
 
 
-def test_query_endpoint_can_return_serialized_data_without_visualization_hint(
+def test_invalid_presentation_reference_cannot_change_query_execution(
+    api_client: APIClient,
+    user,
+    order_data: None,
+    registered_orders: None,
+) -> None:
+    api_client.force_authenticate(user=user)
+
+    response = api_client.post(
+        "/asklens/query/",
+        {
+            "question": "Submitted plan",
+            "plan": valid_plan_payload(),
+            "presentation": {
+                "kind": "bar",
+                "x": "missing",
+                "y": "order_count",
+            },
+        },
+        format="json",
+    )
+
+    assert response.status_code == 200
+    assert response.data["data"] == [
+        {"status": "paid", "order_count": 2},
+        {"status": "pending", "order_count": 1},
+    ]
+    assert response.data["presentation"] == {"kind": "table"}
+
+
+def test_query_endpoint_can_return_data_without_presentation(
     settings,
     api_client: APIClient,
     user,
@@ -825,7 +892,7 @@ def test_query_endpoint_can_return_serialized_data_without_visualization_hint(
 
     response = api_client.post(
         "/asklens/query/",
-        {"question": QUESTION, "include_visualization": False},
+        {"question": QUESTION, "include_presentation": False},
         format="json",
     )
 
@@ -835,6 +902,7 @@ def test_query_endpoint_can_return_serialized_data_without_visualization_hint(
         {"status": "paid", "order_count": 2},
         {"status": "pending", "order_count": 1},
     ]
+    assert "presentation" not in response.data
     assert "visualization" not in response.data
 
 
@@ -846,7 +914,6 @@ def test_query_errors_are_audited_safely(
 ) -> None:
     bad_plan = valid_plan_payload()
     bad_plan["group_by"] = [{"field": "missing"}]
-    bad_plan["visualization"] = {"type": "bar", "x": "missing", "y": "order_count"}
     configure_dummy_plan(settings, bad_plan)
     api_client.force_authenticate(user=user)
 

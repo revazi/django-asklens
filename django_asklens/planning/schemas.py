@@ -33,7 +33,7 @@ SUPPORTED_FILTER_OPERATORS = (
 )
 SUPPORTED_DATE_TRUNCS = ("day", "week", "month", "quarter", "year")
 SUPPORTED_ORDER_DIRECTIONS = ("asc", "desc")
-SUPPORTED_VISUALIZATION_TYPES = ("table", "metric", "bar", "line", "pie")
+SUPPORTED_PRESENTATION_KINDS = ("table", "metric", "bar", "line", "pie")
 
 type Intent = Literal["list", "aggregate"]
 type FilterOperator = Literal[
@@ -53,7 +53,7 @@ type FilterOperator = Literal[
 ]
 type DateTrunc = Literal["day", "week", "month", "quarter", "year"]
 type OrderDirection = Literal["asc", "desc"]
-type VisualizationType = Literal["table", "metric", "bar", "line", "pie"]
+type PresentationKind = Literal["table", "metric", "bar", "line", "pie"]
 type JsonScalar = str | int | float | bool
 type JsonValue = JsonScalar | list[JsonScalar]
 
@@ -135,10 +135,10 @@ class OrderBySpec(PlanBaseModel):
         return self
 
 
-class VisualizationSpec(PlanBaseModel):
-    """Chart/table hint requested by a plan."""
+class PresentationSpec(PlanBaseModel):
+    """Optional display metadata kept outside the executable QueryPlan."""
 
-    type: VisualizationType = "table"
+    kind: PresentationKind = "table"
     x: str | None = None
     y: str | None = None
 
@@ -147,15 +147,22 @@ class VisualizationSpec(PlanBaseModel):
     def validate_optional_axis(cls, value: str | None) -> str | None:
         if value is None:
             return value
-        return validate_non_empty_string(value, "visualization axis")
+        return validate_non_empty_string(value, "presentation axis")
 
     @model_validator(mode="after")
-    def validate_axes_for_type(self) -> "VisualizationSpec":
-        if self.type == "metric" and self.x is not None:
-            msg = "visualization type 'metric' must not define x."
+    def validate_axes_for_kind(self) -> "PresentationSpec":
+        if self.kind == "table" and (self.x is not None or self.y is not None):
+            msg = "presentation kind 'table' must not define axes."
             raise ValueError(msg)
-        if self.type in {"bar", "line", "pie"} and (self.x is None or self.y is None):
-            msg = f"visualization type {self.type!r} requires x and y."
+        if self.kind == "metric":
+            if self.x is not None:
+                msg = "presentation kind 'metric' must not define x."
+                raise ValueError(msg)
+            if self.y is None:
+                msg = "presentation kind 'metric' requires y."
+                raise ValueError(msg)
+        if self.kind in {"bar", "line", "pie"} and (self.x is None or self.y is None):
+            msg = f"presentation kind {self.kind!r} requires x and y."
             raise ValueError(msg)
         return self
 
@@ -171,7 +178,6 @@ class QueryPlan(PlanBaseModel):
     select: tuple[str, ...] = Field(default_factory=tuple)
     order_by: tuple[OrderBySpec, ...] = Field(default_factory=tuple)
     limit: int = 100
-    visualization: VisualizationSpec = Field(default_factory=VisualizationSpec)
 
     @field_validator("resource")
     @classmethod
@@ -199,6 +205,12 @@ def parse_query_plan(raw_plan: str | bytes | Mapping[str, Any]) -> QueryPlan:
     """Parse untrusted JSON/mapping input into a strict QueryPlan."""
 
     payload = parse_plan_payload(raw_plan)
+    if "visualization" in payload:
+        msg = (
+            "visualization is no longer part of QueryPlan; move display metadata "
+            "to the separate presentation envelope."
+        )
+        raise PlanParseError(msg, pointer="/visualization")
     try:
         return QueryPlan.model_validate(payload)
     except ValidationError as exc:
@@ -210,6 +222,18 @@ def get_query_plan_json_schema() -> dict[str, Any]:
     """Return the JSON schema for strict QueryPlan output."""
 
     return QueryPlan.model_json_schema()
+
+
+def parse_presentation(value: Mapping[str, Any] | None) -> PresentationSpec | None:
+    """Parse optional untrusted presentation metadata outside QueryPlan."""
+
+    if value is None:
+        return None
+    try:
+        return PresentationSpec.model_validate(value)
+    except ValidationError as exc:
+        msg = format_pydantic_error(exc).replace("QueryPlan", "presentation")
+        raise PlanParseError(msg, pointer="/presentation") from exc
 
 
 def parse_plan_payload(raw_plan: str | bytes | Mapping[str, Any]) -> Mapping[str, Any]:

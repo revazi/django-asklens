@@ -107,6 +107,7 @@ jobs:
           required_wheel_files = {
               "django_asklens/__init__.py",
               "django_asklens/api/views.py",
+              "django_asklens/results/presentation.py",
               "django_asklens/templates/admin/django_asklens/asklensquery/change_list.html",
               "django_asklens/templates/django_asklens/frontend/query.html",
           }
@@ -119,6 +120,7 @@ jobs:
               "/LICENSE",
               "/docs/index.md",
               "/docs/installation.md",
+              "/docs/migrating-0.1-to-0.2.md",
               "/docs/providers.md",
               "/docs/security-checklist.md",
           }

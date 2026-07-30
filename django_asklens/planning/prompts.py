@@ -8,7 +8,7 @@ from django_asklens.catalog.registry import CatalogRegistry, default_registry
 from django_asklens.llms.base import LLMMessage
 
 SYSTEM_PROMPT = """You are Django AskLens' query planner.
-Return only JSON matching the provided QueryPlan schema.
+Return only JSON matching the provided PlannerProviderResponse schema.
 Do not write SQL, raw SQL, code, or explanations.
 Use only resources, fields, and metrics present in the catalog message.
 Never invent fields, metrics, model names, table names, or permissions.
@@ -26,13 +26,14 @@ RFC 3339 strings with an explicit offset. Resource timezone metadata is
 server-owned and must never be copied into the plan.
 Use date_trunc on date/datetime fields for day, week, month, quarter, or year buckets.
 Result keys are the exact select field names, group_by field names, and metric names.
-For date_trunc groupings, visualization axes and order_by fields must still
-reference the original group_by field name, for example x: "start_date".
-Never invent bucket aliases such as "start_date_month" or "paid_at_month".
-Treat visualization as an optional display hint over returned data; axes must
-reference result keys. For single-number aggregate answers, prefer
-visualization type "metric" with y set to the requested metric name; if you are
-uncertain, use visualization type "table".
+Return the executable query in query_plan. QueryPlan never contains display
+metadata. Return optional display metadata separately in presentation using
+kind plus result-key x/y axes. For date_trunc groupings, presentation axes and
+order_by fields must reference the original group_by field name, for example
+x: "start_date". Never invent bucket aliases such as "start_date_month" or
+"paid_at_month". For single-number aggregate answers, prefer presentation kind
+"metric" with y set to the requested metric name; if uncertain, use kind
+"table" with no axes.
 If a question asks for data outside the catalog, choose the safest valid plan
 or fail via validation by not inventing fields.
 """.strip()

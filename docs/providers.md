@@ -1,6 +1,6 @@
 # Provider configuration
 
-AskLens treats provider output as untrusted data. A provider may suggest a structured `QueryPlan`, but AskLens validates it before compilation or execution. Metric requests contain only a registered semantic name; providers never choose or receive the operation, private Django binding, distinct key, or permission token.
+AskLens treats provider output as untrusted data. A provider returns an envelope containing an executable `query_plan` and optional separate `presentation`; AskLens validates the plan before compilation or execution. Presentation metadata cannot alter authorization, scope, compilation, ordering, limits, or returned values. Metric requests contain only a registered semantic name; providers never choose or receive the operation, private Django binding, distinct key, or permission token.
 
 ## Default backend: dummy
 
@@ -11,12 +11,18 @@ DJANGO_ASKLENS = {
     "LLM_BACKEND": "dummy",
     "DUMMY_PLANS": {
         "Show orders by status": {
-            "resource": "orders",
-            "intent": "aggregate",
-            "group_by": [{"field": "status"}],
-            "metrics": [{"metric": "order_count"}],
-            "limit": 100,
-            "visualization": {"type": "bar", "x": "status", "y": "order_count"},
+            "query_plan": {
+                "resource": "orders",
+                "intent": "aggregate",
+                "group_by": [{"field": "status"}],
+                "metrics": [{"metric": "order_count"}],
+                "limit": 100,
+            },
+            "presentation": {
+                "kind": "bar",
+                "x": "status",
+                "y": "order_count",
+            },
         }
     },
     "DUMMY_DEFAULT_PLAN": None,

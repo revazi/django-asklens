@@ -23,6 +23,7 @@ from django_asklens.planning.prompts import stable_json_dumps
 from django_asklens.planning.schemas import (
     PLAN_MODEL_CONFIG,
     PlanBaseModel,
+    PresentationSpec,
     QueryPlan,
     format_pydantic_error,
     parse_plan_payload,
@@ -52,9 +53,11 @@ asks to list records or fields. List plans use select and must not include
 metrics or group_by. Result keys are exact select field names, group_by field
 names, and metric names. Use only the operators listed for each field in
 capabilities, and use enum canonical values or aliases exactly as listed. Never
-use null with eq/neq; use isnull with a boolean value. For date_trunc groupings,
-visualization axes and order_by fields must still reference the original
-group_by field name; never invent bucket aliases such as "start_date_month".
+use null with eq/neq; use isnull with a boolean value. QueryPlan must not
+contain display metadata. Return optional presentation separately using kind
+and result-key axes. For date_trunc groupings, presentation axes and order_by
+fields must still reference the original group_by field name; never invent
+bucket aliases such as "start_date_month".
 
 For response_type="capabilities", return query_help and omit query_plan. Query
 help suggestions must include natural-language question text plus exact
@@ -77,6 +80,7 @@ class AskLensProviderResponse(PlanBaseModel):
 
     response_type: ResponseType
     query_plan: dict[str, Any] | None = None
+    presentation: PresentationSpec | None = None
     query_help: QueryHelp | None = None
 
     @model_validator(mode="after")
@@ -98,6 +102,9 @@ class AskLensProviderResponse(PlanBaseModel):
         if self.query_plan is not None:
             msg = "response_type='capabilities' must not include query_plan."
             raise ValueError(msg)
+        if self.presentation is not None:
+            msg = "response_type='capabilities' must not include presentation."
+            raise ValueError(msg)
         return self
 
 
@@ -108,6 +115,7 @@ class AskLensProviderResult:
     question: str
     response_type: ResponseType
     query_plan: QueryPlan | None = None
+    presentation: PresentationSpec | None = None
     query_help: QueryHelp | None = None
 
 
@@ -152,6 +160,7 @@ def plan_asklens_response(
             question=question,
             response_type="query",
             query_plan=validated_plan,
+            presentation=response.presentation,
         )
 
     assert response.query_help is not None  # Narrowed by branch validator.
@@ -285,6 +294,7 @@ def get_asklens_provider_response_json_schema() -> dict[str, Any]:
                 "enum": ["query", "capabilities"],
             },
             "query_plan": compact_query_plan_schema(),
+            "presentation": compact_presentation_schema(),
             "query_help": compact_query_help_schema(),
         },
     }
@@ -368,18 +378,24 @@ def compact_query_plan_schema() -> dict[str, Any]:
                 },
             },
             "limit": {"type": "integer"},
-            "visualization": {
-                "type": "object",
-                "additionalProperties": False,
-                "properties": {
-                    "type": {
-                        "type": "string",
-                        "enum": ["table", "metric", "bar", "line", "pie"],
-                    },
-                    "x": {"type": "string"},
-                    "y": {"type": "string"},
-                },
+        },
+    }
+
+
+def compact_presentation_schema() -> dict[str, Any]:
+    """Return optional provider-facing presentation metadata."""
+
+    return {
+        "type": "object",
+        "additionalProperties": False,
+        "required": ["kind"],
+        "properties": {
+            "kind": {
+                "type": "string",
+                "enum": ["table", "metric", "bar", "line", "pie"],
             },
+            "x": {"type": "string"},
+            "y": {"type": "string"},
         },
     }
 

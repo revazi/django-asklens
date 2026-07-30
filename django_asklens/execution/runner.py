@@ -72,21 +72,18 @@ class QueryResult:
     rows: tuple[dict[str, Any], ...]
     row_count: int
     duration_ms: int
-    visualization: dict[str, Any]
     limit: int
     limit_scope: LimitScope
     truncated: bool
     _validated_plan: QueryPlan | None = field(default=None, repr=False, compare=False)
     _audit_record: Any = field(default=None, repr=False, compare=False)
 
-    def to_dict(self, *, include_visualization: bool = True) -> dict[str, Any]:
-        """Serialize the result to JSON-safe primitives plus optional hints."""
+    def to_dict(self) -> dict[str, Any]:
+        """Serialize the core query result to JSON-safe primitives."""
 
         serialized = serialize_query_result(
             columns=self.columns,
             rows=self.rows,
-            visualization=self.visualization,
-            include_visualization=include_visualization,
         )
         return {
             **serialized,
@@ -372,7 +369,6 @@ def _execute_compiled_query(
         rows=rows,
         row_count=len(rows),
         duration_ms=duration_ms,
-        visualization=compiled_query.visualization,
         limit=compiled_query.limit,
         limit_scope=compiled_query.limit_scope,
         truncated=truncated,

@@ -68,9 +68,7 @@ that single visible scope. Do not suggest comparing, grouping, filtering, or
 trending across any scope dimension unless the resource scope allows multiple
 or all scopes and the scope-dimension field is visible.
 Do not suggest internal result-key aliases such as "start_date_month"; say
-"by month using start date" in the natural-language question instead. For
-visualization, use table with no axes when a chart is not clearly needed; use
-metric with y set to the metric name for single-number aggregate answers.
+"by month using start date" in the natural-language question instead.
 If the user asks for a number of examples, return up to the requested count,
 never more than the requested count from the additional instructions.
 Do not include SQL, code, database rows, sample values, secrets, credentials,
@@ -449,11 +447,6 @@ def build_aggregate_suggestion_plan(
     else:
         order_by.append({"metric": first_metric_name, "direction": "desc"})
 
-    visualization = build_aggregate_suggestion_visualization(
-        group_by=group_by,
-        metric_name=first_metric_name,
-        has_date_field=bool(suggestion.date_fields),
-    )
     return {
         "resource": resource["name"],
         "intent": "aggregate",
@@ -463,22 +456,7 @@ def build_aggregate_suggestion_plan(
         "select": [],
         "order_by": order_by,
         "limit": 50,
-        "visualization": visualization,
     }
-
-
-def build_aggregate_suggestion_visualization(
-    *,
-    group_by: Sequence[Mapping[str, str]],
-    metric_name: str,
-    has_date_field: bool,
-) -> dict[str, str]:
-    """Return a valid visualization hint for a synthesized aggregate plan."""
-
-    if not group_by:
-        return {"type": "metric", "y": metric_name}
-    chart_type = "line" if has_date_field else "bar"
-    return {"type": chart_type, "x": group_by[0]["field"], "y": metric_name}
 
 
 def build_list_suggestion_plan(
@@ -516,7 +494,6 @@ def build_list_suggestion_plan(
         "select": select[:8],
         "order_by": [],
         "limit": 50,
-        "visualization": {"type": "table"},
     }
 
 

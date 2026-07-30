@@ -297,7 +297,6 @@ def valid_billing_revenue_payload(**updates: object) -> dict[str, object]:
         "metrics": [{"metric": "gross_revenue"}],
         "order_by": [{"metric": "gross_revenue", "direction": "desc"}],
         "limit": 10,
-        "visualization": {"type": "bar", "x": "product_name", "y": "gross_revenue"},
     }
     payload.update(updates)
     return payload
@@ -682,7 +681,6 @@ def test_resource_permission_fails_without_matching_permission() -> None:
         filters=[],
         group_by=[{"field": "status"}],
         metrics=[{"metric": "order_count"}],
-        visualization={"type": "bar", "x": "status", "y": "order_count"},
     )
 
     with pytest.raises(PermissionDeniedError, match="shop.view_orders"):
@@ -710,7 +708,6 @@ def test_raw_sql_like_field_name_fails_as_unknown_field() -> None:
         group_by=[],
         metrics=[],
         order_by=[],
-        visualization={"type": "table"},
     )
 
     with pytest.raises(UnknownFieldError, match="DROP TABLE"):
@@ -851,7 +848,6 @@ def test_permission_gated_metric_field_fails_without_permission() -> None:
     plan = parse_valid_plan(
         metrics=[{"metric": "revenue"}],
         order_by=[{"metric": "revenue", "direction": "desc"}],
-        visualization={"type": "bar", "x": "status", "y": "revenue"},
     )
 
     with pytest.raises(PermissionDeniedError, match="shop.view_financials"):
@@ -877,7 +873,6 @@ def test_hidden_field_fails_unless_explicitly_allowed() -> None:
         group_by=[],
         metrics=[],
         order_by=[],
-        visualization={"type": "table"},
     )
 
     with pytest.raises(PermissionDeniedError, match="hidden"):
@@ -894,7 +889,6 @@ def test_filter_only_field_cannot_be_selected() -> None:
         group_by=[],
         metrics=[],
         order_by=[],
-        visualization={"type": "table"},
     )
 
     with pytest.raises(PlanValidationError, match="only be used in filters"):
@@ -929,7 +923,6 @@ def test_too_many_metrics_and_groupings_fail() -> None:
             {"metric": "order_count"},
             {"metric": "revenue"},
         ],
-        visualization={"type": "bar", "x": "status", "y": "order_count"},
     )
 
     with pytest.raises(PlanValidationError, match="metrics"):
@@ -979,7 +972,6 @@ def test_order_by_must_reference_selected_or_metric_result() -> None:
         group_by=[],
         metrics=[],
         order_by=[{"field": "status"}],
-        visualization={"type": "table"},
     )
 
     with pytest.raises(PlanValidationError, match="selected or grouped"):
@@ -989,78 +981,3 @@ def test_order_by_must_reference_selected_or_metric_result() -> None:
 
     with pytest.raises(PlanValidationError, match="requested in metrics"):
         validate_query_plan(aggregate_plan, registry=build_registry())
-
-
-def test_visualization_refs_must_exist_in_result_keys() -> None:
-    plan = parse_valid_plan(
-        visualization={"type": "bar", "x": "missing", "y": "order_count"}
-    )
-
-    with pytest.raises(PlanValidationError, match="Visualization x"):
-        validate_query_plan(plan, registry=build_registry())
-
-    metric_plan = parse_valid_plan(visualization={"type": "metric", "y": "status"})
-
-    with pytest.raises(PlanValidationError, match="Metric visualization"):
-        validate_query_plan(metric_plan, registry=build_registry())
-
-
-def test_table_visualization_axes_are_ignored() -> None:
-    plan = parse_valid_plan(
-        visualization={"type": "table", "x": "status", "y": "order_count"}
-    )
-
-    validated = validate_query_plan(plan, registry=build_registry())
-
-    assert validated.visualization.x is None
-    assert validated.visualization.y is None
-
-
-def test_single_metric_visualization_y_is_inferred() -> None:
-    plan = parse_valid_plan(visualization={"type": "metric"})
-
-    validated = validate_query_plan(plan, registry=build_registry())
-
-    assert validated.visualization.y == "order_count"
-
-
-def test_metric_visualization_without_y_still_fails_when_ambiguous() -> None:
-    plan = parse_valid_plan(
-        metrics=[
-            {"metric": "order_count"},
-            {"metric": "revenue"},
-        ],
-        visualization={"type": "metric"},
-    )
-
-    with pytest.raises(PlanValidationError, match="Metric visualization"):
-        validate_query_plan(
-            plan,
-            registry=build_registry(),
-            permissions={"shop.view_financials"},
-        )
-
-
-def test_date_trunc_visualization_alias_is_canonicalized() -> None:
-    """Providers often invent date bucket aliases; normalize safe exact aliases."""
-
-    plan = parse_valid_plan(
-        group_by=[{"field": "created_at", "date_trunc": "month"}],
-        visualization={"type": "line", "x": "created_at_month", "y": "order_count"},
-    )
-
-    validated = validate_query_plan(plan, registry=build_registry())
-
-    assert validated.visualization.x == "created_at"
-
-
-def test_date_trunc_visualization_alias_must_match_grouping() -> None:
-    """Only aliases for the actual date-truncated group_by field are accepted."""
-
-    plan = parse_valid_plan(
-        group_by=[{"field": "created_at", "date_trunc": "month"}],
-        visualization={"type": "line", "x": "paid_at_month", "y": "order_count"},
-    )
-
-    with pytest.raises(PlanValidationError, match="Visualization x"):
-        validate_query_plan(plan, registry=build_registry())

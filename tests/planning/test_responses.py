@@ -169,7 +169,6 @@ def valid_query_plan_payload() -> dict[str, Any]:
         "select": [],
         "order_by": [{"metric": "order_count", "direction": "desc"}],
         "limit": 10,
-        "visualization": {"type": "bar", "x": "status", "y": "order_count"},
     }
 
 
@@ -181,7 +180,9 @@ def test_provider_response_schema_hides_local_suggestion_plans() -> None:
     assert schema["title"] == "AskLensProviderResponse"
     assert "$defs" not in schema
     assert "query_plan" in schema["properties"]
+    assert "presentation" in schema["properties"]
     query_plan_schema = schema["properties"]["query_plan"]
+    assert "visualization" not in query_plan_schema["properties"]
     assert query_plan_schema["required"] == ["resource", "intent"]
     metric_schema = query_plan_schema["properties"]["metrics"]["items"]
     assert metric_schema["required"] == ["metric"]
@@ -207,12 +208,29 @@ def test_parse_provider_response_requires_matching_branch() -> None:
     with pytest.raises(PlanValidationError, match="query_help"):
         parse_asklens_provider_response({"response_type": "capabilities"})
 
+    with pytest.raises(PlanValidationError, match="must not include presentation"):
+        parse_asklens_provider_response(
+            {
+                "response_type": "capabilities",
+                "query_help": {"answer": "Help"},
+                "presentation": {"kind": "table"},
+            }
+        )
+
 
 def test_plan_asklens_response_validates_query_branch() -> None:
-    """Query responses produce a normal validated QueryPlan."""
+    """Query responses keep presentation outside the validated QueryPlan."""
 
     provider = UnifiedProvider(
-        {"response_type": "query", "query_plan": valid_query_plan_payload()}
+        {
+            "response_type": "query",
+            "query_plan": valid_query_plan_payload(),
+            "presentation": {
+                "kind": "bar",
+                "x": "status",
+                "y": "order_count",
+            },
+        }
     )
 
     result = plan_asklens_response(
@@ -225,6 +243,8 @@ def test_plan_asklens_response_validates_query_branch() -> None:
     assert result.response_type == "query"
     assert result.query_plan is not None
     assert result.query_plan.resource == "orders"
+    assert result.presentation is not None
+    assert result.presentation.kind == "bar"
     assert provider.schema is not None
     assert provider.schema["title"] == "AskLensProviderResponse"
     assert provider.messages is not None

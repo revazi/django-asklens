@@ -96,8 +96,9 @@ class QueryView(AskLensAPIView):
             request,
             question=serializer.validated_data["question"],
             debug=serializer.validated_data["debug"],
-            include_visualization=serializer.validated_data["include_visualization"],
+            include_presentation=serializer.validated_data["include_presentation"],
             provided_plan=serializer.validated_data.get("plan"),
+            provided_presentation=serializer.validated_data.get("presentation"),
         )
         return Response(outcome.payload, status=outcome.status_code)
 

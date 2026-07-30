@@ -25,7 +25,15 @@ def valid_plan_payload() -> dict[str, object]:
         "metrics": [{"metric": "order_count"}],
         "order_by": [{"metric": "order_count", "direction": "desc"}],
         "limit": 10,
-        "visualization": {"type": "bar", "x": "status", "y": "order_count"},
+    }
+
+
+def valid_provider_payload() -> dict[str, object]:
+    """Return a plan plus separate optional presentation metadata."""
+
+    return {
+        "query_plan": valid_plan_payload(),
+        "presentation": {"kind": "bar", "x": "status", "y": "order_count"},
     }
 
 
@@ -114,13 +122,15 @@ class SpyProvider:
 
 
 def test_dummy_provider_returns_deterministic_plan() -> None:
-    provider = DummyProvider(plans={QUESTION: valid_plan_payload()})
+    provider = DummyProvider(plans={QUESTION: valid_provider_payload()})
 
     result = plan_question(QUESTION, provider=provider, registry=build_registry())
 
     assert result.question == QUESTION
     assert result.plan.resource == "orders"
     assert result.plan.metrics[0].metric == "order_count"
+    assert result.presentation is not None
+    assert result.presentation.kind == "bar"
 
 
 def test_dummy_provider_without_configured_plan_fails() -> None:
@@ -131,12 +141,16 @@ def test_dummy_provider_without_configured_plan_fails() -> None:
 
 
 def test_planner_sends_safe_catalog_metadata_and_schema() -> None:
-    provider = SpyProvider(valid_plan_payload())
+    provider = SpyProvider(valid_provider_payload())
 
     plan_question(QUESTION, provider=provider, registry=build_registry())
 
     assert provider.schema is not None
-    assert provider.schema["title"] == "QueryPlan"
+    assert provider.schema["title"] == "PlannerProviderResponse"
+    query_plan_schema = provider.schema["properties"]["query_plan"]
+    assert query_plan_schema["$ref"] == "#/$defs/QueryPlan"
+    assert "visualization" not in provider.schema["$defs"]["QueryPlan"]["properties"]
+    assert provider.schema["$defs"]["MetricSpec"]["required"] == ["metric"]
     assert provider.messages is not None
 
     prompt_text = "\n".join(message["content"] for message in provider.messages)
@@ -164,7 +178,7 @@ def test_build_planner_request_is_deterministic_and_safe() -> None:
     prompt_text = "\n".join(message["content"] for message in request.messages)
 
     assert request.question == QUESTION
-    assert request.schema["title"] == "QueryPlan"
+    assert request.schema["title"] == "PlannerProviderResponse"
     assert "Catalog metadata" in prompt_text
     assert "Never invent bucket aliases" in prompt_text
     assert "customer.email" not in prompt_text
@@ -195,9 +209,11 @@ def test_provider_output_is_always_validated() -> None:
     provider = DummyProvider(
         plans={
             QUESTION: {
-                "resource": "orders",
-                "intent": "delete",
-                "raw_sql": "select * from orders",
+                "query_plan": {
+                    "resource": "orders",
+                    "intent": "delete",
+                    "raw_sql": "select * from orders",
+                }
             }
         }
     )
