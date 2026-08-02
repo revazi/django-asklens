@@ -1,0 +1,147 @@
+{
+  "$defs": {
+    "ResultColumnDocument": {
+      "additionalProperties": false,
+      "description": "One canonical serialized result column.",
+      "properties": {
+        "key": {
+          "minLength": 1,
+          "title": "Key",
+          "type": "string"
+        },
+        "label": {
+          "minLength": 1,
+          "title": "Label",
+          "type": "string"
+        },
+        "nullable": {
+          "title": "Nullable",
+          "type": "boolean"
+        },
+        "type": {
+          "enum": [
+            "string",
+            "boolean",
+            "integer",
+            "decimal",
+            "float",
+            "date",
+            "datetime",
+            "time",
+            "uuid",
+            "enum"
+          ],
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "key",
+        "label",
+        "type",
+        "nullable"
+      ],
+      "title": "ResultColumnDocument",
+      "type": "object"
+    },
+    "ResultMetadataDocument": {
+      "additionalProperties": false,
+      "description": "Deterministic execution limit metadata.",
+      "properties": {
+        "limit": {
+          "minimum": 1,
+          "title": "Limit",
+          "type": "integer"
+        },
+        "limit_scope": {
+          "enum": [
+            "rows",
+            "groups"
+          ],
+          "title": "Limit Scope",
+          "type": "string"
+        },
+        "truncated": {
+          "title": "Truncated",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "limit",
+        "limit_scope",
+        "truncated"
+      ],
+      "title": "ResultMetadataDocument",
+      "type": "object"
+    }
+  },
+  "$id": "result.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Canonical serialized core query result.",
+  "properties": {
+    "columns": {
+      "items": {
+        "$ref": "#/$defs/ResultColumnDocument"
+      },
+      "title": "Columns",
+      "type": "array"
+    },
+    "data": {
+      "items": {
+        "additionalProperties": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "integer"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "propertyNames": {
+          "minLength": 1
+        },
+        "type": "object"
+      },
+      "title": "Data",
+      "type": "array"
+    },
+    "duration_ms": {
+      "minimum": 0,
+      "title": "Duration Ms",
+      "type": "integer"
+    },
+    "empty": {
+      "const": true,
+      "title": "Empty",
+      "type": "boolean"
+    },
+    "result_metadata": {
+      "$ref": "#/$defs/ResultMetadataDocument"
+    },
+    "row_count": {
+      "minimum": 0,
+      "title": "Row Count",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "columns",
+    "data",
+    "row_count",
+    "duration_ms",
+    "result_metadata"
+  ],
+  "title": "AskLens Internal Result",
+  "type": "object"
+}

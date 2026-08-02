@@ -94,7 +94,7 @@ dev = [
 include = ["django_asklens*"]
 
 [tool.setuptools.package-data]
-django_asklens = ["templates/**/*.html"]
+django_asklens = ["contracts/schemas/*.json", "templates/**/*.html"]
 
 [tool.pytest.ini_options]
 DJANGO_SETTINGS_MODULE = "tests.test_project.settings"

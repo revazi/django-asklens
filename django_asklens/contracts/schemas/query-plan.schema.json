@@ -1,0 +1,385 @@
+{
+  "$defs": {
+    "DateTrunc": {
+      "enum": [
+        "day",
+        "week",
+        "month",
+        "quarter",
+        "year"
+      ],
+      "type": "string"
+    },
+    "FilterOperator": {
+      "enum": [
+        "eq",
+        "neq",
+        "contains",
+        "icontains",
+        "gt",
+        "gte",
+        "lt",
+        "lte",
+        "in",
+        "isnull",
+        "date_range",
+        "last_n_days",
+        "last_n_months"
+      ],
+      "type": "string"
+    },
+    "FilterSpec": {
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "op": {
+                "const": "isnull"
+              }
+            },
+            "required": [
+              "op"
+            ]
+          },
+          "then": {
+            "properties": {
+              "value": {
+                "type": "boolean"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "op": {
+                "const": "in"
+              }
+            },
+            "required": [
+              "op"
+            ]
+          },
+          "then": {
+            "properties": {
+              "value": {
+                "items": {
+                  "$ref": "#/$defs/JsonScalar"
+                },
+                "minItems": 1,
+                "type": "array"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "op": {
+                "const": "date_range"
+              }
+            },
+            "required": [
+              "op"
+            ]
+          },
+          "then": {
+            "properties": {
+              "value": {
+                "items": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "maxItems": 2,
+                "minItems": 2,
+                "type": "array"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "op": {
+                "enum": [
+                  "last_n_days",
+                  "last_n_months"
+                ]
+              }
+            },
+            "required": [
+              "op"
+            ]
+          },
+          "then": {
+            "properties": {
+              "value": {
+                "minimum": 1,
+                "type": "integer"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "op": {
+                "enum": [
+                  "eq",
+                  "neq",
+                  "contains",
+                  "icontains",
+                  "gt",
+                  "gte",
+                  "lt",
+                  "lte"
+                ]
+              }
+            },
+            "required": [
+              "op"
+            ]
+          },
+          "then": {
+            "properties": {
+              "value": {
+                "$ref": "#/$defs/JsonScalar"
+              }
+            }
+          }
+        }
+      ],
+      "description": "A filter over a registered resource field.",
+      "properties": {
+        "field": {
+          "minLength": 1,
+          "title": "Field",
+          "type": "string"
+        },
+        "op": {
+          "$ref": "#/$defs/FilterOperator"
+        },
+        "value": {
+          "$ref": "#/$defs/JsonValue"
+        }
+      },
+      "required": [
+        "field",
+        "op",
+        "value"
+      ],
+      "title": "FilterSpec",
+      "type": "object"
+    },
+    "GroupBySpec": {
+      "additionalProperties": false,
+      "description": "A grouping over a registered resource field.",
+      "properties": {
+        "date_trunc": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/DateTrunc"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "field": {
+          "minLength": 1,
+          "title": "Field",
+          "type": "string"
+        }
+      },
+      "required": [
+        "field"
+      ],
+      "title": "GroupBySpec",
+      "type": "object"
+    },
+    "Intent": {
+      "enum": [
+        "list",
+        "aggregate"
+      ],
+      "type": "string"
+    },
+    "JsonScalar": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "integer"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "boolean"
+        }
+      ]
+    },
+    "JsonValue": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/JsonScalar"
+        },
+        {
+          "items": {
+            "$ref": "#/$defs/JsonScalar"
+          },
+          "type": "array"
+        }
+      ]
+    },
+    "MetricSpec": {
+      "additionalProperties": false,
+      "description": "A semantic metric name requested by an untrusted plan.",
+      "properties": {
+        "metric": {
+          "minLength": 1,
+          "title": "Metric",
+          "type": "string"
+        }
+      },
+      "required": [
+        "metric"
+      ],
+      "title": "MetricSpec",
+      "type": "object"
+    },
+    "OrderBySpec": {
+      "additionalProperties": false,
+      "description": "Ordering by either a selected field or a requested metric.",
+      "oneOf": [
+        {
+          "properties": {
+            "field": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "metric": {
+              "type": "null"
+            }
+          },
+          "required": [
+            "field"
+          ]
+        },
+        {
+          "properties": {
+            "field": {
+              "type": "null"
+            },
+            "metric": {
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "metric"
+          ]
+        }
+      ],
+      "properties": {
+        "direction": {
+          "$ref": "#/$defs/OrderDirection"
+        },
+        "field": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Field"
+        },
+        "metric": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Metric"
+        }
+      },
+      "title": "OrderBySpec",
+      "type": "object"
+    },
+    "OrderDirection": {
+      "enum": [
+        "asc",
+        "desc"
+      ],
+      "type": "string"
+    }
+  },
+  "$id": "query-plan.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Structured, read-only query plan suggested by a planner.",
+  "properties": {
+    "filters": {
+      "items": {
+        "$ref": "#/$defs/FilterSpec"
+      },
+      "title": "Filters",
+      "type": "array"
+    },
+    "group_by": {
+      "items": {
+        "$ref": "#/$defs/GroupBySpec"
+      },
+      "title": "Group By",
+      "type": "array"
+    },
+    "intent": {
+      "$ref": "#/$defs/Intent"
+    },
+    "limit": {
+      "minimum": 1,
+      "title": "Limit",
+      "type": "integer"
+    },
+    "metrics": {
+      "items": {
+        "$ref": "#/$defs/MetricSpec"
+      },
+      "title": "Metrics",
+      "type": "array"
+    },
+    "order_by": {
+      "items": {
+        "$ref": "#/$defs/OrderBySpec"
+      },
+      "title": "Order By",
+      "type": "array"
+    },
+    "resource": {
+      "minLength": 1,
+      "title": "Resource",
+      "type": "string"
+    },
+    "select": {
+      "items": {
+        "minLength": 1,
+        "type": "string"
+      },
+      "title": "Select",
+      "type": "array"
+    }
+  },
+  "required": [
+    "resource",
+    "intent"
+  ],
+  "title": "AskLens Internal QueryPlan",
+  "type": "object"
+}

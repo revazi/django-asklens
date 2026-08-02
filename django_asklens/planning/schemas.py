@@ -8,6 +8,7 @@ from pydantic import (
     BaseModel,
     ConfigDict,
     Field,
+    StrictInt,
     ValidationError,
     field_validator,
     model_validator,
@@ -177,7 +178,7 @@ class QueryPlan(PlanBaseModel):
     metrics: tuple[MetricSpec, ...] = Field(default_factory=tuple)
     select: tuple[str, ...] = Field(default_factory=tuple)
     order_by: tuple[OrderBySpec, ...] = Field(default_factory=tuple)
-    limit: int = 100
+    limit: StrictInt = 100
 
     @field_validator("resource")
     @classmethod

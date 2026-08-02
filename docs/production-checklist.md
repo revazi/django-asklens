@@ -57,6 +57,9 @@ AskLens is a data access surface. Configure it as carefully as any reporting, an
 
 ## Limits and query safety
 
+- [ ] Treat packaged draft-schema validation as shape checking only; submit every
+      plan through `execute_plan()` for current authorization, scope, budgets,
+      binding, and execution.
 - [ ] Keep `ALLOW_RAW_SQL` disabled. AskLens has no raw SQL execution path.
 - [ ] Keep `SEND_SAMPLE_ROWS_TO_LLM` disabled.
 - [ ] Set conservative values for every structural budget:
