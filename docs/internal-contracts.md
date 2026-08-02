@@ -47,8 +47,10 @@ When an internal contract conflict is found, use this order:
 3. language-neutral fixtures provide executable cases;
 4. Django must conform to those sources.
 
-The fixture corpus is a later R4 slice and is not included merely by packaging
-the schemas.
+A separate top-level `conformance/` corpus now provides explicit synthetic
+positive, negative, security, budget, semantic, ordering, truncation, and
+serialization cases. The current implementation replays it on SQLite;
+PostgreSQL replay remains a later R4 slice.
 
 ## Boundaries
 

@@ -16,6 +16,7 @@ Status: **alpha**. APIs may change before a stable release.
 - Optional DRF catalog, capabilities, query, and run-detail endpoints.
 - Strict Pydantic `QueryPlan` validation.
 - Five packaged draft internal JSON Schemas for the current contract shape.
+- A language-neutral synthetic conformance corpus with SQLite replay.
 - ORM-only list and aggregate query execution.
 - Dummy provider for deterministic tests and demos.
 - OpenAI-compatible live provider adapter.

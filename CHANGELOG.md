@@ -22,6 +22,7 @@ The project is alpha and APIs may change before a stable release.
 - Added required explicit server-owned IANA timezone registration for every resource; the timezone is safe catalog/capability metadata but cannot be supplied by a plan.
 - Added optional presentation envelopes using `{"kind": "table|metric|bar|line|pie", ...}` outside QueryPlan and normalized them only against completed result columns.
 - Added five packaged Draft 2020-12 JSON Schemas and Python accessors for the one current internal catalog, query-plan, capabilities, result, and error shape; the schemas remain draft and unfrozen.
+- Added a language-neutral synthetic conformance corpus with explicit positive, structural, member/scope/security, budget, semantic, ordering/truncation, and serialization cases plus trusted SQLite replay.
 
 ### Changed
 

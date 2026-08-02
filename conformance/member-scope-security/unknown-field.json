@@ -1,0 +1,265 @@
+{
+  "capabilities": {
+    "aggregate_policies": {
+      "numeric_to_many": false,
+      "to_many_count_policies": [
+        "count_rows",
+        "count_distinct"
+      ]
+    },
+    "backend_restrictions": [],
+    "features": {
+      "accurate_truncation": true,
+      "arbitrary_expressions": false,
+      "cross_resource_queries": false,
+      "cursor_pagination": false,
+      "mutations": false,
+      "presentation": true,
+      "raw_sql": false,
+      "registered_metrics": true
+    },
+    "filter_logic": "implicit_and",
+    "intents": [
+      "list",
+      "aggregate"
+    ],
+    "limits": {
+      "default_result_limit": 50,
+      "max_filter_values": 200,
+      "max_filters": 20,
+      "max_group_terms": 3,
+      "max_in_values": 100,
+      "max_metrics": 5,
+      "max_order_terms": 5,
+      "max_plan_bytes": 65536,
+      "max_relationship_edges": 8,
+      "max_relationship_hops": 2,
+      "max_result_rows": 50,
+      "max_selected_fields": 25
+    },
+    "time_grains": [
+      "day",
+      "week",
+      "month",
+      "quarter",
+      "year"
+    ],
+    "types": [
+      {
+        "name": "string",
+        "operators": [
+          "eq",
+          "neq",
+          "contains",
+          "icontains",
+          "in",
+          "isnull"
+        ]
+      },
+      {
+        "name": "boolean",
+        "operators": [
+          "eq",
+          "neq",
+          "in",
+          "isnull"
+        ]
+      },
+      {
+        "name": "integer",
+        "operators": [
+          "eq",
+          "neq",
+          "gt",
+          "gte",
+          "lt",
+          "lte",
+          "in",
+          "isnull"
+        ]
+      },
+      {
+        "name": "decimal",
+        "operators": [
+          "eq",
+          "neq",
+          "gt",
+          "gte",
+          "lt",
+          "lte",
+          "in",
+          "isnull"
+        ]
+      },
+      {
+        "name": "float",
+        "operators": [
+          "eq",
+          "neq",
+          "gt",
+          "gte",
+          "lt",
+          "lte",
+          "in",
+          "isnull"
+        ]
+      },
+      {
+        "name": "date",
+        "operators": [
+          "eq",
+          "neq",
+          "gt",
+          "gte",
+          "lt",
+          "lte",
+          "in",
+          "isnull",
+          "date_range",
+          "last_n_days",
+          "last_n_months"
+        ]
+      },
+      {
+        "name": "datetime",
+        "operators": [
+          "eq",
+          "neq",
+          "gt",
+          "gte",
+          "lt",
+          "lte",
+          "in",
+          "isnull",
+          "date_range",
+          "last_n_days",
+          "last_n_months"
+        ]
+      },
+      {
+        "name": "time",
+        "operators": [
+          "eq",
+          "neq",
+          "gt",
+          "gte",
+          "lt",
+          "lte",
+          "in",
+          "isnull"
+        ]
+      },
+      {
+        "name": "uuid",
+        "operators": [
+          "eq",
+          "neq",
+          "in",
+          "isnull"
+        ]
+      },
+      {
+        "name": "enum",
+        "operators": [
+          "eq",
+          "neq",
+          "in",
+          "isnull"
+        ]
+      }
+    ]
+  },
+  "case_id": "member-scope-security.unknown-field",
+  "catalog": {
+    "resources": [
+      {
+        "default_date_field": "created_at",
+        "default_order": [
+          {
+            "direction": "asc",
+            "field": "id"
+          }
+        ],
+        "description": "Synthetic scoped orders.",
+        "fields": [
+          {
+            "label": "Order ID",
+            "name": "id",
+            "nullable": false,
+            "relation_depth": 0,
+            "type": "integer"
+          },
+          {
+            "enum": {
+              "type": "string",
+              "values": [
+                {
+                  "label": "Paid",
+                  "value": "paid"
+                },
+                {
+                  "label": "Pending",
+                  "value": "pending"
+                }
+              ]
+            },
+            "label": "Status",
+            "name": "status",
+            "nullable": false,
+            "relation_depth": 0,
+            "type": "enum"
+          },
+          {
+            "label": "Created at",
+            "name": "created_at",
+            "nullable": false,
+            "relation_depth": 0,
+            "type": "datetime"
+          },
+          {
+            "label": "Total",
+            "name": "total",
+            "nullable": false,
+            "relation_depth": 0,
+            "type": "decimal"
+          }
+        ],
+        "label": "Orders",
+        "metrics": [
+          {
+            "label": "Order count",
+            "name": "order_count",
+            "result_type": "integer"
+          },
+          {
+            "label": "Revenue",
+            "name": "revenue",
+            "result_type": "decimal"
+          }
+        ],
+        "name": "orders",
+        "synonyms": [],
+        "timezone": "UTC"
+      }
+    ]
+  },
+  "category": "member-scope-security",
+  "execution": {
+    "scenario": "north_visible"
+  },
+  "expected": {
+    "application_data_queries": 0,
+    "error": {
+      "code": "asklens.member.unavailable",
+      "message": "A requested query member is unavailable."
+    }
+  },
+  "plan": {
+    "intent": "list",
+    "limit": 10,
+    "resource": "orders",
+    "select": [
+      "private_note"
+    ]
+  }
+}
