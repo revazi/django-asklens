@@ -195,4 +195,7 @@ class ErrorDocument(ContractModel):
 
     code: AskLensErrorCode
     message: NonEmptyString
-    pointer: Annotated[str, Field(pattern=r"^/", max_length=200)] = None  # type: ignore[assignment]
+    pointer: Annotated[
+        str,
+        Field(pattern=r"^/[^\x00-\x1f]*$", max_length=200),
+    ] = None  # type: ignore[assignment]

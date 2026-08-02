@@ -245,6 +245,15 @@ def test_contracts_reject_extra_or_private_shape() -> None:
                 "message": "unsafe",
             },
         )
+    with pytest.raises(ValidationError):
+        validate_contract_document(
+            "error",
+            {
+                "code": "asklens.parse.invalid",
+                "message": "The query plan could not be parsed.",
+                "pointer": "/filters/0\ninternal",
+            },
+        )
 
 
 def test_schemas_omit_private_backend_and_policy_properties() -> None:
