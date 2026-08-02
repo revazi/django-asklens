@@ -123,7 +123,10 @@ jobs:
           required_sdist_suffixes = {
               "/README.md",
               "/LICENSE",
+              "/conformance/README.md",
+              "/conformance/positive/list-scoped.json",
               "/docs/index.md",
+              "/docs/conformance.md",
               "/docs/installation.md",
               "/docs/internal-contracts.md",
               "/docs/migrating-0.1-to-0.2.md",

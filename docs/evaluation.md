@@ -26,6 +26,15 @@ The current opt-in live evaluation suite covers status aggregation, count metric
 
 Default CI and local test runs do not set live-provider environment variables, so these tests are skipped by default.
 
+## Contract conformance versus provider evaluation
+
+The separate top-level `conformance/` corpus contains language-neutral plan,
+result/error, catalog, and capability documents. It verifies deterministic
+wire, semantic, security, budget, ordering, truncation, and serialization
+behavior without evaluating natural-language planning quality. The trusted
+implementation harness is documented in [Draft internal conformance
+corpus](conformance.md).
+
 Required environment variables for live evaluation:
 
 - `DJANGO_ASKLENS_LIVE_LLM=1`

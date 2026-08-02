@@ -1,6 +1,7 @@
 include CHANGELOG.md
 include CONTRIBUTING.md
 include SECURITY.md
+recursive-include conformance *.json *.md
 recursive-include django_asklens/contracts/schemas *.json
 recursive-include django_asklens/templates *.html
 recursive-include docs *.md

@@ -9,6 +9,7 @@ Django AskLens is an alpha reusable Django package for safe natural-language que
 - [Migrating from 0.1 alpha to 0.2 alpha](migrating-0.1-to-0.2.md)
 - [Core Python API](core-python-api.md)
 - [Draft internal contract schemas](internal-contracts.md)
+- [Draft internal conformance corpus](conformance.md)
 - [Custom UI guide](custom-ui.md)
 - [Registration API](registration.md)
 - [Provider configuration](providers.md)

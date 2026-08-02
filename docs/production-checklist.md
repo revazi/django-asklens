@@ -118,7 +118,8 @@ AskLens is a data access surface. Configure it as carefully as any reporting, an
 
 ## Final go/no-go
 
-- [ ] Full test suite passes.
+- [ ] Full test suite and language-neutral conformance replay pass on each
+      database/version claimed by the deployment.
 - [ ] Live provider validation passes for representative roles.
 - [ ] Security checklist is complete.
 - [ ] No sensitive data, sample rows, provider payload logs, `.env` files, or credentials are committed.
