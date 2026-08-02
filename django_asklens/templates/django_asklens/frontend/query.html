@@ -1146,9 +1146,9 @@
             <ul class="chip-list" id="starter-list"></ul>
           </section>
 
-          <details class="card disclosure" aria-label="Visible capabilities">
+          <details class="card disclosure" aria-label="Visible catalog">
             <summary>
-              <span>Visible capabilities</span>
+              <span>Visible catalog</span>
             </summary>
             <div class="disclosure-content">
               <div class="disclosure-heading">
@@ -1206,7 +1206,6 @@
   <script>
     const app = document.getElementById("asklens-app");
     const catalogUrl = app.dataset.catalogUrl;
-    const capabilitiesUrl = app.dataset.capabilitiesUrl;
     const queryUrl = app.dataset.queryUrl;
     const csrfToken = document.querySelector("[name=csrfmiddlewaretoken]").value;
     const starterQuestions = JSON.parse(document.getElementById("asklens-starter-questions").textContent);
@@ -1444,7 +1443,7 @@
       title.textContent = queryHelp?.answer || "What can I query?";
       const summary = document.createElement("p");
       summary.className = "small";
-      summary.textContent = payload.capabilities?.summary || payload.explanation || "AskLens capabilities are available.";
+      summary.textContent = payload.query_help?.answer || payload.explanation || "AskLens query help is available.";
       answer.append(title, summary);
       if (payload.query_help_error) {
         const reason = document.createElement("p");
@@ -1851,8 +1850,8 @@
 
     async function loadCapabilities() {
       try {
-        const capabilities = await fetchJson(capabilitiesUrl);
-        const resources = capabilities.resources || [];
+        const catalog = await fetchJson(catalogUrl);
+        const resources = catalog.resources || [];
         capabilitiesList.replaceChildren();
         resources.slice(0, 20).forEach((resource) => {
           const item = document.createElement("li");
@@ -1875,7 +1874,7 @@
         capabilitiesList.replaceChildren();
         const item = document.createElement("li");
         item.className = "empty";
-        item.textContent = `Capabilities unavailable: ${error.message}`;
+        item.textContent = `Catalog unavailable: ${error.message}`;
         capabilitiesList.appendChild(item);
       }
     }

@@ -209,7 +209,8 @@ def test_demo_fastmcp_server_capabilities_are_compact_by_default(
 
     assert payload["response_type"] == "capabilities"
     assert "query_plan_schema" not in payload
-    [resource] = payload["capabilities"]["resources"]
+    assert payload["capabilities"]["intents"] == ["list", "aggregate"]
+    [resource] = payload["resource_summaries"]
     assert resource["field_names"] == ["id", "status", "created_at"]
     assert resource["metric_names"] == ["order_count"]
     assert "fields" not in resource

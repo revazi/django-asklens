@@ -10,6 +10,7 @@ from collections.abc import Mapping
 from typing import Any
 
 from django_asklens.catalog.capabilities import build_capabilities
+from django_asklens.catalog.registry import serialize_catalog
 from django_asklens.exceptions import AskLensError
 from django_asklens.permissions import get_request_permissions
 from django_asklens.planning.schemas import get_query_plan_json_schema
@@ -50,11 +51,12 @@ def asklens_capabilities(
     include_query_plan_schema: bool = True,
     resource_detail: str = "full",
 ) -> dict[str, Any]:
-    """Return permission-scoped capabilities for an MCP client.
+    """Return machine capabilities plus separate visible-resource metadata.
 
-    The payload is derived from registered catalog metadata only. It does not
-    inspect database rows, include sample values, execute a query, or call an
-    LLM provider.
+    The catalog or resource summaries are permission scoped. The machine
+    capability document contains no resources or human guidance. This helper
+    does not inspect rows, include sample values, execute a query, or call a
+    provider.
     """
 
     if resource_detail not in {"full", "summary"}:
@@ -63,20 +65,26 @@ def asklens_capabilities(
         )
 
     permissions = get_request_permissions(request)
-    capabilities: dict[str, Any] = build_capabilities(permissions=permissions)
-    if resource_detail == "summary":
-        capabilities = summarize_capabilities(capabilities)
-
+    catalog = serialize_catalog(permissions=permissions)
     payload: dict[str, Any] = {
         "response_type": "capabilities",
-        "capabilities": capabilities,
+        "capabilities": build_capabilities(),
+        "resource_detail": resource_detail,
         "rows_omitted": True,
         "executed": False,
         "explanation": (
-            "Returned permission-scoped AskLens capabilities without executing "
-            "a database query."
+            "Returned machine capabilities and permission-scoped catalog "
+            "metadata without executing a database query."
         ),
     }
+    if resource_detail == "summary":
+        payload["resource_summaries"] = summarize_catalog_resources(catalog)
+        payload["resource_detail_guidance"] = (
+            "Call asklens_describe_resource(resource) for full field and metric "
+            "metadata before constructing a QueryPlan for a specific resource."
+        )
+    else:
+        payload["catalog"] = catalog
     if include_query_plan_schema:
         payload["query_plan_schema"] = get_query_plan_json_schema()
     return payload
@@ -101,13 +109,13 @@ def asklens_describe_resource(request: Any, resource: str) -> dict[str, Any]:
     """Return full permission-scoped metadata for one visible resource."""
 
     permissions = get_request_permissions(request)
-    capabilities = build_capabilities(permissions=permissions)
-    for resource_capability in capabilities["resources"]:
-        if resource_capability["name"] == resource:
+    catalog = serialize_catalog(permissions=permissions)
+    for resource_metadata in catalog["resources"]:
+        if resource_metadata["name"] == resource:
             return {
                 "response_type": "resource_description",
                 "valid": True,
-                "resource": resource_capability,
+                "resource": resource_metadata,
                 "rows_omitted": True,
                 "executed": False,
                 "explanation": (
@@ -128,31 +136,30 @@ def asklens_describe_resource(request: Any, resource: str) -> dict[str, Any]:
     }
 
 
-def summarize_capabilities(capabilities: Mapping[str, Any]) -> dict[str, Any]:
-    """Return a compact capability view suitable for MCP discovery calls."""
+def summarize_catalog_resources(catalog: Mapping[str, Any]) -> list[dict[str, Any]]:
+    """Return compact resource discovery metadata outside the catalog shape."""
 
-    resources = capabilities.get("resources", [])
-    summarized_resources = [
-        summarize_resource_capability(resource)
+    resources = catalog.get("resources", [])
+    return [
+        summarize_catalog_resource(resource)
         for resource in resources
         if isinstance(resource, Mapping)
     ]
-    summary = dict(capabilities)
-    summary["resources"] = summarized_resources
-    summary["resource_detail"] = "summary"
-    summary["resource_detail_guidance"] = (
-        "Call asklens_describe_resource(resource) for full field and metric "
-        "metadata before constructing a QueryPlan for a specific resource."
-    )
-    return summary
 
 
-def summarize_resource_capability(resource: Mapping[str, Any]) -> dict[str, Any]:
-    """Return compact metadata for one permission-scoped resource."""
+def summarize_catalog_resource(resource: Mapping[str, Any]) -> dict[str, Any]:
+    """Return compact metadata for one permission-scoped catalog resource."""
 
     fields = resource.get("fields", [])
     metrics = resource.get("metrics", [])
-    date_fields = resource.get("date_fields", [])
+    date_fields = [
+        field
+        for field in fields
+        if isinstance(field, Mapping)
+        and field.get("type") in {"date", "datetime"}
+        and not field.get("filter_only", False)
+        and field.get("result_visible", True)
+    ]
     summary: dict[str, Any] = {
         "name": resource.get("name"),
         "label": resource.get("label"),
@@ -162,11 +169,8 @@ def summarize_resource_capability(resource: Mapping[str, Any]) -> dict[str, Any]
         "field_names": names_from_capability_items(fields),
         "metric_names": names_from_capability_items(metrics),
         "date_field_names": names_from_capability_items(date_fields),
-        "examples": resource.get("examples", []),
-        "scope": resource.get("scope", {}),
     }
     for optional_key in (
-        "requires_permission",
         "scope_resource",
         "examples_enabled",
     ):

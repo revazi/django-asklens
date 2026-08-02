@@ -122,41 +122,56 @@ DJANGO_ASKLENS = {
 }
 ```
 
-## 3. Discover what can be queried
+## 3. Discover machine features and visible resources
 
-With the optional `api` extra installed, use the capabilities endpoint to show users what AskLens can answer for the current request permissions. The response is generated from permission-scoped catalog metadata only; it does not include database rows or sample values.
+With the optional `api` extra installed, query two separate metadata documents:
 
 ```http
 GET /asklens/capabilities/
+GET /asklens/catalog/
 ```
 
-A response includes visible resources, exposed fields, metrics, date fields, example questions, supported patterns, and limitations. Users can also ask capability/help questions through `/asklens/query/`. In live mode, AskLens uses one unified provider call to decide whether the request is a data query or capability help, using visible capabilities metadata once. Provider-backed suggestions include catalog references, and AskLens synthesizes/validates executable QueryPlans from those references locally before returning help. Dummy/offline mode uses deterministic examples for obvious help questions such as `What can I query?`.
+Machine capabilities describe supported intents, canonical type/operator rules,
+time grains, structural limits, features, aggregate policies, and backend
+restrictions. They contain no resources or human prose. The permission-scoped
+catalog separately contains visible resources, fields, metrics, enum metadata,
+and server-owned resource timezones. Neither response contains rows or sample
+values. Abbreviated examples of the two documents follow.
 
 ```json
 {
-  "summary": "You can ask read-only list and aggregate questions over 1 resource.",
+  "intents": ["list", "aggregate"],
+  "filter_logic": "implicit_and",
+  "types": [
+    {"name": "enum", "operators": ["eq", "neq", "in", "isnull"]}
+  ],
+  "time_grains": ["day", "week", "month", "quarter", "year"]
+}
+```
+
+```json
+{
   "resources": [
     {
       "name": "orders",
       "label": "Orders",
       "timezone": "UTC",
       "fields": [
-        {
-          "name": "status",
-          "label": "Status",
-          "type": "enum",
-          "can_group": true,
-          "operators": ["eq", "neq", "in", "isnull"]
-        }
+        {"name": "status", "label": "Status", "type": "enum", "nullable": false}
       ],
       "metrics": [
         {"name": "order_count", "label": "Number of orders", "result_type": "integer"}
-      ],
-      "examples": ["Show Number of orders by Status"]
+      ]
     }
   ]
 }
 ```
+
+Users can ask human help questions through `/asklens/query/`. Live mode uses
+permission-scoped provider guidance derived from the catalog, but that guidance
+is not merged into the machine capability document. Provider-backed suggestions
+include catalog references, and AskLens synthesizes/validates executable
+QueryPlans locally. Dummy/offline mode uses deterministic help.
 
 ## 4. Query through the optional API
 
@@ -202,7 +217,7 @@ For grouped aggregate/chart responses, `limit` caps returned groups/slices; for 
 
 Column metadata includes canonical `type` and `nullable`. Decimal values are JSON strings, floats are JSON numbers, and unknown runtime objects are rejected rather than stringified. See [Registration](registration.md) for the per-type operator matrix and explicit enum aliases.
 
-Capability/help questions return a non-row response and do not execute a database query. In live mode, `query_help_source` is `semantic_provider` when the unified provider response chose capability help and suggestions passed catalog-reference plus locally synthesized plan validation:
+Capability/help questions return a non-row response and do not execute a database query. In live mode, `query_help_source` is `semantic_provider` when the unified provider response chose capability help and suggestions passed catalog-reference plus locally synthesized plan validation. An abbreviated response is:
 
 ```json
 {
@@ -210,7 +225,8 @@ Capability/help questions return a non-row response and do not execute a databas
   "response_type": "capabilities",
   "routing_source": "fallback",
   "query_help_source": "deterministic",
-  "capabilities": {"summary": "You can ask read-only list and aggregate questions over 1 resource."},
+  "capabilities": {"intents": ["list", "aggregate"], "filter_logic": "implicit_and"},
+  "catalog": {"resources": [{"name": "orders", "label": "Orders"}]},
   "query_help": {
     "answer": "You can ask read-only list and aggregate questions over 1 resource.",
     "suggestions": [
@@ -276,7 +292,7 @@ For alpha, `/asklens/query/` is the single query/help entry point when the optio
 - In dummy/offline mode, obvious help questions are handled deterministically and data questions use configured dummy plans.
 - Successful data responses return `response_type: "query"`.
 - Help/capability responses return `response_type: "capabilities"` and do not execute a database query.
-- AskLens does not expose a separate `/asklens/help/` endpoint in alpha. Clients should use `/asklens/capabilities/` for static guidance and `/asklens/query/` for natural-language help questions.
+- AskLens does not expose a separate `/asklens/help/` endpoint in alpha. Clients should use `/asklens/capabilities/` for machine features, `/asklens/catalog/` for visible resources, and `/asklens/query/` for natural-language help questions.
 
 Submitted plans are always revalidated. This applies to clicked suggestions, browser-saved plans, project-owned saved queries, and custom UI controls that modify filters, dates, ordering, or limits. A submitted plan is a latency/UX optimization, not a trust boundary or permission bypass.
 
@@ -288,7 +304,7 @@ The admin query page remains available in alpha as a staff/operator utility and 
 
 ## 7. Query from Python
 
-Core Python usage does not require DRF. See the [Core Python API](core-python-api.md) guide for core-only setup, permission-scoped capabilities, plan validation, execution, result serialization, and the shared query/help orchestration helper.
+Core Python usage does not require DRF. See the [Core Python API](core-python-api.md) guide for core-only setup, separate machine capabilities and permission-scoped catalog metadata, plan validation, execution, result serialization, and the shared query/help orchestration helper.
 
 ```python
 from django_asklens.execution import execute_plan

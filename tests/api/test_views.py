@@ -11,7 +11,7 @@ from rest_framework.test import APIClient
 
 from django_asklens import Metric
 from django_asklens.admin_querying import build_admin_result, execute_admin_query
-from django_asklens.catalog.capabilities import build_capabilities
+from django_asklens.catalog.capabilities import build_query_guidance
 from django_asklens.catalog.registry import default_registry
 from django_asklens.models import SemanticQueryRun
 from django_asklens.querying import get_query_help_for_capabilities
@@ -263,12 +263,12 @@ def test_catalog_endpoint_requires_authentication(
     assert "customer.email" not in catalog_text
 
 
-def test_capabilities_endpoint_returns_permission_scoped_query_guidance(
+def test_capabilities_endpoint_returns_machine_features_without_catalog_or_help(
     api_client: APIClient,
     registered_orders: None,
     user,
 ) -> None:
-    """Capabilities explain what a requester can query without exposing rows."""
+    """Capabilities expose machine facts separately from catalog and help."""
 
     unauthenticated = api_client.get("/asklens/capabilities/")
     assert unauthenticated.status_code in {401, 403}
@@ -277,22 +277,14 @@ def test_capabilities_endpoint_returns_permission_scoped_query_guidance(
     response = api_client.get("/asklens/capabilities/")
 
     assert response.status_code == 200
-    assert response.data["summary"] == (
-        "You can ask read-only list and aggregate questions over 1 resource."
-    )
-    assert response.data["query_patterns"]
-    assert response.data["limitations"]
-    [resource] = response.data["resources"]
-    assert resource["name"] == "orders"
-    assert resource["label"] == "Orders"
-    assert resource["timezone"] == "UTC"
-    assert {field["name"] for field in resource["fields"]} == {
-        "id",
-        "status",
-        "created_at",
-    }
-    assert resource["metrics"][0]["name"] == "order_count"
-    assert "Show Order Count by Status" in resource["examples"]
+    assert response.data["intents"] == ["list", "aggregate"]
+    assert response.data["filter_logic"] == "implicit_and"
+    assert response.data["types"]
+    assert response.data["limits"]["max_result_rows"] == 50
+    assert response.data["features"]["raw_sql"] is False
+    assert "resources" not in response.data
+    assert "summary" not in response.data
+    assert "examples" not in response.data
     assert "customer.email" not in str(response.data)
 
 
@@ -309,7 +301,7 @@ def test_live_query_help_uses_provider(
 
     query_help, source, error = get_query_help_for_capabilities(
         "What can I query?",
-        capabilities=build_capabilities(),
+        capabilities=build_query_guidance(),
     )
 
     assert source == "semantic_provider"
@@ -334,7 +326,7 @@ def test_query_help_fallback_returns_safe_error(
 
     query_help, source, error = get_query_help_for_capabilities(
         "What can I query?",
-        capabilities=build_capabilities(),
+        capabilities=build_query_guidance(),
     )
 
     assert source == "deterministic_fallback"
@@ -507,10 +499,10 @@ def test_query_endpoint_intercepts_capabilities_question_without_provider_or_aud
     assert response.status_code == 200
     assert response.data["question"] == "What can I query?"
     assert response.data["response_type"] == "capabilities"
-    assert response.data["capabilities"]["summary"] == (
-        "You can ask read-only list and aggregate questions over 1 resource."
-    )
-    assert response.data["capabilities"]["resources"][0]["name"] == "orders"
+    assert response.data["capabilities"]["intents"] == ["list", "aggregate"]
+    assert response.data["catalog"]["resources"][0]["name"] == "orders"
+    assert "summary" not in response.data["capabilities"]
+    assert "examples" not in response.data["capabilities"]
     assert response.data["routing_source"] == "fallback"
     assert response.data["capability_intent"]["intent"] == "capabilities"
     assert response.data["query_help_source"] == "deterministic"

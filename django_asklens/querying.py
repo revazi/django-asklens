@@ -5,7 +5,11 @@ from typing import Any, Literal
 
 from django.core.exceptions import PermissionDenied
 
-from django_asklens.catalog.capabilities import build_capabilities
+from django_asklens.catalog.capabilities import (
+    build_capabilities,
+    build_query_guidance,
+)
+from django_asklens.catalog.registry import serialize_catalog
 from django_asklens.exceptions import (
     AskLensError,
     PublicErrorPayload,
@@ -95,10 +99,10 @@ def execute_asklens_query_request(
             if provided_plan is not None:
                 untrusted_plan = provided_plan
             elif should_use_unified_provider_response():
-                capabilities = build_capabilities(permissions=permissions)
+                query_guidance = build_query_guidance(permissions=permissions)
                 provider_result = plan_asklens_response(
                     question,
-                    capabilities=capabilities,
+                    capabilities=query_guidance,
                     permissions=permissions,
                 )
                 if provider_result.response_type == "capabilities":
@@ -109,7 +113,7 @@ def execute_asklens_query_request(
                             question,
                             intent=capabilities_intent(),
                             source="semantic_provider",
-                            capabilities=capabilities,
+                            permissions=permissions,
                             query_help=provider_result.query_help,
                             query_help_source="semantic_provider",
                         ),
@@ -124,8 +128,8 @@ def execute_asklens_query_request(
                     permissions=permissions,
                 )
                 if routing_result.intent.intent == "capabilities":
-                    capabilities = filter_capabilities_for_intent(
-                        build_capabilities(permissions=permissions),
+                    query_guidance = filter_capabilities_for_intent(
+                        build_query_guidance(permissions=permissions),
                         routing_result.intent,
                     )
                     (
@@ -134,7 +138,7 @@ def execute_asklens_query_request(
                         query_help_error,
                     ) = get_query_help_for_capabilities(
                         question,
-                        capabilities=capabilities,
+                        capabilities=query_guidance,
                         permissions=permissions,
                     )
                     return AskLensQueryResponse(
@@ -143,7 +147,7 @@ def execute_asklens_query_request(
                             question,
                             intent=routing_result.intent,
                             source=routing_result.source,
-                            capabilities=capabilities,
+                            permissions=permissions,
                             query_help=query_help,
                             query_help_source=query_help_source,
                             query_help_error=query_help_error,
@@ -181,16 +185,16 @@ def execute_asklens_query_request(
             question,
             provided_plan=provided_plan,
         ):
-            capabilities = build_capabilities(permissions=permissions)
+            query_guidance = build_query_guidance(permissions=permissions)
             return AskLensQueryResponse(
                 response_type="capabilities",
                 payload=build_capabilities_payload(
                     question,
                     intent=capabilities_intent(confidence=0.5),
                     source="fallback",
-                    capabilities=capabilities,
+                    permissions=permissions,
                     query_help=build_deterministic_query_help(
-                        capabilities=capabilities,
+                        capabilities=query_guidance,
                         question=question,
                         permissions=tuple(permissions),
                     ),
@@ -306,7 +310,7 @@ def build_capabilities_payload(
     *,
     intent: QuestionIntent,
     source: str,
-    capabilities: dict[str, Any],
+    permissions: frozenset[str],
     query_help: QueryHelp,
     query_help_source: str,
     query_help_error: str = "",
@@ -318,12 +322,13 @@ def build_capabilities_payload(
         "response_type": "capabilities",
         "capability_intent": intent.model_dump(mode="json"),
         "routing_source": source,
-        "capabilities": capabilities,
+        "capabilities": build_capabilities(),
+        "catalog": serialize_catalog(permissions=permissions),
         "query_help_source": query_help_source,
         "query_help": query_help.model_dump(mode="json"),
         "explanation": (
-            "Returned permission-scoped AskLens capabilities and query-writing "
-            "help without executing a database query."
+            "Returned machine capabilities, permission-scoped catalog metadata, "
+            "and query-writing help without executing a database query."
         ),
     }
     if query_help_error:

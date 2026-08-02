@@ -82,8 +82,8 @@ resource = register(
 - `synonyms`: optional alternate words for the resource.
 - `default_date_field`: registered date/datetime field used by date-oriented planning.
 - `timezone`: required server-owned IANA timezone name, such as `"UTC"` or
-  `"America/New_York"`. It is included in catalog/capability metadata so
-  consumers can interpret calendar buckets, but plans cannot override it and
+  `"America/New_York"`. It is included in catalog and provider-guidance metadata
+  so consumers can interpret calendar buckets, but plans cannot override it and
   AskLens never falls back to Django's `TIME_ZONE`.
 - `metrics`: explicit aggregate metrics available to plans.
 - `default_order`: optional semantic `(field, "asc" | "desc")` pairs used when a list plan omits ordering. Fields must be unrestricted, result-visible registered fields.
@@ -91,7 +91,7 @@ resource = register(
 - `requires_permission`: optional permission string required to see and query the whole resource.
 - `scope_mode`: optional per-resource override. It must be `"global"` or `"context_scoped"`. When omitted, AskLens uses `DJANGO_ASKLENS["DEFAULT_SCOPE_MODE"]`; only `"context_scoped"` is accepted as a project default. If neither is configured, registration fails.
 - `scope_provider`: trusted request-aware queryset provider required for `context_scoped`; forbidden for `global`.
-- `scope_resource`: optional capabilities/help metadata. Set `True` when this resource represents the scoped entity itself, regardless of what your project calls that entity.
+- `scope_resource`: optional query-help/provider-guidance metadata. Set `True` when this resource represents the scoped entity itself, regardless of what your project calls that entity.
 - `examples_enabled`: optional boolean, default `True`. Set `False` for helper/lookup resources that should remain queryable but should not generate deterministic “suggested question” examples.
 
 ## Field metadata
@@ -247,7 +247,7 @@ fields = {
 
 By default, AskLens checks `request.user.get_all_permissions()` in the API flow. If your project uses role tables, tenant-scoped grants, or another permission system, configure `DJANGO_ASKLENS["REQUEST_PERMISSIONS_GETTER"]`; see [Multi-tenant security](multitenancy-security.md).
 
-Use `scope_dimension=True` for any field that identifies the user's row scope, whatever your schema calls it, such as `account.name`, `organization.title`, `gym.label`, or another project-specific relation. Use `scope_resource=True` when the whole resource represents the scoped entity. These flags only shape capabilities/help examples; row access is enforced by the resource's effective `scope_mode` and trusted `scope_provider(request)`.
+Use `scope_dimension=True` for any field that identifies the user's row scope, whatever your schema calls it, such as `account.name`, `organization.title`, `gym.label`, or another project-specific relation. Use `scope_resource=True` when the whole resource represents the scoped entity. These flags only shape query-help examples and provider guidance; row access is enforced by the resource's effective `scope_mode` and trusted `scope_provider(request)`.
 
 ## Metrics
 
@@ -271,7 +271,7 @@ Metric(
 )
 ```
 
-`binding`, `op`, `result_type`, `distinct_key`, cardinality policy, and permission policy are never accepted from a plan. Public catalog and capability payloads include only the semantic name, label, and result type; private Django paths and permission tokens are omitted.
+`binding`, `op`, `result_type`, `distinct_key`, cardinality policy, and permission policy are never accepted from a plan. Public catalog and provider-guidance metric entries include only the semantic name, label, and result type; machine capabilities contain no resource metrics. Private Django paths and permission tokens are omitted from every document.
 
 Supported operations are `count`, `sum`, `avg`, `min`, and `max`. The default `to_one_only` policy rejects any metric crossing a to-many relationship. The only 0.2 exceptions are explicit counts at one declared relationship grain:
 

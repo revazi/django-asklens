@@ -21,6 +21,6 @@ Django AskLens is an alpha reusable Django package for safe natural-language que
 
 ## Current scope
 
-AskLens exposes permission-scoped catalog and capabilities metadata, accepts a natural-language question through Python helpers or the optional DRF API, asks a deterministic or configured provider for an executable `query_plan` plus optional separate `presentation`, validates the plan against the semantic catalog, compiles safe read-only Django ORM queries, executes with limits, and returns typed result JSON.
+AskLens exposes permission-scoped catalog metadata and separate machine capabilities, accepts a natural-language question through Python helpers or the optional DRF API, asks a deterministic or configured provider for an executable `query_plan` plus optional separate `presentation`, validates the plan against the semantic catalog, compiles safe read-only Django ORM queries, executes with limits, and returns typed result JSON.
 
 AskLens does not execute LLM-generated SQL, mutate data, auto-expose Django models, send sample rows to providers, or require a frontend framework.

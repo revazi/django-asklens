@@ -52,7 +52,6 @@
       <div class="module">
         <h2>{% translate "Examples" %}</h2>
         {% if result.answer %}<p>{{ result.answer }}</p>{% endif %}
-        {% if result.summary %}<p class="help">{{ result.summary }}</p>{% endif %}
         {% if result.query_help_error %}
           <p class="errornote">{% blocktranslate with reason=result.query_help_error %}Reason: {{ reason }}{% endblocktranslate %}</p>
         {% endif %}
