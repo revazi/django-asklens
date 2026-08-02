@@ -1,0 +1,45 @@
+{
+  "$defs": {
+    "AskLensErrorCode": {
+      "enum": [
+        "asklens.parse.invalid",
+        "asklens.member.unavailable",
+        "asklens.plan.invalid",
+        "asklens.authorization.denied",
+        "asklens.scope.unavailable",
+        "asklens.budget.exceeded",
+        "asklens.binding.invalid",
+        "asklens.compile.failed",
+        "asklens.execute.failed",
+        "asklens.provider.failed"
+      ],
+      "type": "string"
+    }
+  },
+  "$id": "error.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Stable safe public error document.",
+  "properties": {
+    "code": {
+      "$ref": "#/$defs/AskLensErrorCode"
+    },
+    "message": {
+      "minLength": 1,
+      "title": "Message",
+      "type": "string"
+    },
+    "pointer": {
+      "maxLength": 200,
+      "pattern": "^/[^\\x00-\\x1f]*$",
+      "title": "Pointer",
+      "type": "string"
+    }
+  },
+  "required": [
+    "code",
+    "message"
+  ],
+  "title": "AskLens Internal Error",
+  "type": "object"
+}

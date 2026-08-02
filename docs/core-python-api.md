@@ -144,6 +144,22 @@ Neither document contains rows or sample values. By default, AskLens reads
 the catalog and validating plans. Projects with role, tenant, or staff-grant
 systems can configure `DJANGO_ASKLENS["REQUEST_PERMISSIONS_GETTER"]`.
 
+## Read the draft internal JSON Schemas
+
+The installed package includes the current Draft 2020-12 schemas for catalog,
+query plan, capabilities, result, and error documents:
+
+```python
+from django_asklens import get_contract_schema, list_contract_schemas
+
+names = list_contract_schemas()
+plan_schema = get_contract_schema("query-plan")
+```
+
+These schemas are internal and unfrozen, carry no embedded contract version,
+and do not replace trusted execution or current-request authorization. See
+[Draft internal contract schemas](internal-contracts.md).
+
 ## Validate and execute a known plan
 
 If your application already has a plan payload, pass the untrusted mapping directly to `execute_plan()`. The facade parses it and checks the current registered catalog, allowed fields, permissions, limits, relation depth, and read-only intent before compilation.

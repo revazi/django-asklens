@@ -39,6 +39,17 @@ def smoke_core_install() -> None:
     import django_asklens.execution as execution_package
 
     assert django_asklens.__version__ == "0.1.0a1"
+    assert django_asklens.list_contract_schemas() == (
+        "catalog",
+        "query-plan",
+        "capabilities",
+        "result",
+        "error",
+    )
+    capabilities_schema = django_asklens.get_contract_schema("capabilities")
+    assert capabilities_schema["$schema"].endswith("/draft/2020-12/schema")
+    assert capabilities_schema["additionalProperties"] is False
+    assert "resources" not in capabilities_schema["properties"]
     assert callable(execution_package.execute_plan)
     assert not hasattr(execution_package, "execute_query")
     assert not hasattr(compiler_package, "compile_query_plan")

@@ -54,6 +54,15 @@ def test_valid_query_plan_parses_to_immutable_typed_model() -> None:
         plan.filters[0] = plan.filters[0]
 
 
+@pytest.mark.parametrize("invalid_limit", [True, 10.0, "10"])
+def test_query_plan_limit_requires_a_json_integer(invalid_limit: object) -> None:
+    payload = valid_aggregate_plan_payload()
+    payload["limit"] = invalid_limit
+
+    with pytest.raises(PlanValidationError, match="limit"):
+        parse_query_plan(payload)
+
+
 def test_metric_requests_contain_only_the_registered_semantic_name() -> None:
     schema = get_query_plan_json_schema()
     metric_schema = schema["$defs"]["MetricSpec"]

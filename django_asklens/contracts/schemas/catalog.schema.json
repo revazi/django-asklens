@@ -1,0 +1,321 @@
+{
+  "$defs": {
+    "CatalogFieldDocument": {
+      "additionalProperties": false,
+      "description": "One public semantic catalog field.",
+      "properties": {
+        "enum": {
+          "$ref": "#/$defs/EnumDocument"
+        },
+        "filter_only": {
+          "const": true,
+          "title": "Filter Only",
+          "type": "boolean"
+        },
+        "label": {
+          "minLength": 1,
+          "title": "Label",
+          "type": "string"
+        },
+        "llm_visible": {
+          "const": false,
+          "title": "Llm Visible",
+          "type": "boolean"
+        },
+        "name": {
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "nullable": {
+          "title": "Nullable",
+          "type": "boolean"
+        },
+        "relation_depth": {
+          "minimum": 0,
+          "title": "Relation Depth",
+          "type": "integer"
+        },
+        "result_visible": {
+          "const": false,
+          "title": "Result Visible",
+          "type": "boolean"
+        },
+        "scope_dimension": {
+          "const": true,
+          "title": "Scope Dimension",
+          "type": "boolean"
+        },
+        "sensitive": {
+          "const": true,
+          "title": "Sensitive",
+          "type": "boolean"
+        },
+        "type": {
+          "enum": [
+            "string",
+            "boolean",
+            "integer",
+            "decimal",
+            "float",
+            "date",
+            "datetime",
+            "time",
+            "uuid",
+            "enum"
+          ],
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "label",
+        "type",
+        "nullable",
+        "relation_depth"
+      ],
+      "title": "CatalogFieldDocument",
+      "type": "object"
+    },
+    "CatalogMetricDocument": {
+      "additionalProperties": false,
+      "description": "One public registered metric.",
+      "properties": {
+        "label": {
+          "minLength": 1,
+          "title": "Label",
+          "type": "string"
+        },
+        "name": {
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "result_type": {
+          "enum": [
+            "string",
+            "boolean",
+            "integer",
+            "decimal",
+            "float",
+            "date",
+            "datetime",
+            "time",
+            "uuid",
+            "enum"
+          ],
+          "title": "Result Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "label",
+        "result_type"
+      ],
+      "title": "CatalogMetricDocument",
+      "type": "object"
+    },
+    "CatalogResourceDocument": {
+      "additionalProperties": false,
+      "description": "One permission-scoped semantic catalog resource.",
+      "properties": {
+        "default_date_field": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Default Date Field"
+        },
+        "default_order": {
+          "items": {
+            "$ref": "#/$defs/DefaultOrderDocument"
+          },
+          "title": "Default Order",
+          "type": "array"
+        },
+        "description": {
+          "title": "Description",
+          "type": "string"
+        },
+        "examples_enabled": {
+          "const": false,
+          "title": "Examples Enabled",
+          "type": "boolean"
+        },
+        "fields": {
+          "items": {
+            "$ref": "#/$defs/CatalogFieldDocument"
+          },
+          "title": "Fields",
+          "type": "array"
+        },
+        "label": {
+          "minLength": 1,
+          "title": "Label",
+          "type": "string"
+        },
+        "metrics": {
+          "items": {
+            "$ref": "#/$defs/CatalogMetricDocument"
+          },
+          "title": "Metrics",
+          "type": "array"
+        },
+        "name": {
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "scope_resource": {
+          "const": true,
+          "title": "Scope Resource",
+          "type": "boolean"
+        },
+        "synonyms": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Synonyms",
+          "type": "array"
+        },
+        "timezone": {
+          "minLength": 1,
+          "title": "Timezone",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "label",
+        "description",
+        "synonyms",
+        "default_date_field",
+        "timezone",
+        "fields",
+        "metrics"
+      ],
+      "title": "CatalogResourceDocument",
+      "type": "object"
+    },
+    "DefaultOrderDocument": {
+      "additionalProperties": false,
+      "description": "One deterministic semantic default-order term.",
+      "properties": {
+        "direction": {
+          "enum": [
+            "asc",
+            "desc"
+          ],
+          "title": "Direction",
+          "type": "string"
+        },
+        "field": {
+          "minLength": 1,
+          "title": "Field",
+          "type": "string"
+        }
+      },
+      "required": [
+        "field",
+        "direction"
+      ],
+      "title": "DefaultOrderDocument",
+      "type": "object"
+    },
+    "EnumDocument": {
+      "additionalProperties": false,
+      "description": "Safe enum metadata in a catalog field.",
+      "properties": {
+        "type": {
+          "enum": [
+            "string",
+            "integer"
+          ],
+          "title": "Type",
+          "type": "string"
+        },
+        "values": {
+          "items": {
+            "$ref": "#/$defs/EnumValueDocument"
+          },
+          "minItems": 1,
+          "title": "Values",
+          "type": "array"
+        }
+      },
+      "required": [
+        "type",
+        "values"
+      ],
+      "title": "EnumDocument",
+      "type": "object"
+    },
+    "EnumValueDocument": {
+      "additionalProperties": false,
+      "description": "One explicit safe enum value in a catalog.",
+      "properties": {
+        "aliases": {
+          "items": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              }
+            ]
+          },
+          "title": "Aliases",
+          "type": "array"
+        },
+        "label": {
+          "minLength": 1,
+          "title": "Label",
+          "type": "string"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "integer"
+            }
+          ],
+          "title": "Value"
+        }
+      },
+      "required": [
+        "value"
+      ],
+      "title": "EnumValueDocument",
+      "type": "object"
+    }
+  },
+  "$id": "catalog.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Permission-scoped semantic catalog document.",
+  "properties": {
+    "resources": {
+      "items": {
+        "$ref": "#/$defs/CatalogResourceDocument"
+      },
+      "title": "Resources",
+      "type": "array"
+    }
+  },
+  "required": [
+    "resources"
+  ],
+  "title": "AskLens Internal Catalog",
+  "type": "object"
+}

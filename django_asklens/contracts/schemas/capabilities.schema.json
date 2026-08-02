@@ -1,0 +1,293 @@
+{
+  "$defs": {
+    "AggregatePolicyCapabilitiesDocument": {
+      "additionalProperties": false,
+      "description": "Registered metric relationship policies.",
+      "properties": {
+        "numeric_to_many": {
+          "title": "Numeric To Many",
+          "type": "boolean"
+        },
+        "to_many_count_policies": {
+          "items": {
+            "enum": [
+              "count_rows",
+              "count_distinct"
+            ],
+            "type": "string"
+          },
+          "title": "To Many Count Policies",
+          "type": "array"
+        }
+      },
+      "required": [
+        "to_many_count_policies",
+        "numeric_to_many"
+      ],
+      "title": "AggregatePolicyCapabilitiesDocument",
+      "type": "object"
+    },
+    "DateTrunc": {
+      "enum": [
+        "day",
+        "week",
+        "month",
+        "quarter",
+        "year"
+      ],
+      "type": "string"
+    },
+    "FeatureCapabilitiesDocument": {
+      "additionalProperties": false,
+      "description": "Supported and explicitly unsupported implementation features.",
+      "properties": {
+        "accurate_truncation": {
+          "title": "Accurate Truncation",
+          "type": "boolean"
+        },
+        "arbitrary_expressions": {
+          "title": "Arbitrary Expressions",
+          "type": "boolean"
+        },
+        "cross_resource_queries": {
+          "title": "Cross Resource Queries",
+          "type": "boolean"
+        },
+        "cursor_pagination": {
+          "title": "Cursor Pagination",
+          "type": "boolean"
+        },
+        "mutations": {
+          "title": "Mutations",
+          "type": "boolean"
+        },
+        "presentation": {
+          "title": "Presentation",
+          "type": "boolean"
+        },
+        "raw_sql": {
+          "title": "Raw Sql",
+          "type": "boolean"
+        },
+        "registered_metrics": {
+          "title": "Registered Metrics",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "registered_metrics",
+        "presentation",
+        "accurate_truncation",
+        "raw_sql",
+        "mutations",
+        "cross_resource_queries",
+        "arbitrary_expressions",
+        "cursor_pagination"
+      ],
+      "title": "FeatureCapabilitiesDocument",
+      "type": "object"
+    },
+    "FilterOperator": {
+      "enum": [
+        "eq",
+        "neq",
+        "contains",
+        "icontains",
+        "gt",
+        "gte",
+        "lt",
+        "lte",
+        "in",
+        "isnull",
+        "date_range",
+        "last_n_days",
+        "last_n_months"
+      ],
+      "type": "string"
+    },
+    "Intent": {
+      "enum": [
+        "list",
+        "aggregate"
+      ],
+      "type": "string"
+    },
+    "LimitCapabilitiesDocument": {
+      "additionalProperties": false,
+      "description": "Current structural limits advertised by the implementation.",
+      "properties": {
+        "default_result_limit": {
+          "minimum": 1,
+          "title": "Default Result Limit",
+          "type": "integer"
+        },
+        "max_filter_values": {
+          "minimum": 0,
+          "title": "Max Filter Values",
+          "type": "integer"
+        },
+        "max_filters": {
+          "minimum": 0,
+          "title": "Max Filters",
+          "type": "integer"
+        },
+        "max_group_terms": {
+          "minimum": 0,
+          "title": "Max Group Terms",
+          "type": "integer"
+        },
+        "max_in_values": {
+          "minimum": 0,
+          "title": "Max In Values",
+          "type": "integer"
+        },
+        "max_metrics": {
+          "minimum": 0,
+          "title": "Max Metrics",
+          "type": "integer"
+        },
+        "max_order_terms": {
+          "minimum": 0,
+          "title": "Max Order Terms",
+          "type": "integer"
+        },
+        "max_plan_bytes": {
+          "minimum": 1,
+          "title": "Max Plan Bytes",
+          "type": "integer"
+        },
+        "max_relationship_edges": {
+          "minimum": 0,
+          "title": "Max Relationship Edges",
+          "type": "integer"
+        },
+        "max_relationship_hops": {
+          "minimum": 0,
+          "title": "Max Relationship Hops",
+          "type": "integer"
+        },
+        "max_result_rows": {
+          "minimum": 1,
+          "title": "Max Result Rows",
+          "type": "integer"
+        },
+        "max_selected_fields": {
+          "minimum": 0,
+          "title": "Max Selected Fields",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "max_plan_bytes",
+        "max_filters",
+        "max_selected_fields",
+        "max_order_terms",
+        "max_group_terms",
+        "max_metrics",
+        "max_relationship_hops",
+        "max_relationship_edges",
+        "max_in_values",
+        "max_filter_values",
+        "max_result_rows",
+        "default_result_limit"
+      ],
+      "title": "LimitCapabilitiesDocument",
+      "type": "object"
+    },
+    "TypeCapabilityDocument": {
+      "additionalProperties": false,
+      "description": "Operators supported by one canonical field type.",
+      "properties": {
+        "name": {
+          "enum": [
+            "string",
+            "boolean",
+            "integer",
+            "decimal",
+            "float",
+            "date",
+            "datetime",
+            "time",
+            "uuid",
+            "enum"
+          ],
+          "title": "Name",
+          "type": "string"
+        },
+        "operators": {
+          "items": {
+            "$ref": "#/$defs/FilterOperator"
+          },
+          "title": "Operators",
+          "type": "array"
+        }
+      },
+      "required": [
+        "name",
+        "operators"
+      ],
+      "title": "TypeCapabilityDocument",
+      "type": "object"
+    }
+  },
+  "$id": "capabilities.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Resource-independent implementation capability document.",
+  "properties": {
+    "aggregate_policies": {
+      "$ref": "#/$defs/AggregatePolicyCapabilitiesDocument"
+    },
+    "backend_restrictions": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Backend Restrictions",
+      "type": "array"
+    },
+    "features": {
+      "$ref": "#/$defs/FeatureCapabilitiesDocument"
+    },
+    "filter_logic": {
+      "const": "implicit_and",
+      "title": "Filter Logic",
+      "type": "string"
+    },
+    "intents": {
+      "items": {
+        "$ref": "#/$defs/Intent"
+      },
+      "title": "Intents",
+      "type": "array"
+    },
+    "limits": {
+      "$ref": "#/$defs/LimitCapabilitiesDocument"
+    },
+    "time_grains": {
+      "items": {
+        "$ref": "#/$defs/DateTrunc"
+      },
+      "title": "Time Grains",
+      "type": "array"
+    },
+    "types": {
+      "items": {
+        "$ref": "#/$defs/TypeCapabilityDocument"
+      },
+      "title": "Types",
+      "type": "array"
+    }
+  },
+  "required": [
+    "intents",
+    "filter_logic",
+    "types",
+    "time_grains",
+    "limits",
+    "features",
+    "aggregate_policies",
+    "backend_restrictions"
+  ],
+  "title": "AskLens Internal Capabilities",
+  "type": "object"
+}

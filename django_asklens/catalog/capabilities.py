@@ -1,4 +1,4 @@
-"""Permission-scoped query guidance built from the semantic catalog."""
+"""Machine capabilities and permission-scoped semantic query guidance."""
 
 import re
 from collections.abc import Iterable, Mapping, Sequence

@@ -21,6 +21,7 @@ The project is alpha and APIs may change before a stable release.
 - Added a canonical per-type filter-operator matrix to permission-scoped capabilities and result-column nullability metadata.
 - Added required explicit server-owned IANA timezone registration for every resource; the timezone is safe catalog/capability metadata but cannot be supplied by a plan.
 - Added optional presentation envelopes using `{"kind": "table|metric|bar|line|pie", ...}` outside QueryPlan and normalized them only against completed result columns.
+- Added five packaged Draft 2020-12 JSON Schemas and Python accessors for the one current internal catalog, query-plan, capabilities, result, and error shape; the schemas remain draft and unfrozen.
 
 ### Changed
 
@@ -29,7 +30,7 @@ The project is alpha and APIs may change before a stable release.
 - ORM compilation now consumes a private, non-serializable prepared representation bound to the current execution context and resolved resource queryset.
 - AskLens query-plan failures in the API and MCP helpers now expose an `error` object containing only `code`, safe `message`, and an optional safe JSON `pointer`, replacing raw diagnostic strings and transport-specific `error_category` values.
 - Invalid `/asklens/query/` request bodies now return `asklens.parse.invalid` without exposing DRF serializer field details.
-- Omitted plan limits now use the current `DEFAULT_LIMIT` (capped by `MAX_ROWS`) instead of acting as a fixed protocol constant; repeated meaningless structural references are rejected.
+- Omitted plan limits now use the current `DEFAULT_LIMIT` (capped by `MAX_ROWS`) instead of acting as a fixed protocol constant; explicit limits require positive JSON integers rather than coercing booleans, floats, or numeric strings, and repeated meaningless structural references are rejected.
 - List ordering uses semantic defaults when needed and always appends a missing private identity tie-breaker; grouped ordering appends missing group keys and nulls sort last.
 - Result metadata replaces non-definitive `limit_reached` with accurate `truncated`; list/grouped queries fetch `limit + 1`, while ungrouped aggregates have effective limit one.
 - Database auditing now stores operational resource/intent/status/error/row-count/duration metadata by default; questions, filter values, and complete plans require explicit `AUDIT_INCLUDE_CONTENT=True` opt-in.

@@ -104,6 +104,8 @@ Important value changes:
 - Local times use offset-free `HH:MM:SS[.ffffff]`.
 - Datetimes require an explicit RFC 3339 offset.
 - Date ranges are inclusive; datetime ranges are half-open.
+- QueryPlan `limit` is a positive JSON integer; booleans, floats, and numeric
+  strings are not coerced.
 
 Relative filters use the request-bound aware clock and resource timezone.
 `last_n_days` is an exact rolling duration; `last_n_months` is calendar-month
@@ -201,6 +203,18 @@ scope guidance, limitations, and examples. The current shape separates them:
 Do not look for `resources`, `summary`, `examples`, labels, descriptions, or
 scope guidance inside machine capabilities. Combine catalog field types with
 machine type/operator entries when building a client-side planner.
+
+## 10. Treat packaged schemas as one current internal shape
+
+The package now includes Draft 2020-12 schemas named `catalog`, `query-plan`,
+`capabilities`, `result`, and `error`, available through
+`list_contract_schemas()` and `get_contract_schema(name)`. They contain no
+embedded AskLens version or revision.
+
+These schemas are internal, draft, and unfrozen. Do not treat them as a public
+specification or as an authorization token. Existing plan consumers must still
+migrate payloads to the current strict shape and execute through the trusted
+facade.
 
 ## Migration checklist
 
