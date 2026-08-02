@@ -173,17 +173,9 @@ def smoke_core_install() -> None:
         "value": "active",
         "aliases": ["enabled"],
     }
-    capabilities = build_capabilities(registry=registry)
-    users_capability = next(
-        item for item in capabilities["resources"] if item["name"] == "users"
-    )
-    id_capability = next(
-        item for item in users_capability["fields"] if item["name"] == "id"
-    )
-    state_capability = next(
-        item for item in users_capability["fields"] if item["name"] == "state"
-    )
-    assert id_capability["operators"] == [
+    capabilities = build_capabilities()
+    type_capabilities = {item["name"]: item for item in capabilities["types"]}
+    assert type_capabilities["integer"]["operators"] == [
         "eq",
         "neq",
         "gt",
@@ -193,9 +185,9 @@ def smoke_core_install() -> None:
         "in",
         "isnull",
     ]
-    assert state_capability["operators"] == ["eq", "neq", "in", "isnull"]
-    assert users_capability["timezone"] == "UTC"
-    assert state_capability["enum"]["values"][0]["aliases"] == ["enabled"]
+    assert type_capabilities["enum"]["operators"] == ["eq", "neq", "in", "isnull"]
+    assert "resources" not in capabilities
+    assert "examples" not in capabilities
     assert serialize_rows(
         columns=(compiler_package.ResultColumn("id", "ID", "integer", False),),
         rows=({"id": 1},),

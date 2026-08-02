@@ -17,51 +17,68 @@ urlpatterns = [
 Then call the same permission-gated endpoints your UI needs:
 
 ```text
+GET  /asklens/catalog/
 GET  /asklens/capabilities/
 POST /asklens/query/
 GET  /asklens/runs/<id>/
 ```
 
-The endpoints use your normal Django/DRF authentication and the configured AskLens API permission classes. Resource visibility, field visibility, row scope, sensitive fields, and suggested examples are all scoped to the current request.
+The endpoints use your normal Django/DRF authentication and configured AskLens
+API permission classes. Catalog resource/field visibility and query-help
+suggestions are scoped to the current request. Machine capabilities describe
+the installed implementation and contain no resource catalog or human help.
 
-## Discover visible capabilities
+## Discover machine capabilities and the visible catalog
 
-Use capabilities to show the current user what they can ask about before they query anything:
-
-```http
-GET /asklens/capabilities/
-Accept: application/json
-```
-
-The response is metadata only. It contains visible resources, their server-owned timezones, fields, metrics, date fields, supported query patterns, limitations, and example questions. It does **not** include database rows or sample values.
+Use `/asklens/capabilities/` for machine-readable query features and limits.
+An abbreviated response is:
 
 ```json
 {
-  "summary": "You can ask read-only list and aggregate questions over 2 resources.",
+  "intents": ["list", "aggregate"],
+  "filter_logic": "implicit_and",
+  "types": [
+    {"name": "string", "operators": ["eq", "neq", "contains", "icontains", "in", "isnull"]}
+  ],
+  "time_grains": ["day", "week", "month", "quarter", "year"],
+  "limits": {"max_result_rows": 500, "default_result_limit": 100},
+  "features": {"registered_metrics": true, "raw_sql": false},
+  "aggregate_policies": {
+    "to_many_count_policies": ["count_rows", "count_distinct"],
+    "numeric_to_many": false
+  },
+  "backend_restrictions": []
+}
+```
+
+Use `/asklens/catalog/` separately for permission-scoped resources:
+
+```json
+{
   "resources": [
     {
       "name": "orders",
       "label": "Orders",
+      "timezone": "UTC",
       "fields": [
-        {"name": "status", "label": "Status", "can_group": true},
-        {"name": "created_at", "label": "Created date", "can_date_bucket": true}
+        {"name": "status", "label": "Status", "type": "enum", "nullable": false}
       ],
       "metrics": [
         {"name": "order_count", "label": "Orders", "result_type": "integer"}
-      ],
-      "examples": ["Show count of Orders by Status"]
+      ]
     }
-  ],
-  "examples": ["Show count of Orders by Status"]
+  ]
 }
 ```
 
-Common UI uses:
+Both responses are metadata only and contain no rows or sample values. Ask a
+help question through `/asklens/query/` when the UI needs human suggestions.
+Common UI uses include:
 
-- show starter questions from `examples`
+- combine catalog field types with capability operator rules
 - display visible resources/fields in a help panel
-- hide the query composer when no resources are visible
-- explain why a user cannot ask about a field or resource
+- hide the query composer when the catalog has no resources
+- render starter questions from `query_help.suggestions`
 
 ## Ask a question
 
@@ -169,13 +186,14 @@ When `include_presentation` is false, the response still includes `columns`, `da
 
 ## Handle help responses
 
-Questions such as `show me example queries` or `what can I ask?` return `response_type: "capabilities"` and do not execute a database query:
+Questions such as `show me example queries` or `what can I ask?` return `response_type: "capabilities"` and do not execute a database query. An abbreviated response is:
 
 ```json
 {
   "response_type": "capabilities",
   "query_help_source": "deterministic",
-  "capabilities": {"summary": "You can ask read-only questions over 1 resource."},
+  "capabilities": {"intents": ["list", "aggregate"], "filter_logic": "implicit_and"},
+  "catalog": {"resources": [{"name": "orders", "label": "Orders"}]},
   "query_help": {
     "answer": "Try these examples.",
     "suggestions": [

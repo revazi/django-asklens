@@ -42,6 +42,7 @@ The project is alpha and APIs may change before a stable release.
 - The compact provider response schema now correctly requests semantic-name-only metric objects.
 - Temporal filters now require strict ISO dates, offset-free local times, and offset-bearing RFC 3339 datetimes. Date ranges are inclusive, datetime ranges are half-open, relative filters use the injected aware clock with an exclusive upper bound at `now`, rolling days are exact 24-hour durations, calendar months use resource-local wall time with month-end/DST handling, and date buckets use the explicit resource timezone with Monday week starts.
 - Provider and dummy responses now separate `query_plan` from optional `presentation`. API/MCP callers use `presentation` and `include_presentation`; presentation cannot change authorization, scope, compilation, ordering, limits, or returned values.
+- Machine capabilities now contain only supported intents, filter logic, canonical type/operator rules, time grains, structural limits, features, aggregate policies, and backend restrictions. Permission-scoped resources remain in the separate catalog; human guidance and examples remain in query-help/provider paths.
 
 ### Removed
 

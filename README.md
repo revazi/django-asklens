@@ -12,7 +12,7 @@ Status: **alpha**. APIs may change before a stable release.
 ## What it provides
 
 - Explicit semantic resource registration.
-- Permission-scoped catalog and capabilities metadata.
+- Permission-scoped catalog metadata plus separate machine capabilities.
 - Optional DRF catalog, capabilities, query, and run-detail endpoints.
 - Strict Pydantic `QueryPlan` validation.
 - ORM-only list and aggregate query execution.

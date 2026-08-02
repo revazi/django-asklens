@@ -215,7 +215,8 @@ def test_test_project_registers_asklens_tools_on_mcp_server(
     assert "query_plan_schema" in payload
     assert schema["response_type"] == "query_plan_schema"
     assert resource_description["valid"] is True
-    [resource] = payload["capabilities"]["resources"]
+    assert payload["capabilities"]["intents"] == ["list", "aggregate"]
+    [resource] = payload["catalog"]["resources"]
     assert {field["name"] for field in resource["fields"]} == {
         "id",
         "status",

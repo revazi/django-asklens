@@ -181,6 +181,27 @@ Database auditing stores operational metadata by default. Questions and full
 plans require explicit `AUDIT_INCLUDE_CONTENT=True`; review retention and access
 before enabling it.
 
+## 9. Separate machine capabilities, catalog, and human help
+
+The 0.1 capability payload mixed visible resources, operator facts, prose,
+scope guidance, limitations, and examples. The current shape separates them:
+
+- `build_capabilities()` and `GET /asklens/capabilities/` return only machine
+  features and structural limits; `build_capabilities()` no longer accepts
+  permissions, a registry, or a catalog.
+- `serialize_catalog(permissions=...)` and `GET /asklens/catalog/` return
+  permission-scoped resources, fields, enums, metrics, and timezones.
+- Human guidance/examples are returned as `query_help` by help questions and
+  remain internal to permission-scoped provider prompting.
+- Query-help responses contain sibling `capabilities`, `catalog`, and
+  `query_help` documents.
+- MCP full discovery contains sibling `capabilities` and `catalog`; compact MCP
+  discovery uses `capabilities` plus adapter-level `resource_summaries`.
+
+Do not look for `resources`, `summary`, `examples`, labels, descriptions, or
+scope guidance inside machine capabilities. Combine catalog field types with
+machine type/operator entries when building a client-side planner.
+
 ## Migration checklist
 
 - [ ] Route every executing adapter through `execute_plan()`.
@@ -193,5 +214,7 @@ before enabling it.
 - [ ] Move plan visualization to sibling presentation metadata.
 - [ ] Update result consumers for `truncated`, typed columns, decimals, and
       optional presentation.
+- [ ] Read machine capabilities and permission-scoped catalog as separate
+      documents; read human suggestions from `query_help`.
 - [ ] Run tenant, permission, boundary, package, and PostgreSQL tests appropriate
       to the deployment before release.

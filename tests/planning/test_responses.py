@@ -78,7 +78,7 @@ def build_registry() -> CatalogRegistry:
 
 
 def capabilities_payload() -> dict[str, Any]:
-    """Return visible capabilities for unified response tests."""
+    """Return visible query guidance for unified response tests."""
 
     return {
         "summary": "You can query Orders.",
@@ -249,7 +249,7 @@ def test_plan_asklens_response_validates_query_branch() -> None:
     assert provider.schema["title"] == "AskLensProviderResponse"
     assert provider.messages is not None
     prompt_text = "\n".join(message["content"] for message in provider.messages)
-    assert "Visible capabilities metadata" in prompt_text
+    assert "Visible query guidance metadata" in prompt_text
     assert "Aggregate plans must put dimensions in" in prompt_text
     assert "must not include select" in prompt_text
     assert "operators listed for each field" in prompt_text
@@ -445,7 +445,7 @@ def test_plan_asklens_response_shortlists_data_question_prompt(settings) -> None
 
 
 def test_plan_asklens_response_keeps_full_prompt_for_explicit_help(settings) -> None:
-    """Explicit help questions should keep full visible capabilities metadata."""
+    """Explicit help questions should keep full visible query guidance metadata."""
 
     settings.DJANGO_ASKLENS = {"PROMPT_RESOURCE_SHORTLIST_LIMIT": 1}
     provider = UnifiedProvider(

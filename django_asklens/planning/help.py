@@ -51,7 +51,7 @@ BLOCKED_SUGGESTION_ACTIONS = {
 QUERY_HELP_SYSTEM_PROMPT = """You help users write safe Django AskLens questions.
 Return only JSON matching the provided QueryHelp schema.
 Use only resources, fields, metrics, date fields, and scope guidance present
-in the visible capabilities metadata.
+in the visible query guidance metadata.
 Suggest natural-language questions that AskLens can plan as read-only list or
 aggregate queries. Suggestions must be copy-pasteable user questions likely to
 produce valid AskLens plans. For broad help questions like "what can I query?",
@@ -243,7 +243,7 @@ def build_query_help_messages(
         },
         {
             "role": "user",
-            "content": "Visible capabilities metadata:\n"
+            "content": "Visible query guidance metadata:\n"
             + stable_json_dumps(capabilities),
         },
     )
@@ -279,7 +279,7 @@ def validate_query_help(
     permissions: Sequence[str] | None = None,
     require_plans: bool = False,
 ) -> QueryHelp:
-    """Validate provider help against visible capabilities metadata."""
+    """Validate provider help against visible query guidance metadata."""
 
     resource_index = index_resource_references(capabilities)
     permission_set = tuple(permissions or ())
@@ -318,7 +318,7 @@ def validate_query_help_suggestion(
     permissions: Sequence[str] | None = None,
     require_plan: bool = False,
 ) -> QueryHelpSuggestion:
-    """Validate one provider suggestion against visible capabilities."""
+    """Validate one provider suggestion against visible query guidance."""
 
     resource = resource_index.get(suggestion.resource_name.casefold())
     if resource is None:

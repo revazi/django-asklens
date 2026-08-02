@@ -66,9 +66,18 @@ asklens_execute_plan(plan, presentation=null, include_rows=false)
 asklens_query(question, presentation=null, include_rows=false)  # optional convenience tool
 ```
 
-`asklens_capabilities(request)` returns permission-scoped metadata only: visible resources, their server-owned timezones, fields, metrics, supported patterns, limitations, example questions, and optionally the `QueryPlan` JSON schema. It does not return database rows or sample values, execute a query, or call an LLM provider. For MCP transports, prefer `resource_detail="summary"` and `include_query_plan_schema=False` during discovery to keep tool output compact.
+`asklens_capabilities(request)` returns machine capabilities separately from
+permission-scoped resource metadata. With `resource_detail="full"`, the payload
+contains sibling `capabilities` and `catalog` documents. With
+`resource_detail="summary"`, it contains machine `capabilities` plus adapter-
+level `resource_summaries`; the summary is not the strict catalog document.
+Machine capabilities contain no labels, descriptions, examples, scope guidance,
+or resources. The helper does not return rows/sample values, execute a query, or
+call a provider. For MCP transports, prefer summary detail and
+`include_query_plan_schema=False` during discovery.
 
-`asklens_query_plan_schema(request)` returns the QueryPlan JSON schema without repeating catalog capabilities.
+`asklens_query_plan_schema(request)` returns the QueryPlan JSON schema without
+repeating machine capabilities or catalog metadata.
 
 `asklens_describe_resource(request, resource)` returns full permission-scoped metadata for one visible resource. Use this after compact discovery and before constructing a QueryPlan for a specific resource.
 
@@ -129,7 +138,11 @@ asklens_execute_plan
 
 If `expose_query_tool=True`, it also returns `asklens_query`. Keep this disabled unless you intentionally want a tool that may call the configured AskLens provider in non-dummy deployments.
 
-The optional FastMCP bridge exposes compact capabilities by default: `asklens_capabilities()` omits the QueryPlan schema and summarizes each resource. MCP clients can then call `asklens_query_plan_schema()` and `asklens_describe_resource(resource)` only when they need those details.
+The optional FastMCP bridge exposes compact discovery by default:
+`asklens_capabilities()` omits the QueryPlan schema, returns the machine
+capability document, and places compact resource metadata in separate
+`resource_summaries`. MCP clients can then call `asklens_query_plan_schema()` and
+`asklens_describe_resource(resource)` only when they need those details.
 
 When using `create_fastmcp_server(toolset)`, FastMCP's injected `Context` is passed to `toolset.request_factory(context)`. Host projects can use that trusted server-side context to derive the Django user, tenant scope, or session metadata. Do not accept usernames or permission strings from client-controlled tool arguments.
 

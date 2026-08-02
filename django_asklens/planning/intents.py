@@ -9,7 +9,7 @@ from pydantic import Field, ValidationError, field_validator
 
 from django_asklens.catalog.capabilities import (
     CapabilitiesSnapshot,
-    build_capabilities,
+    build_query_guidance,
 )
 from django_asklens.exceptions import AskLensError, PlanValidationError
 from django_asklens.llms.base import LLMMessage, LLMProvider
@@ -148,7 +148,7 @@ def route_question_intent(
     visible_capabilities = (
         capabilities
         if capabilities is not None
-        else build_capabilities(permissions=permission_set)
+        else build_query_guidance(permissions=permission_set)
     )
 
     if is_capabilities_fallback_question(question):
@@ -196,7 +196,7 @@ def plan_question_intent(
     provider: LLMProvider | None = None,
     capabilities: CapabilitiesSnapshot,
 ) -> QuestionIntent:
-    """Ask a provider to classify a question using visible capabilities only."""
+    """Ask a provider to classify a question using visible query guidance only."""
 
     selected_provider = provider or get_llm_provider()
     payload = selected_provider.complete_json(
@@ -218,7 +218,7 @@ def build_intent_messages(
         {"role": "user", "content": question},
         {
             "role": "user",
-            "content": "Visible capabilities metadata:\n"
+            "content": "Visible query guidance metadata:\n"
             + stable_json_dumps(capabilities),
         },
     )
@@ -247,7 +247,7 @@ def validate_question_intent(
     intent: QuestionIntent,
     capabilities: CapabilitiesSnapshot,
 ) -> QuestionIntent:
-    """Validate provider-selected resources against visible capabilities."""
+    """Validate provider-selected resources against visible query guidance."""
 
     visible_resource_names = {
         resource["name"] for resource in capabilities.get("resources", [])

@@ -1,12 +1,106 @@
-"""Tests for permission-scoped AskLens capabilities guidance."""
+"""Tests for separate machine capabilities and human query guidance."""
 
-from django_asklens.catalog.capabilities import build_capabilities
+import pytest
+
+from django_asklens.catalog.capabilities import (
+    build_capabilities,
+    build_query_guidance,
+)
 
 
-def test_build_capabilities_handles_empty_catalog() -> None:
+def test_machine_capabilities_exclude_catalog_and_human_guidance(settings) -> None:
+    settings.DJANGO_ASKLENS = {
+        "MAX_ROWS": 25,
+        "DEFAULT_LIMIT": 10,
+        "MAX_FILTERS": 7,
+    }
+
+    capabilities = build_capabilities()
+
+    assert set(capabilities) == {
+        "intents",
+        "filter_logic",
+        "types",
+        "time_grains",
+        "limits",
+        "features",
+        "aggregate_policies",
+        "backend_restrictions",
+    }
+    assert capabilities["intents"] == ["list", "aggregate"]
+    assert capabilities["filter_logic"] == "implicit_and"
+    assert capabilities["types"][0] == {
+        "name": "string",
+        "operators": ["eq", "neq", "contains", "icontains", "in", "isnull"],
+    }
+    assert [item["name"] for item in capabilities["types"]] == [
+        "string",
+        "boolean",
+        "integer",
+        "decimal",
+        "float",
+        "date",
+        "datetime",
+        "time",
+        "uuid",
+        "enum",
+    ]
+    assert capabilities["time_grains"] == [
+        "day",
+        "week",
+        "month",
+        "quarter",
+        "year",
+    ]
+    assert set(capabilities["limits"]) == {
+        "max_plan_bytes",
+        "max_filters",
+        "max_selected_fields",
+        "max_order_terms",
+        "max_group_terms",
+        "max_metrics",
+        "max_relationship_hops",
+        "max_relationship_edges",
+        "max_in_values",
+        "max_filter_values",
+        "max_result_rows",
+        "default_result_limit",
+    }
+    assert capabilities["limits"]["max_result_rows"] == 25
+    assert capabilities["limits"]["default_result_limit"] == 10
+    assert capabilities["limits"]["max_filters"] == 7
+    assert set(capabilities["features"]) == {
+        "registered_metrics",
+        "presentation",
+        "accurate_truncation",
+        "raw_sql",
+        "mutations",
+        "cross_resource_queries",
+        "arbitrary_expressions",
+        "cursor_pagination",
+    }
+    assert capabilities["features"]["registered_metrics"] is True
+    assert capabilities["features"]["raw_sql"] is False
+    assert capabilities["backend_restrictions"] == []
+    with pytest.raises(TypeError):
+        build_capabilities(permissions=set())  # type: ignore[call-arg]
+    assert (
+        not {
+            "summary",
+            "resources",
+            "examples",
+            "guidance",
+            "labels",
+            "descriptions",
+        }
+        & capabilities.keys()
+    )
+
+
+def test_build_query_guidance_handles_empty_catalog() -> None:
     """An empty visible catalog should produce clear guidance, not an error."""
 
-    capabilities = build_capabilities(catalog={"resources": []})
+    capabilities = build_query_guidance(catalog={"resources": []})
 
     assert (
         capabilities["summary"]
@@ -17,10 +111,10 @@ def test_build_capabilities_handles_empty_catalog() -> None:
     assert "raw SQL" in " ".join(capabilities["limitations"])
 
 
-def test_build_capabilities_describes_visible_fields_metrics_and_examples() -> None:
-    """Capabilities should be derived from safe catalog metadata only."""
+def test_build_query_guidance_describes_visible_fields_metrics_and_examples() -> None:
+    """Guidance should be derived from safe catalog metadata only."""
 
-    capabilities = build_capabilities(
+    capabilities = build_query_guidance(
         catalog={
             "resources": [
                 {
@@ -107,21 +201,21 @@ def test_build_capabilities_describes_visible_fields_metrics_and_examples() -> N
     assert capabilities["examples"] == resource["examples"]
 
 
-def test_build_capabilities_includes_configured_row_limit_guidance(settings) -> None:
-    """Capabilities should guide users to narrow broad list results."""
+def test_build_query_guidance_includes_configured_row_limit(settings) -> None:
+    """Human guidance should reflect the configured broad-list limit."""
 
     settings.DJANGO_ASKLENS = {"MAX_ROWS": 25}
 
-    capabilities = build_capabilities(catalog={"resources": []})
+    capabilities = build_query_guidance(catalog={"resources": []})
 
     assert any("25 rows" in item for item in capabilities["limitations"])
     assert any("25-row" in item for item in capabilities["query_patterns"])
 
 
-def test_build_capabilities_adds_sanitized_single_scope_guidance() -> None:
-    """Capabilities can guide LLM help without leaking scope identifiers."""
+def test_build_query_guidance_adds_sanitized_single_scope_context() -> None:
+    """Guidance can help the LLM without leaking scope identifiers."""
 
-    capabilities = build_capabilities(
+    capabilities = build_query_guidance(
         permissions={"facility:123:BillingReportsView"},
         resource_permissions={"billing_lines": "BillingReportsView"},
         catalog={
@@ -174,10 +268,10 @@ def test_build_capabilities_adds_sanitized_single_scope_guidance() -> None:
     assert "Show Gross revenue by Product" in resource["examples"]
 
 
-def test_build_capabilities_omits_single_scope_resource_examples() -> None:
+def test_build_query_guidance_omits_single_scope_resource_examples() -> None:
     """Single-facility users should not get plural facility-list suggestions."""
 
-    capabilities = build_capabilities(
+    capabilities = build_query_guidance(
         permissions={"facility:123:FacilityView"},
         resource_permissions={"facilities": "FacilityView"},
         catalog={
@@ -228,10 +322,10 @@ def test_build_capabilities_omits_single_scope_resource_examples() -> None:
     assert "List Facilities with Facility name" not in str(capabilities)
 
 
-def test_build_capabilities_honors_examples_enabled_flag() -> None:
+def test_build_query_guidance_honors_examples_enabled_flag() -> None:
     """Utility resources can stay visible without generated question examples."""
 
-    capabilities = build_capabilities(
+    capabilities = build_query_guidance(
         catalog={
             "resources": [
                 {
@@ -263,10 +357,10 @@ def test_build_capabilities_honors_examples_enabled_flag() -> None:
     assert capabilities["examples"] == []
 
 
-def test_build_capabilities_uses_explicit_scope_metadata_for_arbitrary_names() -> None:
+def test_build_query_guidance_uses_explicit_scope_metadata() -> None:
     """Scope help should not depend on facility/account/tenant naming."""
 
-    capabilities = build_capabilities(
+    capabilities = build_query_guidance(
         permissions={"gym:abc:ReportsView"},
         resource_permissions={
             "locations": "ReportsView",

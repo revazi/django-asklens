@@ -78,7 +78,7 @@ DJANGO_ASKLENS = {
 }
 ```
 
-This logs the outbound chat-completions request body, raw provider response, and parsed JSON content to the `django_asklens.llms.openai_compatible` logger at `INFO` level. Authorization headers and API keys are excluded. Treat these logs as sensitive anyway: they can include user questions, permission-scoped schema/capabilities metadata, and provider-generated plans/help. Do not enable this in production unless your logging pipeline is approved for that data.
+This logs the outbound chat-completions request body, raw provider response, and parsed JSON content to the `django_asklens.llms.openai_compatible` logger at `INFO` level. Authorization headers and API keys are excluded. Treat these logs as sensitive anyway: they can include user questions, permission-scoped provider-guidance/catalog metadata, and provider-generated plans/help. Do not enable this in production unless your logging pipeline is approved for that data.
 
 The provider sends a request to:
 
@@ -101,7 +101,7 @@ class LLMProvider(Protocol):
 
 AskLens sends:
 
-- permission-scoped safe capabilities or catalog metadata,
+- permission-scoped provider guidance derived from safe catalog metadata and machine capabilities,
 - the user's question,
 - a strict JSON schema for the response being requested.
 
@@ -109,11 +109,22 @@ AskLens must not send sample database rows, secrets, credentials, `.env` content
 
 ## Prompt-size optimization
 
-Live `/asklens/query/` calls use permission-scoped capabilities metadata for provider prompts. By default, AskLens sends all visible resources in a compact provider-facing shape so the provider can choose among the user's full allowed catalog. Compact resource metadata retains the server-owned timezone, and compact field metadata retains canonical type, nullability, supported operators, and explicitly registered enum values/aliases; it still omits Django bindings, model labels, permission tokens, and database values. The provider cannot override the resource timezone in a plan.
+Live `/asklens/query/` calls use internal permission-scoped query guidance for
+provider prompts. This guidance is derived from the separate catalog and
+machine capability facts; it is not the public machine capability document. By
+default, AskLens sends all visible resources in a compact provider-facing shape
+so the provider can choose among the user's full allowed catalog. Compact
+resource metadata retains the server-owned timezone, and compact field metadata
+retains canonical type, nullability, supported operators, and explicitly
+registered enum values/aliases; it still omits Django bindings, model labels,
+permission tokens, and database values. The provider cannot override the
+resource timezone in a plan.
 
 Resource shortlisting is available as an opt-in prompt-size optimization for larger catalogs. When enabled, likely data questions send only the top matching visible resources before the provider call. This can reduce prompt size and cost, but it is not an authorization decision: every returned plan is still validated against the full catalog, request permissions, and limits before execution.
 
-Explicit help/capability questions such as `show me example queries` always keep the full visible capabilities payload so users can discover everything available to them.
+Explicit help questions such as `show me example queries` keep full visible
+provider guidance so users can discover everything available to them. Human
+examples and guidance never become fields in the machine capability document.
 
 The alpha default is `0`, which disables resource shortlisting:
 

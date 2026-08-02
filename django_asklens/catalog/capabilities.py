@@ -80,7 +80,7 @@ class CapabilityResource(TypedDict):
 
 
 class CapabilitiesSnapshot(TypedDict):
-    """Permission-scoped AskLens capabilities payload."""
+    """Internal human query guidance derived from visible catalog metadata."""
 
     summary: str
     query_patterns: list[str]
@@ -89,7 +89,110 @@ class CapabilitiesSnapshot(TypedDict):
     examples: list[str]
 
 
-def build_capabilities(
+class TypeCapability(TypedDict):
+    """Machine-readable operators supported by one canonical field type."""
+
+    name: str
+    operators: list[str]
+
+
+class LimitCapabilities(TypedDict):
+    """Machine-readable structural limits for the current implementation."""
+
+    max_plan_bytes: int
+    max_filters: int
+    max_selected_fields: int
+    max_order_terms: int
+    max_group_terms: int
+    max_metrics: int
+    max_relationship_hops: int
+    max_relationship_edges: int
+    max_in_values: int
+    max_filter_values: int
+    max_result_rows: int
+    default_result_limit: int
+
+
+class FeatureCapabilities(TypedDict):
+    """Machine-readable supported and unsupported query features."""
+
+    registered_metrics: bool
+    presentation: bool
+    accurate_truncation: bool
+    raw_sql: bool
+    mutations: bool
+    cross_resource_queries: bool
+    arbitrary_expressions: bool
+    cursor_pagination: bool
+
+
+class AggregatePolicyCapabilities(TypedDict):
+    """Machine-readable relationship policies for registered metrics."""
+
+    to_many_count_policies: list[str]
+    numeric_to_many: bool
+
+
+class MachineCapabilitiesSnapshot(TypedDict):
+    """Machine facts kept separate from catalog and human query guidance."""
+
+    intents: list[str]
+    filter_logic: Literal["implicit_and"]
+    types: list[TypeCapability]
+    time_grains: list[str]
+    limits: LimitCapabilities
+    features: FeatureCapabilities
+    aggregate_policies: AggregatePolicyCapabilities
+    backend_restrictions: list[str]
+
+
+def build_capabilities() -> MachineCapabilitiesSnapshot:
+    """Return machine-readable query features without catalog or human prose."""
+
+    from django_asklens.planning.validation import get_plan_limits
+
+    limits = get_plan_limits()
+    return {
+        "intents": ["list", "aggregate"],
+        "filter_logic": "implicit_and",
+        "types": [
+            {"name": field_type, "operators": list(operators)}
+            for field_type, operators in OPERATORS_BY_FIELD_TYPE.items()
+        ],
+        "time_grains": ["day", "week", "month", "quarter", "year"],
+        "limits": {
+            "max_plan_bytes": limits.max_plan_bytes,
+            "max_filters": limits.max_filters,
+            "max_selected_fields": limits.max_selected_fields,
+            "max_order_terms": limits.max_order_by,
+            "max_group_terms": limits.max_group_by,
+            "max_metrics": limits.max_metrics,
+            "max_relationship_hops": limits.max_joins,
+            "max_relationship_edges": limits.max_relationship_edges,
+            "max_in_values": limits.max_in_values,
+            "max_filter_values": limits.max_filter_values,
+            "max_result_rows": limits.max_rows,
+            "default_result_limit": limits.default_limit,
+        },
+        "features": {
+            "registered_metrics": True,
+            "presentation": True,
+            "accurate_truncation": True,
+            "raw_sql": False,
+            "mutations": False,
+            "cross_resource_queries": False,
+            "arbitrary_expressions": False,
+            "cursor_pagination": False,
+        },
+        "aggregate_policies": {
+            "to_many_count_policies": ["count_rows", "count_distinct"],
+            "numeric_to_many": False,
+        },
+        "backend_restrictions": [],
+    }
+
+
+def build_query_guidance(
     *,
     permissions: Iterable[str] | None = None,
     catalog: CatalogSnapshot | None = None,

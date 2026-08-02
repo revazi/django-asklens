@@ -116,19 +116,33 @@ The field mapping key is the public semantic name used by plans. `binding` is tr
 
 Validation enforces the capability-declared operator matrix and canonical JSON values before scope resolution. Decimal filter values are finite strings, floats are finite JSON numbers, UUIDs normalize canonically, dates and local times use strict ISO forms, datetimes require an explicit RFC 3339 offset, and `eq`/`neq` never accept null. Choice labels are not inferred from Django model metadata; use an explicit `type="enum"` definition with registered canonical values and aliases when closed-set semantics are intended. See [Registration](registration.md).
 
-## Build permission-scoped capabilities
+## Build machine capabilities and a permission-scoped catalog
 
-Use capabilities when a Python caller needs to show what the current request can query without exposing database rows or sample values.
+Machine capabilities describe the installed implementation's supported intents,
+canonical types/operators, time grains, structural limits, features, aggregate
+policies, and backend restrictions. They deliberately contain no resources,
+labels, descriptions, examples, or human guidance:
 
 ```python
-from django_asklens.catalog.capabilities import build_capabilities
+from django_asklens import build_capabilities
+
+capabilities = build_capabilities()
+```
+
+Build the current request's visible semantic catalog separately:
+
+```python
+from django_asklens import serialize_catalog
 from django_asklens.permissions import get_request_permissions
 
 permissions = get_request_permissions(request)
-capabilities = build_capabilities(permissions=permissions)
+catalog = serialize_catalog(permissions=permissions)
 ```
 
-By default, AskLens reads `request.user.get_all_permissions()` for authenticated users. Projects with role, tenant, or staff-grant systems can configure `DJANGO_ASKLENS["REQUEST_PERMISSIONS_GETTER"]`.
+Neither document contains rows or sample values. By default, AskLens reads
+`request.user.get_all_permissions()` for authenticated users when constructing
+the catalog and validating plans. Projects with role, tenant, or staff-grant
+systems can configure `DJANGO_ASKLENS["REQUEST_PERMISSIONS_GETTER"]`.
 
 ## Validate and execute a known plan
 

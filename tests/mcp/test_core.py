@@ -31,7 +31,9 @@ def test_mcp_capabilities_are_permission_scoped(
     assert payload["rows_omitted"] is True
     assert payload["executed"] is False
     assert "query_plan_schema" in payload
-    [resource] = payload["capabilities"]["resources"]
+    assert payload["capabilities"]["intents"] == ["list", "aggregate"]
+    assert "resources" not in payload["capabilities"]
+    [resource] = payload["catalog"]["resources"]
     assert resource["timezone"] == "UTC"
     assert {field["name"] for field in resource["fields"]} == {
         "id",
@@ -41,14 +43,17 @@ def test_mcp_capabilities_are_permission_scoped(
     status_field = next(
         field for field in resource["fields"] if field["name"] == "status"
     )
-    assert status_field["operators"] == ["eq", "neq", "in", "isnull"]
+    enum_capability = next(
+        item for item in payload["capabilities"]["types"] if item["name"] == "enum"
+    )
+    assert enum_capability["operators"] == ["eq", "neq", "in", "isnull"]
     assert status_field["enum"]["values"][0]["aliases"] == ["settled"]
     assert "alice@example.com" not in str(payload)
 
     mcp_request.asklens_permissions = frozenset({"shop.view_customer_pii"})
 
     payload_with_pii_permission = asklens_capabilities(mcp_request)
-    [resource] = payload_with_pii_permission["capabilities"]["resources"]
+    [resource] = payload_with_pii_permission["catalog"]["resources"]
     assert "customer.email" in {field["name"] for field in resource["fields"]}
     assert "alice@example.com" not in str(payload_with_pii_permission)
 
@@ -67,12 +72,14 @@ def test_mcp_capabilities_can_return_compact_resource_summaries(
 
     assert payload["response_type"] == "capabilities"
     assert "query_plan_schema" not in payload
-    [resource] = payload["capabilities"]["resources"]
+    assert payload["capabilities"]["intents"] == ["list", "aggregate"]
+    assert "catalog" not in payload
+    [resource] = payload["resource_summaries"]
     assert resource["timezone"] == "UTC"
     assert resource["field_names"] == ["id", "status", "created_at"]
     assert resource["metric_names"] == ["order_count"]
     assert "fields" not in resource
-    assert payload["capabilities"]["resource_detail"] == "summary"
+    assert payload["resource_detail"] == "summary"
 
 
 def test_mcp_capabilities_reject_invalid_resource_detail(

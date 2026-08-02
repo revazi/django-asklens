@@ -41,7 +41,7 @@ suggested queries, or help using AskLens.
 Use response_type="query" when the user asks for actual records, rows, counts,
 totals, trends, filtered data, or aggregate results.
 Use only resources, fields, metrics, date fields, and scope guidance present in
-the visible capabilities metadata. Never invent resources, fields, metrics,
+the visible query guidance metadata. Never invent resources, fields, metrics,
 model names, table names, permissions, SQL, code, or explanations.
 
 For response_type="query", return query_plan and omit query_help. QueryPlan
@@ -203,7 +203,7 @@ def build_unified_response_messages(
         },
         {
             "role": "user",
-            "content": "Visible capabilities metadata:\n"
+            "content": "Visible query guidance metadata:\n"
             + stable_json_dumps(capabilities),
         },
     )

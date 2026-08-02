@@ -42,7 +42,7 @@ class IntentProvider:
 
 
 def capabilities_payload() -> dict[str, Any]:
-    """Return a minimal visible capabilities payload for routing tests."""
+    """Return a minimal visible query guidance payload for routing tests."""
 
     return {
         "summary": "You can query 2 resources.",
@@ -135,7 +135,7 @@ def test_provider_backed_semantic_routing_selects_capabilities_resource() -> Non
     assert provider.messages is not None
     prompt_text = "\n".join(message["content"] for message in provider.messages)
     assert "payment_attempts" in prompt_text
-    assert "Visible capabilities metadata" in prompt_text
+    assert "Visible query guidance metadata" in prompt_text
 
 
 def test_provider_backed_semantic_routing_can_choose_query_intent() -> None:

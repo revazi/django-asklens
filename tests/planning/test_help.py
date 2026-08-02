@@ -73,7 +73,7 @@ class HelpProvider:
 
 
 def capabilities_payload() -> dict[str, Any]:
-    """Return visible capabilities with one resource for query-help tests."""
+    """Return visible query guidance with one resource for query-help tests."""
 
     return {
         "summary": "You can query Orders.",
@@ -242,7 +242,7 @@ def test_build_query_help_uses_provider_and_validates_references() -> None:
     assert provider.schema["title"] == "QueryHelp"
     assert provider.messages is not None
     prompt_text = "\n".join(message["content"] for message in provider.messages)
-    assert "Visible capabilities metadata" in prompt_text
+    assert "Visible query guidance metadata" in prompt_text
     assert "Each suggestion.plan must match" not in prompt_text
     assert "orders" in prompt_text
     assert "facilities/accounts/tenants" not in prompt_text

@@ -57,13 +57,11 @@ def build_admin_query_result(result: dict[str, Any]) -> dict[str, Any]:
 def build_admin_capabilities_result(result: dict[str, Any]) -> dict[str, Any]:
     """Return a template-friendly representation of query help."""
 
-    capabilities = result.get("capabilities") or {}
     query_help = result.get("query_help") or {}
     suggestions = query_help.get("suggestions") or []
     return {
         "response_type": "capabilities",
-        "answer": query_help.get("answer") or capabilities.get("summary") or "",
-        "summary": capabilities.get("summary", ""),
+        "answer": query_help.get("answer") or "",
         "query_help_source": result.get("query_help_source", ""),
         "query_help_error": result.get("query_help_error", ""),
         "suggestions": [

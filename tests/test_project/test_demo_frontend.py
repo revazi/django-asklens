@@ -146,7 +146,7 @@ def test_demo_frontend_renders_for_reporting_user() -> None:
     assert "Running…" not in content
     assert "Suggestions" in content
     assert "Starter questions" in content
-    assert "Visible capabilities" in content
+    assert "Visible catalog" in content
     assert "Queryable resources" in content
     assert "Resources visible to you." in content
     assert "Offline dummy plans" in content
@@ -170,10 +170,8 @@ def test_demo_frontend_renders_for_reporting_user() -> None:
     assert content.index("Session") < content.index("Tenant row scope")
     assert content.index("Tenant row scope") < content.index("Saved queries")
     assert content.index("Saved queries") < content.index("Suggestions")
-    assert content.index("Suggestions") < content.index("Visible capabilities")
-    assert (
-        '<details class="card disclosure" aria-label="Visible capabilities">' in content
-    )
+    assert content.index("Suggestions") < content.index("Visible catalog")
+    assert '<details class="card disclosure" aria-label="Visible catalog">' in content
 
 
 @override_settings(

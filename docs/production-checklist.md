@@ -22,7 +22,7 @@ AskLens is a data access surface. Configure it as carefully as any reporting, an
 - [ ] Configure `REQUEST_PERMISSIONS_GETTER` if field/resource visibility is not fully represented by `request.user.get_all_permissions()`.
 - [ ] Return only permission strings needed by AskLens.
 - [ ] Test representative roles/users against `/asklens/catalog/` and `/asklens/capabilities/`.
-- [ ] Confirm unauthorized resources are absent from capabilities and rejected by query validation.
+- [ ] Confirm unauthorized resources are absent from the catalog and rejected by query validation; machine capabilities contain no resources.
 
 ## Resource registration
 
@@ -44,7 +44,7 @@ AskLens is a data access surface. Configure it as carefully as any reporting, an
 - [ ] Every `context_scoped` resource has a trusted `scope_provider(request)` that returns an unevaluated queryset for the registered model.
 - [ ] Scope providers return `none()` for anonymous/unauthorized users unless host policy deliberately permits access.
 - [ ] Tests prove missing/invalid scope fails closed and users cannot see another tenant's rows.
-- [ ] Scope fields are marked with `scope_dimension=True` where useful for capabilities/help guidance.
+- [ ] Scope fields are marked with `scope_dimension=True` where useful for query-help/provider guidance.
 - [ ] Resources representing the scoped entity itself use `scope_resource=True` where useful.
 
 ## Sensitive fields
@@ -52,7 +52,7 @@ AskLens is a data access surface. Configure it as carefully as any reporting, an
 - [ ] Mark PII, secrets, internal identifiers, notes, and operationally sensitive fields as `sensitive=True` or hide them with `llm_visible=False` / `result_visible=False`.
 - [ ] Add `requires_permission` for fields that need explicit access.
 - [ ] Test sensitive fields with and without permission.
-- [ ] Confirm sensitive fields are absent from capabilities and provider metadata for unauthorized users.
+- [ ] Confirm sensitive fields are absent from catalog and provider metadata for unauthorized users; machine capabilities contain no fields.
 - [ ] Confirm sensitive fields do not appear in result columns/data unless explicitly allowed.
 
 ## Limits and query safety

@@ -64,14 +64,12 @@ class CatalogView(AskLensAPIView):
 
 
 class CapabilitiesView(AskLensAPIView):
-    """Return permission-scoped guidance about what can be queried."""
+    """Return machine-readable query features and structural limits."""
 
     def get(self, request: Request) -> Response:
-        """Return safe capabilities derived from visible catalog metadata."""
+        """Return machine capabilities without catalog or human guidance."""
 
-        return Response(
-            build_capabilities(permissions=get_request_permissions(request))
-        )
+        return Response(build_capabilities())
 
 
 class QueryView(AskLensAPIView):
