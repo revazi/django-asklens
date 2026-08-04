@@ -12,6 +12,7 @@ REFERENCE_SCRIPT = ROOT / "scripts" / "reference-demo-smoke.sh"
 PACKAGE_SCRIPT = ROOT / "scripts" / "alpha-candidate-package-smoke.sh"
 PLAYWRIGHT_TEST = ROOT / "tests" / "e2e" / "reference_demo.py"
 PRIVATE_EVALUATION_GUIDE = ROOT / "docs" / "private-candidate-evaluation.md"
+PILOT_INTAKE_WORKSHEET = ROOT / "docs" / "pilot-intake-worksheet.md"
 
 
 def read_text(path: Path) -> str:
@@ -177,7 +178,11 @@ def test_private_candidate_guide_is_linked_provenanced_and_privacy_bounded() -> 
 
     assert "(private-candidate-evaluation.md)" in install
     assert "(private-candidate-evaluation.md)" in index
+    assert "(pilot-intake-worksheet.md)" in install
+    assert "(pilot-intake-worksheet.md)" in index
+    assert "(pilot-intake-worksheet.md)" in guide
     assert '"/docs/private-candidate-evaluation.md"' in workflow
+    assert '"/docs/pilot-intake-worksheet.md"' in workflow
     for required in (
         "maintainer-supplied candidate manifest",
         "ASKLENS_CANDIDATE_COMMIT",
@@ -212,3 +217,75 @@ def test_private_candidate_guide_is_linked_provenanced_and_privacy_bounded() -> 
     assert "twine upload" not in guide
     assert '"AUDIT_INCLUDE_CONTENT": True' not in guide
     assert '"MCP_ALLOW_ROW_RETURN": True' not in guide
+
+
+def test_pilot_intake_worksheet_is_privacy_bounded() -> None:
+    """The intake worksheet strictly forbids exposing sensitive integration details."""
+
+    worksheet = read_text(PILOT_INTAKE_WORKSHEET).lower()
+
+    for required in (
+        "participant class",
+        "python version",
+        "django version",
+        "database engine",
+        "primary asklens surface",
+        "semantic fields",
+        "semantic metrics",
+        "scope mode",
+        "timezone configuration",
+        "role/membership condition",
+        "tenant isolation",
+        "allowed expectations",
+        "denial expectations",
+        "intent/mode",
+        "expected status",
+        "expected shape/count",
+        "cross-scope",
+        "hidden/filter-only/result-excluded/unknown member",
+        "client-supplied policy claims",
+        "missing context",
+        "structural budget",
+        "mcp row-return",
+        "provider metadata boundary",
+        "audit policy mode",
+        "storage owner",
+        "retention & deletion",
+        "prohibited artifacts",
+        "provider/client planning mode",
+        "initial smoke test",
+        "time to integration",
+        "time to first correctly scoped query",
+        "maintainer intervention",
+        "registration effort",
+        "baseline custom-report",
+        "asklens.member.unavailable",
+        "asklens.budget.exceeded",
+        "a correctly scoped application-data query may execute",
+        "no out-of-scope rows or aggregate influence",
+        "returned query data/rows are omitted unless host+request opt in",
+        "inspect the permission-scoped catalog and pre-provider request",
+        "truncation applies only within an accepted limit",
+        "omission is not a query-cost control",
+        "never include:** participant names, application names",
+        "exact schema/model/binding paths",
+        "database rows or sample values",
+        "questions containing private facts",
+        "tenant or user identifiers",
+        "permission strings, credentials, secrets, `.env` files",
+        "scope-provider code",
+        "full sensitive plan or filter values",
+        "provider payloads, provider logs, or full audit content",
+    ):
+        assert required in worksheet
+
+    for forbidden in (
+        "zero cross-tenant sql",
+        "asklens.parse.invalid or exact observed stable code",
+        "metadata/aggregate only; zero row exposure",
+        "passing a payload containing orm binding details",
+        "rejection or truncation depending on limit policy",
+        "provider adapter drops private bindings",
+        "local isolated sqlite",
+    ):
+        assert forbidden not in worksheet, f"Forbidden phrase found: {forbidden}"

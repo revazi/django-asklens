@@ -39,7 +39,7 @@ The repository version intentionally remains `0.1.0a1` because no version bump o
 
 ## Private candidate evaluation
 
-Maintainer-invited evaluators using an immutable commit, source-built wheel, and checksum should follow the [private candidate evaluation and onboarding guide](private-candidate-evaluation.md). That workflow uses a clean participant-owned staging environment and verified local artifact rather than assuming a public candidate exists on PyPI. It keeps completed forms and evidence outside the repository and does not turn the unchanged `0.1.0a1` package replacement into an upgrade or beta claim.
+Maintainer-invited evaluators using an immutable commit, source-built wheel, and checksum should follow the [private candidate evaluation and onboarding guide](private-candidate-evaluation.md). That workflow uses a clean participant-owned staging environment and verified local artifact rather than assuming a public candidate exists on PyPI. It keeps completed forms and evidence outside the repository and does not turn the unchanged `0.1.0a1` package replacement into an upgrade or beta claim. An optional [Privacy-Safe Pilot Intake Worksheet](pilot-intake-worksheet.md) template is provided for structing private evaluations safely.
 
 ## Django setup
 
