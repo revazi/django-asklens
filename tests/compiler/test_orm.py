@@ -18,7 +18,7 @@ from django_asklens.execution.runner import (
 from django_asklens.planning import PlanLimits, parse_and_validate_query_plan
 from tests.test_project.models import Account, Customer, Order
 
-pytestmark = pytest.mark.django_db
+pytestmark = [pytest.mark.django_db, pytest.mark.postgresql]
 
 
 def aware_datetime(year: int, month: int, day: int) -> datetime:
@@ -251,6 +251,9 @@ def test_semantic_keys_bind_privately_across_query_positions(
         metrics=[Metric("revenue", op="sum", binding="total", result_type="decimal")],
     )
 
+    alice_number, bob_number = (
+        Order.objects.filter(status="paid").order_by("id").values_list("id", flat=True)
+    )
     list_result = execute_test_plan(
         {
             "resource": "orders",
@@ -275,12 +278,12 @@ def test_semantic_keys_bind_privately_across_query_positions(
 
     assert list_result.rows == (
         {
-            "order.number": 1,
+            "order.number": alice_number,
             "customer_contact": "alice@example.com",
             "lifecycle": "paid",
         },
         {
-            "order.number": 2,
+            "order.number": bob_number,
             "customer_contact": "bob@example.com",
             "lifecycle": "paid",
         },

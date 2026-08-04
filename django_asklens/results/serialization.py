@@ -112,6 +112,8 @@ def normalize_cell_value(
     if column_type == "decimal" and isinstance(value, Decimal):
         if not value.is_finite():
             raise_non_finite_result(column)
+        if column._is_metric:
+            return _serialize_aggregate_decimal(value)
         return str(value)
     if column_type == "float" and isinstance(value, (int, float, Decimal)):
         if isinstance(value, bool):
@@ -152,6 +154,17 @@ def normalize_cell_value(
         ):
             raise_non_finite_result(column)
     raise_unsupported_result(value, column=column)
+
+
+def _serialize_aggregate_decimal(value: Decimal) -> str:
+    """Return the canonical minimal plain string for an aggregate decimal."""
+
+    if value.is_zero():
+        return "0"
+    plain_value = format(value, "f")
+    if "." in plain_value:
+        plain_value = plain_value.rstrip("0").rstrip(".")
+    return plain_value
 
 
 def raise_non_finite_result(column: ResultColumn) -> None:

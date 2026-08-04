@@ -166,8 +166,10 @@ one extra result to determine truncation; ungrouped aggregates have effective
 limit one and never truncate.
 
 Columns now include canonical `type` and `nullable`. Decimal results remain
-strings. Empty ungrouped count is `0`; other empty ungrouped aggregates are
-`null`; empty grouped aggregates return no rows.
+strings. Aggregate decimal metrics may shed insignificant fractional trailing
+zeros (`"20.00"` becomes `"20"`), while scalar decimal fields preserve scale
+(`"20.00"` remains `"20.00"`). Empty ungrouped count is `0`; other empty
+ungrouped aggregates are `null`; empty grouped aggregates return no rows.
 
 `QueryResult.to_dict()` and `serialize_query_result()` return only core query
 results. API/provider/MCP orchestration may add optional sibling
@@ -226,8 +228,9 @@ facade.
 - [ ] Update metric requests to `{ "metric": "name" }`.
 - [ ] Update filter and temporal values to canonical forms.
 - [ ] Move plan visualization to sibling presentation metadata.
-- [ ] Update result consumers for `truncated`, typed columns, decimals, and
-      optional presentation.
+- [ ] Update result consumers for `truncated`, typed columns, aggregate decimal
+      canonicalization, scalar decimal scale preservation, and optional
+      presentation.
 - [ ] Read machine capabilities and permission-scoped catalog as separate
       documents; read human suggestions from `query_help`.
 - [ ] Run tenant, permission, boundary, package, and PostgreSQL tests appropriate

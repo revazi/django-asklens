@@ -79,6 +79,7 @@ jobs:
       - name: Inspect package artifacts
         run: |
           uv run --no-sync python - <<'PY'
+          from email.parser import Parser
           from pathlib import Path
           import tarfile
           import zipfile
@@ -91,8 +92,25 @@ jobs:
 
           with zipfile.ZipFile(wheels[0]) as wheel:
               wheel_names = set(wheel.namelist())
+              [metadata_name] = [
+                  name for name in wheel_names if name.endswith(".dist-info/METADATA")
+              ]
+              metadata = Parser().parsestr(wheel.read(metadata_name).decode("utf-8"))
           with tarfile.open(sdists[0], "r:gz") as sdist:
               sdist_names = set(sdist.getnames())
+
+          forbidden_requirements = [
+              requirement
+              for requirement in metadata.get_all("Requires-Dist", [])
+              if requirement.lower().replace("_", "-").startswith(
+                  ("playwright", "psycopg")
+              )
+          ]
+          if forbidden_requirements:
+              raise SystemExit(
+                  "Dev-only dependencies leaked into wheel Requires-Dist: "
+                  f"{forbidden_requirements}"
+              )
 
           forbidden_fragments = (".agents/", "asklens-llm-io")
           for artifact_name, names in ((wheels[0].name, wheel_names), (sdists[0].name, sdist_names)):
@@ -162,3 +180,79 @@ jobs:
             api \
             "${{ matrix.django-package }}" \
             "${{ matrix.django-version-prefix }}"
+
+  postgresql:
+    name: PostgreSQL ${{ matrix.postgresql-version }} / Python 3.13 / Django 6.x
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        postgresql-version: ["15", "18"]
+
+    services:
+      postgres:
+        image: postgres:${{ matrix.postgresql-version }}
+        env:
+          POSTGRES_DB: asklens
+          POSTGRES_USER: asklens
+          POSTGRES_PASSWORD: asklens-test-only
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U asklens -d asklens"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DJANGO_ASKLENS_LIVE_LLM: "0"
+      DJANGO_ASKLENS_DEMO_LIVE_LLM: "0"
+      DJANGO_SETTINGS_MODULE: tests.test_project.postgresql_settings
+      DJANGO_ASKLENS_POSTGRES_DB: asklens
+      DJANGO_ASKLENS_POSTGRES_USER: asklens
+      DJANGO_ASKLENS_POSTGRES_PASSWORD: asklens-test-only
+      DJANGO_ASKLENS_POSTGRES_HOST: 127.0.0.1
+      DJANGO_ASKLENS_POSTGRES_PORT: "5432"
+      DJANGO_ASKLENS_POSTGRES_EXPECTED_MAJOR: ${{ matrix.postgresql-version }}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+
+      - name: Install dependencies
+        run: uv sync --locked --group dev
+
+      - name: Install fixed Django version
+        run: uv pip install --reinstall "Django>=6.0,<7.0"
+
+      - name: Guard backend/version and replay all conformance fixtures
+        run: >-
+          uv run --no-sync pytest --strict-config --strict-markers
+          -m postgresql tests/conformance/test_replay.py
+
+      - name: Run complete database-sensitive suite
+        run: >-
+          uv run --no-sync pytest --strict-config --strict-markers
+          -m postgresql
+
+      - name: Run PostgreSQL Django system check
+        run: >-
+          uv run --no-sync python -m django check
+          --settings=tests.test_project.postgresql_settings
+
+      - name: Check AskLens migrations under PostgreSQL settings
+        run: >-
+          uv run --no-sync python -m django makemigrations asklens
+          --check --dry-run --settings=tests.test_project.postgresql_settings

@@ -16,7 +16,7 @@ from django_asklens.querying import execute_asklens_query_request
 from tests.execution.test_facade import build_registry, sensitive_plan, status_plan
 from tests.test_project.models import Customer, Order
 
-pytestmark = pytest.mark.django_db
+pytestmark = [pytest.mark.django_db, pytest.mark.postgresql]
 
 
 @pytest.fixture(autouse=True)

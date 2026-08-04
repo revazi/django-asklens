@@ -1,5 +1,7 @@
 """Tests for framework-neutral MCP core helpers."""
 
+from types import SimpleNamespace
+
 import pytest
 
 from django_asklens import Metric
@@ -16,7 +18,7 @@ from django_asklens.models import SemanticQueryRun
 from tests.mcp._support import sensitive_list_plan, valid_aggregate_plan
 from tests.test_project.models import Order
 
-pytestmark = pytest.mark.django_db
+pytestmark = [pytest.mark.django_db, pytest.mark.postgresql]
 
 
 def test_mcp_capabilities_are_permission_scoped(
@@ -466,6 +468,66 @@ def test_mcp_execute_plan_can_include_rows_when_setting_allows_it(
         {"status": "paid", "order_count": 2},
         {"status": "pending", "order_count": 1},
     ]
+
+
+def test_mcp_execution_re_resolves_server_owned_scope_for_each_context(
+    settings,
+    order_data: None,
+    mcp_request,
+) -> None:
+    """The same untrusted MCP plan cannot carry scope across contexts."""
+
+    settings.DJANGO_ASKLENS["MCP_ALLOW_ROW_RETURN"] = True
+    default_registry.register(
+        timezone="UTC",
+        model=Order,
+        name="orders",
+        label="Orders",
+        scope_mode="context_scoped",
+        scope_provider=lambda request: Order.objects.filter(
+            status=request.server_owned_status
+        ),
+        fields={
+            "status": {
+                "binding": "status",
+                "type": "enum",
+                "nullable": False,
+                "label": "Status",
+                "enum": {
+                    "type": "string",
+                    "values": [{"value": "paid"}, {"value": "pending"}],
+                },
+            }
+        },
+        metrics=[
+            Metric("order_count", op="count", binding="id", result_type="integer")
+        ],
+    )
+    paid_context = SimpleNamespace(
+        user=mcp_request.user,
+        asklens_permissions=frozenset(),
+        server_owned_status="paid",
+    )
+    pending_context = SimpleNamespace(
+        user=mcp_request.user,
+        asklens_permissions=frozenset(),
+        server_owned_status="pending",
+    )
+    untrusted_plan = valid_aggregate_plan()
+
+    paid_payload = asklens_execute_plan(
+        paid_context,
+        untrusted_plan,
+        include_rows=True,
+    )
+    pending_payload = asklens_execute_plan(
+        pending_context,
+        untrusted_plan,
+        include_rows=True,
+    )
+
+    assert paid_payload["data"] == [{"status": "paid", "order_count": 2}]
+    assert pending_payload["data"] == [{"status": "pending", "order_count": 1}]
 
 
 def test_mcp_execute_plan_caps_returned_rows_when_rows_are_allowed(
