@@ -25,6 +25,18 @@ uv sync --group dev
 uv run pytest
 ```
 
+## Source-checkout alpha-candidate package evidence
+
+R4 includes an opt-in package smoke for proposal evidence only:
+
+```bash
+bash scripts/alpha-candidate-package-smoke.sh
+```
+
+The command requires Python 3.12+, `uv`, and network access to PyPI. It builds the current source into a temporary wheel, checks that Docker, Playwright, and psycopg did not leak into runtime requirements or extras, and installs the core, API, and MCP wheel surfaces in separate temporary environments. It then installs the published 0.1.0a1 from PyPI and replaces it with the exact local source wheel before rerunning the installed-core smoke. Every temporary environment and artifact is removed at exit.
+
+The repository version intentionally remains `0.1.0a1` because no version bump or release is authorized. Consequently, the final step must use pip's same-version `--force-reinstall`; it is package replacement evidence, not proof of a normal resolver-selected `0.1.0a1` to `0.2.0a*` transition. A separately authorized candidate must set the exact proposed version and rerun this workflow as a normal upgrade. The script does not upload, tag, publish, or release anything.
+
 ## Django setup
 
 For core-only use, add AskLens to `INSTALLED_APPS`:

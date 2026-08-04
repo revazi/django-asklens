@@ -16,7 +16,8 @@ Status: **alpha**. APIs may change before a stable release.
 - Optional DRF catalog, capabilities, query, and run-detail endpoints.
 - Strict Pydantic `QueryPlan` validation.
 - Five packaged draft internal JSON Schemas for the current contract shape.
-- A language-neutral synthetic conformance corpus with SQLite replay.
+- A language-neutral synthetic conformance corpus replayed on SQLite and required PostgreSQL 15/18 CI jobs.
+- A source-checkout PostgreSQL 18 Compose/Playwright synthetic reference smoke.
 - ORM-only list and aggregate query execution.
 - Dummy provider for deterministic tests and demos.
 - OpenAI-compatible live provider adapter.
@@ -306,7 +307,7 @@ Review the [security checklist](docs/security-checklist.md) and [production chec
 - [Production checklist](docs/production-checklist.md)
 - [Multi-tenant security](docs/multitenancy-security.md)
 - [Evaluation fixtures](docs/evaluation.md)
-- [Runnable complex test project](docs/test-project-demo.md)
+- [Runnable complex test project and PostgreSQL reference smoke](docs/test-project-demo.md)
 - [Changelog](CHANGELOG.md)
 
 ## Development
@@ -320,4 +321,11 @@ uv run ruff check .
 uv run ruff format --check .
 ```
 
-The package remains standards-based and setuptools-backed; `uv` is used for contributor workflows, not as a runtime dependency.
+The opt-in source-checkout PostgreSQL 18 browser smoke is:
+
+```bash
+uv run playwright install chromium
+bash scripts/reference-demo-smoke.sh
+```
+
+It uses only synthetic data, disables live providers, and is internal draft alpha-candidate evidence—not production/security certification, external validation, or backend-neutral proof. The package remains standards-based and setuptools-backed; `uv`, Docker, PostgreSQL drivers, and Playwright are contributor/evidence tools, not mandatory runtime dependencies.

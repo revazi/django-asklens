@@ -2,7 +2,7 @@
 
 Use this checklist before enabling AskLens in a production or production-like environment.
 
-AskLens is a data access surface. Configure it as carefully as any reporting, analytics, or admin feature. Supported Python execution uses `execute_plan()` (with `run_query_plan()` temporarily retained as a deprecated safe wrapper), and every resource registration must resolve a fail-closed scope policy from an explicit resource mode or the context-only project default. Production-like evaluation must still test host scope providers and operational controls.
+AskLens is a data access surface. Configure it as carefully as any reporting, analytics, or admin feature. Supported Python execution uses `execute_plan()` (with `run_query_plan()` temporarily retained as a deprecated safe wrapper), and every resource registration must resolve a fail-closed scope policy from an explicit resource mode or the context-only project default. Production-like evaluation must still test host scope providers and operational controls. The repository Compose/reference app is synthetic test evidence, not a production topology, credential pattern, security review, or capacity baseline.
 
 ## Access gates
 
@@ -77,12 +77,12 @@ AskLens is a data access surface. Configure it as carefully as any reporting, an
   - [ ] `DEFAULT_LIMIT`
 - [ ] Test broad list queries and aggregate queries for acceptable latency.
 - [ ] Test repeated limited queries for stable ordering and verify `truncated` below, at, and above the effective limit.
-- [ ] Configure a database statement timeout appropriate to reporting queries.
-- [ ] Configure an end-to-end request timeout.
-- [ ] Apply host/API rate and concurrency limits; structural budgets do not bound request volume.
-- [ ] Use read-only database credentials or equivalent database policy where practical.
+- [ ] Configure and verify a database statement timeout on the actual AskLens connection/role; do not rely only on a web timeout after the database has begun work.
+- [ ] Configure an end-to-end request timeout at the ASGI/WSGI server or trusted proxy, keep it longer than or coordinated with the statement timeout, and test cancellation/connection cleanup.
+- [ ] Apply authenticated-principal/route rate limits and a bounded concurrency limit before execution; structural budgets do not bound request volume, queued work, or simultaneous scans.
+- [ ] Use a dedicated read-only database role or equivalent database policy where practical. Verify that the role can select only intended schemas/tables and cannot insert, update, delete, alter, create, or assume a broader role. AskLens' own database audit writes may need a separately routed/privileged sink rather than granting writes to application data.
 - [ ] Review database indexes for common filter/group/order fields.
-- [ ] Monitor duration, errors, rejected budgets, and row/group counts.
+- [ ] Monitor query duration, statement/request timeouts, errors by stable code, rejected budgets, row/group counts, audit-sink failures, rate-limit decisions, concurrency saturation, connection-pool pressure, and database resource use. Keep labels low-cardinality and exclude filter values, rows, questions, credentials, and tenant identifiers by default.
 
 ## Live provider configuration
 
@@ -113,6 +113,10 @@ AskLens is a data access surface. Configure it as carefully as any reporting, an
 - [ ] Confirm successful and rejected data-query attempts reach the selected sink exactly once. Database rejection auditing may issue one metadata-only `INSERT`; it must not issue an application-data query.
 - [ ] Confirm disabled/custom non-database auditing adds zero SQL to rejected plans.
 - [ ] Keep `AUDIT_INCLUDE_CONTENT=False` unless storing questions, filter values, and complete validated plans has an explicit retention, access, redaction, and deletion policy.
+- [ ] Set a documented retention period for metadata and any opted-in content; assign an owner and legal/business basis, and test a scheduled deletion process. AskLens does not provide automatic retention or deletion.
+- [ ] Restrict audit access separately from query access, record administrative access where required, and test user/tenant separation for custom audit views and exports.
+- [ ] Define redaction at ingestion and display/export boundaries. Redaction after storage is not a substitute for keeping `AUDIT_INCLUDE_CONTENT=False`; never copy raw rejected input or provider payloads into an audit sink by default.
+- [ ] Define deletion handling for user/tenant requests, account closure, backups, replicas, and external custom sinks; verify failures are surfaced without retrying the data query.
 - [ ] Confirm help/capabilities responses do not create query-run audit records because they do not execute a data query.
 - [ ] Monitor audit-sink failures, slow queries, and row counts with normal Django/database tooling.
 
