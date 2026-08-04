@@ -149,6 +149,7 @@ jobs:
               "/docs/installation.md",
               "/docs/internal-contracts.md",
               "/docs/migrating-0.1-to-0.2.md",
+              "/docs/pilot-intake-worksheet.md",
               "/docs/private-candidate-evaluation.md",
               "/docs/providers.md",
               "/docs/security-checklist.md",

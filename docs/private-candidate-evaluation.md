@@ -18,7 +18,7 @@ Current package metadata supports Python 3.12+ and Django 5.2 LTS or Django 6.x.
 
 The optional Django REST Framework API and FastMCP integrations are installed only when they are part of the agreed evaluation.
 
-Before starting, assign an evaluation owner and record where the staging environment, candidate manifest, dependency lock, database snapshot, and rollback instructions are held. Keep completed evaluation forms and evidence outside this repository.
+Before starting, assign an evaluation owner and record where the staging environment, candidate manifest, dependency lock, database snapshot, and rollback instructions are held. Keep completed evaluation forms and evidence outside this repository. An optional [Privacy-Safe Pilot Intake Worksheet](pilot-intake-worksheet.md) template is available to help structure evaluation reporting without disclosing private application details.
 
 ## 1. Verify candidate provenance before installation
 
