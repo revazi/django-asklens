@@ -13,7 +13,7 @@ from django_asklens.exceptions import InvalidResourceError
 from django_asklens.execution import execute_plan
 from tests.test_project.models import Account, Customer, Order
 
-pytestmark = pytest.mark.django_db
+pytestmark = [pytest.mark.django_db, pytest.mark.postgresql]
 
 
 @pytest.fixture(autouse=True)

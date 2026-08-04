@@ -31,6 +31,7 @@ class ResultColumn:
     type: str
     nullable: bool
     enum_values: tuple[str | int, ...] = field(default=(), repr=False)
+    _is_metric: bool = field(default=False, repr=False, compare=False, kw_only=True)
 
 
 @dataclass(frozen=True, slots=True)
@@ -311,4 +312,5 @@ def metric_column(metric: Metric) -> ResultColumn:
         label=metric.label or metric.name.replace("_", " ").title(),
         type=metric.result_type,
         nullable=metric.op != "count",
+        _is_metric=True,
     )

@@ -3,6 +3,7 @@
 from datetime import UTC, date, datetime, time, timedelta
 from decimal import Decimal
 from types import SimpleNamespace
+from uuid import UUID
 from zoneinfo import ZoneInfo
 
 import pytest
@@ -12,7 +13,7 @@ from django_asklens.catalog.registry import CatalogRegistry
 from django_asklens.execution import execute_plan, run_query_plan
 from tests.test_project.models import CanonicalValueFixture
 
-pytestmark = pytest.mark.django_db
+pytestmark = [pytest.mark.django_db, pytest.mark.postgresql]
 
 
 def build_registry(*, resource_timezone: str = "UTC") -> CatalogRegistry:
@@ -72,6 +73,154 @@ def execute(plan: dict[str, object], *, registry: CatalogRegistry):
         request=SimpleNamespace(user=None),
         registry=registry,
     )
+
+
+def test_canonical_database_scalars_round_trip_through_serialization() -> None:
+    """Canonical scalar values survive the database and result boundary."""
+
+    identifier = UUID("01234567-89ab-cdef-0123-456789abcdef")
+    instant = datetime(2026, 3, 8, 7, 30, 15, 123456, tzinfo=UTC)
+    clock = time(9, 30, 15, 123456)
+    CanonicalValueFixture.objects.create(
+        text_value="café",
+        nullable_text=None,
+        boolean_value=True,
+        integer_value=-123456,
+        decimal_value=Decimal("-1234.5678"),
+        float_value=1.25,
+        date_value=date(2026, 3, 8),
+        datetime_value=instant,
+        time_value=clock,
+        uuid_value=identifier,
+        enum_text_value="active",
+        enum_integer_value=2,
+    )
+    registry = CatalogRegistry()
+    registry.register(
+        model=CanonicalValueFixture,
+        name="canonical_values",
+        timezone="UTC",
+        scope_mode="global",
+        fields={
+            "text": {"binding": "text_value", "type": "string", "nullable": False},
+            "optional_text": {
+                "binding": "nullable_text",
+                "type": "string",
+                "nullable": True,
+            },
+            "flag": {
+                "binding": "boolean_value",
+                "type": "boolean",
+                "nullable": False,
+            },
+            "count": {
+                "binding": "integer_value",
+                "type": "integer",
+                "nullable": False,
+            },
+            "amount": {
+                "binding": "decimal_value",
+                "type": "decimal",
+                "nullable": False,
+            },
+            "ratio": {
+                "binding": "float_value",
+                "type": "float",
+                "nullable": False,
+            },
+            "day": {"binding": "date_value", "type": "date", "nullable": False},
+            "instant": {
+                "binding": "datetime_value",
+                "type": "datetime",
+                "nullable": False,
+            },
+            "clock": {
+                "binding": "time_value",
+                "type": "time",
+                "nullable": False,
+            },
+            "identifier": {
+                "binding": "uuid_value",
+                "type": "uuid",
+                "nullable": False,
+            },
+            "state": {
+                "binding": "enum_text_value",
+                "type": "enum",
+                "nullable": False,
+                "enum": {
+                    "type": "string",
+                    "values": [{"value": "draft"}, {"value": "active"}],
+                },
+            },
+            "state_code": {
+                "binding": "enum_integer_value",
+                "type": "enum",
+                "nullable": False,
+                "enum": {
+                    "type": "integer",
+                    "values": [{"value": 1}, {"value": 2}],
+                },
+            },
+        },
+    )
+    selected = [
+        "text",
+        "optional_text",
+        "flag",
+        "count",
+        "amount",
+        "ratio",
+        "day",
+        "instant",
+        "clock",
+        "identifier",
+        "state",
+        "state_code",
+    ]
+
+    result = execute(
+        {
+            "resource": "canonical_values",
+            "intent": "list",
+            "select": selected,
+            "limit": 1,
+        },
+        registry=registry,
+    )
+
+    assert result.rows == (
+        {
+            "text": "café",
+            "optional_text": None,
+            "flag": True,
+            "count": -123456,
+            "amount": Decimal("-1234.5678"),
+            "ratio": 1.25,
+            "day": date(2026, 3, 8),
+            "instant": instant,
+            "clock": clock,
+            "identifier": identifier,
+            "state": "active",
+            "state_code": 2,
+        },
+    )
+    assert result.to_dict()["data"] == [
+        {
+            "text": "café",
+            "optional_text": None,
+            "flag": True,
+            "count": -123456,
+            "amount": "-1234.5678",
+            "ratio": 1.25,
+            "day": "2026-03-08",
+            "instant": "2026-03-08T07:30:15.123456+00:00",
+            "clock": "09:30:15.123456",
+            "identifier": "01234567-89ab-cdef-0123-456789abcdef",
+            "state": "active",
+            "state_code": 2,
+        }
+    ]
 
 
 def test_date_range_is_inclusive_of_both_calendar_dates() -> None:
@@ -231,6 +380,52 @@ def test_relative_date_projection_preserves_exclusive_midnight_upper_bound() -> 
         )
 
     assert result.rows == ({"day": date(2026, 7, 26)},)
+
+
+@pytest.mark.parametrize(
+    ("now", "expected_start"),
+    [
+        (
+            datetime(2026, 4, 8, 2, 30, tzinfo=ZoneInfo("America/New_York")),
+            datetime(2026, 3, 8, 7, 30, tzinfo=UTC),
+        ),
+        (
+            datetime(2026, 12, 1, 1, 30, tzinfo=ZoneInfo("America/New_York")),
+            datetime(2026, 11, 1, 5, 30, tzinfo=UTC),
+        ),
+    ],
+    ids=["dst-gap-moves-forward", "dst-fold-uses-earlier-occurrence"],
+)
+def test_last_n_months_executes_at_dst_gap_and_fold_boundaries(
+    now: datetime,
+    expected_start: datetime,
+) -> None:
+    expected_end = now.astimezone(UTC)
+    for instant in (
+        expected_start - timedelta(microseconds=1),
+        expected_start,
+        expected_end - timedelta(microseconds=1),
+        expected_end,
+    ):
+        create_value(day=instant.date(), instant=instant)
+
+    with pytest.warns(DeprecationWarning, match="execute_plan"):
+        result = run_query_plan(
+            {
+                "resource": "temporal_values",
+                "intent": "list",
+                "filters": [{"field": "instant", "op": "last_n_months", "value": 1}],
+                "select": ["instant"],
+            },
+            registry=build_registry(resource_timezone="America/New_York"),
+            request=SimpleNamespace(user=None),
+            now=now,
+        )
+
+    assert tuple(row["instant"] for row in result.rows) == (
+        expected_start,
+        expected_end - timedelta(microseconds=1),
+    )
 
 
 def test_day_grouping_uses_explicit_resource_timezone() -> None:

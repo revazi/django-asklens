@@ -13,7 +13,7 @@ from django_asklens.execution import execute_plan, run_query_plan
 from django_asklens.planning import parse_query_plan
 from tests.test_project.models import CanonicalValueFixture, Customer, Facility, Order
 
-pytestmark = pytest.mark.django_db
+pytestmark = [pytest.mark.django_db, pytest.mark.postgresql]
 
 
 @pytest.fixture(autouse=True)

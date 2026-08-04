@@ -1,6 +1,7 @@
 """Replay the language-neutral AskLens conformance corpus."""
 
 import json
+import os
 from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
@@ -35,6 +36,8 @@ EXPECTED_CATEGORIES = {
     "serialization",
     "structural-negative",
 }
+pytestmark = pytest.mark.postgresql
+
 FORBIDDEN_FIXTURE_PROPERTIES = {
     "binding",
     "clock",
@@ -55,6 +58,19 @@ def _load_cases() -> list[tuple[Path, dict[str, Any]]]:
 
 
 CASES = _load_cases()
+
+
+@pytest.mark.postgresql
+def test_postgresql_backend_and_server_major() -> None:
+    """Fail a required PostgreSQL run that targets the wrong database."""
+
+    expected_major = os.environ.get("DJANGO_ASKLENS_POSTGRES_EXPECTED_MAJOR")
+    if expected_major is None:
+        pytest.skip("PostgreSQL server-major guard is only required in PostgreSQL runs")
+
+    assert expected_major in {"15", "18"}
+    assert connection.vendor == "postgresql"
+    assert connection.pg_version // 10_000 == int(expected_major)
 
 
 def _property_names(value: object) -> set[str]:

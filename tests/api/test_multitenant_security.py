@@ -17,7 +17,7 @@ from django_asklens.models import SemanticQueryRun
 from django_asklens.planning.planner import build_planner_request
 from tests.test_project.models import Account, AccountMembership, Customer, Order
 
-pytestmark = pytest.mark.django_db
+pytestmark = [pytest.mark.django_db, pytest.mark.postgresql]
 
 QUESTION_BY_STATUS = "Show my orders by status"
 QUESTION_TENANT_FILTER = "List beta tenant orders"

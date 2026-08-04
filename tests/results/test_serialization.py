@@ -5,7 +5,9 @@ from decimal import Decimal
 
 import pytest
 
+from django_asklens.catalog.resources import Metric
 from django_asklens.compiler import ResultColumn
+from django_asklens.compiler.orm import metric_column
 from django_asklens.exceptions import ResultSerializationError, public_error_payload
 from django_asklens.results.serialization import serialize_rows
 
@@ -51,6 +53,67 @@ def test_serialize_rows_normalizes_values_to_json_primitives() -> None:
         ],
         "row_count": 1,
     }
+
+
+@pytest.mark.parametrize(
+    ("value", "expected"),
+    [
+        (Decimal("20.00"), "20"),
+        (Decimal("10.50"), "10.5"),
+        (Decimal("-0.00"), "0"),
+        (Decimal("0E+10"), "0"),
+        (Decimal("1E+3"), "1000"),
+        (Decimal("1E-7"), "0.0000001"),
+    ],
+)
+def test_aggregate_decimal_metrics_use_minimal_plain_strings(
+    value: Decimal,
+    expected: str,
+) -> None:
+    """Metric decimals are backend-neutral without exposing origin metadata."""
+
+    column = metric_column(
+        Metric("revenue", op="sum", binding="total", result_type="decimal")
+    )
+
+    payload = serialize_rows(columns=(column,), rows=({"revenue": value},))
+
+    assert payload["columns"] == [
+        {
+            "key": "revenue",
+            "label": "Revenue",
+            "type": "decimal",
+            "nullable": True,
+        }
+    ]
+    assert payload["data"] == [{"revenue": expected}]
+    assert "e" not in payload["data"][0]["revenue"].lower()
+
+
+def test_scalar_decimal_fields_preserve_scale() -> None:
+    """Option B applies only to aggregate metrics, never scalar fields."""
+
+    payload = serialize_rows(
+        columns=(ResultColumn("total", "Total", "decimal", nullable=False),),
+        rows=({"total": Decimal("20.00")},),
+    )
+
+    assert payload["data"] == [{"total": "20.00"}]
+
+
+@pytest.mark.parametrize(
+    "value",
+    [Decimal("NaN"), Decimal("Infinity"), Decimal("-Infinity")],
+)
+def test_aggregate_decimal_metrics_reject_non_finite_values(value: Decimal) -> None:
+    """Aggregate canonicalization cannot turn non-finite values into strings."""
+
+    column = metric_column(
+        Metric("revenue", op="sum", binding="total", result_type="decimal")
+    )
+
+    with pytest.raises(ResultSerializationError, match="non-finite"):
+        serialize_rows(columns=(column,), rows=({"revenue": value},))
 
 
 def test_serialize_rows_marks_empty_results() -> None:
