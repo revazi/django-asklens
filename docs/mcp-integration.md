@@ -152,6 +152,8 @@ See [`examples/mcp/`](../examples/mcp/) for a generic registration sketch. The r
 
 The runnable test project can expose a real FastMCP Streamable HTTP endpoint for local testing with clients such as pi-codemcp. This ASGI/Uvicorn setup is a local one-port demo convenience: `/mcp` is served by FastMCP and normal Django routes, including admin, are mounted beside it.
 
+For the committed PostgreSQL 18 and Playwright HTTP evidence, use `bash scripts/reference-demo-smoke.sh` from a source checkout after the setup in [the runnable demo guide](test-project-demo.md). That smoke starts with a server-owned `facility-owner` identity, keeps `DJANGO_ASKLENS_MCP_ALLOW_ROWS=0`, proves the tool schema has no client identity/permission/scope arguments, requests rows and observes safe denial, and tears down its isolated Compose project. It is synthetic internal alpha-candidate evidence, not production authentication or transport-security guidance.
+
 AskLens core does not require ASGI, Uvicorn, or FastMCP. Host projects may run their normal Django app/admin through `runserver`, WSGI, or their existing ASGI stack and expose MCP from a separate process or port. In this repository, FastMCP and Uvicorn are development dependencies installed by `uv sync --group dev`.
 
 Seed the demo database first:
