@@ -37,6 +37,10 @@ The command requires Python 3.12+, `uv`, and network access to PyPI. It builds t
 
 The repository version intentionally remains `0.1.0a1` because no version bump or release is authorized. Consequently, the final step must use pip's same-version `--force-reinstall`; it is package replacement evidence, not proof of a normal resolver-selected `0.1.0a1` to `0.2.0a*` transition. A separately authorized candidate must set the exact proposed version and rerun this workflow as a normal upgrade. The script does not upload, tag, publish, or release anything.
 
+## Private candidate evaluation
+
+Maintainer-invited evaluators using an immutable commit, source-built wheel, and checksum should follow the [private candidate evaluation and onboarding guide](private-candidate-evaluation.md). That workflow uses a clean participant-owned staging environment and verified local artifact rather than assuming a public candidate exists on PyPI. It keeps completed forms and evidence outside the repository and does not turn the unchanged `0.1.0a1` package replacement into an upgrade or beta claim.
+
 ## Django setup
 
 For core-only use, add AskLens to `INSTALLED_APPS`:

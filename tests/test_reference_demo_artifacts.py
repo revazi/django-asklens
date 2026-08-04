@@ -11,6 +11,7 @@ COMPOSE = ROOT / "compose.yaml"
 REFERENCE_SCRIPT = ROOT / "scripts" / "reference-demo-smoke.sh"
 PACKAGE_SCRIPT = ROOT / "scripts" / "alpha-candidate-package-smoke.sh"
 PLAYWRIGHT_TEST = ROOT / "tests" / "e2e" / "reference_demo.py"
+PRIVATE_EVALUATION_GUIDE = ROOT / "docs" / "private-candidate-evaluation.md"
 
 
 def read_text(path: Path) -> str:
@@ -164,3 +165,50 @@ def test_source_demo_and_candidate_commands_are_documented() -> None:
     assert "redaction" in production.lower()
     assert "deletion" in production.lower()
     assert "strict replacement" in migration.lower()
+
+
+def test_private_candidate_guide_is_linked_provenanced_and_privacy_bounded() -> None:
+    """Private evaluation uses exact artifacts without release or data claims."""
+
+    guide = read_text(PRIVATE_EVALUATION_GUIDE)
+    install = read_text(ROOT / "docs" / "installation.md")
+    index = read_text(ROOT / "docs" / "index.md")
+    workflow = read_text(ROOT / ".github" / "workflows" / "ci.yml")
+
+    assert "(private-candidate-evaluation.md)" in install
+    assert "(private-candidate-evaluation.md)" in index
+    assert '"/docs/private-candidate-evaluation.md"' in workflow
+    for required in (
+        "maintainer-supplied candidate manifest",
+        "ASKLENS_CANDIDATE_COMMIT",
+        "ASKLENS_CANDIDATE_WHEEL",
+        "ASKLENS_CANDIDATE_SHA256",
+        "hmac.compare_digest",
+        "participant-owned, isolated staging",
+        "broad compatibility matrix",
+        "Python 3.13 with Django 6.x on PostgreSQL 15 and 18",
+        "python3 -m venv .venv-asklens-evaluation",
+        "${ASKLENS_CANDIDATE_WHEEL}[api]",
+        "${ASKLENS_CANDIDATE_WHEEL}[mcp]",
+        "python manage.py migrate --plan",
+        "python manage.py migrate",
+        "python manage.py check",
+        '"LLM_BACKEND": "dummy"',
+        '"AUDIT_INCLUDE_CONTENT": False',
+        "statement timeout",
+        "request timeout",
+        "rate limits",
+        "read only",
+        "time to first correctly scoped query",
+        "completed evaluation forms and evidence outside this repository",
+        "Never put them in candidate manifests, portable fixtures, intake templates",
+        "Report suspected security vulnerabilities",
+    ):
+        assert required in guide
+
+    assert "It is not a normal `0.1.0a1` to `0.2.0a*` upgrade" in guide
+    assert "pip install django-asklens==0.2" not in guide
+    assert "python3.12 -m venv" not in guide
+    assert "twine upload" not in guide
+    assert '"AUDIT_INCLUDE_CONTENT": True' not in guide
+    assert '"MCP_ALLOW_ROW_RETURN": True' not in guide
