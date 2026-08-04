@@ -47,10 +47,7 @@ When an internal contract conflict is found, use this order:
 3. language-neutral fixtures provide executable cases;
 4. Django must conform to those sources.
 
-A separate top-level `conformance/` corpus now provides explicit synthetic
-positive, negative, security, budget, semantic, ordering, truncation, and
-serialization cases. The current implementation replays it on SQLite;
-PostgreSQL replay remains a later R4 slice.
+A separate top-level `conformance/` corpus provides explicit synthetic positive, negative, security, budget, semantic, ordering, truncation, and serialization cases. The current Django implementation replays it on SQLite and on the required PostgreSQL 15/18 CI jobs. The source-checkout PostgreSQL 18 Compose/Playwright reference workflow adds demo-path evidence; it does not freeze these contracts or establish production, backend-neutral, public-specification, pilot, or independent-security evidence.
 
 ## Boundaries
 

@@ -141,6 +141,7 @@ jobs:
           required_sdist_suffixes = {
               "/README.md",
               "/LICENSE",
+              "/compose.yaml",
               "/conformance/README.md",
               "/conformance/positive/list-scoped.json",
               "/docs/index.md",
@@ -150,6 +151,9 @@ jobs:
               "/docs/migrating-0.1-to-0.2.md",
               "/docs/providers.md",
               "/docs/security-checklist.md",
+              "/scripts/alpha-candidate-package-smoke.sh",
+              "/scripts/reference-demo-smoke.sh",
+              "/tests/e2e/reference_demo.py",
           }
           missing_sdist_files = sorted(
               suffix
@@ -256,3 +260,58 @@ jobs:
         run: >-
           uv run --no-sync python -m django makemigrations asklens
           --check --dry-run --settings=tests.test_project.postgresql_settings
+
+  reference-demo:
+    name: PostgreSQL 18 / Playwright reference demo
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+
+      - name: Install development evidence dependencies
+        run: uv sync --locked --group dev
+
+      - name: Install Chromium and system dependencies
+        run: uv run --no-sync playwright install --with-deps chromium
+
+      - name: Run disposable Compose/Playwright reference smoke
+        run: bash scripts/reference-demo-smoke.sh
+
+  candidate-package:
+    name: Source wheel and published-alpha replacement evidence
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+
+      - name: Install package evidence dependencies
+        run: uv sync --locked --group dev
+
+      - name: Run isolated source-wheel and upgrade evidence
+        run: bash scripts/alpha-candidate-package-smoke.sh

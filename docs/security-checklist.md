@@ -48,7 +48,8 @@ Use this checklist before enabling AskLens outside local development.
 ## Audit safety
 
 - [ ] Select `AUDIT_MODE` deliberately and keep `AUDIT_INCLUDE_CONTENT=False` by default.
-- [ ] If full content is enabled, define retention, access, redaction, and deletion policy for questions, filters, and plans.
+- [ ] Define retention, access, redaction, and deletion policy even for metadata-only records; AskLens does not automatically expire audit rows.
+- [ ] If full content is enabled, separately justify and test ingestion/display/export redaction, tightly restricted access, scheduled deletion, backup/replica deletion handling, and every custom sink for questions, filters, and plans.
 - [ ] Prove rejected plans issue no application-data query; allow at most one metadata insert only in database audit mode.
 - [ ] Monitor custom/database sink failures without retrying query execution.
 

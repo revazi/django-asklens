@@ -8,8 +8,9 @@ Until the first stable release, security fixes are handled on the latest unrelea
 
 | Version | Supported |
 | --- | --- |
-| `0.1.0a0` / `main` | Yes |
-| Older snapshots | No |
+| `main` (unreleased alpha work) | Yes |
+| `0.1.0a1` (published alpha) | Yes |
+| `0.1.0a0` and older snapshots | No |
 
 ## Reporting a vulnerability
 
@@ -42,9 +43,12 @@ AskLens should fail closed:
 - no sample database rows sent to providers by default,
 - only explicitly registered resources and fields are queryable,
 - provider output is untrusted and must be validated before execution,
-- query execution starts from each resource's `base_queryset(request)`,
-- DRF/API permissions and request-scoped field permissions must be enforced,
-- limits such as `MAX_ROWS`, `MAX_JOINS`, `MAX_METRICS`, and `MAX_GROUP_BY` must remain active.
+- every resource resolves to explicit `global` or trusted request-aware `context_scoped` policy, with no unrestricted manager fallback,
+- context-scoped execution starts from a lazy exact-model `scope_provider(request)` queryset and fails closed when current scope is unavailable,
+- DRF/API/MCP permissions and request-scoped field permissions must be enforced through the trusted facade,
+- client input cannot select identity, permission, tenant, or scope policy,
+- structural limits must remain active, while hosts additionally enforce statement/request timeouts, rate/concurrency limits, read-only database defense, and monitoring, and
+- default audit storage remains metadata-only; full content requires explicit retention, access, redaction, and deletion policy.
 
 See also:
 

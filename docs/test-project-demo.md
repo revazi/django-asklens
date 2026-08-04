@@ -2,7 +2,46 @@
 
 The source repository includes a synthetic Django test project with complex tenant, role, member, subscription, billing, payment, and schedule models. It is designed for local AskLens integration testing without host-application code or sensitive data. This guide is for a source checkout, not an installed package runtime.
 
-## Start the admin/demo server
+## PostgreSQL 18 reference workflow
+
+This synthetic reference app provides internal, draft alpha-candidate evidence only. It is not production or security certification, external pilot evidence, a public specification, or backend-neutral proof. Live providers stay disabled throughout the committed smoke.
+
+Prerequisites:
+
+- Python 3.12 or newer and `uv`;
+- Docker Engine with the Docker Compose plugin;
+- enough local capacity to run one PostgreSQL 18 container; and
+- network access for the initial Python and Chromium downloads.
+
+From a fresh source checkout, the one-command setup is:
+
+```bash
+uv sync --locked --group dev && uv run playwright install chromium
+```
+
+Run the complete automated smoke with one command:
+
+```bash
+bash scripts/reference-demo-smoke.sh
+```
+
+The script validates `compose.yaml`, chooses free loopback ports, creates a uniquely named Compose project and named volume, waits for health, verifies the live server is PostgreSQL 18, migrates/syncs and seeds the real synthetic Django app, starts the MCP-enabled ASGI demo, and runs `tests/e2e/reference_demo.py` with Playwright/Chromium. It covers browser login and interaction, permission-scoped catalog and machine capabilities, context scope, list and aggregate execution, typed/canonical JSON values, metadata-only audit records, API routes, real FastMCP Streamable HTTP, default MCP row omission, and fail-closed denial. It then removes only the containers, network, and named volume in that unique Compose project, on success or failure.
+
+For manual exploration, keep the same deterministic PostgreSQL setup and real ASGI/MCP app running until Ctrl-C:
+
+```bash
+bash scripts/reference-demo-smoke.sh --manual
+```
+
+The command prints its dynamically selected demo and MCP URLs. Ctrl-C stops the server and safely runs `docker compose down --volumes --remove-orphans` for the fixed `django-asklens-reference-demo` project only. If a prior manual run was interrupted before its trap completed, the one-command safe teardown is:
+
+```bash
+bash scripts/reference-demo-smoke.sh --teardown
+```
+
+The Compose database uses deterministic credentials (`asklens_demo` / `asklens-demo-only`) that are committed and intended only for this synthetic loopback demo. It does not use a developer's existing PostgreSQL server. PostgreSQL data lives in a Docker-managed named volume rather than a host bind mount; the orchestration deliberately removes that project-scoped volume during teardown. Do not reuse these credentials or this Compose configuration for production data.
+
+## Start the SQLite admin/demo server
 
 Use the demo settings module so admin, sessions, templates, and a local SQLite database are enabled. For normal admin/frontend testing, use Django's development server:
 

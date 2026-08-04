@@ -22,9 +22,20 @@ case "$mode" in
 esac
 
 smoke_venv="$(mktemp -d)"
+cleanup() {
+  rm -r "$smoke_venv"
+}
+trap cleanup EXIT
 python -m venv "$smoke_venv"
-wheel="$(echo dist/django_asklens-*.whl)"
-"$smoke_venv/bin/python" -m pip install --upgrade pip
-"$smoke_venv/bin/python" -m pip install "$django_package"
-"$smoke_venv/bin/python" -m pip install "${wheel}${extra}"
+wheel="${4:-}"
+if [[ -z "$wheel" ]]; then
+  wheel="$(echo dist/django_asklens-*.whl)"
+fi
+if [[ ! -f "$wheel" ]]; then
+  echo "Wheel does not exist: $wheel" >&2
+  exit 2
+fi
+"$smoke_venv/bin/python" -m pip install --quiet --upgrade pip
+"$smoke_venv/bin/python" -m pip install --quiet "$django_package"
+"$smoke_venv/bin/python" -m pip install --quiet "${wheel}${extra}"
 DJANGO_VERSION_PREFIX="$django_version_prefix" "$smoke_venv/bin/python" .github/scripts/wheel_smoke.py "$mode"

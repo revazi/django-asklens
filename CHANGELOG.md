@@ -23,6 +23,9 @@ The project is alpha and APIs may change before a stable release.
 - Added optional presentation envelopes using `{"kind": "table|metric|bar|line|pie", ...}` outside QueryPlan and normalized them only against completed result columns.
 - Added five packaged Draft 2020-12 JSON Schemas and Python accessors for the one current internal catalog, query-plan, capabilities, result, and error shape; the schemas remain draft and unfrozen.
 - Added a language-neutral synthetic conformance corpus with explicit positive, structural, member/scope/security, budget, semantic, ordering/truncation, and serialization cases plus trusted SQLite replay.
+- Added required PostgreSQL 15/18 database-sensitive and conformance CI coverage with a development-only psycopg driver.
+- Added a source-checkout PostgreSQL 18 Compose reference database and one-command Playwright/Chromium smoke over the real synthetic ASGI/API/FastMCP demo, with project-scoped teardown and live providers disabled.
+- Added isolated source-wheel core/API/MCP install and published-`0.1.0a1` replacement evidence. It leaves the repository version unchanged and performs no upload, tag, or release.
 
 ### Changed
 
@@ -66,6 +69,7 @@ The project is alpha and APIs may change before a stable release.
 - To-many metrics now fail closed by default. Only explicit one-grain `count_rows` and private-key `count_distinct` registrations are accepted; numeric to-many aggregates, unsafe keys, plan-level fanout, and independent relationship paths reject before application-data SQL.
 - Every over-budget structural dimension rejects with `asklens.budget.exceeded` before scope resolution or application-data SQL; malformed UTF-8 byte plans return a typed parse error.
 - Unsupported type/operator pairs, invalid scalar types, and unknown enum inputs reject with `asklens.plan.invalid` before scope resolution or application-data SQL. Unsupported result objects fail with the safe `asklens.execute.failed` category.
+- The PostgreSQL reference smoke proves server-owned MCP identity, host-and-request row-return gating, metadata-only audit records, tenant-scoped list/aggregate behavior, and fail-closed no-report access using synthetic data. This is internal technical evidence, not production certification or an independent security audit.
 
 ## 0.1.0a1 — 2026-07-19
 
