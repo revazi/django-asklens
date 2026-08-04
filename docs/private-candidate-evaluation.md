@@ -14,7 +14,7 @@ The current repository and wheel still report version `0.1.0a1`. Use a clean eva
 
 Run the evaluation in participant-owned, isolated staging with a disposable or restorable PostgreSQL database containing only synthetic or properly de-identified data. Do not connect this candidate to production data or a shared production database. Keep live providers off until a separate provider evaluation is approved.
 
-Current package metadata supports Python 3.12+ and Django 5.2 LTS or Django 6.x. The broad compatibility matrix currently exercises Python 3.12/3.13 and Django 5.2/6.x on SQLite. PostgreSQL semantic/conformance CI is narrower: Python 3.13 with Django 6.x on PostgreSQL 15 and 18. The PostgreSQL 18 reference app also has separate browser/API/MCP smoke evidence. Record the exact evaluation combination and this limitation rather than implying that every Python/Django/PostgreSQL combination has been tested together.
+Current package metadata supports Python 3.12+ and Django 5.2 LTS or Django 6.x. The broad compatibility matrix currently exercises Python 3.12/3.13 and Django 5.2/6.x on SQLite. PostgreSQL semantic/conformance CI covers specific major stacks on PostgreSQL 15 and 18; it is not a full Cartesian matrix. PG15 is tested with Py3.12/Django 5.2 and Py3.13/Django 6.x; PG18 is tested with Py3.13/Django 6.x. The PostgreSQL 18 reference app also has separate browser/API/MCP smoke evidence. Record the exact evaluation combination and this limitation rather than implying that every Python/Django/PostgreSQL combination has been tested together.
 
 The optional Django REST Framework API and FastMCP integrations are installed only when they are part of the agreed evaluation.
 
