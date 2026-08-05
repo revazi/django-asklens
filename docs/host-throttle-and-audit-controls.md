@@ -132,7 +132,31 @@ Do **not** include, export, or index these request-level values by default:
 A sink error must not trigger query re-run, nor become an authorization or rate
 limiter gate.
 
-## 7) No mandatory telemetry or queueing dependencies
+## 7) Manual built-in database-audit redaction
+
+AskLens provides one manual, preview-by-default lifecycle command for built-in
+`SemanticQueryRun` rows:
+
+```bash
+python manage.py redact_asklens_audit \
+  --before 2026-08-01T00:00:00Z \
+  --database default \
+  --batch-size 1000
+```
+
+The cutoff must be a strict uppercase, offset-aware RFC 3339 timestamp in the
+past. Preview counts eligible rows at one point in time and performs no writes.
+Only a trusted operator should add `--execute`; the selected alias then needs
+update permission. Execution clears `question` and `plan` only, in bounded
+batches, while retaining the audit row and operational fields. Output contains
+no audit row IDs or stored content.
+
+The command acts on the selected built-in database table regardless of current
+`AUDIT_MODE`; it does not call custom sinks. Custom-sink storage, backups, and
+replicas remain host-owned. AskLens does not schedule this command, choose a
+retention policy, purge rows, or complete host deletion-request workflows.
+
+## 8) No mandatory telemetry or queueing dependencies
 
 AskLens does not require OpenTelemetry, Prometheus, background queues, a cache,
 or service mesh to satisfy this hardening slice.

@@ -10,7 +10,7 @@ from types import SimpleNamespace
 
 import django
 from django.conf import settings
-from django.core.management import call_command
+from django.core.management import call_command, get_commands
 
 
 def main() -> None:
@@ -54,6 +54,9 @@ def smoke_core_install() -> None:
     assert not hasattr(execution_package, "execute_query")
     assert not hasattr(compiler_package, "compile_query_plan")
     configure_settings(installed_apps=["django_asklens"])
+    commands = get_commands()
+    assert commands["redact_asklens_audit"] == "django_asklens"
+    assert "_audit_lifecycle" not in commands
 
     from django.contrib.auth import get_user_model
 
