@@ -63,5 +63,14 @@ Use this checklist before enabling AskLens outside local development.
 - [ ] Monitor query volume, budget rejections, and slow queries using normal Django/database tooling.
 - [ ] Consume stable failures through `error.code` and `error.message`; confirm unknown and unauthorized members both return `asklens.member.unavailable` without catalog or permission detail.
 - [ ] Review logs to ensure errors do not include stack traces, secrets, raw credentials, provider payload dumps, or sensitive row values.
+- [ ] Run point-in-time dependency evidence as a metadata check:
+  ```bash
+  uv audit --locked --preview-features audit-command
+  ```
+  This is dependency metadata evidence for the current lock only; it is not an independent security audit, SBOM, or production certification claim.
+- [ ] Remediation policy for this control:
+  - no ignore/allowlist entries in this tranche;
+  - fixed vulnerabilities must be upgraded or replaced, not ignored;
+  - if a verified finding remains, document advisory ID, owner, and review date as project debt.
 
 AskLens is a data access surface. If in doubt, register less data and add fields/metrics only after review.
