@@ -63,6 +63,16 @@ class SemanticQueryRunAdmin(admin.ModelAdmin):
 
         return False
 
+    def has_change_permission(self, request, obj=None) -> bool:
+        """Prevent editing audit records in admin."""
+
+        return False
+
+    def has_delete_permission(self, request, obj=None) -> bool:
+        """Prevent deleting audit records in admin."""
+
+        return False
+
     @admin.display(description="Question")
     def query_result_link(self, obj: SemanticQueryRun) -> str:
         """Return a link to open this question in the query admin."""

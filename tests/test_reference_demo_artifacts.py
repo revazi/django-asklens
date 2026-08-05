@@ -618,7 +618,11 @@ def test_audit_lifecycle_docs_and_artifacts_cover_irreversible_purge() -> None:
         "replicas",
         "no scheduler",
         "automatic retention policy",
-        "normal django model permissions",
+        "view-only",
+        "including superusers",
+        "delete_selected",
+        "asklens-provided operator workflows",
+        "not universal host authorization or mutation controls",
         "not a complete",
     ):
         assert required in combined_guidance
@@ -634,6 +638,11 @@ def test_audit_lifecycle_docs_and_artifacts_cover_irreversible_purge() -> None:
         "operate only on the selected built-in database table",
         "operates only on the selected built-in database table",
         "both commands act on selected built-in database rows",
+        "existing django admin deletion continues to follow normal model permissions",
+        "existing django admin mutation remains governed by normal model permissions",
+        "existing audit-admin mutation continues to use normal django model "
+        "permissions",
+        "command-only admin hardening",
     ):
         assert inaccurate not in normalized_guidance
     assert 'commands["purge_asklens_audit"] == "django_asklens"' in wheel_smoke
