@@ -20,6 +20,13 @@ DATABASES = {
         "ENGINE": "django.db.backends.sqlite3",
         "NAME": ":memory:",
     },
+    "asklens_read": {
+        "ENGINE": "django.db.backends.sqlite3",
+        "NAME": ":memory:",
+        "TEST": {
+            "MIRROR": "default",
+        },
+    },
 }
 
 MIDDLEWARE = []
