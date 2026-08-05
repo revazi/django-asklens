@@ -596,6 +596,10 @@ def test_audit_lifecycle_docs_and_artifacts_cover_irreversible_purge() -> None:
         "--execute",
         "irreversible",
         "high-water",
+        "higher-pk",
+        "manually inserted",
+        "reused lower",
+        "snapshot guarantee",
         "point-in-time",
         "backup/restore",
         "pre_delete",
@@ -605,6 +609,10 @@ def test_audit_lifecycle_docs_and_artifacts_cover_irreversible_purge() -> None:
         "restrict",
         "external",
         "cannot be rolled back",
+        "earlier committed batches",
+        "rerun preview",
+        "targets",
+        "related host rows",
         "custom sink",
         "backups",
         "replicas",
@@ -618,6 +626,16 @@ def test_audit_lifecycle_docs_and_artifacts_cover_irreversible_purge() -> None:
     normalized_host = host.replace("\n", " ")
     assert "does not schedule this command" not in normalized_host
     assert "does not schedule these commands" in normalized_host
+
+    normalized_guidance = combined_guidance.replace("\n", " ")
+    for inaccurate in (
+        "act only on the selected built-in database table",
+        "acts only on the selected built-in database table",
+        "operate only on the selected built-in database table",
+        "operates only on the selected built-in database table",
+        "both commands act on selected built-in database rows",
+    ):
+        assert inaccurate not in normalized_guidance
     assert 'commands["purge_asklens_audit"] == "django_asklens"' in wheel_smoke
     assert '"django_asklens/management/commands/purge_asklens_audit.py"' in workflow
 

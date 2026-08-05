@@ -154,24 +154,27 @@ past; batch size is bounded from 1 through 10000. Preview counts eligible rows
 at one point in time and performs no writes. Only trusted operators should add
 `--execute`. Output contains no high-water/row IDs or stored content.
 
-Redaction execution needs update permission and clears only `question` and
-`plan`, retaining each audit row and its operational fields. Purge execution
-needs delete and related-object permissions and permanently removes all eligible
-base rows from its initial primary-key high-water boundary. Concurrent updates
-or deletes can make actual deleted-row counts differ from preview; ordinary
-later inserts wait for another run.
+Redaction execution needs update permission and only updates `question` and
+`plan` on selected built-in rows, retaining each audit row and its operational
+fields. Purge execution needs delete and related-object permissions and targets
+eligible `SemanticQueryRun` rows through its initial primary-key high-water
+boundary. Ordinary later higher-PK inserts wait for another run. Manually
+inserted or reused lower PKs and concurrent changes are not covered by a
+snapshot guarantee; actual deleted-row counts may differ from preview.
 
 Before purge, establish and test a backup/restore plan. Normal Django delete
-signals and configured cascade/protect/restrict relationship behavior apply.
-Database changes in a failed batch roll back, but external effects performed by
-host signal handlers cannot be rolled back.
+signals run, and collector relationships may cascade, update, protect, restrict,
+or otherwise block related host rows. Each batch commits independently. A
+failing batch rolls back, but earlier committed batches remain deleted if a
+later batch or signal fails. Rerun preview and reconcile before retrying.
+External effects performed by host signal handlers cannot be rolled back.
 
-The commands act only on the selected built-in database table regardless of
-current `AUDIT_MODE`; they do not call custom sinks. Custom-sink storage,
-backups, and replicas remain host-owned. AskLens does not schedule these
-commands or choose an automatic retention policy, and they do not complete host
-user/tenant access or deletion-request workflows. Existing Django admin
-mutation remains governed by normal model permissions; command-only admin
+The command code does not resolve or invoke configured `AUDIT_SINK` callables.
+Host delete signals and relationships may perform their own effects. Custom-sink
+storage, backups, and replicas remain host-owned. AskLens does not schedule
+these commands or choose an automatic retention policy, and they do not
+complete host user/tenant access or deletion-request workflows. Existing Django
+admin mutation remains governed by normal model permissions; command-only admin
 hardening is outside this slice.
 
 ## 8) No mandatory telemetry or queueing dependencies

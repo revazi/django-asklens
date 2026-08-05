@@ -333,27 +333,33 @@ counts, batch size, and mode—never high-water/row IDs or stored content.
 primary-key batches while retaining the principal reference, status, row count,
 duration, error, and creation time. Its selected alias needs update permission.
 
-`purge_asklens_audit --execute` irrevocably deletes rows with
+`purge_asklens_audit --execute` irrevocably targets rows with
 `created_at < before`. Make and test a host-appropriate backup/restore plan
-first. The command captures the initially eligible maximum primary key so
-ordinary later inserts wait for another run, then uses short primary-key batch
-transactions and reports actual `SemanticQueryRun` rows deleted. Concurrent
-updates or deletes may make that count differ from preview. The selected alias
-needs delete permission plus permissions required by related-object behavior.
+first. The command captures the initially eligible maximum primary key, so
+ordinary later higher-PK inserts wait for another run. Manually inserted or
+reused lower PKs and concurrent changes are not covered by a snapshot guarantee.
+The command uses short primary-key batch transactions and reports actual
+`SemanticQueryRun` rows deleted; concurrent updates/deletes may make that count
+differ from preview. The selected alias needs delete permission plus permissions
+required by related-object behavior.
 
 Purge uses normal public Django `QuerySet.delete()` behavior: `pre_delete` and
-`post_delete` signals run, and configured cascade, protection, and restriction
-rules apply. A failed batch rolls back its database changes. External effects
-performed by signal handlers cannot be rolled back and remain the host's
-responsibility.
+`post_delete` signals run, and configured relationships may cascade, update,
+protect, restrict, or otherwise block related host rows. Each batch commits
+independently. A failing batch rolls back its own database changes, but earlier
+committed batches remain deleted if a later batch or signal fails. Rerun preview
+and reconcile retained/deleted rows before retrying. External effects performed
+by signal handlers cannot be rolled back and remain the host's responsibility.
 
-Both commands operate only on the selected built-in database table regardless
-of current `AUDIT_MODE`; neither calls or changes custom sinks. Custom-sink
-storage, backups, and replicas remain host-owned. AskLens provides no scheduler
-or automatic retention policy, and these commands are not a complete
-user/tenant access or deletion-request workflow. Existing Django admin deletion
-continues to follow normal model permissions; command-only admin hardening is
-not part of these lifecycle commands.
+The lifecycle command code does not resolve or invoke configured `AUDIT_SINK`
+callables. Redaction only updates `question` and `plan` on selected built-in
+rows. Purge targets selected `SemanticQueryRun` rows, while host delete signals
+and collector relationships may perform their own effects. Custom-sink storage,
+backups, and replicas remain host-owned. AskLens provides no scheduler or
+automatic retention policy, and these commands are not a complete user/tenant
+access or deletion-request workflow. Existing Django admin deletion continues
+to follow normal model permissions; command-only admin hardening is not part of
+these lifecycle commands.
 
 ## Optional access gate helper
 

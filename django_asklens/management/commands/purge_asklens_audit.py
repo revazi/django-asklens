@@ -20,7 +20,12 @@ from django_asklens.management._audit_lifecycle import (
 class Command(BaseCommand):
     """Permanently delete built-in database audit records."""
 
-    help = "Preview or execute irreversible purging of older AskLens audit rows."
+    help = (
+        "Preview or execute irreversible purging of older AskLens audit rows. "
+        "Normal Django delete signals and relationship behavior apply. Earlier "
+        "committed batches may remain after a later failure. Test backup/restore "
+        "first."
+    )
 
     def add_arguments(self, parser: CommandParser) -> None:
         """Declare the shared bounded, preview-by-default command contract."""
@@ -52,6 +57,15 @@ class Command(BaseCommand):
         self.stdout.write(f"Cutoff (UTC): {canonical_utc(before)}")
         self.stdout.write(f"Eligible rows (point-in-time): {eligible}")
         self.stdout.write(f"Batch size: {batch_size}")
+        self.stdout.write(
+            "Warning: Purge is irreversible; normal Django delete signals and "
+            "relationship behavior apply."
+        )
+        self.stdout.write(
+            "Warning: Earlier completed batches can remain deleted if a later "
+            "batch fails; external signal effects cannot be rolled back."
+        )
+        self.stdout.write("Warning: Test backup/restore before using --execute.")
 
         if not options["execute"]:
             self.stdout.write("Mode: PREVIEW")

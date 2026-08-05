@@ -126,8 +126,12 @@ def test_commands_are_discovered_with_exact_shared_options_and_defaults() -> Non
     assert "--database DATABASE" in help_text
     assert "--batch-size BATCH_SIZE" in help_text
     assert "--execute" in help_text
-    assert "preview" in help_text.lower()
-    assert "irreversible" in help_text.lower()
+    normalized_help = " ".join(help_text.lower().split())
+    assert "preview" in normalized_help
+    assert "irreversible" in normalized_help
+    assert "signals" in normalized_help
+    assert "earlier committed batches" in normalized_help
+    assert "backup/restore" in normalized_help
 
 
 @pytest.mark.django_db
@@ -221,6 +225,15 @@ def test_preview_counts_all_old_rows_and_performs_zero_writes() -> None:
         "Cutoff (UTC): 2026-08-05T11:00:00Z",
         "Eligible rows (point-in-time): 1",
         "Batch size: 7",
+        (
+            "Warning: Purge is irreversible; normal Django delete signals and "
+            "relationship behavior apply."
+        ),
+        (
+            "Warning: Earlier completed batches can remain deleted if a later "
+            "batch fails; external signal effects cannot be rolled back."
+        ),
+        "Warning: Test backup/restore before using --execute.",
         "Mode: PREVIEW",
         (
             "No rows were deleted. Re-run with --execute to permanently delete "
@@ -242,6 +255,8 @@ def test_execute_deletes_only_rows_strictly_older_than_cutoff() -> None:
     assert SemanticQueryRun.objects.filter(pk=equal.pk).exists()
     assert SemanticQueryRun.objects.filter(pk=newer.pk).exists()
     assert "Eligible rows (point-in-time): 1" in stdout
+    assert "Warning: Purge is irreversible" in stdout
+    assert stdout.index("Warning: Purge") < stdout.index("Mode: EXECUTE")
     assert "Mode: EXECUTE" in stdout
     assert "Deleted SemanticQueryRun rows: 1" in stdout
     assert stderr == ""
@@ -535,6 +550,62 @@ def test_raising_host_signal_is_safe_and_rolls_back_database_batch() -> None:
     combined = f"{error.value}\n{stdout.getvalue()}\n{stderr.getvalue()}"
     assert private_exception not in combined
     assert str(old.pk) not in combined
+
+
+@pytest.mark.django_db
+def test_later_signal_failure_preserves_earlier_committed_batch_deletion() -> None:
+    private_exception = "unique-private-later-batch-signal-exception"
+    first = _create_run(
+        pk=87_654_330,
+        created_at=NOW - timedelta(hours=2),
+    )
+    second = _create_run(
+        pk=87_654_331,
+        created_at=NOW - timedelta(hours=2),
+    )
+    external_side_effects: list[int] = []
+
+    def fail_on_second(sender, instance, **kwargs) -> None:
+        external_side_effects.append(instance.pk)
+        if instance.pk == second.pk:
+            raise RuntimeError(private_exception)
+
+    post_delete.connect(
+        fail_on_second,
+        sender=SemanticQueryRun,
+        weak=False,
+        dispatch_uid="asklens-purge-test-later-failing-post",
+    )
+    stdout = StringIO()
+    stderr = StringIO()
+    try:
+        with pytest.raises(CommandError) as error:
+            call_command(
+                "purge_asklens_audit",
+                "--before",
+                VALID_BEFORE,
+                "--batch-size",
+                "1",
+                "--execute",
+                stdout=stdout,
+                stderr=stderr,
+                no_color=True,
+            )
+    finally:
+        post_delete.disconnect(
+            sender=SemanticQueryRun,
+            dispatch_uid="asklens-purge-test-later-failing-post",
+        )
+
+    assert not SemanticQueryRun.objects.filter(pk=first.pk).exists()
+    assert SemanticQueryRun.objects.filter(pk=second.pk).exists()
+    assert external_side_effects == [first.pk, second.pk]
+    assert str(error.value) == "AskLens audit purge could not be completed."
+    combined = f"{error.value}\n{stdout.getvalue()}\n{stderr.getvalue()}"
+    assert private_exception not in combined
+    assert str(first.pk) not in combined
+    assert str(second.pk) not in combined
+    assert "Earlier completed batches can remain deleted" in stdout.getvalue()
 
 
 @pytest.mark.django_db
