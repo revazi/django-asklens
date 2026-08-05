@@ -168,6 +168,35 @@ def test_package_evidence_is_isolated_and_never_releases() -> None:
     assert "0.2.0a" not in read_text(ROOT / "pyproject.toml")
 
 
+def test_package_migration_probe_is_disposable_and_scoped() -> None:
+    """Package smoke validates SQLite same-version migration-state preservation."""
+
+    script = read_text(PACKAGE_SCRIPT)
+
+    assert "migration-probe" in script
+    assert "ASKLENS_MIGRATION_PROBE_DB" in script
+    assert "ASKLENS_MIGRATION_PROBE_SECRET" in script
+    assert "probe.sqlite3" in script
+    assert "migrate --plan" in script
+    assert "showmigrations asklens" in script
+    assert "probe_manage migrate" in script
+    assert "makemigrations asklens --check --dry-run" in script
+    assert "MigrationRecorder" in script
+    assert "MigrationExecutor" in script
+    assert "connection.introspection.table_names" in script
+    assert "AskLensQuery._meta.proxy" in script
+    assert "AskLensQuery._meta.db_table" in script
+    assert "SemanticQueryRun.objects.get()" in script
+    assert "synthetic published probe" in script
+    assert "PASS migrate --plan after local same-version replacement" in script
+    assert "PASS migration graph remains 0001_initial +"
+    assert "0002_add_admin_query_proxy" in script
+    assert "cursor.execute(" not in script
+    assert "sqlite3.connect" not in script
+    assert "raw SQL" not in script.lower()
+    assert "0.1.0a1 to 0.2" not in script.lower()
+
+
 def test_dev_tools_do_not_leak_into_runtime_metadata() -> None:
     """Docker, PostgreSQL, and Playwright remain source/dev-only tools."""
 

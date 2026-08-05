@@ -144,11 +144,150 @@ assert version("django-asklens") == "0.1.0a1"
 print("PASS published 0.1.0a1 installed from PyPI")
 PY
 
-# The repository version intentionally remains 0.1.0a1 until a separate release
-# gate. Force replacement is therefore required to exercise the local wheel now;
+# The repository version intentionally remains 0.1.0a1 until a separate release.
+# Force replacement is therefore required to exercise the local wheel now;
 # an authorized 0.2.0a* version bump must rerun this as a normal resolver upgrade.
+probe_root="$workdir/migration-probe"
+probe_project="$probe_root/probeproj"
+probe_db="$probe_root/probe.sqlite3"
+probe_secret="asklens-pr10-probe-secret"
+mkdir -p "$probe_project"
+cat > "$probe_project/__init__.py" <<'EOF'
+"""Disposable probe project package for package evidence."""
+EOF
+cat > "$probe_project/urls.py" <<'EOF'
+from django.urls import path
+
+urlpatterns = []
+EOF
+cat > "$probe_project/settings.py" <<'EOF'
+"""Probe settings used to exercise published/local migration state in SQLite."""
+
+from pathlib import Path
+import os
+
+BASE_DIR = Path(__file__).resolve().parent
+SECRET_KEY = os.environ.get("ASKLENS_MIGRATION_PROBE_SECRET", "asklens-pr10-fallback")
+DEBUG = False
+
+INSTALLED_APPS = [
+    "django.contrib.auth",
+    "django.contrib.contenttypes",
+    "django_asklens",
+]
+
+DATABASES = {
+    "default": {
+        "ENGINE": "django.db.backends.sqlite3",
+        "NAME": os.environ["ASKLENS_MIGRATION_PROBE_DB"],
+    }
+}
+
+MIDDLEWARE = []
+ROOT_URLCONF = "probeproj.urls"
+USE_TZ = True
+DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+EOF
+
+probe_manage() {
+  local manage_command="$1"
+  shift
+  (
+    export PYTHONPATH="$probe_root"
+    export DJANGO_SETTINGS_MODULE=probeproj.settings
+    export ASKLENS_MIGRATION_PROBE_DB="$probe_db"
+    export ASKLENS_MIGRATION_PROBE_SECRET="$probe_secret"
+    "$upgrade_venv/bin/python" -m django "$manage_command" "$@"
+  )
+}
+
+export ASKLENS_MIGRATION_PROBE_DB="$probe_db"
+export ASKLENS_MIGRATION_PROBE_SECRET="$probe_secret"
+probe_manage migrate --noinput --verbosity 1
+(
+  export PYTHONPATH="$probe_root"
+  export DJANGO_SETTINGS_MODULE=probeproj.settings
+  export ASKLENS_MIGRATION_PROBE_DB="$probe_db"
+  export ASKLENS_MIGRATION_PROBE_SECRET="$probe_secret"
+  "$upgrade_venv/bin/python" - <<'PY'
+import django
+
+django.setup()
+
+from django_asklens.models import SemanticQueryRun
+
+row = SemanticQueryRun.objects.create(
+    question="synthetic published probe",
+    plan={"resource": "synthetic_probe", "intent": "list"},
+    status="success",
+    row_count=1,
+    duration_ms=7,
+    error="",
+)
+assert row.pk == 1
+assert SemanticQueryRun.objects.count() == 1
+print("PASS published 0.1.0a1 migration path initialized with one synthetic row")
+PY
+)
+
+
 "$upgrade_venv/bin/python" -m pip install \
   --force-reinstall --no-deps "$wheel" >/dev/null
+probe_plan_output="$({
+  probe_manage migrate --plan
+} 2>&1)"
+printf 'PASS migrate --plan after local same-version replacement:\n%s\n' "$probe_plan_output"
+probe_manage migrate --noinput --verbosity 1
+probe_manage showmigrations asklens
+probe_manage check
+probe_manage makemigrations asklens --check --dry-run
+
+(
+  export PYTHONPATH="$probe_root"
+  export DJANGO_SETTINGS_MODULE=probeproj.settings
+  export ASKLENS_MIGRATION_PROBE_DB="$probe_db"
+  export ASKLENS_MIGRATION_PROBE_SECRET="$probe_secret"
+  "$upgrade_venv/bin/python" - <<'PY'
+import django
+
+django.setup()
+
+from django.db import connection
+from django.db.migrations.executor import MigrationExecutor
+from django.db.migrations.recorder import MigrationRecorder
+from django_asklens.models import AskLensQuery, SemanticQueryRun
+
+recorder = MigrationRecorder(connection)
+applied = recorder.applied_migrations()
+assert ("asklens", "0001_initial") in applied
+assert ("asklens", "0002_add_admin_query_proxy") in applied
+
+executor = MigrationExecutor(connection)
+plan = executor.migration_plan(executor.loader.graph.leaf_nodes())
+assert not plan
+
+asklens_tables = [
+    name
+    for name in connection.introspection.table_names()
+    if name.startswith("asklens_")
+]
+assert asklens_tables == ["asklens_semanticqueryrun"]
+
+row = SemanticQueryRun.objects.get()
+assert row.question == "synthetic published probe"
+assert row.plan == {"resource": "synthetic_probe", "intent": "list"}
+assert row.status == "success"
+assert row.row_count == 1
+assert row.duration_ms == 7
+assert AskLensQuery._meta.proxy
+assert AskLensQuery._meta.db_table == SemanticQueryRun._meta.db_table
+assert AskLensQuery.objects.count() == 1
+print("PASS migration graph remains 0001_initial + 0002_add_admin_query_proxy")
+print("PASS synthetic SemanticQueryRun row preserved across same-version replacement")
+print("PASS AskLensQuery remains a proxy over asklens_semanticqueryrun table")
+PY
+)
+
 (
   cd "$workdir"
   "$upgrade_venv/bin/python" - "$wheel" <<'PY'
