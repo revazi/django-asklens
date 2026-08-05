@@ -8,7 +8,6 @@ import copy
 import json
 import os
 import random
-import traceback
 from dataclasses import dataclass
 
 import pytest
@@ -23,11 +22,32 @@ from django_asklens.execution import execute_plan
 from django_asklens.planning import QueryPlan, parse_query_plan
 from tests.execution.test_facade import build_registry, request_with, status_plan
 
+FORBIDDEN_PUBLIC_MARKERS = (
+    "traceback",
+    "tenant",
+    "permission",
+    "secret",
+    "credential",
+    "customer__email",
+    "order__",
+    "order.objects",
+)
+
 
 def _generation_seed() -> int:
-    """Read deterministic seed from test environment (default documented)."""
+    """Read deterministic seed from test environment.
 
-    return int(os.getenv("ASKLENS_HARDENING_GENERATION_SEED", "20260805"))
+    Replay expects an integer string for deterministic cases.
+    """
+
+    raw_seed = os.getenv("ASKLENS_HARDENING_GENERATION_SEED", "20260805")
+    try:
+        return int(raw_seed)
+    except ValueError as exc:
+        raise ValueError(
+            "ASKLENS_HARDENING_GENERATION_SEED must be an integer "
+            "for deterministic replay."
+        ) from exc
 
 
 GENERATION_SEED = _generation_seed()
@@ -42,18 +62,78 @@ EXPECTED_PUBLIC_MESSAGES = {
 
 @dataclass(frozen=True)
 class _GeneratedCase:
-    """One bounded synthetic failure case for untrusted plan handling."""
+    """One bounded synthetic failure case for untrusted-plan handling."""
 
     case_id: str
     payload: object
     expected_code: str
     settings_overrides: dict[str, int] | None = None
+    private_tokens: tuple[str, ...] = ()
 
 
-def _bad_top_level_key(rng: random.Random) -> object:
-    """Generate a deterministic invalid top-level mapping key."""
+def _value_text(value: object) -> str:
+    """Return a compact stable string for private token checks."""
 
-    return rng.choice([1, 2.5, ("tuple",)])
+    if isinstance(value, str):
+        return value
+    if isinstance(value, (bool, int, float)):
+        return str(value)
+    try:
+        return json.dumps(value, separators=(",", ":"), sort_keys=True, default=str)
+    except (TypeError, ValueError):
+        return str(value)
+
+
+def _private_tokens(*values: object) -> tuple[str, ...]:
+    """Collect deterministic private tokens for safe-surface assertions."""
+
+    return tuple(dict.fromkeys(_value_text(value) for value in values))
+
+
+def _generate_scalar_json_value(rng: random.Random) -> object:
+    """Generate bounded primitive JSON values."""
+
+    return rng.choice(
+        [
+            None,
+            True,
+            False,
+            rng.randint(0, 50),
+            f"seed-{GENERATION_SEED}-{rng.randint(10_000, 99_999)}",
+        ]
+    )
+
+
+def _generate_json_value(rng: random.Random, max_depth: int) -> object:
+    """Generate a bounded recursive JSON value for deterministic variation."""
+
+    if max_depth <= 0:
+        return _generate_scalar_json_value(rng)
+
+    branch = rng.choice(["scalar", "list", "dict"])
+    if branch == "scalar" or max_depth <= 1:
+        return _generate_scalar_json_value(rng)
+
+    if branch == "list":
+        return [
+            _generate_json_value(rng, max_depth=max_depth - 1),
+            _generate_json_value(rng, max_depth=max_depth - 1),
+        ]
+
+    return {
+        f"sentinel_{rng.randint(10_000, 99_999)}": _generate_json_value(
+            rng, max_depth=max_depth - 1
+        ),
+        f"marker_{rng.randint(10_000, 99_999)}": _generate_json_value(
+            rng, max_depth=max_depth - 1
+        ),
+    }
+
+
+def _bounded_json_values(rng: random.Random, count: int = 4) -> list[object]:
+    """Return a bounded set of synthetic JSON values for case generation."""
+
+    return [_generate_json_value(rng, max_depth=2) for _ in range(count)]
 
 
 def _build_seeded_cases() -> list[_GeneratedCase]:
@@ -102,23 +182,25 @@ def _build_seeded_cases() -> list[_GeneratedCase]:
                 payload={
                     "resource": "orders",
                     "intent": "list",
-                    _bad_top_level_key(rng): "x",
+                    (1, 2.5): "x",
                 },
                 expected_code="asklens.parse.invalid",
             ),
         ]
     )
 
-    extra_key = f"__hidden_{rng.randint(10_000, 99_999)}"
-    extra_key_payload = copy.deepcopy(valid_list_plan)
-    extra_key_payload[extra_key] = "raw_sql"
-    cases.append(
-        _GeneratedCase(
-            case_id=f"seed{GENERATION_SEED}-strict-shape-extra-key",
-            payload=extra_key_payload,
-            expected_code="asklens.parse.invalid",
+    for index, sentinel in enumerate(_bounded_json_values(rng, count=4), start=1):
+        key = f"__hidden_{rng.randint(10_000, 99_999)}_{index}"
+        payload = copy.deepcopy(valid_list_plan)
+        payload[key] = sentinel
+        cases.append(
+            _GeneratedCase(
+                case_id=f"seed{GENERATION_SEED}-strict-shape-extra-key-{index:02d}",
+                payload=payload,
+                expected_code="asklens.parse.invalid",
+                private_tokens=(_value_text(key), *_private_tokens(sentinel)),
+            )
         )
-    )
 
     cases.append(
         _GeneratedCase(
@@ -130,6 +212,7 @@ def _build_seeded_cases() -> list[_GeneratedCase]:
                 "limit": 10,
             },
             expected_code="asklens.parse.invalid",
+            private_tokens=("field",),
         )
     )
 
@@ -150,63 +233,73 @@ def _build_seeded_cases() -> list[_GeneratedCase]:
                 "limit": 10,
             },
             expected_code="asklens.parse.invalid",
+            private_tokens=("order_count",),
         )
     )
 
+    opaque_resource = f"orders_{rng.randint(10_000, 99_999)}"
     cases.append(
         _GeneratedCase(
             case_id=f"seed{GENERATION_SEED}-opaque-resource",
             payload={
-                "resource": f"orders_{rng.randint(10_000, 99_999)}",
+                "resource": opaque_resource,
                 "intent": "list",
                 "select": ["status"],
                 "limit": 10,
             },
             expected_code="asklens.member.unavailable",
+            private_tokens=(_value_text(opaque_resource),),
         )
     )
 
+    opaque_field = f"missing_{rng.randint(10_000, 99_999)}"
     cases.append(
         _GeneratedCase(
             case_id=f"seed{GENERATION_SEED}-opaque-field",
             payload={
                 "resource": "orders",
                 "intent": "list",
-                "select": ["status", f"missing_{rng.randint(10_000, 99_999)}"],
+                "select": ["status", opaque_field],
                 "limit": 10,
             },
             expected_code="asklens.member.unavailable",
+            private_tokens=(opaque_field,),
         )
     )
 
     opaque_metric = copy.deepcopy(valid_aggregate_plan)
-    opaque_metric["metrics"] = [{"metric": f"revenue_{rng.randint(10_000, 99_999)}"}]
+    hidden_metric = f"revenue_{rng.randint(10_000, 99_999)}"
+    opaque_metric["metrics"] = [{"metric": hidden_metric}]
     cases.append(
         _GeneratedCase(
             case_id=f"seed{GENERATION_SEED}-opaque-metric",
             payload=opaque_metric,
             expected_code="asklens.member.unavailable",
+            private_tokens=(hidden_metric,),
         )
     )
 
+    mismatch_status_token = rng.randint(10_000, 99_999)
     mismatch_status = copy.deepcopy(valid_list_plan)
     mismatch_status["filters"] = [
-        {"field": "status", "op": "eq", "value": rng.randint(10_000, 99_999)}
+        {"field": "status", "op": "eq", "value": mismatch_status_token}
     ]
     cases.append(
         _GeneratedCase(
             case_id=f"seed{GENERATION_SEED}-type-mismatch-status-int",
             payload=mismatch_status,
             expected_code="asklens.plan.invalid",
+            private_tokens=(str(mismatch_status_token),),
         )
     )
 
     mismatch_integer = copy.deepcopy(valid_list_plan)
+    mismatch_integer_value = f"not-an-integer-{rng.randint(10_000, 99_999)}"
     mismatch_integer["filters"] = [
         {
             "field": "id",
             "op": "eq",
-            "value": "not-an-integer",
+            "value": mismatch_integer_value,
         }
     ]
     mismatch_integer["order_by"] = []
@@ -216,6 +309,7 @@ def _build_seeded_cases() -> list[_GeneratedCase]:
             case_id=f"seed{GENERATION_SEED}-type-mismatch-id-string",
             payload=mismatch_integer,
             expected_code="asklens.plan.invalid",
+            private_tokens=(mismatch_integer_value,),
         )
     )
 
@@ -255,6 +349,52 @@ def _build_seeded_cases() -> list[_GeneratedCase]:
             payload=over_order_by,
             expected_code="asklens.budget.exceeded",
             settings_overrides={"MAX_ORDER_BY": 1},
+        )
+    )
+
+    over_group_by = copy.deepcopy(valid_aggregate_plan)
+    over_group_by["group_by"] = [
+        {"field": "status"},
+        {"field": "id"},
+        {"field": "status"},
+    ]
+    cases.append(
+        _GeneratedCase(
+            case_id=f"seed{GENERATION_SEED}-budget-over-group-by",
+            payload=over_group_by,
+            expected_code="asklens.budget.exceeded",
+            settings_overrides={"MAX_GROUP_BY": 1},
+        )
+    )
+
+    over_metrics = copy.deepcopy(valid_aggregate_plan)
+    cases.append(
+        _GeneratedCase(
+            case_id=f"seed{GENERATION_SEED}-budget-over-metrics",
+            payload=over_metrics,
+            expected_code="asklens.budget.exceeded",
+            settings_overrides={"MAX_METRICS": 0},
+        )
+    )
+
+    over_filter_values = copy.deepcopy(valid_list_plan)
+    over_filter_value = rng.randint(1, 50)
+    over_filter_values["filters"] = [
+        {"field": "status", "op": "eq", "value": "paid"},
+        {"field": "status", "op": "neq", "value": "pending"},
+        {
+            "field": "id",
+            "op": "eq",
+            "value": over_filter_value,
+        },
+    ]
+    cases.append(
+        _GeneratedCase(
+            case_id=f"seed{GENERATION_SEED}-budget-over-filter-values",
+            payload=over_filter_values,
+            expected_code="asklens.budget.exceeded",
+            settings_overrides={"MAX_FILTER_VALUES": 2},
+            private_tokens=(str(over_filter_value),),
         )
     )
 
@@ -318,6 +458,26 @@ def configure_custom_audit(settings, events: list[dict]) -> None:
     }
 
 
+def _assert_no_token_leaks(
+    *,
+    case: _GeneratedCase,
+    public_payload_text: str,
+    error_text: str,
+    event_text: str,
+) -> None:
+    """Assert deterministic private tokens never leak into public-facing output."""
+
+    combined_text = public_payload_text + error_text + event_text
+    for marker in FORBIDDEN_PUBLIC_MARKERS:
+        assert marker not in combined_text.lower()
+
+    for token in case.private_tokens:
+        if token:
+            assert token not in public_payload_text
+            assert token not in error_text
+            assert token not in event_text
+
+
 @pytest.mark.parametrize(
     "case", GENERATED_REJECTION_CASES, ids=lambda case: case.case_id
 )
@@ -343,21 +503,32 @@ def test_generated_rejection_cases_have_safe_error_envelope_and_no_application_s
 
     error = caught.value
     public_payload = public_error_payload(error)
-
+    error_text = str(error)
+    public_payload_text = json.dumps(
+        public_payload, sort_keys=True, separators=(",", ":"), default=str
+    )
     assert public_payload["code"] == case.expected_code
     assert public_payload["message"] == EXPECTED_PUBLIC_MESSAGES[case.expected_code]
-    assert str(error) == public_payload["message"]
-    assert case.case_id not in str(error)
-    assert case.case_id not in "".join(traceback.format_exception(error))
+    assert error_text == public_payload["message"]
 
     assert len(events) == 1
     [audit_event] = events
+    audit_event_text = json.dumps(
+        audit_event, sort_keys=True, separators=(",", ":"), default=str
+    )
     assert audit_event["status"] == "failed"
     assert audit_event["error_code"] == case.expected_code
     assert audit_event["error_message"] == public_payload["message"]
     assert "question" not in audit_event
     assert "plan" not in audit_event
     assert "raw_sql" not in str(audit_event)
+
+    _assert_no_token_leaks(
+        case=case,
+        public_payload_text=public_payload_text,
+        error_text=error_text,
+        event_text=audit_event_text,
+    )
 
 
 @pytest.mark.parametrize(
@@ -383,10 +554,12 @@ def test_unsupported_input_containers_reject_with_parse_error(
         execute_plan(raw_plan, request=request, registry=build_registry())
 
     public_error = public_error_payload(caught.value)
+    public_text = json.dumps(public_error, sort_keys=True, separators=(",", ":"))
     assert public_error == {
         "code": "asklens.parse.invalid",
         "message": "The query plan could not be parsed.",
     }
+    assert "traceback" not in public_text.lower()
     assert len(events) == 1
 
 
@@ -436,11 +609,13 @@ def test_parse_query_plan_errors_are_stable_and_safe(raw_plan: object) -> None:
         parse_query_plan(raw_plan)
 
     public_error = public_error_payload(normalize_public_error(caught.value))
+    public_text = json.dumps(public_error, sort_keys=True, separators=(",", ":"))
     assert public_error == {
         "code": "asklens.parse.invalid",
         "message": "The query plan could not be parsed.",
     }
-    assert "raw_sql" not in public_error["message"]
+    assert "traceback" not in public_text.lower()
+    assert "raw_sql" not in public_text
 
 
 def test_parse_query_plan_accepts_valid_query_plan_input() -> None:
