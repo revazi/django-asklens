@@ -11,6 +11,7 @@ The project is alpha and APIs may change before a stable release.
 - Began the R1 trusted-execution boundary with public `execute_plan(plan, *, request, registry=...)`, which treats mappings and existing `QueryPlan` objects as untrusted and repeats current permission, catalog, limit, and request-scope validation before ORM execution.
 - Added stable namespaced public errors for parse, unavailable-member, plan, authorization, scope, budget, binding, compilation, execution, and provider failures.
 - Added server-owned audit modes: `database` (default), `disabled`, and `custom`, with an optional callable `AUDIT_SINK` for non-database operational events.
+- Added preview-by-default `redact_asklens_audit` for trusted operators to manually clear question and plan content from older built-in database audit rows in bounded batches.
 - Added required resource `scope_mode="global" | "context_scoped"` registration and trusted `scope_provider=...` support.
 - Added configurable structural budgets for 64 KiB plan payloads, filters, selected/order/group/metric terms, relationship depth and unique edges, per-`in` and total filter values, returned rows/groups, and the default result limit.
 - Added semantic resource `default_order` plus private `row_identity` registration, defaulting to the model primary key.

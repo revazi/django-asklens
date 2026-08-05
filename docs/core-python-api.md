@@ -306,6 +306,32 @@ DJANGO_ASKLENS = {
 
 A custom sink receives a safe operational event mapping and adds no database SQL unless the host sink chooses to do so. Disabled mode adds no audit SQL. Setting `AUDIT_INCLUDE_CONTENT=True` adds the question and complete validated plan to database/custom events; enable it only with an explicit retention, access, redaction, and deletion policy. Audit-sink failure is logged server-side and does not trigger rejected-plan execution or replace a successful query result.
 
+### Manual database-audit content redaction
+
+Trusted operators can preview built-in database rows older than a strict aware
+RFC 3339 cutoff:
+
+```bash
+python manage.py redact_asklens_audit \
+  --before 2026-08-01T00:00:00Z \
+  --database default \
+  --batch-size 1000
+```
+
+Preview is the default and performs a point-in-time eligible-row count with no
+writes. Add `--execute` explicitly to clear exactly `question` and `plan` in
+short primary-key batches. The command retains the principal reference, status,
+row count, duration, error, and creation time; it does not delete audit rows.
+Its output is limited to the operation, selected alias, canonical UTC cutoff,
+counts, batch size, and mode—never row IDs or stored content.
+
+This command operates only on `SemanticQueryRun` rows on the selected database
+alias, regardless of the current `AUDIT_MODE`. Preview needs table-read access;
+`--execute` also needs update permission on that alias. It never invokes or
+changes a custom sink. Custom-sink storage, backups, and replicas remain
+host-owned. AskLens provides no scheduler or automatic retention policy, and
+this redaction command is not a purge or a complete deletion-request workflow.
+
 ## Optional access gate helper
 
 AskLens includes a small DRF-compatible authenticated-user gate that does not require DRF:

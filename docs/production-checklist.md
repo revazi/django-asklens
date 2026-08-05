@@ -142,7 +142,10 @@ AskLens is a data access surface. Configure it as carefully as any reporting, an
 - [ ] If the command fails because the external advisory service is unavailable, treat it as failed evidence and re-run after recovery.
 - [ ] For strict read-only query credentials, prefer `AUDIT_MODE="disabled"` or `custom`; avoid granting host-wide write privileges just to satisfy default audit writes. A separate audit database is optional and not required by AskLens.
 - [ ] If you use `database` audit mode with read-only replicas/roles, confirm the deployment write-routing/FK topology is reviewed and documented.
-- [ ] Set a documented retention period for metadata and any opted-in content; assign an owner and legal/business basis, and test a scheduled deletion process. AskLens does not provide automatic retention or deletion.
+- [ ] Set a documented retention period for metadata and any opted-in content; assign an owner and legal/business basis. AskLens provides no scheduler or automatic retention/deletion policy.
+- [ ] For built-in database audit rows, preview manual content redaction with `python manage.py redact_asklens_audit --before <strict-aware-RFC3339> --database <alias> --batch-size <1..10000>`. Review the point-in-time eligible count before adding `--execute`; only execution requires update permission on the selected alias.
+- [ ] Confirm redaction clears only `question` and `plan`, retains the principal and operational fields, prints no row IDs/content, and is not treated as row purge or a complete access/deletion-request workflow.
+- [ ] Keep custom-sink storage, backups, replicas, purge, and scheduled deletion handling host-owned; the built-in command never invokes custom sinks and operates on selected database rows regardless of current `AUDIT_MODE`.
 - [ ] Restrict audit access separately from query access, record administrative access where required, and test user/tenant separation for custom audit views and exports.
 - [ ] Define redaction at ingestion and display/export boundaries. Redaction after storage is not a substitute for keeping `AUDIT_INCLUDE_CONTENT=False`; never copy raw rejected input or provider payloads into an audit sink by default.
 - [ ] Define deletion handling for user/tenant requests, account closure, backups, replicas, and external custom sinks; verify failures are surfaced without retrying the data query.

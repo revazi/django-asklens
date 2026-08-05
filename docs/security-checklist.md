@@ -49,8 +49,10 @@ Use this checklist before enabling AskLens outside local development.
 ## Audit safety
 
 - [ ] Select `AUDIT_MODE` deliberately and keep `AUDIT_INCLUDE_CONTENT=False` by default.
-- [ ] Define retention, access, redaction, and deletion policy even for metadata-only records; AskLens does not automatically expire audit rows.
-- [ ] If full content is enabled, separately justify and test ingestion/display/export redaction, tightly restricted access, scheduled deletion, backup/replica deletion handling, and every custom sink for questions, filters, and plans.
+- [ ] Define retention, access, redaction, and deletion policy even for metadata-only records; AskLens does not schedule lifecycle work or automatically expire audit rows.
+- [ ] Preview built-in database content redaction with `redact_asklens_audit --before <strict-aware-RFC3339>` and review its point-in-time count before explicitly adding `--execute`; grant update permission only on the selected alias used for execution.
+- [ ] Confirm the command clears `question` and `plan` only, prints no row IDs/content, never invokes custom sinks, and is not treated as purge or complete user/tenant deletion handling.
+- [ ] If full content is enabled, separately justify and test ingestion/display/export redaction, tightly restricted access, scheduled deletion, backup/replica deletion handling, and every custom sink for questions, filters, and plans. Custom sinks, backups, and replicas remain host-owned.
 - [ ] Prove rejected plans issue no application-data query; allow at most one metadata insert only in database audit mode.
 - [ ] Monitor custom/database sink failures without retrying query execution.
 
