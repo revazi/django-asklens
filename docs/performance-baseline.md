@@ -59,7 +59,7 @@ The script:
 Artifacts are written as:
 
 ```text
-{artifact-name}-{query-profile}-profile-{dataset_profile}-i{iterations}-w{warmups}.json
+{artifact-name}-{query-profile}-size{dataset_profile}-i{iterations}-w{warmups}.json
 ```
 
 Example of a stable explicit invocation and deterministic artifact naming:
@@ -76,7 +76,7 @@ bash scripts/performance-baseline.sh \
 This command produces:
 
 ```text
-.asklens-performance-baseline/final-baseline-profile-medium-i1-w1.json
+.asklens-performance-baseline/final-baseline-sizemedium-i1-w1.json
 ```
 
 If you need a fixed output file, use `--output` and avoid inference from earlier
