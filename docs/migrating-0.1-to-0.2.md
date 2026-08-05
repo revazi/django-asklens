@@ -9,9 +9,9 @@ Treat 0.2 as a strict replacement, not an in-place wire-compatible upgrade. Befo
 
 The source-checkout package smoke installs published `0.1.0a1` and force-replaces it with the current local wheel because the repository version cannot change before a separate release authorization. This exercises packaging/import replacement only.
 
-For PR10 this script extension adds a disposable SQLite migration-state check inside its existing temporary working directory: it applies the already-published `0001_initial` and `0002_add_admin_query_proxy` migration set, writes one synthetic `SemanticQueryRun`, performs same-version local-wheel replacement, and re-runs `migrate --plan`, `migrate`, `showmigrations`, `check`, and `makemigrations --check --dry-run`. It then asserts one surviving synthetic row, a clean migration recorder state, and proxy/table shape expectations.
+For PR10 this script extension adds a disposable SQLite migration-state check inside its existing temporary working directory. It applies the already-published `0001_initial` and `0002_add_admin_query_proxy` migration set, then writes one synthetic `SemanticQueryRun`. It then performs same-version local-wheel replacement and re-runs `migrate --plan`, `migrate`, `showmigrations`, `check`, and `makemigrations --check --dry-run`. It then asserts a surviving synthetic row, exact asklens migration recorder state for this package, and proxy/table shape expectations.
 
-A real candidate version must rerun migration evidence as a normal resolver-selected upgrade against authorized host data and cannot infer PostgreSQL coverage from this SQLite probe. This check is package-state preservation evidence only, not a normal 0.1→0.2 upgrade pathway evidence.
+A real candidate version must rerun migration evidence as a normal resolver-selected upgrade against authorized host data and cannot infer PostgreSQL coverage from this SQLite probe. This check provides package-state preservation evidence only and is not evidence that a normal 0.1 to 0.2 upgrade path has been completed.
 
 ## 1. Use the trusted execution facade
 

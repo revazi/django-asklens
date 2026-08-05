@@ -177,10 +177,9 @@ def test_package_migration_probe_is_disposable_and_scoped() -> None:
     assert "ASKLENS_MIGRATION_PROBE_DB" in script
     assert "ASKLENS_MIGRATION_PROBE_SECRET" in script
     assert "probe.sqlite3" in script
-    assert "migrate --plan" in script
-    assert "showmigrations asklens" in script
+    assert 'probe_plan_output="$(probe_manage migrate --plan 2>&1)"' in script
+    assert "probe_python - <<'PY'" in script
     assert "probe_manage migrate" in script
-    assert "makemigrations asklens --check --dry-run" in script
     assert "MigrationRecorder" in script
     assert "MigrationExecutor" in script
     assert "connection.introspection.table_names" in script
@@ -188,9 +187,22 @@ def test_package_migration_probe_is_disposable_and_scoped() -> None:
     assert "AskLensQuery._meta.db_table" in script
     assert "SemanticQueryRun.objects.get()" in script
     assert "synthetic published probe" in script
-    assert "PASS migrate --plan after local same-version replacement" in script
-    assert "PASS migration graph remains 0001_initial +"
-    assert "0002_add_admin_query_proxy" in script
+    assert (
+        "PASS published migration graph is exact: 0001_initial and"
+        " 0002_add_admin_query_proxy" in script
+    )
+    assert (
+        "PASS migration graph after local same-version replacement is"
+        " exact: 0001_initial and 0002_add_admin_query_proxy" in script
+    )
+    assert (
+        script.count(
+            "asklens_migrations == {"
+            '("asklens", "0001_initial"), '
+            '("asklens", "0002_add_admin_query_proxy")}'
+        )
+        == 2
+    )
     assert "cursor.execute(" not in script
     assert "sqlite3.connect" not in script
     assert "raw SQL" not in script.lower()

@@ -156,18 +156,14 @@ cat > "$probe_project/__init__.py" <<'EOF'
 """Disposable probe project package for package evidence."""
 EOF
 cat > "$probe_project/urls.py" <<'EOF'
-from django.urls import path
-
 urlpatterns = []
 EOF
 cat > "$probe_project/settings.py" <<'EOF'
 """Probe settings used to exercise published/local migration state in SQLite."""
 
-from pathlib import Path
 import os
 
-BASE_DIR = Path(__file__).resolve().parent
-SECRET_KEY = os.environ.get("ASKLENS_MIGRATION_PROBE_SECRET", "asklens-pr10-fallback")
+SECRET_KEY = os.environ["ASKLENS_MIGRATION_PROBE_SECRET"]
 DEBUG = False
 
 INSTALLED_APPS = [
@@ -189,32 +185,40 @@ USE_TZ = True
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 EOF
 
-probe_manage() {
-  local manage_command="$1"
-  shift
+# SQLite-only migration-state preservation; this is package evidence, not a production upgrade check.
+probe_python() {
   (
     export PYTHONPATH="$probe_root"
     export DJANGO_SETTINGS_MODULE=probeproj.settings
     export ASKLENS_MIGRATION_PROBE_DB="$probe_db"
     export ASKLENS_MIGRATION_PROBE_SECRET="$probe_secret"
-    "$upgrade_venv/bin/python" -m django "$manage_command" "$@"
+    "$upgrade_venv/bin/python" "$@"
   )
 }
 
-export ASKLENS_MIGRATION_PROBE_DB="$probe_db"
-export ASKLENS_MIGRATION_PROBE_SECRET="$probe_secret"
+probe_manage() {
+  local manage_command="$1"
+  shift
+  probe_python -m django "$manage_command" "$@"
+}
+
 probe_manage migrate --noinput --verbosity 1
-(
-  export PYTHONPATH="$probe_root"
-  export DJANGO_SETTINGS_MODULE=probeproj.settings
-  export ASKLENS_MIGRATION_PROBE_DB="$probe_db"
-  export ASKLENS_MIGRATION_PROBE_SECRET="$probe_secret"
-  "$upgrade_venv/bin/python" - <<'PY'
+probe_python - <<'PY'
 import django
 
 django.setup()
 
+from django.db import connection
+from django.db.migrations.recorder import MigrationRecorder
 from django_asklens.models import SemanticQueryRun
+
+asklens_migrations = {
+    migration
+    for migration in MigrationRecorder(connection).applied_migrations()
+    if migration[0] == "asklens"
+}
+assert asklens_migrations == {("asklens", "0001_initial"), ("asklens", "0002_add_admin_query_proxy")}
+print("PASS published migration graph is exact: 0001_initial and 0002_add_admin_query_proxy")
 
 row = SemanticQueryRun.objects.create(
     question="synthetic published probe",
@@ -228,26 +232,17 @@ assert row.pk == 1
 assert SemanticQueryRun.objects.count() == 1
 print("PASS published 0.1.0a1 migration path initialized with one synthetic row")
 PY
-)
-
 
 "$upgrade_venv/bin/python" -m pip install \
   --force-reinstall --no-deps "$wheel" >/dev/null
-probe_plan_output="$({
-  probe_manage migrate --plan
-} 2>&1)"
+probe_plan_output="$(probe_manage migrate --plan 2>&1)"
 printf 'PASS migrate --plan after local same-version replacement:\n%s\n' "$probe_plan_output"
 probe_manage migrate --noinput --verbosity 1
 probe_manage showmigrations asklens
 probe_manage check
 probe_manage makemigrations asklens --check --dry-run
 
-(
-  export PYTHONPATH="$probe_root"
-  export DJANGO_SETTINGS_MODULE=probeproj.settings
-  export ASKLENS_MIGRATION_PROBE_DB="$probe_db"
-  export ASKLENS_MIGRATION_PROBE_SECRET="$probe_secret"
-  "$upgrade_venv/bin/python" - <<'PY'
+probe_python - <<'PY'
 import django
 
 django.setup()
@@ -257,10 +252,12 @@ from django.db.migrations.executor import MigrationExecutor
 from django.db.migrations.recorder import MigrationRecorder
 from django_asklens.models import AskLensQuery, SemanticQueryRun
 
-recorder = MigrationRecorder(connection)
-applied = recorder.applied_migrations()
-assert ("asklens", "0001_initial") in applied
-assert ("asklens", "0002_add_admin_query_proxy") in applied
+asklens_migrations = {
+    migration
+    for migration in MigrationRecorder(connection).applied_migrations()
+    if migration[0] == "asklens"
+}
+assert asklens_migrations == {("asklens", "0001_initial"), ("asklens", "0002_add_admin_query_proxy")}
 
 executor = MigrationExecutor(connection)
 plan = executor.migration_plan(executor.loader.graph.leaf_nodes())
@@ -282,11 +279,10 @@ assert row.duration_ms == 7
 assert AskLensQuery._meta.proxy
 assert AskLensQuery._meta.db_table == SemanticQueryRun._meta.db_table
 assert AskLensQuery.objects.count() == 1
-print("PASS migration graph remains 0001_initial + 0002_add_admin_query_proxy")
+print("PASS migration graph after local same-version replacement is exact: 0001_initial and 0002_add_admin_query_proxy")
 print("PASS synthetic SemanticQueryRun row preserved across same-version replacement")
 print("PASS AskLensQuery remains a proxy over asklens_semanticqueryrun table")
 PY
-)
 
 (
   cd "$workdir"
