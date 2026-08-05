@@ -268,6 +268,8 @@ export DJANGO_ASKLENS_LIVE_LLM_LOG_IO=0
 
 if [[ -z "$artifact_path" ]]; then
   artifact_path="$artifact_dir/${artifact_name}-${query_profile}-size${seed_profile}-i${iterations}-w${warmups}.json"
+elif [[ "$artifact_path" != *.json ]]; then
+  artifact_path="${artifact_path}.json"
 fi
 
 cleanup() {
