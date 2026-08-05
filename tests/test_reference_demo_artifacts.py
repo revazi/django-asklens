@@ -13,6 +13,8 @@ PACKAGE_SCRIPT = ROOT / "scripts" / "alpha-candidate-package-smoke.sh"
 PLAYWRIGHT_TEST = ROOT / "tests" / "e2e" / "reference_demo.py"
 PRIVATE_EVALUATION_GUIDE = ROOT / "docs" / "private-candidate-evaluation.md"
 PILOT_INTAKE_WORKSHEET = ROOT / "docs" / "pilot-intake-worksheet.md"
+PERFORMANCE_SCRIPT = ROOT / "scripts" / "performance-baseline.sh"
+PERFORMANCE_GUIDE = ROOT / "docs" / "performance-baseline.md"
 
 
 def read_text(path: Path) -> str:
@@ -57,6 +59,77 @@ def test_reference_script_is_fail_fast_bounded_and_opt_in() -> None:
     assert "docker system prune" not in script
     assert "docker volume prune" not in script
     assert "rm -rf" not in script
+
+
+def test_performance_baseline_script_is_bounded_and_safe() -> None:
+    """Local baseline runner is deterministic, opt-in, and artifact-oriented."""
+
+    script = read_text(PERFORMANCE_SCRIPT)
+
+    assert "set -Eeuo pipefail" in script
+    assert "run_performance_baseline" in script
+    assert "seed_complex_test_project" in script
+    assert "--dataset-profile" in script
+    assert "--size PROFILE" in script
+    assert "--query-profile" in script
+    assert "--iterations" in script
+    assert "--warmups" in script
+    assert "--artifact-dir" in script
+    assert "--artifact-name" in script
+    assert "--output" in script
+    assert "--commit" in script
+    assert "--help" in script
+    assert "--dataset-profile" in script
+    assert (
+        "${artifact_name}-${query_profile}-size${seed_profile}-i${iterations}-w"
+        in script
+    )
+    assert "${warmups}" in script
+    assert "resolve_commit" in script
+    assert "git rev-parse" in script
+    assert "SHOW server_version_num" not in script
+    assert "connection.info.server_version" in script
+    assert 'int("$PG_PORT")' not in script
+    assert "PG_PORT" in script
+    assert "trap - EXIT INT TERM" in script
+    assert "No compose project started for this run; nothing to tear down." in script
+    assert "DJANGO_ASKLENS_POSTGRES_EXPECTED_MAJOR=18" in script
+    assert "DJANGO_ASKLENS_DEMO_LIVE_LLM=0" in script
+    assert "compose down --volumes --remove-orphans" in script
+    assert "trap cleanup EXIT" in script
+    assert "Tore down compose project" in script
+    assert "docker system prune" not in script
+    assert "docker volume prune" not in script
+    assert "rm -rf" not in script
+
+    # Sanity check syntax and help output generation without running Docker.
+    subprocess.run(["bash", "-n", str(PERFORMANCE_SCRIPT)], check=True)
+    help_result = subprocess.run(
+        ["bash", str(PERFORMANCE_SCRIPT), "--help"],
+        text=True,
+        capture_output=True,
+        check=True,
+    )
+    assert "Usage:" in help_result.stdout
+
+    safe_help_path = ROOT / ".asklens-performance-baseline" / "safe-help-output.json"
+    safe_help_path.parent.mkdir(parents=True, exist_ok=True)
+    if safe_help_path.exists():
+        safe_help_path.unlink()
+    help_with_output = subprocess.run(
+        [
+            "bash",
+            str(PERFORMANCE_SCRIPT),
+            "--output",
+            str(safe_help_path),
+            "--help",
+        ],
+        text=True,
+        capture_output=True,
+        check=True,
+    )
+    assert "Usage:" in help_with_output.stdout
+    assert not safe_help_path.exists()
 
 
 def test_playwright_test_uses_browser_and_network_surfaces() -> None:
@@ -227,6 +300,11 @@ def test_source_demo_and_candidate_commands_are_documented() -> None:
     assert "bash scripts/reference-demo-smoke.sh" in demo
     assert "bash scripts/reference-demo-smoke.sh --manual" in demo
     assert "bash scripts/reference-demo-smoke.sh --teardown" in demo
+    assert "bash scripts/performance-baseline.sh" in demo
+    assert "bash scripts/performance-baseline.sh \\" in demo
+    assert "--query-profile compact" in demo
+    assert "--dataset-profile" in demo
+    assert "Synthetic performance baseline" in demo
     assert "PostgreSQL 18" in demo
     assert "synthetic reference app" in demo
     assert "not production" in demo
@@ -243,6 +321,29 @@ def test_source_demo_and_candidate_commands_are_documented() -> None:
     assert "redaction" in production.lower()
     assert "deletion" in production.lower()
     assert "strict replacement" in migration.lower()
+
+
+def test_performance_baseline_guide_and_index_linked() -> None:
+    """Synthetic performance baseline docs are isolated and output-safe."""
+
+    guide = read_text(PERFORMANCE_GUIDE)
+    index = read_text(ROOT / "docs" / "index.md")
+    usage = read_text(ROOT / "docs" / "usage.md")
+    ignore = read_text(ROOT / ".gitignore")
+
+    assert "# Synthetic query performance baseline" in guide
+    assert "redacted" in guide.lower()
+    assert (
+        "Runs only against the test-project fixtures and seeded synthetic data."
+        in guide
+    )
+    assert "PostgreSQL 18" in guide
+    assert "--query-profile" in guide
+    assert "--iterations" in guide
+    assert "--warmups" in guide
+    assert ".asklens-performance-baseline/" in ignore
+    assert "performance-baseline.md" in index
+    assert "Synthetic performance baseline" in usage.replace("\n", " ")
 
 
 def test_private_candidate_guide_is_linked_provenanced_and_privacy_bounded() -> None:
