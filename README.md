@@ -9,6 +9,8 @@ AskLens does **not** let an LLM write SQL. It asks a provider for structured JSO
 
 Status: **alpha**. APIs may change before a stable release.
 
+Django AskLens was created by [Revaz Zakalashvili](https://github.com/revazi) ([revaz.zakalashvili@gmail.com](mailto:revaz.zakalashvili@gmail.com)).
+
 ## What it provides
 
 - Explicit semantic resource registration.
