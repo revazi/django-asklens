@@ -131,8 +131,14 @@ AskLens is a data access surface. Configure it as carefully as any reporting, an
 - [ ] Scope and limitations for this control:
   - This is not an independent security audit, SBOM, or production security certification.
   - Do not suppress findings with ignore/allowlist entries in this tranche.
-  - If a fixed vulnerability is detected, prefer upgrade/remediation in project maintenance.
-  - If a vulnerability must remain, document advisory ID, rationale, owner, and review-by date in project evidence controls.
+  - Fixed vulnerabilities must be upgraded or replaced immediately.
+  - A temporary exception is only allowed when no fix/replacement is available after review.
+    - document advisory ID;
+    - document evidence that no fix is available;
+    - document immediate mitigation;
+    - assign owner and explicit review/expiry date;
+    - record explicit maintainer decision.
+  - In all cases, include exception metadata in project evidence controls.
 - [ ] If the command fails because the external advisory service is unavailable, treat it as failed evidence and re-run after recovery.
 - [ ] For strict read-only query credentials, prefer `AUDIT_MODE="disabled"` or `custom`; avoid granting host-wide write privileges just to satisfy default audit writes. A separate audit database is optional and not required by AskLens.
 - [ ] If you use `database` audit mode with read-only replicas/roles, confirm the deployment write-routing/FK topology is reviewed and documented.
