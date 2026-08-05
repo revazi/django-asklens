@@ -84,10 +84,14 @@ AskLens is a data access surface. Configure it as carefully as any reporting, an
   - Example: `"OPTIONS": {"options": "-c statement_timeout=3000"}` (or equivalent host/database role configuration).
 - [ ] Configure an end-to-end request timeout at the ASGI/WSGI server or trusted proxy, keep it longer than or coordinated with the statement timeout, and test cancellation/connection cleanup.
 - [ ] Apply authenticated-principal/route rate limits and a bounded concurrency limit before execution; structural budgets do not bound request volume, queued work, or simultaneous scans.
+  See also: [Host throttling and audit controls](host-throttle-and-audit-controls.md).
 - [ ] Use a dedicated read-only database role for queries where practical. Keep a separate deployment credential for migrations/DDL. Verify the role can `SELECT` only intended schemas/tables and cannot write or elevate role privileges.
 - [ ] If `AUDIT_MODE="database"`, confirm that strict read-only credentials and migration separation are compatible; otherwise set `AUDIT_MODE="custom"` or `disabled`.
 - [ ] Review database indexes for common filter/group/order fields.
 - [ ] Monitor query duration, statement/request timeouts, errors by stable code, rejected budgets, row/group counts, audit-sink failures, rate-limit decisions, concurrency saturation, connection-pool pressure, and database resource use. Keep labels low-cardinality and exclude filter values, rows, questions, credentials, and tenant identifiers by default.
+  Recommended minimal labels: `status`, `intent`, `resource`, `error_code`.
+  Use numeric observations for `duration_ms` and `row_count`.
+  Keep human-readable error messages in controlled logs (not metric labels).
 
 ## Live provider configuration
 
@@ -104,6 +108,7 @@ AskLens is a data access surface. Configure it as carefully as any reporting, an
 - [ ] If provider I/O logging is enabled for debugging, treat logs as sensitive.
 - [ ] Confirm logs exclude authorization headers and API keys.
 - [ ] Confirm errors do not include tracebacks, secrets, raw credentials, or sensitive row values.
+- [ ] Do not treat OpenTelemetry/Prometheus/queue/cache/service dependencies as required infrastructure for this alpha hardening scope.
 
 ## UI and saved queries
 

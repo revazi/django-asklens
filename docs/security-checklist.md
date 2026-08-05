@@ -34,7 +34,8 @@ Use this checklist before enabling AskLens outside local development.
 - [ ] Restrict `debug=true` to staff users or a stronger permission gate.
 - [ ] Ensure run-detail access is scoped to the requesting user unless a staff/admin policy is intended.
 - [ ] If using the optional API integration, verify configured `DJANGO_ASKLENS["API_PERMISSION_CLASSES"]` gates every AskLens route.
-- [ ] If using the optional API integration, consider DRF throttling/rate limits in host projects.
+- [ ] If using the optional API integration, configure host-side DRF/proxy throttles before execution and confirm throttled requests never reach AskLens facade logic.
+  See [Host throttling and audit controls](host-throttle-and-audit-controls.md).
 - [ ] Review audit retention requirements for your environment.
 
 ## Provider safety
@@ -56,6 +57,8 @@ Use this checklist before enabling AskLens outside local development.
 ## Deployment safety
 
 - [ ] Configure database statement and request timeouts plus host rate/concurrency limits; structural budgets do not bound scans, runtime, or request volume completely.
+- [ ] Ensure MCP and Python entry points also enforce equivalent host limits and auth/rate controls before calling AskLens helpers.
+- [ ] No mandatory OpenTelemetry/Prometheus/queue/cache service dependencies are required for this alpha hardening scope.
 - [ ] Use a read-only database role or replica as defense in depth if your deployment can enforce it outside AskLens.
 - [ ] Monitor query volume, budget rejections, and slow queries using normal Django/database tooling.
 - [ ] Consume stable failures through `error.code` and `error.message`; confirm unknown and unauthorized members both return `asklens.member.unavailable` without catalog or permission detail.

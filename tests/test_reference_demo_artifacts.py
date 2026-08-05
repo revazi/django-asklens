@@ -389,6 +389,46 @@ def _extract_alias_block(settings_text: str, alias: str) -> str:
     raise AssertionError(f"Could not parse alias block for '{alias}'")
 
 
+def test_host_throttle_and_audit_controls_guide_is_assertive() -> None:
+    """Host operations guidance includes explicit throttle and sink-control
+    guardrails.
+    """
+
+    guide = read_text(ROOT / "docs" / "host-throttle-and-audit-controls.md")
+    production = read_text(ROOT / "docs" / "production-checklist.md")
+    security = read_text(ROOT / "docs" / "security-checklist.md")
+    usage = read_text(ROOT / "docs" / "usage.md")
+
+    assert "Host throttle, concurrency, and AskLens observability controls" in guide
+    assert "UserRateThrottle" in guide
+    assert "authenticated principal-bound" in guide
+    assert "X-Forwarded-For" in guide
+    assert "Do not let spoofed proxy headers choose authenticated identity" in guide
+    assert "error_code" in guide
+    assert "error_code` may be a stable label" in guide
+    assert "free-form `error_message`" in guide
+    assert "do not use free-form `error_message` in\nmetric labels" in guide
+    assert "trusted-proxy" in guide.lower()
+    assert "provider/client output as untrusted" in guide
+    assert "validated by" in guide
+    assert "AUDIT_MODE" in guide
+    assert 'DJANGO_ASKLENS["AUDIT_MODE"] = "custom"' in guide
+    assert "does not require OpenTelemetry" in guide
+    assert "host-owned" in guide
+
+    assert "Host throttling and audit controls" in production
+    assert "Apply authenticated-principal/route rate limits" in production
+    assert (
+        "Do not treat OpenTelemetry/Prometheus/queue/cache/service dependencies "
+        "as required infrastructure" in production
+    )
+
+    assert "Host throttling and audit controls" in security
+    assert "equivalent host limits" in security
+
+    assert "Host throttling and audit controls" in usage
+
+
 def test_test_settings_include_read_alias_for_routing_evidence() -> None:
     """SQLite and PostgreSQL test settings re-use a mirrored `asklens_read` alias."""
 

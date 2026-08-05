@@ -18,6 +18,7 @@ Django AskLens is an alpha reusable Django package for safe natural-language que
 - [MCP integration notes](mcp-integration.md) — framework-neutral adapter helpers and wrapper
 - [Security checklist](security-checklist.md)
 - [Production checklist](production-checklist.md)
+- [Host throttling and audit controls](host-throttle-and-audit-controls.md)
 - [Multi-tenant security](multitenancy-security.md)
 - [Evaluation fixtures](evaluation.md)
 - [Runnable complex test project](test-project-demo.md)

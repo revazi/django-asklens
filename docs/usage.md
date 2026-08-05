@@ -175,6 +175,9 @@ QueryPlans locally. Dummy/offline mode uses deterministic help.
 
 ## 4. Query through the optional API
 
+For production-like API posture, configure host-side throttling, request timeout,
+and concurrency controls before execution and before any transport retry logic.
+See [Host throttling and audit controls](host-throttle-and-audit-controls.md).
 ```http
 POST /asklens/query/
 Content-Type: application/json
