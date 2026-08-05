@@ -173,9 +173,15 @@ The command code does not resolve or invoke configured `AUDIT_SINK` callables.
 Host delete signals and relationships may perform their own effects. Custom-sink
 storage, backups, and replicas remain host-owned. AskLens does not schedule
 these commands or choose an automatic retention policy, and they do not
-complete host user/tenant access or deletion-request workflows. Existing Django
-admin mutation remains governed by normal model permissions; command-only admin
-hardening is outside this slice.
+complete host user/tenant access or deletion-request workflows.
+
+The packaged `SemanticQueryRun` admin preserves inherited Django view semantics
+for its list and detail pages but denies add, change, and delete for every
+principal, including superusers. Its action filtering removes
+`delete_selected`. Redaction and purge remain separate AskLens-provided operator
+workflows; they are not universal host authorization or mutation controls and
+do not prevent ORM, direct database, custom-sink, or host-defined administrative
+writes. Restrict command execution and every other storage path separately.
 
 ## 8) No mandatory telemetry or queueing dependencies
 

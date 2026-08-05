@@ -357,9 +357,17 @@ rows. Purge targets selected `SemanticQueryRun` rows, while host delete signals
 and collector relationships may perform their own effects. Custom-sink storage,
 backups, and replicas remain host-owned. AskLens provides no scheduler or
 automatic retention policy, and these commands are not a complete user/tenant
-access or deletion-request workflow. Existing Django admin deletion continues
-to follow normal model permissions; command-only admin hardening is not part of
-these lifecycle commands.
+access or deletion-request workflow.
+
+The packaged `SemanticQueryRun` admin is view-only. It preserves Django's
+inherited view semantics, so users with the model's raw view or change
+permission can open its list and detail pages, but its admin policy denies add,
+change, and delete for every principal, including superusers. Django therefore
+filters out bulk `delete_selected`, and forged admin mutation requests do not
+change built-in audit rows. The redaction and purge commands are separate,
+AskLens-provided operator workflows; they do not define universal host
+authorization or prevent ORM/database mutation outside the packaged admin. Host
+projects must still restrict command execution and all other storage access.
 
 ## Optional access gate helper
 

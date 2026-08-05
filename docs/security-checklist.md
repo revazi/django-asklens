@@ -56,6 +56,8 @@ Use this checklist before enabling AskLens outside local development.
 - [ ] Review normal Django delete signals and collector relationships that may cascade, update, protect, restrict, or block related host rows.
 - [ ] Plan for partial progress: a failing batch rolls back, while earlier committed batches remain deleted after a later failure. Rerun preview/reconcile and use tested backup/restore before retrying. External signal-handler effects remain host-owned and cannot be rolled back.
 - [ ] Confirm both commands print no high-water/row IDs or stored content. The command code does not resolve or invoke configured `AUDIT_SINK` callables; host signals/relationships may still perform their own effects.
+- [ ] Confirm the packaged `SemanticQueryRun` admin is view-only: inherited Django view semantics permit authorized list/detail access, while add/change/delete stay denied for every principal, including superusers, and `delete_selected` is unavailable.
+- [ ] Treat redaction and purge as AskLens-provided operator workflows, not universal host authorization or mutation controls. Restrict command execution, ORM/direct-database access, custom sinks, and host-defined administration independently.
 - [ ] If full content is enabled, separately justify and test ingestion/display/export redaction, tightly restricted access, scheduled deletion, backup/replica deletion handling, and every custom sink for questions, filters, and plans. Custom sinks, backups, and replicas remain host-owned; these commands do not complete user/tenant deletion handling.
 - [ ] Prove rejected plans issue no application-data query; allow at most one metadata insert only in database audit mode.
 - [ ] Monitor custom/database sink failures without retrying query execution.

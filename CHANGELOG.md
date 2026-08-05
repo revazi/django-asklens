@@ -71,6 +71,7 @@ The project is alpha and APIs may change before a stable release.
 - Every over-budget structural dimension rejects with `asklens.budget.exceeded` before scope resolution or application-data SQL; malformed UTF-8 byte plans return a typed parse error.
 - Unsupported type/operator pairs, invalid scalar types, and unknown enum inputs reject with `asklens.plan.invalid` before scope resolution or application-data SQL. Unsupported result objects fail with the safe `asklens.execute.failed` category.
 - The PostgreSQL reference smoke proves server-owned MCP identity, host-and-request row-return gating, metadata-only audit records, tenant-scoped list/aggregate behavior, and fail-closed no-report access using synthetic data. This is internal technical evidence, not production certification or an independent security audit.
+- The packaged `SemanticQueryRun` admin is view-only: inherited Django view semantics remain available, while add, change, direct delete, and bulk `delete_selected` are denied for every principal, including superusers. The separate lifecycle commands remain explicit AskLens-provided operator workflows rather than universal host authorization or mutation controls.
 
 ## 0.1.0a1 — 2026-07-19
 
