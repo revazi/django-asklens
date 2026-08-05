@@ -44,5 +44,17 @@ DATABASES = {
         "HOST": _required_environment("DJANGO_ASKLENS_POSTGRES_HOST"),
         "PORT": POSTGRES_PORT,
         "CONN_MAX_AGE": 0,
-    }
+    },
+    "asklens_read": {
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": _required_environment("DJANGO_ASKLENS_POSTGRES_DB"),
+        "USER": _required_environment("DJANGO_ASKLENS_POSTGRES_USER"),
+        "PASSWORD": _required_environment("DJANGO_ASKLENS_POSTGRES_PASSWORD"),
+        "HOST": _required_environment("DJANGO_ASKLENS_POSTGRES_HOST"),
+        "PORT": POSTGRES_PORT,
+        "CONN_MAX_AGE": 0,
+        "TEST": {
+            "MIRROR": "default",
+        },
+    },
 }

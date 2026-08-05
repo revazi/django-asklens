@@ -368,3 +368,35 @@ def test_pilot_intake_worksheet_is_privacy_bounded() -> None:
         "local isolated sqlite",
     ):
         assert forbidden not in worksheet, f"Forbidden phrase found: {forbidden}"
+
+
+def _extract_alias_block(settings_text: str, alias: str) -> str:
+    """Return the raw text for one configured database alias block."""
+
+    marker = f'"{alias}": {{'
+    start = settings_text.find(marker)
+    if start < 0:
+        raise AssertionError(f"Database alias '{alias}' block not found")
+    open_braces = 0
+    # Track braces from the start of the alias block.
+    for index in range(start, len(settings_text)):
+        if settings_text[index] == "{":
+            open_braces += 1
+        elif settings_text[index] == "}":
+            open_braces -= 1
+            if open_braces == 0:
+                return settings_text[start : index + 1]
+    raise AssertionError(f"Could not parse alias block for '{alias}'")
+
+
+def test_test_settings_include_read_alias_for_routing_evidence() -> None:
+    """SQLite and PostgreSQL test settings re-use a mirrored `asklens_read` alias."""
+
+    sqlite_settings = read_text(ROOT / "tests" / "test_project" / "settings.py")
+    pg_settings = read_text(ROOT / "tests" / "test_project" / "postgresql_settings.py")
+
+    for settings_text in (sqlite_settings, pg_settings):
+        assert '"asklens_read"' in settings_text
+        alias_block = _extract_alias_block(settings_text, "asklens_read")
+        assert '"TEST": {' in alias_block
+        assert '"MIRROR": "default"' in alias_block

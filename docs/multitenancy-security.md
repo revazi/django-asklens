@@ -6,6 +6,10 @@ AskLens does not include a separate tenant policy engine in the alpha package su
 
 Every resource must resolve to `global` or `context_scoped`. Projects can configure `DJANGO_ASKLENS["DEFAULT_SCOPE_MODE"] = "context_scoped"` once; `global` must always be declared individually. Context-scoped resources require a trusted request-aware provider, and AskLens compiles and executes plans from the returned queryset.
 
+Scope providers are server-owned execution points. A provider can return `.using("asklens_read")` to target a replica or dedicated read role, but alias selection and routing policy must come only from trusted host logic, not user/client request values. AskLens preserves the returned queryset binding; it does not perform broad client-facing fallback to `default`, automatic cross-database probing, or package-managed replica failover.
+
+When using a replica read path, host policy must explicitly define read-after-write behavior and tenant-policy consistency expectations for your trust boundaries.
+
 ```python
 DJANGO_ASKLENS = {
     "DEFAULT_SCOPE_MODE": "context_scoped",
@@ -121,4 +125,16 @@ DJANGO_ASKLENS = {
 
 - Live LLM providers are opt-in and should be validated in a safe non-production environment before production use.
 - AskLens relies on host apps to define tenant membership and correct server-owned scope-provider policy.
-- Read-only replica/database routing is a host-project deployment concern in alpha.
+- Read-only replica/database routing is a host-project deployment concern in alpha. Use dedicated read credentials where practical, keep migrations and DDL on a separate deployment credential, and avoid package-managed role switching.
+- Configure the read-role timeout from host connection settings, for example:
+
+  ```python
+  DATABASES["asklens_read"]["OPTIONS"] = {"options": "-c statement_timeout=3000"}
+  ```
+
+  `statement_timeout` in `OPTIONS` is the correct PostgreSQL connection setting pattern.
+- Request timeout remains host-owned at the ASGI/WSGI/proxy boundary and should remain coordinated with database statement timeout.
+- If strict read-only query credentials are required, evaluate `AUDIT_MODE="custom"` or `disabled`; otherwise route audit writes through approved host-owned write routing.
+- `.using("asklens_read")` changes only scoped data-query execution; built-in database audit writes continue through normal Django write connection routing.
+- If your application uses a separate audit connection, ensure the same tenant and cross-database topology assumptions (including FK constraints and replica consistency) are explicit and reviewed.
+- Scope reads must be server-owned, explicit, and reviewed: no alias may be derived from client request fields, no broad fallback alias is allowed, and fail-closed errors must remain the host-owned control path. Using a valid Django database router is acceptable when it is explicit, deterministic, and not client-driven.
