@@ -73,6 +73,33 @@ DJANGO_SETTINGS_MODULE=tests.test_project.demo_settings \
 uv run python -m django seed_complex_test_project --size large
 ```
 
+## Synthetic performance baseline
+
+To run a reproducible local performance baseline, use:
+
+```bash
+bash scripts/performance-baseline.sh
+```
+
+The workflow is opt-in, runs only in the synthetic test project, seeds with
+`medium` by default, and emits a redacted internal-only JSON artifact.
+
+Use smaller CI-safe profiles for quick checks:
+
+```bash
+bash scripts/performance-baseline.sh \
+  --query-profile compact \
+  --iterations 2 \
+  --warmups 1 \
+  --dataset-profile medium
+
+# commit is captured from HEAD by default:
+# --commit can override this if you need a fixed marker
+```
+
+See [Synthetic performance baseline](performance-baseline.md) for artifact shape,
+command options, and cleanup behavior.
+
 You can override profile dimensions for custom smoke runs:
 
 ```bash

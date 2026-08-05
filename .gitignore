@@ -16,6 +16,10 @@ logs/
 asklens-llm-*.json
 asklens-provider-*.json
 
+# Performance baseline artifacts
+.performance-baseline/
+.asklens-performance-baseline/
+
 # Build/test artifacts
 .pytest_cache/
 .ruff_cache/

@@ -187,6 +187,9 @@ Content-Type: application/json
 
 A successful data-query response includes `response_type: "query"`, the question, validated plan, column metadata, normalized rows, limit metadata, optional presentation, timing, and audit run id. Presentation is outside QueryPlan and cannot affect authorization, scope, compilation, ordering, limits, or returned values. In live mode, deciding between data query and capability help plus producing the data `QueryPlan` and optional presentation happens in one provider call. Advanced clients may submit a previously returned `query_help.suggestions[].plan` with the question; AskLens revalidates the plan against current request permissions and executes it directly instead of making another LLM call.
 
+For local benchmark checks on the synthetic project, use [Synthetic performance
+baseline](performance-baseline.md).
+
 ```json
 {
   "question": "Show orders by status",
