@@ -22,6 +22,7 @@ Django AskLens is an alpha reusable Django package for safe natural-language que
 - [Multi-tenant security](multitenancy-security.md)
 - [Evaluation fixtures](evaluation.md)
 - [Synthetic performance baseline](performance-baseline.md)
+- [PR7 deterministic hardening evidence](hardening-pr7-deterministic-evidence.md)
 - [Runnable complex test project](test-project-demo.md)
 - [Demo query ideas](demo-queries.md)
 
