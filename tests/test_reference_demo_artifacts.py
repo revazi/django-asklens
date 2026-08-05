@@ -138,6 +138,83 @@ def test_reference_shell_entrypoints_have_safe_argument_boundaries() -> None:
     assert "Unknown option" in invalid.stderr
 
 
+def test_postgresql_ci_matrix_is_parameterized() -> None:
+    """The PostgreSQL CI matrix covers exactly the three authorized stacks."""
+
+    import re
+
+    workflow = read_text(ROOT / ".github" / "workflows" / "ci.yml")
+
+    # Extract the postgresql job block.
+    job_match = re.search(r"  postgresql:(.*?)  reference-demo:", workflow, re.DOTALL)
+    assert job_match is not None, "Could not find postgresql job in CI workflow"
+    job = job_match.group(1)
+
+    # Assert dynamic job name.
+    job_name = (
+        "name: PostgreSQL ${{ matrix.postgresql-version }} / "
+        "Python ${{ matrix.python-version }} / "
+        "Django ${{ matrix.django-version }}"
+    )
+    assert job_name in job
+
+    # Extract the matrix include block.
+    include_match = re.search(r"        include:(.*?)\n    services:", job, re.DOTALL)
+    assert include_match is not None, "Could not find matrix include block"
+    include = include_match.group(1)
+
+    # Verify exactly three combinations.
+    entries = re.findall(r"- postgresql-version:", include)
+    assert len(entries) == 3, f"Expected exactly 3 matrix entries, got {len(entries)}"
+
+    # Verify the specific authorized tuples as units.
+    expected_tuples = [
+        (
+            '- postgresql-version: "15"\n'
+            '            python-version: "3.12"\n'
+            '            django-version: "5.2"\n'
+            '            django-package: "Django>=5.2,<6.0"'
+        ),
+        (
+            '- postgresql-version: "15"\n'
+            '            python-version: "3.13"\n'
+            '            django-version: "6.x"\n'
+            '            django-package: "Django>=6.0,<7.0"'
+        ),
+        (
+            '- postgresql-version: "18"\n'
+            '            python-version: "3.13"\n'
+            '            django-version: "6.x"\n'
+            '            django-package: "Django>=6.0,<7.0"'
+        ),
+    ]
+    for expected in expected_tuples:
+        assert expected in include
+
+    # Assert parameterized setup and install steps.
+    assert "python-version: ${{ matrix.python-version }}" in job
+    assert 'uv pip install --reinstall "${{ matrix.django-package }}"' in job
+
+    # Assert preservation of required execution steps.
+    assert "name: Guard backend/version and replay all conformance fixtures" in job
+    assert "tests/conformance/test_replay.py" in job
+    assert "name: Run complete database-sensitive suite" in job
+    assert "pytest --strict-config --strict-markers\n          -m postgresql" in job
+    assert "name: Run PostgreSQL Django system check" in job
+    check_command = (
+        "python -m django check\n"
+        "          --settings=tests.test_project.postgresql_settings"
+    )
+    assert check_command in job
+    assert "name: Check AskLens migrations under PostgreSQL settings" in job
+    migrate_command = (
+        "python -m django makemigrations asklens\n"
+        "          --check --dry-run "
+        "--settings=tests.test_project.postgresql_settings"
+    )
+    assert migrate_command in job
+
+
 def test_source_demo_and_candidate_commands_are_documented() -> None:
     """A checkout documents setup, smoke, manual, teardown, and limitations."""
 
@@ -191,7 +268,9 @@ def test_private_candidate_guide_is_linked_provenanced_and_privacy_bounded() -> 
         "hmac.compare_digest",
         "participant-owned, isolated staging",
         "broad compatibility matrix",
-        "Python 3.13 with Django 6.x on PostgreSQL 15 and 18",
+        "PostgreSQL 15 and 18",
+        "PG15 is tested with Py3.12/Django 5.2 and Py3.13/Django 6.x",
+        "PG18 is tested with Py3.13/Django 6.x",
         "python3 -m venv .venv-asklens-evaluation",
         "${ASKLENS_CANDIDATE_WHEEL}[api]",
         "${ASKLENS_CANDIDATE_WHEEL}[mcp]",
