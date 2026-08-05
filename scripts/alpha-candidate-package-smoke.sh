@@ -230,7 +230,7 @@ row = SemanticQueryRun.objects.create(
 )
 assert row.pk == 1
 assert SemanticQueryRun.objects.count() == 1
-print("PASS published 0.1.0a1 migration path initialized with one synthetic row")
+print("PASS published 0.1.0a1 migration state initialized with one synthetic row")
 PY
 
 "$upgrade_venv/bin/python" -m pip install \

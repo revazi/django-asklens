@@ -192,6 +192,10 @@ def test_package_migration_probe_is_disposable_and_scoped() -> None:
         " 0002_add_admin_query_proxy" in script
     )
     assert (
+        "PASS published 0.1.0a1 migration state initialized with "
+        "one synthetic row" in script
+    )
+    assert (
         "PASS migration graph after local same-version replacement is"
         " exact: 0001_initial and 0002_add_admin_query_proxy" in script
     )
