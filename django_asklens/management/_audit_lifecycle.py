@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
+import argparse
 import re
 from datetime import UTC, datetime
 
 from django.core.exceptions import ImproperlyConfigured
-from django.core.management.base import CommandError
+from django.core.management.base import CommandError, CommandParser
 from django.db import DatabaseError, connections, transaction
 from django.db.models import Q, QuerySet
 from django.db.utils import ConnectionDoesNotExist
@@ -85,6 +86,46 @@ def validate_batch_size(value: object) -> int:
     return batch_size
 
 
+def _batch_size_argument(value: str) -> int:
+    """Adapt shared batch validation to argparse's safe error flow."""
+
+    try:
+        return validate_batch_size(value)
+    except CommandError as exc:
+        raise argparse.ArgumentTypeError(str(exc)) from None
+
+
+def add_lifecycle_arguments(
+    parser: CommandParser,
+    *,
+    execute_help: str,
+) -> None:
+    """Add the exact shared preview/execute lifecycle command options."""
+
+    parser.add_argument(
+        "--before",
+        required=True,
+        metavar="RFC3339",
+        help="Strict aware RFC 3339 cutoff; matching rows are older than it.",
+    )
+    parser.add_argument(
+        "--database",
+        default="default",
+        help="Django database alias containing built-in AskLens audit rows.",
+    )
+    parser.add_argument(
+        "--batch-size",
+        default=DEFAULT_BATCH_SIZE,
+        type=_batch_size_argument,
+        help="Rows per short transaction (1 through 10000; default 1000).",
+    )
+    parser.add_argument(
+        "--execute",
+        action="store_true",
+        help=execute_help,
+    )
+
+
 def ensure_audit_table(alias: object) -> str:
     """Validate a configured alias containing the built-in audit table."""
 
@@ -133,3 +174,67 @@ def redact_in_batches(*, alias: str, before: datetime, batch_size: int) -> int:
                 .update(question="", plan={})
             )
         redacted += updated
+
+
+def purge_queryset(
+    *,
+    alias: str,
+    before: datetime,
+    high_water: int | None = None,
+) -> QuerySet[SemanticQueryRun]:
+    """Build the selected-alias queryset for purge-eligible audit rows."""
+
+    queryset = SemanticQueryRun.objects.using(alias).filter(created_at__lt=before)
+    if high_water is not None:
+        queryset = queryset.filter(pk__lte=high_water)
+    return queryset
+
+
+def capture_purge_high_water(*, alias: str, before: datetime) -> int | None:
+    """Capture the largest initially eligible primary key for one purge run."""
+
+    return (
+        purge_queryset(alias=alias, before=before)
+        .order_by("-pk")
+        .values_list("pk", flat=True)
+        .first()
+    )
+
+
+def purge_in_batches(
+    *,
+    alias: str,
+    before: datetime,
+    batch_size: int,
+    high_water: int | None,
+) -> int:
+    """Delete eligible base audit rows in bounded primary-key batches."""
+
+    if high_water is None:
+        return 0
+
+    deleted_runs = 0
+    model_label = SemanticQueryRun._meta.label
+    while True:
+        with transaction.atomic(using=alias):
+            primary_keys = list(
+                purge_queryset(
+                    alias=alias,
+                    before=before,
+                    high_water=high_water,
+                )
+                .order_by("pk")
+                .values_list("pk", flat=True)[:batch_size]
+            )
+            if not primary_keys:
+                return deleted_runs
+            _, details = (
+                purge_queryset(
+                    alias=alias,
+                    before=before,
+                    high_water=high_water,
+                )
+                .filter(pk__in=primary_keys)
+                .delete()
+            )
+        deleted_runs += details.get(model_label, 0)

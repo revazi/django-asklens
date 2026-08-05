@@ -133,6 +133,7 @@ jobs:
               "django_asklens/management/__init__.py",
               "django_asklens/management/_audit_lifecycle.py",
               "django_asklens/management/commands/__init__.py",
+              "django_asklens/management/commands/purge_asklens_audit.py",
               "django_asklens/management/commands/redact_asklens_audit.py",
               "django_asklens/results/presentation.py",
               "django_asklens/templates/admin/django_asklens/asklensquery/change_list.html",

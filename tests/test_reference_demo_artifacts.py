@@ -575,6 +575,71 @@ def test_host_throttle_and_audit_controls_guide_is_assertive() -> None:
     assert "Host throttling and audit controls" in usage
 
 
+def test_audit_lifecycle_docs_and_artifacts_cover_irreversible_purge() -> None:
+    """Lifecycle docs and installed-wheel guards retain purge safety boundaries."""
+
+    core = read_text(ROOT / "docs" / "core-python-api.md")
+    host = read_text(ROOT / "docs" / "host-throttle-and-audit-controls.md")
+    production = read_text(ROOT / "docs" / "production-checklist.md")
+    security = read_text(ROOT / "docs" / "security-checklist.md")
+    changelog = read_text(ROOT / "CHANGELOG.md")
+    wheel_smoke = read_text(ROOT / ".github" / "scripts" / "wheel_smoke.py")
+    workflow = read_text(ROOT / ".github" / "workflows" / "ci.yml")
+
+    for document in (core, host, production, security, changelog):
+        assert "redact_asklens_audit" in document
+        assert "purge_asklens_audit" in document
+
+    combined_guidance = "\n".join((core, host, production, security)).lower()
+    for required in (
+        "preview",
+        "--execute",
+        "irreversible",
+        "high-water",
+        "higher-pk",
+        "manually inserted",
+        "reused lower",
+        "snapshot guarantee",
+        "point-in-time",
+        "backup/restore",
+        "pre_delete",
+        "post_delete",
+        "cascade",
+        "protect",
+        "restrict",
+        "external",
+        "cannot be rolled back",
+        "earlier committed batches",
+        "rerun preview",
+        "targets",
+        "related host rows",
+        "custom sink",
+        "backups",
+        "replicas",
+        "no scheduler",
+        "automatic retention policy",
+        "normal django model permissions",
+        "not a complete",
+    ):
+        assert required in combined_guidance
+
+    normalized_host = host.replace("\n", " ")
+    assert "does not schedule this command" not in normalized_host
+    assert "does not schedule these commands" in normalized_host
+
+    normalized_guidance = combined_guidance.replace("\n", " ")
+    for inaccurate in (
+        "act only on the selected built-in database table",
+        "acts only on the selected built-in database table",
+        "operate only on the selected built-in database table",
+        "operates only on the selected built-in database table",
+        "both commands act on selected built-in database rows",
+    ):
+        assert inaccurate not in normalized_guidance
+    assert 'commands["purge_asklens_audit"] == "django_asklens"' in wheel_smoke
+    assert '"django_asklens/management/commands/purge_asklens_audit.py"' in workflow
+
+
 def test_test_settings_include_read_alias_for_routing_evidence() -> None:
     """SQLite and PostgreSQL test settings re-use a mirrored `asklens_read` alias."""
 

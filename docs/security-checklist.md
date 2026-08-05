@@ -51,8 +51,12 @@ Use this checklist before enabling AskLens outside local development.
 - [ ] Select `AUDIT_MODE` deliberately and keep `AUDIT_INCLUDE_CONTENT=False` by default.
 - [ ] Define retention, access, redaction, and deletion policy even for metadata-only records; AskLens does not schedule lifecycle work or automatically expire audit rows.
 - [ ] Preview built-in database content redaction with `redact_asklens_audit --before <strict-aware-RFC3339>` and review its point-in-time count before explicitly adding `--execute`; grant update permission only on the selected alias used for execution.
-- [ ] Confirm the command clears `question` and `plan` only, prints no row IDs/content, never invokes custom sinks, and is not treated as purge or complete user/tenant deletion handling.
-- [ ] If full content is enabled, separately justify and test ingestion/display/export redaction, tightly restricted access, scheduled deletion, backup/replica deletion handling, and every custom sink for questions, filters, and plans. Custom sinks, backups, and replicas remain host-owned.
+- [ ] Preview irreversible deletion with `purge_asklens_audit --before <strict-aware-RFC3339>`; test backup/restore first and grant delete plus related-object permissions only on the selected execution alias.
+- [ ] Confirm purge uses its initial primary-key high-water boundary and reports actual base audit rows deleted. Ordinary later higher-PK inserts wait; manually inserted or reused lower PKs and concurrent changes are not covered by a snapshot guarantee.
+- [ ] Review normal Django delete signals and collector relationships that may cascade, update, protect, restrict, or block related host rows.
+- [ ] Plan for partial progress: a failing batch rolls back, while earlier committed batches remain deleted after a later failure. Rerun preview/reconcile and use tested backup/restore before retrying. External signal-handler effects remain host-owned and cannot be rolled back.
+- [ ] Confirm both commands print no high-water/row IDs or stored content. The command code does not resolve or invoke configured `AUDIT_SINK` callables; host signals/relationships may still perform their own effects.
+- [ ] If full content is enabled, separately justify and test ingestion/display/export redaction, tightly restricted access, scheduled deletion, backup/replica deletion handling, and every custom sink for questions, filters, and plans. Custom sinks, backups, and replicas remain host-owned; these commands do not complete user/tenant deletion handling.
 - [ ] Prove rejected plans issue no application-data query; allow at most one metadata insert only in database audit mode.
 - [ ] Monitor custom/database sink failures without retrying query execution.
 

@@ -2,13 +2,11 @@
 
 from __future__ import annotations
 
-import argparse
-
 from django.core.management.base import BaseCommand, CommandError, CommandParser
 from django.db import DatabaseError
 
 from django_asklens.management._audit_lifecycle import (
-    DEFAULT_BATCH_SIZE,
+    add_lifecycle_arguments,
     canonical_utc,
     ensure_audit_table,
     parse_before,
@@ -16,15 +14,6 @@ from django_asklens.management._audit_lifecycle import (
     redaction_queryset,
     validate_batch_size,
 )
-
-
-def _batch_size_argument(value: str) -> int:
-    """Adapt internal batch validation to argparse's safe error flow."""
-
-    try:
-        return validate_batch_size(value)
-    except CommandError as exc:
-        raise argparse.ArgumentTypeError(str(exc)) from None
 
 
 class Command(BaseCommand):
@@ -35,27 +24,9 @@ class Command(BaseCommand):
     def add_arguments(self, parser: CommandParser) -> None:
         """Declare the bounded, preview-by-default command contract."""
 
-        parser.add_argument(
-            "--before",
-            required=True,
-            metavar="RFC3339",
-            help="Strict aware RFC 3339 cutoff; matching rows are older than it.",
-        )
-        parser.add_argument(
-            "--database",
-            default="default",
-            help="Django database alias containing built-in AskLens audit rows.",
-        )
-        parser.add_argument(
-            "--batch-size",
-            default=DEFAULT_BATCH_SIZE,
-            type=_batch_size_argument,
-            help="Rows per short transaction (1 through 10000; default 1000).",
-        )
-        parser.add_argument(
-            "--execute",
-            action="store_true",
-            help="Apply redaction; omission performs a count-only preview.",
+        add_lifecycle_arguments(
+            parser,
+            execute_help=("Apply redaction; omission performs a count-only preview."),
         )
 
     def handle(self, *args: object, **options: object) -> None:
