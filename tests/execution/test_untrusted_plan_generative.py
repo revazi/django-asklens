@@ -32,6 +32,7 @@ FORBIDDEN_PUBLIC_MARKERS = (
     "order__",
     "order.objects",
 )
+DISTINCTIVE_NUMERIC_PRIVATE_TOKEN_MIN = 9_000_000_000
 
 
 def _generation_seed() -> int:
@@ -90,6 +91,16 @@ def _private_tokens(*values: object) -> tuple[str, ...]:
     return tuple(dict.fromkeys(_value_text(value) for value in values))
 
 
+def _distinctive_numeric_private_token(rng: random.Random) -> int:
+    """Return a numeric leak sentinel unlikely to match safe operational metadata.
+
+    This large synthetic range prevents substring-test false positives; it is not a
+    production input or audit policy.
+    """
+
+    return DISTINCTIVE_NUMERIC_PRIVATE_TOKEN_MIN + rng.randint(10_000, 99_999)
+
+
 def _generate_scalar_json_value(rng: random.Random) -> object:
     """Generate bounded primitive JSON values."""
 
@@ -98,7 +109,9 @@ def _generate_scalar_json_value(rng: random.Random) -> object:
             None,
             True,
             False,
-            rng.randint(0, 50),
+            # Preserve this generator's original bounded RNG draw while ensuring a
+            # numeric payload sentinel cannot resemble timestamp/duration metadata.
+            DISTINCTIVE_NUMERIC_PRIVATE_TOKEN_MIN + rng.randint(0, 50),
             f"seed-{GENERATION_SEED}-{rng.randint(10_000, 99_999)}",
         ]
     )
@@ -279,7 +292,7 @@ def _build_seeded_cases() -> list[_GeneratedCase]:
         )
     )
 
-    mismatch_status_token = rng.randint(10_000, 99_999)
+    mismatch_status_token = _distinctive_numeric_private_token(rng)
     mismatch_status = copy.deepcopy(valid_list_plan)
     mismatch_status["filters"] = [
         {"field": "status", "op": "eq", "value": mismatch_status_token}
@@ -378,7 +391,7 @@ def _build_seeded_cases() -> list[_GeneratedCase]:
     )
 
     over_filter_values = copy.deepcopy(valid_list_plan)
-    over_filter_value = rng.randint(1, 50)
+    over_filter_value = _distinctive_numeric_private_token(rng)
     over_filter_values["filters"] = [
         {"field": "status", "op": "eq", "value": "paid"},
         {"field": "status", "op": "neq", "value": "pending"},
@@ -443,6 +456,24 @@ def _build_seeded_cases() -> list[_GeneratedCase]:
 
 
 GENERATED_REJECTION_CASES = _build_seeded_cases()
+
+
+def test_generated_numeric_private_tokens_use_distinctive_synthetic_range() -> None:
+    """Numeric leak sentinels cannot collide with ordinary operational metadata."""
+
+    numeric_tokens = [
+        (case.case_id, token)
+        for case in GENERATED_REJECTION_CASES
+        for token in case.private_tokens
+        if token.isdecimal()
+    ]
+    assert numeric_tokens
+    invalid_numeric_tokens = [
+        (case_id, token)
+        for case_id, token in numeric_tokens
+        if len(token) < 10 or int(token) < DISTINCTIVE_NUMERIC_PRIVATE_TOKEN_MIN
+    ]
+    assert invalid_numeric_tokens == []
 
 
 def configure_custom_audit(settings, events: list[dict]) -> None:

@@ -10,6 +10,9 @@ for untrusted plan boundary rejection coverage.
 The suite uses stdlib `random.Random` and produces bounded cases in-memory. It
 covers malformed syntax, strict-shape failures, unavailable members, budget
 limits, operator/type/value mismatches, and unsupported input containers.
+Purely numeric payload sentinels checked against serialized safe surfaces use a
+distinctive synthetic range so they do not collide with unrelated operational
+timestamps or durations. The tests still assert that no payload sentinel leaks.
 
 ## Replay command and seed
 
