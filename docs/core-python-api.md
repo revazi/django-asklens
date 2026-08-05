@@ -306,31 +306,54 @@ DJANGO_ASKLENS = {
 
 A custom sink receives a safe operational event mapping and adds no database SQL unless the host sink chooses to do so. Disabled mode adds no audit SQL. Setting `AUDIT_INCLUDE_CONTENT=True` adds the question and complete validated plan to database/custom events; enable it only with an explicit retention, access, redaction, and deletion policy. Audit-sink failure is logged server-side and does not trigger rejected-plan execution or replace a successful query result.
 
-### Manual database-audit content redaction
+### Manual database-audit lifecycle commands
 
-Trusted operators can preview built-in database rows older than a strict aware
-RFC 3339 cutoff:
+Trusted operators can preview redaction or irreversible purge of built-in
+`SemanticQueryRun` rows older than a strict aware RFC 3339 cutoff:
 
 ```bash
 python manage.py redact_asklens_audit \
   --before 2026-08-01T00:00:00Z \
   --database default \
   --batch-size 1000
+
+python manage.py purge_asklens_audit \
+  --before 2026-08-01T00:00:00Z \
+  --database default \
+  --batch-size 1000
 ```
 
-Preview is the default and performs a point-in-time eligible-row count with no
-writes. Add `--execute` explicitly to clear exactly `question` and `plan` in
-short primary-key batches. The command retains the principal reference, status,
-row count, duration, error, and creation time; it does not delete audit rows.
-Its output is limited to the operation, selected alias, canonical UTC cutoff,
-counts, batch size, and mode—never row IDs or stored content.
+Both commands require the uppercase offset-aware cutoff, support batch sizes
+from 1 through 10000, and preview by default. Preview performs a point-in-time
+eligible-row count with no writes. Review that count before adding `--execute`.
+Output is limited to the operation, selected alias, canonical UTC cutoff,
+counts, batch size, and mode—never high-water/row IDs or stored content.
 
-This command operates only on `SemanticQueryRun` rows on the selected database
-alias, regardless of the current `AUDIT_MODE`. Preview needs table-read access;
-`--execute` also needs update permission on that alias. It never invokes or
-changes a custom sink. Custom-sink storage, backups, and replicas remain
-host-owned. AskLens provides no scheduler or automatic retention policy, and
-this redaction command is not a purge or a complete deletion-request workflow.
+`redact_asklens_audit --execute` clears exactly `question` and `plan` in short
+primary-key batches while retaining the principal reference, status, row count,
+duration, error, and creation time. Its selected alias needs update permission.
+
+`purge_asklens_audit --execute` irrevocably deletes rows with
+`created_at < before`. Make and test a host-appropriate backup/restore plan
+first. The command captures the initially eligible maximum primary key so
+ordinary later inserts wait for another run, then uses short primary-key batch
+transactions and reports actual `SemanticQueryRun` rows deleted. Concurrent
+updates or deletes may make that count differ from preview. The selected alias
+needs delete permission plus permissions required by related-object behavior.
+
+Purge uses normal public Django `QuerySet.delete()` behavior: `pre_delete` and
+`post_delete` signals run, and configured cascade, protection, and restriction
+rules apply. A failed batch rolls back its database changes. External effects
+performed by signal handlers cannot be rolled back and remain the host's
+responsibility.
+
+Both commands operate only on the selected built-in database table regardless
+of current `AUDIT_MODE`; neither calls or changes custom sinks. Custom-sink
+storage, backups, and replicas remain host-owned. AskLens provides no scheduler
+or automatic retention policy, and these commands are not a complete
+user/tenant access or deletion-request workflow. Existing Django admin deletion
+continues to follow normal model permissions; command-only admin hardening is
+not part of these lifecycle commands.
 
 ## Optional access gate helper
 

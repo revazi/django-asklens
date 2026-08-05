@@ -1,4 +1,4 @@
-"""Preview or execute bounded redaction of built-in database audit rows."""
+"""Preview or execute bounded deletion of built-in database audit rows."""
 
 from __future__ import annotations
 
@@ -8,42 +8,46 @@ from django.db import DatabaseError
 from django_asklens.management._audit_lifecycle import (
     add_lifecycle_arguments,
     canonical_utc,
+    capture_purge_high_water,
     ensure_audit_table,
     parse_before,
-    redact_in_batches,
-    redaction_queryset,
+    purge_in_batches,
+    purge_queryset,
     validate_batch_size,
 )
 
 
 class Command(BaseCommand):
-    """Redact sensitive content from built-in database audit records."""
+    """Permanently delete built-in database audit records."""
 
-    help = "Preview or redact question and plan content in AskLens database audits."
+    help = "Preview or execute irreversible purging of older AskLens audit rows."
 
     def add_arguments(self, parser: CommandParser) -> None:
-        """Declare the bounded, preview-by-default command contract."""
+        """Declare the shared bounded, preview-by-default command contract."""
 
         add_lifecycle_arguments(
             parser,
-            execute_help=("Apply redaction; omission performs a count-only preview."),
+            execute_help=(
+                "Irreversible deletion of eligible rows; omission performs a "
+                "count-only preview."
+            ),
         )
 
     def handle(self, *args: object, **options: object) -> None:
-        """Validate, preview, and optionally execute database-only redaction."""
+        """Validate, preview, and optionally execute database-only purging."""
 
         before = parse_before(options["before"])
         alias = ensure_audit_table(options["database"])
         batch_size = validate_batch_size(options["batch_size"])
 
         try:
-            eligible = redaction_queryset(alias=alias, before=before).count()
+            eligible = purge_queryset(alias=alias, before=before).count()
         except DatabaseError:
             raise CommandError(
-                "AskLens audit redaction could not inspect the selected database."
+                "AskLens audit purge could not inspect the selected database."
             ) from None
 
-        self.stdout.write("Operation: redact_asklens_audit")
+        self.stdout.write("Operation: purge_asklens_audit")
         self.stdout.write(f"Database alias: {alias}")
         self.stdout.write(f"Cutoff (UTC): {canonical_utc(before)}")
         self.stdout.write(f"Eligible rows (point-in-time): {eligible}")
@@ -52,20 +56,22 @@ class Command(BaseCommand):
         if not options["execute"]:
             self.stdout.write("Mode: PREVIEW")
             self.stdout.write(
-                "No rows were modified. Re-run with --execute to redact eligible rows."
+                "No rows were deleted. Re-run with --execute to permanently "
+                "delete eligible rows."
             )
             return
 
         try:
-            redacted = redact_in_batches(
+            high_water = capture_purge_high_water(alias=alias, before=before)
+            deleted_runs = purge_in_batches(
                 alias=alias,
                 before=before,
                 batch_size=batch_size,
+                high_water=high_water,
             )
-        except DatabaseError:
-            raise CommandError(
-                "AskLens audit redaction could not update the selected database."
-            ) from None
+        # Host delete signals and relation policies may raise arbitrary Exceptions.
+        except Exception:
+            raise CommandError("AskLens audit purge could not be completed.") from None
 
         self.stdout.write("Mode: EXECUTE")
-        self.stdout.write(f"Redacted rows: {redacted}")
+        self.stdout.write(f"Deleted SemanticQueryRun rows: {deleted_runs}")

@@ -56,6 +56,7 @@ def smoke_core_install() -> None:
     configure_settings(installed_apps=["django_asklens"])
     commands = get_commands()
     assert commands["redact_asklens_audit"] == "django_asklens"
+    assert commands["purge_asklens_audit"] == "django_asklens"
     assert "_audit_lifecycle" not in commands
 
     from django.contrib.auth import get_user_model

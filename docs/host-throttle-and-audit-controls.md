@@ -132,29 +132,47 @@ Do **not** include, export, or index these request-level values by default:
 A sink error must not trigger query re-run, nor become an authorization or rate
 limiter gate.
 
-## 7) Manual built-in database-audit redaction
+## 7) Manual built-in database-audit lifecycle commands
 
-AskLens provides one manual, preview-by-default lifecycle command for built-in
-`SemanticQueryRun` rows:
+AskLens provides manual, preview-by-default redaction and irreversible purge for
+built-in `SemanticQueryRun` rows:
 
 ```bash
 python manage.py redact_asklens_audit \
   --before 2026-08-01T00:00:00Z \
   --database default \
   --batch-size 1000
+
+python manage.py purge_asklens_audit \
+  --before 2026-08-01T00:00:00Z \
+  --database default \
+  --batch-size 1000
 ```
 
-The cutoff must be a strict uppercase, offset-aware RFC 3339 timestamp in the
-past. Preview counts eligible rows at one point in time and performs no writes.
-Only a trusted operator should add `--execute`; the selected alias then needs
-update permission. Execution clears `question` and `plan` only, in bounded
-batches, while retaining the audit row and operational fields. Output contains
-no audit row IDs or stored content.
+Both cutoffs must be strict uppercase, offset-aware RFC 3339 timestamps in the
+past; batch size is bounded from 1 through 10000. Preview counts eligible rows
+at one point in time and performs no writes. Only trusted operators should add
+`--execute`. Output contains no high-water/row IDs or stored content.
 
-The command acts on the selected built-in database table regardless of current
-`AUDIT_MODE`; it does not call custom sinks. Custom-sink storage, backups, and
-replicas remain host-owned. AskLens does not schedule this command, choose a
-retention policy, purge rows, or complete host deletion-request workflows.
+Redaction execution needs update permission and clears only `question` and
+`plan`, retaining each audit row and its operational fields. Purge execution
+needs delete and related-object permissions and permanently removes all eligible
+base rows from its initial primary-key high-water boundary. Concurrent updates
+or deletes can make actual deleted-row counts differ from preview; ordinary
+later inserts wait for another run.
+
+Before purge, establish and test a backup/restore plan. Normal Django delete
+signals and configured cascade/protect/restrict relationship behavior apply.
+Database changes in a failed batch roll back, but external effects performed by
+host signal handlers cannot be rolled back.
+
+The commands act only on the selected built-in database table regardless of
+current `AUDIT_MODE`; they do not call custom sinks. Custom-sink storage,
+backups, and replicas remain host-owned. AskLens does not schedule these
+commands or choose an automatic retention policy, and they do not complete host
+user/tenant access or deletion-request workflows. Existing Django admin
+mutation remains governed by normal model permissions; command-only admin
+hardening is outside this slice.
 
 ## 8) No mandatory telemetry or queueing dependencies
 
