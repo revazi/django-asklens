@@ -7,7 +7,11 @@ unsafe fallbacks.
 
 Treat 0.2 as a strict replacement, not an in-place wire-compatible upgrade. Before changing a deployment, inventory every registration, direct Python import, saved/browser/client plan, dummy/provider fixture, API consumer, MCP integration, and audit-content policy. Rewrite them to the current shape in a staging environment, run Django migration planning and a database backup under the host's normal process, then run application-specific tenant/permission and PostgreSQL tests. Do not deploy old and new workers against shared persisted plans unless the host has explicitly migrated those plans; AskLens does not negotiate both shapes. Rollback means restoring the prior package, application registrations/clients, and any host-owned persisted plans together.
 
-The source-checkout package smoke installs published `0.1.0a1` and force-replaces it with the current local wheel because the repository version cannot change before a separate release authorization. This exercises packaging/import replacement only. A real candidate version must rerun the same check as a normal resolver-selected upgrade and run `migrate --plan`, `migrate`, system checks, scope regressions, and API/MCP smokes against a disposable copy of the host database before release.
+The source-checkout package smoke installs published `0.1.0a1` and force-replaces it with the current local wheel because the repository version cannot change before a separate release authorization. This exercises packaging/import replacement only.
+
+For PR10 this script extension adds a disposable SQLite migration-state check inside its existing temporary working directory. It applies the already-published `0001_initial` and `0002_add_admin_query_proxy` migration set, then writes one synthetic `SemanticQueryRun`. It then performs same-version local-wheel replacement and re-runs `migrate --plan`, `migrate`, `showmigrations`, `check`, and `makemigrations --check --dry-run`. It then asserts a surviving synthetic row, exact asklens migration recorder state for this package, and proxy/table shape expectations.
+
+A real candidate version must rerun migration evidence as a normal resolver-selected upgrade against a disposable, access-controlled staging copy of the host database run under the host's normal backup/rollback process. This check provides package-state preservation evidence only and is not evidence that a normal 0.1 to 0.2 upgrade path has been completed.
 
 ## 1. Use the trusted execution facade
 
