@@ -18,14 +18,19 @@ jobs:
       fail-fast: false
       matrix:
         python-version: ["3.12", "3.13"]
-        django-version: ["5.2", "6.x"]
+        django-version: ["5.2", "6.0", "6.x"]
+        # The protected 6.x check names remain fixed to Django 6.1 until a
+        # separately authorized required-check migration changes that alias.
         include:
           - django-version: "5.2"
-            django-package: "Django>=5.2,<6.0"
+            django-package: "Django>=5.2,<5.3"
             django-version-prefix: "5.2."
+          - django-version: "6.0"
+            django-package: "Django>=6.0,<6.1"
+            django-version-prefix: "6.0."
           - django-version: "6.x"
-            django-package: "Django>=6.0,<7.0"
-            django-version-prefix: "6."
+            django-package: "Django>=6.1,<6.2"
+            django-version-prefix: "6.1."
 
     env:
       DJANGO_ASKLENS_LIVE_LLM: "0"
@@ -51,6 +56,14 @@ jobs:
 
       - name: Install Django matrix version
         run: uv pip install --reinstall "${{ matrix.django-package }}"
+
+      - name: Guard Django matrix version
+        env:
+          DJANGO_VERSION_PREFIX: ${{ matrix.django-version-prefix }}
+        run: >-
+          uv run --no-sync python -c
+          "import django, os; assert f'{django.get_version()}.'.startswith(
+          os.environ['DJANGO_VERSION_PREFIX']), django.get_version()"
 
       - name: Run Ruff lint
         run: uv run --no-sync ruff check .
@@ -203,15 +216,18 @@ jobs:
           - postgresql-version: "15"
             python-version: "3.12"
             django-version: "5.2"
-            django-package: "Django>=5.2,<6.0"
+            django-package: "Django>=5.2,<5.3"
+            django-version-prefix: "5.2."
           - postgresql-version: "15"
             python-version: "3.13"
-            django-version: "6.x"
-            django-package: "Django>=6.0,<7.0"
+            django-version: "6.0"
+            django-package: "Django>=6.0,<6.1"
+            django-version-prefix: "6.0."
           - postgresql-version: "18"
             python-version: "3.13"
-            django-version: "6.x"
-            django-package: "Django>=6.0,<7.0"
+            django-version: "6.1"
+            django-package: "Django>=6.1,<6.2"
+            django-version-prefix: "6.1."
 
     services:
       postgres:
@@ -260,6 +276,14 @@ jobs:
       - name: Install Django matrix version
         run: uv pip install --reinstall "${{ matrix.django-package }}"
 
+      - name: Guard Django matrix version
+        env:
+          DJANGO_VERSION_PREFIX: ${{ matrix.django-version-prefix }}
+        run: >-
+          uv run --no-sync python -c
+          "import django, os; assert f'{django.get_version()}.'.startswith(
+          os.environ['DJANGO_VERSION_PREFIX']), django.get_version()"
+
       - name: Guard backend/version and replay all conformance fixtures
         run: >-
           uv run --no-sync pytest --strict-config --strict-markers
@@ -303,6 +327,14 @@ jobs:
       - name: Install development evidence dependencies
         run: uv sync --locked --group dev
 
+      - name: Guard lock-selected Django 6.1
+        env:
+          DJANGO_VERSION_PREFIX: "6.1."
+        run: >-
+          uv run --no-sync python -c
+          "import django, os; assert f'{django.get_version()}.'.startswith(
+          os.environ['DJANGO_VERSION_PREFIX']), django.get_version()"
+
       - name: Install Chromium and system dependencies
         run: uv run --no-sync playwright install --with-deps chromium
 
@@ -331,6 +363,14 @@ jobs:
 
       - name: Install package evidence dependencies
         run: uv sync --locked --group dev
+
+      - name: Guard lock-selected Django 6.1
+        env:
+          DJANGO_VERSION_PREFIX: "6.1."
+        run: >-
+          uv run --no-sync python -c
+          "import django, os; assert f'{django.get_version()}.'.startswith(
+          os.environ['DJANGO_VERSION_PREFIX']), django.get_version()"
 
       - name: Run isolated source-wheel and upgrade evidence
         run: bash scripts/alpha-candidate-package-smoke.sh
