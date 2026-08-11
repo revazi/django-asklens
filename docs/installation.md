@@ -137,4 +137,4 @@ Current development target:
 - Optional API extra: Django REST Framework 3.18+
 - Optional MCP extra: FastMCP 3.4+
 
-Current package metadata supports Django 5.2 through 6.1. CI tests the 5.2, 6.0, and 6.1 lines explicitly.
+Installation metadata remains `Django>=5.2,<7.0`, but current CI support evidence is deliberately limited to Django 5.2 LTS, 6.0, and 6.1.

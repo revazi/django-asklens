@@ -353,6 +353,29 @@ def test_django_61_dependency_pair_is_locked_and_drf_stays_optional() -> None:
     assert locked_versions["djangorestframework"].startswith("3.18")
 
 
+def test_django_install_range_is_not_a_future_ci_support_claim() -> None:
+    """The broad resolver cap is distinct from currently tested Django lines."""
+
+    project = tomllib.loads(read_text(ROOT / "pyproject.toml"))
+    django_requirements = [
+        requirement
+        for requirement in project["project"]["dependencies"]
+        if requirement.lower().startswith("django")
+    ]
+    assert django_requirements == ["Django>=5.2,<7.0"]
+
+    support_boundary = (
+        "Installation metadata remains `Django>=5.2,<7.0`, but current CI support "
+        "evidence is deliberately limited to Django 5.2 LTS, 6.0, and 6.1."
+    )
+    for relative_path in (
+        "README.md",
+        "docs/installation.md",
+        "docs/private-candidate-evaluation.md",
+    ):
+        assert support_boundary in read_text(ROOT / relative_path)
+
+
 def test_postgresql_ci_matrix_is_parameterized() -> None:
     """The PostgreSQL CI matrix covers exactly the three authorized stacks."""
 
