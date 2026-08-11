@@ -125,8 +125,8 @@ PY
 for mode in core api mcp; do
   bash .github/scripts/wheel-smoke.sh \
     "$mode" \
-    "Django>=6.0,<7.0" \
-    "6." \
+    "Django>=6.1,<6.2" \
+    "6.1." \
     "$wheel"
   echo "PASS isolated $mode source-wheel install"
 done
@@ -312,7 +312,7 @@ with zipfile.ZipFile(wheel) as archive:
 print("PASS published install replaced by exact local source-wheel files")
 PY
 )
-DJANGO_VERSION_PREFIX="6." \
+DJANGO_VERSION_PREFIX="6.1." \
   "$upgrade_venv/bin/python" .github/scripts/wheel_smoke.py core
 
 echo "PASS package evidence only; no version change or release was performed"

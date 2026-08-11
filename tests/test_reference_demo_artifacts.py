@@ -256,6 +256,103 @@ def test_reference_shell_entrypoints_have_safe_argument_boundaries() -> None:
     assert "Unknown option" in invalid.stderr
 
 
+def test_ci_explicitly_covers_supported_django_lines() -> None:
+    """CI pins 5.2, 6.0, and 6.1 without floating the protected alias."""
+
+    import re
+
+    workflow = read_text(ROOT / ".github" / "workflows" / "ci.yml")
+    package_script = read_text(PACKAGE_SCRIPT)
+
+    test_match = re.search(r"  test:(.*?)  postgresql:", workflow, re.DOTALL)
+    assert test_match is not None, "Could not find SQLite/full-suite job"
+    test_job = test_match.group(1)
+
+    assert 'django-version: ["5.2", "6.0", "6.x"]' in test_job
+    expected_sqlite_bands = (
+        (
+            'django-version: "5.2"\n'
+            '            django-package: "Django>=5.2,<5.3"\n'
+            '            django-version-prefix: "5.2."'
+        ),
+        (
+            'django-version: "6.0"\n'
+            '            django-package: "Django>=6.0,<6.1"\n'
+            '            django-version-prefix: "6.0."'
+        ),
+        (
+            'django-version: "6.x"\n'
+            '            django-package: "Django>=6.1,<6.2"\n'
+            '            django-version-prefix: "6.1."'
+        ),
+    )
+    for expected in expected_sqlite_bands:
+        assert expected in test_job
+
+    assert "The protected 6.x check names remain fixed to Django 6.1" in test_job
+    assert (
+        "name: Python ${{ matrix.python-version }} / "
+        "Django ${{ matrix.django-version }}"
+    ) in test_job
+    assert "pytest --strict-config --strict-markers" in test_job
+    for mode in ("core", "api", "mcp"):
+        assert (
+            f"{mode} \\\n"
+            '            "${{ matrix.django-package }}" \\\n'
+            '            "${{ matrix.django-version-prefix }}"'
+        ) in test_job
+
+    assert "Django>=6.0,<7.0" not in workflow
+    assert "Django>=5.2,<6.0" not in workflow
+
+    postgresql_match = re.search(
+        r"  postgresql:(.*?)  reference-demo:", workflow, re.DOTALL
+    )
+    assert postgresql_match is not None, "Could not find PostgreSQL job"
+    postgresql_job = postgresql_match.group(1)
+    for version, package, prefix in (
+        ("5.2", "Django>=5.2,<5.3", "5.2."),
+        ("6.0", "Django>=6.0,<6.1", "6.0."),
+        ("6.1", "Django>=6.1,<6.2", "6.1."),
+    ):
+        assert f'django-version: "{version}"' in postgresql_job
+        assert f'django-package: "{package}"' in postgresql_job
+        assert f'django-version-prefix: "{prefix}"' in postgresql_job
+    assert "name: Guard Django matrix version" in postgresql_job
+
+    for job_name in ("reference-demo", "candidate-package"):
+        job_match = re.search(
+            rf"  {job_name}:(.*?)(?=\n  [a-z][a-z-]+:|\Z)", workflow, re.DOTALL
+        )
+        assert job_match is not None, f"Could not find {job_name} job"
+        assert "name: Guard lock-selected Django 6.1" in job_match.group(1)
+        assert 'DJANGO_VERSION_PREFIX: "6.1."' in job_match.group(1)
+
+    assert '"Django>=6.1,<6.2" \\\n    "6.1."' in package_script
+    assert "Django>=6.0,<7.0" not in package_script
+
+
+def test_django_61_dependency_pair_is_locked_and_drf_stays_optional() -> None:
+    """The optional API uses the Django-6.1-compatible DRF line."""
+
+    project = tomllib.loads(read_text(ROOT / "pyproject.toml"))
+    lock = tomllib.loads(read_text(ROOT / "uv.lock"))
+
+    drf_requirement = "djangorestframework>=3.18,<4.0"
+    assert project["project"]["optional-dependencies"]["api"] == [drf_requirement]
+    assert drf_requirement in project["dependency-groups"]["dev"]
+    assert all(
+        not requirement.lower().startswith("djangorestframework")
+        for requirement in project["project"]["dependencies"]
+    )
+
+    locked_versions = {
+        package["name"]: package["version"] for package in lock["package"]
+    }
+    assert locked_versions["django"].startswith("6.1")
+    assert locked_versions["djangorestframework"].startswith("3.18")
+
+
 def test_postgresql_ci_matrix_is_parameterized() -> None:
     """The PostgreSQL CI matrix covers exactly the three authorized stacks."""
 
@@ -291,19 +388,22 @@ def test_postgresql_ci_matrix_is_parameterized() -> None:
             '- postgresql-version: "15"\n'
             '            python-version: "3.12"\n'
             '            django-version: "5.2"\n'
-            '            django-package: "Django>=5.2,<6.0"'
+            '            django-package: "Django>=5.2,<5.3"\n'
+            '            django-version-prefix: "5.2."'
         ),
         (
             '- postgresql-version: "15"\n'
             '            python-version: "3.13"\n'
-            '            django-version: "6.x"\n'
-            '            django-package: "Django>=6.0,<7.0"'
+            '            django-version: "6.0"\n'
+            '            django-package: "Django>=6.0,<6.1"\n'
+            '            django-version-prefix: "6.0."'
         ),
         (
             '- postgresql-version: "18"\n'
             '            python-version: "3.13"\n'
-            '            django-version: "6.x"\n'
-            '            django-package: "Django>=6.0,<7.0"'
+            '            django-version: "6.1"\n'
+            '            django-package: "Django>=6.1,<6.2"\n'
+            '            django-version-prefix: "6.1."'
         ),
     ]
     for expected in expected_tuples:
@@ -312,6 +412,8 @@ def test_postgresql_ci_matrix_is_parameterized() -> None:
     # Assert parameterized setup and install steps.
     assert "python-version: ${{ matrix.python-version }}" in job
     assert 'uv pip install --reinstall "${{ matrix.django-package }}"' in job
+    assert "name: Guard Django matrix version" in job
+    assert "DJANGO_VERSION_PREFIX: ${{ matrix.django-version-prefix }}" in job
 
     # Assert preservation of required execution steps.
     assert "name: Guard backend/version and replay all conformance fixtures" in job
@@ -415,8 +517,8 @@ def test_private_candidate_guide_is_linked_provenanced_and_privacy_bounded() -> 
         "participant-owned, isolated staging",
         "broad compatibility matrix",
         "PostgreSQL 15 and 18",
-        "PG15 is tested with Py3.12/Django 5.2 and Py3.13/Django 6.x",
-        "PG18 is tested with Py3.13/Django 6.x",
+        "PG15 is tested with Py3.12/Django 5.2 and Py3.13/Django 6.0",
+        "PG18 is tested with Py3.13/Django 6.1",
         "python3 -m venv .venv-asklens-evaluation",
         "${ASKLENS_CANDIDATE_WHEEL}[api]",
         "${ASKLENS_CANDIDATE_WHEEL}[mcp]",

@@ -62,7 +62,7 @@ dependencies = [
 
 [project.optional-dependencies]
 api = [
-    "djangorestframework>=3.17,<4.0",
+    "djangorestframework>=3.18,<4.0",
 ]
 mcp = [
     "fastmcp>=3.4,<4",
@@ -80,7 +80,7 @@ Changelog = "https://github.com/revazi/django-asklens/blob/main/CHANGELOG.md"
 [dependency-groups]
 dev = [
     "build>=1",
-    "djangorestframework>=3.17,<4.0",
+    "djangorestframework>=3.18,<4.0",
     "fastmcp>=3.4,<4",
     "mypy>=1.13",
     "playwright>=1.62,<2",

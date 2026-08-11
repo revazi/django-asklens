@@ -17,7 +17,7 @@ def main() -> None:
     """Run the requested wheel smoke scenario."""
 
     mode = sys.argv[1]
-    assert django.get_version().startswith(os.environ["DJANGO_VERSION_PREFIX"])
+    assert f"{django.get_version()}.".startswith(os.environ["DJANGO_VERSION_PREFIX"])
     if mode == "core":
         smoke_core_install()
     elif mode == "mcp":

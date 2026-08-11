@@ -30,6 +30,8 @@ The project is alpha and APIs may change before a stable release.
 
 ### Changed
 
+- Raised the optional API and development Django REST Framework minimum to 3.18 for Django 6.1 compatibility; DRF remains excluded from core dependencies and imports.
+- Split CI support evidence into explicit Django 5.2, 6.0, and 6.1 bands while retaining the protected `6.x` check-name alias as an explicitly Django-6.1-bound compatibility name.
 - Shared API/admin/MCP/provider orchestration now delegates data execution to `execute_plan()`.
 - `run_query_plan()` is a deprecated compatibility wrapper that requires the current request and revalidates plans instead of trusting prior validation.
 - ORM compilation now consumes a private, non-serializable prepared representation bound to the current execution context and resolved resource queryset.

@@ -292,7 +292,7 @@ Review the [security checklist](docs/security-checklist.md) and [production chec
 - Server-side saved queries, dashboard builders, and a dedicated help endpoint are not part of the alpha package surface.
 - The packaged frontend is a reference/demo UI; custom product UIs should call the API directly.
 - Read-only replica/database routing is a host-project deployment concern in alpha.
-- Current package metadata and CI target Django 5.2 LTS and Django 6.x.
+- Current package metadata supports Django 5.2 LTS, 6.0, and 6.1; CI tests each line explicitly.
 
 ## Documentation
 
