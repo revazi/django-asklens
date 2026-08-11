@@ -65,6 +65,61 @@ Do not rely on the shared `0.1.0a1` version or filename: verify all three before
 
 A current private candidate still reports `0.1.0a1`, so installing it is exact same-version replacement in an isolated environment, not a normal PyPI upgrade or public release. The guide does not authorize a version, tag, upload, beta, or production use. It keeps completed forms and evidence outside the repository. An optional [Privacy-Safe Pilot Intake Worksheet](pilot-intake-worksheet.md) template helps structure private evaluations safely.
 
+## Authenticated API prerequisites for exact current artifacts
+
+These prerequisites document the current optional DRF adapter in unreleased source or a separately supplied exact verified wheel. They are not instructions for the published PyPI `0.1.0a1`, a release, or an upgrade. Verify the candidate's immutable commit, exact filename, and SHA-256 digest before installing its API extra in a fresh environment:
+
+```bash
+python -m pip install '/verified/path/django_asklens-0.1.0a1-py3-none-any.whl[api]'
+```
+
+The `[api]` extra installs the existing DRF dependency within the bounds in `pyproject.toml`; it does not install FastMCP or make DRF a core dependency. Add the host authentication/session apps, DRF, AskLens, and the project app that owns registration:
+
+```python
+INSTALLED_APPS = [
+    "django.contrib.auth",
+    "django.contrib.contenttypes",
+    "django.contrib.sessions",
+    "rest_framework",
+    "django_asklens",
+    "shop.apps.ShopConfig",
+]
+
+MIDDLEWARE = [
+    "django.contrib.sessions.middleware.SessionMiddleware",
+    "django.contrib.auth.middleware.AuthenticationMiddleware",
+]
+```
+
+Mount the current API routes:
+
+```python
+from django.urls import include, path
+
+urlpatterns = [
+    path("", include("django_asklens.api.urls")),
+]
+```
+
+Apply the normal host auth/contenttypes/session migrations, the host model permissions, and AskLens audit migrations, then check startup registration:
+
+```bash
+python -m django migrate
+python -m django check
+```
+
+Use existing host authentication to create and authenticate normal users and assign Django permissions server-side. AskLens does not add an authentication backend or token endpoint. The default API route gate requires an authenticated request; a host may configure stronger existing DRF-compatible permission classes. Row identity and scope still come only from the current server-owned request and the registered `scope_provider(request)`.
+
+For a disposable source-tree verification that performs these steps with synthetic users, session middleware, `testserver` as the only `ALLOWED_HOSTS` entry, deterministic dummy planning, and metadata-only database audit, run:
+
+```bash
+bash scripts/quickstart-core-smoke.sh --api
+```
+
+The default command without `--api` remains the U2 core-only exact-wheel smoke. Both modes create one `mktemp`-owned root and remove it on success or failure; neither deletes a caller-owned path. Build and dependency installation may use configured package indexes. The smoke is local current-artifact evidence only—not PostgreSQL, release, upgrade, production, external-usability, or security-certification evidence.
+
+Continue with the [authenticated normal-user API quickstart](usage.md#authenticated-normal-user-api-quickstart) for registration, host permission assignment, catalog-first verification, the current query/denial statuses, and audit expectations.
+
 ## Django setup
 
 For core-only use, add AskLens to `INSTALLED_APPS`:

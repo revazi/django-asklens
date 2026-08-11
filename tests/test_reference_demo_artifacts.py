@@ -197,13 +197,151 @@ def test_core_quickstart_is_linear_executable_and_fail_closed() -> None:
     ):
         assert required in script
 
-    assert "[api]" not in script
+    assert 'mode="core"' in script
+    assert 'if [[ "$mode" == "api" ]]' in script
+    assert 'install_target="$wheel"' in script
     assert "[mcp]" not in script
     assert "docker" not in script.lower()
     assert "twine upload" not in script
     assert "git push" not in script
     assert "rm -rf" not in script
     assert "OPENAI" not in script
+    subprocess.run(["bash", "-n", CORE_QUICKSTART_SCRIPT], check=True, cwd=ROOT)
+
+
+def test_authenticated_api_quickstart_is_current_private_and_disposable() -> None:
+    """The optional API path is linear without changing its current contract."""
+
+    readme = read_text(ROOT / "README.md")
+    install = read_text(ROOT / "docs" / "installation.md")
+    usage = read_text(ROOT / "docs" / "usage.md")
+    security = read_text(ROOT / "docs" / "security-checklist.md")
+    script = read_text(CORE_QUICKSTART_SCRIPT)
+
+    readme_link = (
+        "[Authenticated normal-user API quickstart]"
+        "(docs/usage.md#authenticated-normal-user-api-quickstart)"
+    )
+    assert readme_link in readme
+    assert "catalog first" in readme.lower()
+    assert "host-created authenticated user" in readme
+    assert "does not provide a login or token endpoint" in readme
+
+    install_heading = "## Authenticated API prerequisites for exact current artifacts"
+    assert install_heading in install
+    install_section = install[install.index(install_heading) :]
+    for required in (
+        "exact verified wheel",
+        "[api]",
+        '"rest_framework"',
+        '"django.contrib.sessions"',
+        '"django.contrib.sessions.middleware.SessionMiddleware"',
+        '"django.contrib.auth.middleware.AuthenticationMiddleware"',
+        'include("django_asklens.api.urls")',
+        "python -m django migrate",
+        "existing host authentication",
+        "does not add an authentication backend or token endpoint",
+        "bash scripts/quickstart-core-smoke.sh --api",
+    ):
+        assert required in install_section
+
+    usage_heading = "## Authenticated normal-user API quickstart"
+    ordered_usage_headings = (
+        usage_heading,
+        "### 1. Install and mount the current optional API",
+        "### 2. Register one context-scoped resource once",
+        "### 3. Create and authorize a normal host user",
+        "### 4. Verify the permission-scoped catalog first",
+        "### 5. Submit the deterministic query",
+        "### 6. Keep denials opaque and diagnose host setup",
+        "### 7. Verify metadata-only audit outcomes",
+    )
+    usage_positions = [usage.index(heading) for heading in ordered_usage_headings]
+    assert usage_positions == sorted(usage_positions)
+    normalized_usage = " ".join(usage.replace("\n> ", " ").split())
+    for required in (
+        "unreleased current source",
+        "separately verified exact candidate",
+        "not the published PyPI `0.1.0a1`",
+        "normal user",
+        "server-owned",
+        "AppConfig.ready()",
+        "force_login",
+        "GET /asklens/catalog/",
+        "POST /asklens/query/",
+        "HTTP 403",
+        "HTTP 400",
+        "HTTP 200",
+        "asklens.member.unavailable",
+        "zero registered application-data SQL",
+        "one failed audit row",
+        "one success audit row",
+        "AUDIT_INCLUDE_CONTENT=False",
+        "question is blank",
+        "resource and intent",
+        "bindings, permission tokens, model labels, scope identifiers",
+        "throttling, concurrency limits, statement timeout, and request timeout",
+    ):
+        assert " ".join(required.split()) in normalized_usage
+    assert "requires_permission" in usage
+    assert "must not appear in API, catalog, or audit responses" in usage
+
+    normalized_security = " ".join(security.split())
+    for required in (
+        "anonymous catalog/query requests are rejected at the route gate",
+        "server-owned permission assignment",
+        "server-owned `scope_provider(request)`",
+        "inspect the authenticated user's permission-scoped catalog first",
+        "do not weaken `asklens.member.unavailable`",
+        "metadata-only audit",
+        "host-owned throttling, concurrency, database statement timeout, and "
+        "request timeout",
+    ):
+        assert " ".join(required.split()) in normalized_security
+
+    for required in (
+        "Usage: bash scripts/quickstart-core-smoke.sh [--api] [--help]",
+        'mode="core"',
+        '--api)\n    mode="api"',
+        'install_target="${wheel}[api]"',
+        'util.find_spec("rest_framework")',
+        'util.find_spec("fastmcp")',
+        "core_optional_dependency_status=guarded",
+        'ALLOWED_HOSTS = ["testserver"]',
+        '"django.contrib.sessions"',
+        '"rest_framework"',
+        '"django.contrib.sessions.middleware.SessionMiddleware"',
+        '"django.contrib.auth.middleware.AuthenticationMiddleware"',
+        'include("django_asklens.api.urls")',
+        '"AUDIT_MODE": "database"',
+        '"AUDIT_INCLUDE_CONTENT": False',
+        "AppConfig",
+        "requires_permission=RESOURCE_PERMISSION",
+        'scope_mode="context_scoped"',
+        "client.force_login",
+        'client.get("/asklens/catalog/")',
+        "denied_client.post(",
+        "authorized_client.post(",
+        '"/asklens/query/"',
+        "CaptureQueriesContext",
+        'denial_code == "asklens.member.unavailable"',
+        "denial_application_data_queries == 0",
+        'statuses == ["failed", "success", "success"]',
+        'run.question == ""',
+        'set(run.plan) <= {"resource", "intent"}',
+        "PASS authenticated API quickstart exact-wheel smoke",
+    ):
+        assert required in script
+
+    for forbidden in (
+        "rm -rf",
+        "twine upload",
+        "git push",
+        "OPENAI_API_KEY",
+        "TokenAuthentication",
+        "obtain_auth_token",
+    ):
+        assert forbidden not in script
     subprocess.run(["bash", "-n", CORE_QUICKSTART_SCRIPT], check=True, cwd=ROOT)
 
 

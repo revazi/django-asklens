@@ -1,5 +1,262 @@
 # Usage guide
 
+## Authenticated normal-user API quickstart
+
+> [!IMPORTANT]
+> This journey describes the optional API in unreleased current source or a separately verified exact candidate. It is not the published PyPI `0.1.0a1`, an upgrade, a release, or a frozen API contract. Use the immutable tagged documentation for the published alpha.
+
+This path uses Django's existing session authentication, one normal user, a host-created Django permission, a permission-scoped catalog, deterministic `DummyProvider`, and the current metadata-only database audit. AskLens does not create a login view, authentication backend, or token endpoint and does not accept identity, permission, or scope claims from the client.
+
+### 1. Install and mount the current optional API
+
+Install an exact current artifact with its `[api]` extra only after verifying its commit, filename, and SHA-256 digest. See [Installation](installation.md#authenticated-api-prerequisites-for-exact-current-artifacts). Add the normal host auth/session apps and middleware, `rest_framework`, AskLens, and the one host app that owns registration:
+
+```python
+INSTALLED_APPS = [
+    "django.contrib.auth",
+    "django.contrib.contenttypes",
+    "django.contrib.sessions",
+    "rest_framework",
+    "django_asklens",
+    "shop.apps.ShopConfig",
+]
+
+MIDDLEWARE = [
+    "django.contrib.sessions.middleware.SessionMiddleware",
+    "django.contrib.auth.middleware.AuthenticationMiddleware",
+]
+```
+
+Mount the API under the current documented paths:
+
+```python
+from django.urls import include, path
+
+urlpatterns = [
+    path("", include("django_asklens.api.urls")),
+]
+```
+
+Run all normal host and AskLens migrations so session authentication, model permissions, and audit records are available:
+
+```bash
+python manage.py migrate
+python manage.py check
+```
+
+The default AskLens route permission requires an authenticated user. Keep your host's existing login/session flow; do not treat a username, permission string, user ID, tenant ID, or scope token in an API payload as trusted.
+
+### 2. Register one context-scoped resource once
+
+Put the registration in one project-owned module. This example assumes `Order` has the shown account membership relation; adapt the trusted queryset to the host's own policy:
+
+```python
+# shop/asklens_registration.py
+from django_asklens import register
+
+from .models import Order
+
+ORDER_REPORT_PERMISSION = "shop.view_order"
+
+
+def visible_orders(request):
+    user = getattr(request, "user", None)
+    if user is None or not user.is_authenticated:
+        return Order.objects.none()
+    return Order.objects.filter(account__memberships__user=user)
+
+
+register(
+    timezone="UTC",
+    model=Order,
+    name="orders",
+    label="Orders",
+    description="Orders visible to the current user.",
+    fields={
+        "status": {
+            "binding": "status",
+            "type": "string",
+            "nullable": False,
+            "label": "Status",
+        },
+    },
+    default_order=(("status", "asc"),),
+    requires_permission=ORDER_REPORT_PERMISSION,
+    scope_mode="context_scoped",
+    scope_provider=visible_orders,
+)
+```
+
+Import only that module from the host app's `AppConfig.ready()` method:
+
+```python
+# shop/apps.py
+from django.apps import AppConfig
+
+
+class ShopConfig(AppConfig):
+    name = "shop"
+
+    def ready(self):
+        from . import asklens_registration  # noqa: F401
+```
+
+AskLens does not autodiscover host resources. Do not also import this registration from URLs, models, admin modules, or another `AppConfig`; duplicate/autoreloader-unsafe paths fail rather than broadening access.
+
+Configure one deterministic offline plan and metadata-only database audit:
+
+```python
+DJANGO_ASKLENS = {
+    "LLM_BACKEND": "dummy",
+    "DUMMY_PLANS": {
+        "List my order statuses": {
+            "query_plan": {
+                "resource": "orders",
+                "intent": "list",
+                "select": ["status"],
+                "order_by": [{"field": "status", "direction": "asc"}],
+                "limit": 20,
+            },
+            "presentation": {"kind": "table"},
+        }
+    },
+    "AUDIT_MODE": "database",
+    "AUDIT_INCLUDE_CONTENT": False,
+}
+```
+
+The resource permission and scope identity are server-owned. The host-code `requires_permission` token is necessarily visible to trusted developers, but it must not appear in API, catalog, or audit responses. Public semantic field names do not expose their private Django bindings.
+
+### 3. Create and authorize a normal host user
+
+Use the host's normal account lifecycle. For a local synthetic verification, create a non-staff/non-superuser account and assign the existing Django model permission server-side after migrations:
+
+```python
+# python manage.py shell
+from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Permission
+
+User = get_user_model()
+user, _ = User.objects.get_or_create(username="asklens-reader")
+user.is_staff = False
+user.is_superuser = False
+user.set_unusable_password()  # local verification uses force_login below
+user.save()
+permission = Permission.objects.get(
+    content_type__app_label="shop",
+    codename="view_order",
+)
+user.user_permissions.add(permission)
+```
+
+The permission name above is trusted host setup, not an HTTP input or output. Refresh the user/request after changing permissions so Django's permission cache cannot make a local check stale. Real users authenticate through the host's existing login flow; this quickstart does not promise or add another authentication backend.
+
+### 4. Verify the permission-scoped catalog first
+
+Before querying, use the same current authenticated identity to fetch `GET /asklens/catalog/`. The following Django test-client check exercises normal session middleware without creating an AskLens login endpoint:
+
+```python
+from django.contrib.auth import get_user_model
+from django.test import Client
+
+user = get_user_model().objects.get(username="asklens-reader")
+client = Client()
+client.force_login(user)
+response = client.get("/asklens/catalog/")
+assert response.status_code == 200
+catalog = response.json()
+assert [item["name"] for item in catalog["resources"]] == ["orders"]
+assert [item["name"] for item in catalog["resources"][0]["fields"]] == ["status"]
+```
+
+An abbreviated current response is:
+
+```json
+{
+  "resources": [
+    {
+      "name": "orders",
+      "label": "Orders",
+      "timezone": "UTC",
+      "fields": [
+        {"name": "status", "label": "Status", "type": "string", "nullable": false}
+      ],
+      "metrics": []
+    }
+  ]
+}
+```
+
+The catalog contains no rows, sample values, bindings, permission tokens, model labels, scope identifiers, tenant details, or scope-provider implementation. A normal authenticated user without the resource permission receives `HTTP 200` with `{"resources": []}` rather than learning that the hidden resource exists.
+
+### 5. Submit the deterministic query
+
+Using the same session-authenticated client:
+
+```python
+import json
+
+response = client.post(
+    "/asklens/query/",
+    data=json.dumps({"question": "List my order statuses"}),
+    content_type="application/json",
+)
+assert response.status_code == 200
+payload = response.json()
+assert payload["response_type"] == "query"
+assert payload["plan"]["resource"] == "orders"
+assert payload["plan"]["intent"] == "list"
+assert payload["columns"][0]["key"] == "status"
+```
+
+Current successful behavior is `HTTP 200` with `response_type: "query"`, the revalidated semantic `plan`, typed `columns`, authorized scoped rows in `data`, `row_count`, deterministic `result_metadata`, and a `run_id`. The response also echoes the question submitted by that authorized caller. It must not expose the Django binding, permission token, model label, scope identity, other users' rows, provider envelope, or credentials. Repeating the synthetic request with unchanged scoped data gives the same canonical projection after excluding `run_id` and `duration_ms`.
+
+### 6. Keep denials opaque and diagnose host setup
+
+With the documented session setup, anonymous `GET /asklens/catalog/` and `POST /asklens/query/` currently return `HTTP 403` at the route gate and create no AskLens audit row. A host that replaces the authentication/permission classes owns any transport-level status or envelope differences and must preserve pre-orchestration denial.
+
+A normal authenticated user without the resource permission sees no resource in the catalog. If that user submits the known question anyway, current query behavior is `HTTP 400` with only the safe member error (plus normal run metadata):
+
+```json
+{
+  "error": {
+    "code": "asklens.member.unavailable",
+    "message": "A requested query member is unavailable."
+  }
+}
+```
+
+Unknown and unauthorized resources deliberately share `asklens.member.unavailable`; the denial performs zero registered application-data SQL and creates one failed audit row in database audit mode. Do not weaken that opacity, return the required permission, or reveal whether a hidden member exists.
+
+Diagnose trusted host setup instead:
+
+1. Run `python manage.py check` and confirm the one `AppConfig.ready()` registration import runs in every process.
+2. Verify the host created the intended permission and assigned it to the current user/group; inspect `user.get_all_permissions()` only in trusted server-side diagnostics.
+3. Refresh the authenticated request/user after permission changes, then fetch the permission-scoped catalog again.
+4. If the resource is visible but execution fails, test the trusted `scope_provider(request)` with the current user and confirm it returns a lazy queryset for the registered model.
+
+Never broaden the default manager, accept client-supplied identity/scope, or expose permission/startup diagnostics through the opaque query error.
+
+### 7. Verify metadata-only audit outcomes
+
+With `AUDIT_MODE="database"` and `AUDIT_INCLUDE_CONTENT=False`, the documented sequence has these current outcomes:
+
+- anonymous route denial: no AskLens audit row because orchestration did not start;
+- authenticated hidden-resource query: one failed audit row, stable error code, zero row count, blank question, and an empty operational plan because the member was unavailable;
+- each authorized query: one success audit row with row count and a plan containing only resource and intent.
+
+In metadata-only mode the stored question is blank. Audit rows do not persist result rows, raw rejected input, complete validated plans, filters, private bindings, permission tokens, model labels, scope identifiers, provider payloads, or credentials. The authorized HTTP caller still receives the current query response described above; do not copy that response, its rows, or its echoed question into another audit/log sink by default.
+
+Route authentication and member/scope validation do not bound request volume or database runtime. Configure host-owned throttling, concurrency limits, statement timeout, and request timeout before production-like use; see [Host throttling and audit controls](host-throttle-and-audit-controls.md). Keep read-only database defense, retention, access, redaction, deletion, monitoring, and any custom sink policy host-owned as well.
+
+Run the matching disposable exact-wheel check from a current source checkout with:
+
+```bash
+bash scripts/quickstart-core-smoke.sh --api
+```
+
+The smoke prints only provenance hashes, counts, HTTP statuses, the stable denial code, audit booleans/statuses, and cleanup markers—not rows, questions, usernames, permission tokens, scope identifiers, or raw payloads.
+
 ## 1. Register resources
 
 AskLens only queries resources that your project explicitly registers. Register resources during app startup, such as from an app config `ready()` method or another import path you control. Projects whose resources are normally request-scoped can configure the safe default once:

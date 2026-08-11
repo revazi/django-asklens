@@ -46,6 +46,8 @@ The example below describes the incompatible 0.2 target in this source branch. U
 
 For a linear path that installs core only, wires one project-owned startup import, and executes current-request list plans, use the [Core-only executable quickstart](docs/quickstart-core.md).
 
+For the optional DRF adapter, follow the [Authenticated normal-user API quickstart](docs/usage.md#authenticated-normal-user-api-quickstart). It installs an exact current `[api]` artifact, uses a host-created authenticated user and server-assigned permission, checks that user's permission-scoped catalog first, then demonstrates the current deterministic query, opaque denial, and metadata-only audit outcomes. If the resource is absent from the catalog, diagnose host permission assignment and the single startup registration import; do not weaken the opaque query error. AskLens uses the host's existing authentication and does not provide a login or token endpoint.
+
 Add DRF and the AskLens app:
 
 ```python

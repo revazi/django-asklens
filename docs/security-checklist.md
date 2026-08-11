@@ -30,7 +30,12 @@ Use this checklist before enabling AskLens outside local development.
 
 ## API safety
 
-- [ ] Require authentication for `/asklens/catalog/`, `/asklens/query/`, and `/asklens/runs/<id>/`.
+- [ ] Require authentication for `/asklens/catalog/`, `/asklens/query/`, and `/asklens/runs/<id>/`; prove anonymous catalog/query requests are rejected at the route gate before AskLens orchestration and create no query-run audit row.
+- [ ] Keep resource authorization in server-owned permission assignment and row identity in the server-owned `scope_provider(request)`; never trust client user IDs, permission strings, tenant IDs, or scope tokens.
+- [ ] For a normal authenticated user's first request, inspect the authenticated user's permission-scoped catalog first. If a resource is absent, diagnose the host's permission assignment and one controlled startup registration import rather than revealing hidden membership.
+- [ ] For authenticated unavailable-member queries, preserve zero registered application-data SQL and do not weaken `asklens.member.unavailable` or return permission/catalog details to make setup debugging easier.
+- [ ] Verify anonymous route denials create no AskLens audit row, while each orchestrated denial/success creates exactly one metadata-only audit row under database mode; keep questions blank and plans limited to operational resource/intent unless full content is explicitly justified.
+- [ ] Treat host-owned throttling, concurrency, database statement timeout, and request timeout as required deployment controls; route authentication, semantic budgets, and row limits do not replace them.
 - [ ] Restrict `debug=true` to staff users or a stronger permission gate.
 - [ ] Ensure run-detail access is scoped to the requesting user unless a staff/admin policy is intended.
 - [ ] If using the optional API integration, verify configured `DJANGO_ASKLENS["API_PERMISSION_CLASSES"]` gates every AskLens route.
