@@ -4,6 +4,13 @@ Django AskLens is an alpha reusable Django package for safe natural-language que
 
 Django AskLens was created by [Revaz Zakalashvili](https://github.com/revazi) ([revaz.zakalashvili@gmail.com](mailto:revaz.zakalashvili@gmail.com)).
 
+## Package provenance: choose documentation by artifact
+
+> [!IMPORTANT]
+> PyPI currently serves `django-asklens==0.1.0a1`; install that exact version and use the immutable [documentation tagged `v0.1.0a1`](https://github.com/revazi/django-asklens/blob/v0.1.0a1/README.md). This `main` branch documents an unreleased, incompatible 0.2 target whose examples do not match the published alpha. No public 0.2 package is being released by this documentation change.
+>
+> Do not combine published-alpha packages with unreleased-main instructions or mix those artifacts across workers or clients. [Choose the matching published, source-checkout, or maintainer-supplied private-candidate instructions](installation.md) before using the guides below.
+
 ## Guides
 
 - [Installation](installation.md)

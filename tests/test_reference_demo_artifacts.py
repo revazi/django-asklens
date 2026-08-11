@@ -23,6 +23,99 @@ def read_text(path: Path) -> str:
     return path.read_text(encoding="utf-8")
 
 
+def test_package_provenance_separates_published_and_unreleased_docs() -> None:
+    """Published, source, and private-candidate instructions cannot be confused."""
+
+    readme = read_text(ROOT / "README.md")
+    index = read_text(ROOT / "docs" / "index.md")
+    install = read_text(ROOT / "docs" / "installation.md")
+    tagged_docs = "https://github.com/revazi/django-asklens/blob/v0.1.0a1/README.md"
+
+    provenance_heading = "## Package provenance: published alpha versus main"
+    main_quickstart_heading = (
+        "## Unreleased main quickstart (not for published 0.1.0a1)"
+    )
+    assert provenance_heading in readme
+    assert "PyPI currently serves `django-asklens==0.1.0a1`" in readme
+    assert "unreleased, incompatible 0.2 target" in readme
+    assert "No public 0.2 package is being released by this PR." in readme
+    assert "python -m pip install 'django-asklens==0.1.0a1'" in readme
+    assert tagged_docs in readme
+    assert main_quickstart_heading in readme
+    assert readme.index(provenance_heading) < readme.index("## What it provides")
+    assert readme.index(provenance_heading) < readme.index(main_quickstart_heading)
+    assert readme.index("unreleased, incompatible 0.2 target") < readme.index(
+        main_quickstart_heading
+    )
+    assert "python -m pip install 'django-asklens[api]'" not in readme
+
+    published_heading = "## Published PyPI alpha: 0.1.0a1"
+    source_heading = "## Unreleased main/source checkout for contributors"
+    candidate_heading = "## Maintainer-supplied private candidate evaluation"
+    for heading in (published_heading, source_heading, candidate_heading):
+        assert heading in install
+    assert install.index(published_heading) < install.index(source_heading)
+    assert install.index(source_heading) < install.index(candidate_heading)
+
+    published_section = install[
+        install.index(published_heading) : install.index(source_heading)
+    ]
+    published_commands = [
+        line
+        for line in published_section.splitlines()
+        if line.startswith("python -m pip install")
+    ]
+    assert published_commands == [
+        "python -m pip install 'django-asklens==0.1.0a1'",
+        "python -m pip install 'django-asklens[api]==0.1.0a1'",
+        "python -m pip install 'django-asklens[mcp]==0.1.0a1'",
+    ]
+    assert tagged_docs in published_section
+
+    source_section = install[
+        install.index(source_heading) : install.index(candidate_heading)
+    ]
+    assert "not a release or release candidate" in source_section
+    assert "not a PyPI upgrade" in source_section
+    assert "### Source-checkout alpha-candidate package evidence" in source_section
+    assert "same-version replacement evidence" in source_section
+    assert "not a normal upgrade or release" in source_section
+
+    candidate_section = install[install.index(candidate_heading) :]
+    guide_link = (
+        "[private candidate evaluation and onboarding guide]"
+        "(private-candidate-evaluation.md)"
+    )
+    for marker in (
+        "immutable 40-character Git commit",
+        "exact wheel filename",
+        "SHA-256 digest",
+    ):
+        assert marker in candidate_section
+        assert candidate_section.index(marker) < candidate_section.index(guide_link)
+    assert "verify all three before installing" in candidate_section
+    assert candidate_section.index("verify all three before installing") < (
+        candidate_section.index(guide_link)
+    )
+    assert "not a normal PyPI upgrade or public release" in candidate_section
+
+    index_heading = "## Package provenance: choose documentation by artifact"
+    assert index_heading in index
+    assert index.index(index_heading) < index.index("## Guides")
+    assert "PyPI currently serves `django-asklens==0.1.0a1`" in index
+    assert "unreleased, incompatible 0.2 target" in index
+    assert (
+        "No public 0.2 package is being released by this documentation change." in index
+    )
+    assert tagged_docs in index
+
+    for local_document in (
+        ROOT / "docs" / "installation.md",
+        ROOT / "docs" / "private-candidate-evaluation.md",
+    ):
+        assert local_document.is_file()
+
+
 def test_compose_defines_project_scoped_postgresql_18() -> None:
     """The source demo owns a healthy, disposable PostgreSQL 18 service."""
 

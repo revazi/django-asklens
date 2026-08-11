@@ -11,6 +11,19 @@ Status: **alpha**. APIs may change before a stable release.
 
 Django AskLens was created by [Revaz Zakalashvili](https://github.com/revazi) ([revaz.zakalashvili@gmail.com](mailto:revaz.zakalashvili@gmail.com)).
 
+## Package provenance: published alpha versus main
+
+> [!IMPORTANT]
+> PyPI currently serves `django-asklens==0.1.0a1`. This `main` branch documents an unreleased, incompatible 0.2 target. No public 0.2 package is being released by this PR.
+>
+> To use the published alpha, install the exact version:
+>
+> ```bash
+> python -m pip install 'django-asklens==0.1.0a1'
+> ```
+>
+> Then use the immutable [documentation tagged `v0.1.0a1`](https://github.com/revazi/django-asklens/blob/v0.1.0a1/README.md), not the unreleased-main quickstart below. Do not combine the published alpha with main-branch examples or mix published-alpha and unreleased-main artifacts across workers or clients. See [Installation](docs/installation.md) for pinned core, API, and MCP commands and the separate contributor/private-candidate paths.
+
 ## What it provides
 
 - Explicit semantic resource registration.
@@ -27,13 +40,9 @@ Django AskLens was created by [Revaz Zakalashvili](https://github.com/revazi) ([
 - Frontend-agnostic `columns` + `data` JSON output.
 - Optional packaged browser UI for demos/reference use.
 
-## Quickstart
+## Unreleased main quickstart (not for published 0.1.0a1)
 
-Install from [PyPI](https://pypi.org/project/django-asklens/):
-
-```bash
-python -m pip install 'django-asklens[api]'
-```
+The example below describes the incompatible 0.2 target in this source branch. Use it only with a current source checkout or a maintainer-supplied exact local candidate whose commit and SHA-256 digest you verified. It does not describe the API in the published PyPI alpha, and it is not evidence of a public 0.2 release.
 
 Add DRF and the AskLens app:
 
