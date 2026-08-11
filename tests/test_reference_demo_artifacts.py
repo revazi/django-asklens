@@ -10,6 +10,8 @@ ROOT = Path(__file__).resolve().parents[1]
 COMPOSE = ROOT / "compose.yaml"
 REFERENCE_SCRIPT = ROOT / "scripts" / "reference-demo-smoke.sh"
 PACKAGE_SCRIPT = ROOT / "scripts" / "alpha-candidate-package-smoke.sh"
+CORE_QUICKSTART_SCRIPT = ROOT / "scripts" / "quickstart-core-smoke.sh"
+CORE_QUICKSTART_GUIDE = ROOT / "docs" / "quickstart-core.md"
 PLAYWRIGHT_TEST = ROOT / "tests" / "e2e" / "reference_demo.py"
 PRIVATE_EVALUATION_GUIDE = ROOT / "docs" / "private-candidate-evaluation.md"
 PILOT_INTAKE_WORKSHEET = ROOT / "docs" / "pilot-intake-worksheet.md"
@@ -114,6 +116,95 @@ def test_package_provenance_separates_published_and_unreleased_docs() -> None:
         ROOT / "docs" / "private-candidate-evaluation.md",
     ):
         assert local_document.is_file()
+
+
+def test_core_quickstart_is_linear_executable_and_fail_closed() -> None:
+    """The unreleased core golden path stays complete, explicit, and disposable."""
+
+    assert CORE_QUICKSTART_GUIDE.is_file()
+    assert CORE_QUICKSTART_SCRIPT.is_file()
+    assert CORE_QUICKSTART_SCRIPT.stat().st_mode & 0o111
+
+    guide = read_text(CORE_QUICKSTART_GUIDE)
+    readme = read_text(ROOT / "README.md")
+    index = read_text(ROOT / "docs" / "index.md")
+    core_api = read_text(ROOT / "docs" / "core-python-api.md")
+    registration = read_text(ROOT / "docs" / "registration.md")
+    script = read_text(CORE_QUICKSTART_SCRIPT)
+
+    ordered_headings = (
+        "## Artifact boundary",
+        "## 1. Install the exact core artifact",
+        "## 2. Create the models",
+        "## 3. Register the reviewed resources",
+        "## 4. Import registration once from `AppConfig.ready()`",
+        "## 5. Migrate and check",
+        "## 6. Execute untrusted list plans with current requests",
+        "## 7. Run the disposable wheel smoke",
+    )
+    positions = [guide.index(heading) for heading in ordered_headings]
+    assert positions == sorted(positions)
+
+    normalized_guide = " ".join(guide.replace("\n> ", " ").split())
+    for required in (
+        "unreleased current source",
+        "separately verified exact candidate wheel",
+        "not the published PyPI `0.1.0a1`",
+        'scope_mode="global"',
+        'scope_mode="context_scoped"',
+        "scope_provider=visible_scoped_facts",
+        '"select": ["code", "label"]',
+        '"select": ["label"]',
+        "execute_plan(global_plan, request=request)",
+        "execute_plan(scoped_plan, request=request)",
+        "asklens.member.unavailable",
+        "zero registered application-data SQL",
+        "server-owned",
+        "does not autodiscover",
+        "URLs, models, admin modules, multiple `AppConfig` classes",
+        "autoreloader",
+    ):
+        assert " ".join(required.split()) in normalized_guide
+
+    assert "[Core-only executable quickstart](docs/quickstart-core.md)" in readme
+    assert "[Core-only executable quickstart](quickstart-core.md)" in index
+    assert "[core-only executable quickstart](quickstart-core.md)" in core_api
+    assert "[core-only executable quickstart](quickstart-core.md)" in registration
+
+    for required in (
+        "set -Eeuo pipefail",
+        "mktemp -d",
+        "trap cleanup EXIT",
+        'export TMPDIR="$process_tmp"',
+        "python -m build --wheel",
+        "python -m venv",
+        "pip install --no-cache-dir",
+        'util.find_spec("rest_framework")',
+        'util.find_spec("fastmcp")',
+        "startproject quickstart",
+        "manage.py startapp shop",
+        "manage.py makemigrations shop",
+        "manage.py migrate",
+        "manage.py check",
+        '"select": ["code", "label"]',
+        '"select": ["label"]',
+        "RequestFactory",
+        "execute_plan(",
+        "CaptureQueriesContext",
+        "asklens.member.unavailable",
+        "application_data_queries == 0",
+        "PASS core quickstart exact-wheel smoke",
+    ):
+        assert required in script
+
+    assert "[api]" not in script
+    assert "[mcp]" not in script
+    assert "docker" not in script.lower()
+    assert "twine upload" not in script
+    assert "git push" not in script
+    assert "rm -rf" not in script
+    assert "OPENAI" not in script
+    subprocess.run(["bash", "-n", CORE_QUICKSTART_SCRIPT], check=True, cwd=ROOT)
 
 
 def test_compose_defines_project_scoped_postgresql_18() -> None:

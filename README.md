@@ -44,6 +44,8 @@ Django AskLens was created by [Revaz Zakalashvili](https://github.com/revazi) ([
 
 The example below describes the incompatible 0.2 target in this source branch. Use it only with a current source checkout or a maintainer-supplied exact local candidate whose commit and SHA-256 digest you verified. It does not describe the API in the published PyPI alpha, and it is not evidence of a public 0.2 release.
 
+For a linear path that installs core only, wires one project-owned startup import, and executes current-request list plans, use the [Core-only executable quickstart](docs/quickstart-core.md).
+
 Add DRF and the AskLens app:
 
 ```python

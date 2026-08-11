@@ -8,7 +8,7 @@ Django AskLens can be used without Django REST Framework. Install the core packa
 python -m pip install django-asklens
 ```
 
-Install `django-asklens[api]` only when you want the built-in DRF routes under `django_asklens.api` or the packaged reference frontend.
+Install `django-asklens[api]` only when you want the built-in DRF routes under `django_asklens.api` or the packaged reference frontend. For a fresh project with complete registration startup wiring, explicit global and context scope, string-select list plans, and an exact-wheel smoke, follow the [core-only executable quickstart](quickstart-core.md).
 
 ## Core-only Django setup
 
@@ -26,6 +26,8 @@ python -m django migrate asklens
 ```
 
 Do not include or import `django_asklens.api.urls` unless the `api` extra and `rest_framework` are installed.
+
+AskLens does not autodiscover a host registration module. Import that module through one project-owned `AppConfig.ready()` path; do not also import it through models, URLs, admin, another app config, or manually invoked autoreloader code. See [Registration](registration.md#startup-import-ownership).
 
 ## Register resources
 

@@ -12,6 +12,12 @@ DJANGO_ASKLENS = {
 
 `global` is intentionally not accepted as a project default. Every global resource must opt in explicitly.
 
+## Startup import ownership
+
+`django_asklens.apps.AskLensConfig` does not autodiscover host models or registration modules. Keep one project-owned registration module and import it through one host `AppConfig.ready()` path. Do not import the same module through models, URLs, admin, multiple app configs, or a manually invoked autoreloader path: duplicate process-local resource registration raises an error and must not be hidden by broad exception handling.
+
+The [core-only executable quickstart](quickstart-core.md) shows the complete `apps.py` and registration-module wiring. Identity, permissions, and context scope remain server-owned; startup wiring must not accept them from plan or client input.
+
 ## `register()`
 
 ```python
