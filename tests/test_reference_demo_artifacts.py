@@ -363,6 +363,11 @@ def test_django_install_range_is_not_a_future_ci_support_claim() -> None:
         if requirement.lower().startswith("django")
     ]
     assert django_requirements == ["Django>=5.2,<7.0"]
+    assert {
+        "Framework :: Django :: 5.2",
+        "Framework :: Django :: 6.0",
+        "Framework :: Django :: 6.1",
+    } <= set(project["project"]["classifiers"])
 
     support_boundary = (
         "Installation metadata remains `Django>=5.2,<7.0`, but current CI support "
