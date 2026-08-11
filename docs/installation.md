@@ -1,31 +1,45 @@
 # Installation
 
-Django AskLens is currently alpha. Install the core package into a Django project from your chosen source:
+Choose instructions by artifact provenance. The published PyPI alpha, the unreleased `main` source tree, and a maintainer-supplied private candidate are different contexts and are not interchangeable.
+
+## Published PyPI alpha: 0.1.0a1
+
+PyPI currently serves only the published `django-asklens==0.1.0a1` alpha. Use an exact version pin for the surface you need.
+
+Core package:
 
 ```bash
-python -m pip install django-asklens
+python -m pip install 'django-asklens==0.1.0a1'
 ```
 
-Install the optional DRF API integration when you want the built-in HTTP endpoints or packaged reference frontend:
+Optional DRF API and packaged reference frontend:
 
 ```bash
-python -m pip install 'django-asklens[api]'
+python -m pip install 'django-asklens[api]==0.1.0a1'
 ```
 
-Install the optional MCP integration when you want the FastMCP bridge helpers for exposing AskLens through a real MCP transport:
+Optional FastMCP bridge:
 
 ```bash
-python -m pip install 'django-asklens[mcp]'
+python -m pip install 'django-asklens[mcp]==0.1.0a1'
 ```
 
-For local development in this repository, use `uv`:
+Use the immutable [published-alpha documentation tagged `v0.1.0a1`](https://github.com/revazi/django-asklens/blob/v0.1.0a1/README.md). Do not use the current `main` README quickstart with this package: `main` documents an incompatible, unreleased 0.2 target.
+
+## Unreleased main/source checkout for contributors
+
+The current `main` branch is contributor source for an incompatible 0.2 target. It is not a release or release candidate, not a PyPI upgrade, and not a public package installation path. No public 0.2 package is created by these instructions.
+
+Use `uv` when developing in this repository:
 
 ```bash
 uv sync --group dev
 uv run pytest
 ```
 
-## Source-checkout alpha-candidate package evidence
+Do not mix the published-alpha artifact with source-built main artifacts across workers, clients, or environments. A wheel built from current source still reports `0.1.0a1`; replacing the published wheel with those different same-version bytes requires an exact local artifact and `--force-reinstall`. Call that same-version replacement evidence. It is not a normal upgrade or release.
+
+### Source-checkout alpha-candidate package evidence
 
 R4 includes an opt-in package smoke for proposal evidence only:
 
@@ -35,13 +49,21 @@ bash scripts/alpha-candidate-package-smoke.sh
 
 The command requires Python 3.12+, `uv`, and network access to PyPI. It builds the current source into a temporary wheel, checks that Docker, Playwright, and psycopg did not leak into runtime requirements or extras, and installs the core, API, and MCP wheel surfaces in separate temporary environments. It then installs the published 0.1.0a1 from PyPI and replaces it with the exact local source wheel before rerunning the installed-core smoke. Every temporary environment and artifact is removed at exit.
 
-The repository version intentionally remains `0.1.0a1` because no version bump or release is authorized. Consequently, the final step must use pip's same-version `--force-reinstall`; it is package replacement evidence, not proof of a normal resolver-selected `0.1.0a1` to `0.2.0a*` transition. A separately authorized candidate must set the exact proposed version and rerun this workflow as a normal upgrade. The script does not upload, tag, publish, or release anything.
+The repository version intentionally remains `0.1.0a1` because no version bump or release is authorized. Consequently, the final step uses pip's same-version `--force-reinstall` only as package replacement evidence; it does not prove a resolver-selected version transition. A future separately authorized candidate would need its own exact version and evidence. The script does not upload, tag, publish, or release anything.
 
-For PR10 evidence, the script now creates a disposable SQLite Django project in its temporary workdir, applies the published package migrations (`0001_initial` and `0002_add_admin_query_proxy`), and then creates one synthetic `SemanticQueryRun` row. It then replaces the install with the exact local wheel, re-runs `migrate --plan`, `migrate`, `showmigrations`, `check`, and `makemigrations --check --dry-run`, and verifies that the synthetic row, proxy model, and AskLens table shape survive. This is migration-state preservation evidence only, not a normal package upgrade claim, not PostgreSQL migration evidence, and not release evidence.
+For PR10 evidence, the script creates a disposable SQLite Django project in its temporary workdir, applies the published package migrations (`0001_initial` and `0002_add_admin_query_proxy`), and creates one synthetic `SemanticQueryRun` row. It then replaces the install with the exact local wheel, re-runs `migrate --plan`, `migrate`, `showmigrations`, `check`, and `makemigrations --check --dry-run`, and verifies that the synthetic row, proxy model, and AskLens table shape survive. This is same-version replacement and migration-state preservation evidence only, not PostgreSQL migration evidence and not release evidence.
 
-## Private candidate evaluation
+## Maintainer-supplied private candidate evaluation
 
-Maintainer-invited evaluators using an immutable commit, source-built wheel, and checksum should follow the [private candidate evaluation and onboarding guide](private-candidate-evaluation.md). That workflow uses a clean participant-owned staging environment and verified local artifact rather than assuming a public candidate exists on PyPI. It keeps completed forms and evidence outside the repository and does not turn the unchanged `0.1.0a1` package replacement into an upgrade or beta claim. An optional [Privacy-Safe Pilot Intake Worksheet](pilot-intake-worksheet.md) template is provided for structing private evaluations safely.
+This context applies only when a maintainer supplies an exact local wheel through an approved channel. Before any installation, require all three manifest values:
+
+- an immutable 40-character Git commit;
+- the exact wheel filename;
+- the wheel's SHA-256 digest.
+
+Do not rely on the shared `0.1.0a1` version or filename: verify all three before installing. Only after that verification, follow the [private candidate evaluation and onboarding guide](private-candidate-evaluation.md), which performs commit and SHA-256 checks before its local-wheel installation step.
+
+A current private candidate still reports `0.1.0a1`, so installing it is exact same-version replacement in an isolated environment, not a normal PyPI upgrade or public release. The guide does not authorize a version, tag, upload, beta, or production use. It keeps completed forms and evidence outside the repository. An optional [Privacy-Safe Pilot Intake Worksheet](pilot-intake-worksheet.md) template helps structure private evaluations safely.
 
 ## Django setup
 
