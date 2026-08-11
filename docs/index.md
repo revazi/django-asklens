@@ -14,6 +14,7 @@ Django AskLens was created by [Revaz Zakalashvili](https://github.com/revazi) ([
 ## Guides
 
 - [Installation](installation.md)
+- [Core-only executable quickstart](quickstart-core.md)
 - [Private candidate evaluation and onboarding](private-candidate-evaluation.md)
 - [Privacy-Safe Pilot Intake Worksheet](pilot-intake-worksheet.md)
 - [Usage guide](usage.md)
