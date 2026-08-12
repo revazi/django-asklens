@@ -37,6 +37,24 @@ ROUTES = (
     ("query", "/asklens/query/", QueryView, "post"),
     ("run-detail", "/asklens/runs/{pk}/", QueryRunDetailView, "get"),
 )
+PARSE_ERROR = {
+    "error": {
+        "code": "asklens.parse.invalid",
+        "message": "The AskLens request could not be parsed.",
+    }
+}
+AUTHORIZATION_ERROR = {
+    "error": {
+        "code": "asklens.authorization.denied",
+        "message": "The current request is not authorized.",
+    }
+}
+MEMBER_UNAVAILABLE_ERROR = {
+    "error": {
+        "code": "asklens.member.unavailable",
+        "message": "A requested query member is unavailable.",
+    }
+}
 
 
 @pytest.fixture(autouse=True)
@@ -208,7 +226,7 @@ def test_routes_characterize_exact_http_methods_and_allow_headers(
             if method == "HEAD":
                 assert response.content == b""
             else:
-                assert response.json() == {"detail": f'Method "{method}" not allowed.'}
+                assert response.json() == PARSE_ERROR
 
 
 def test_route_successes_have_current_json_status_and_top_level_shapes(
@@ -303,9 +321,7 @@ def test_default_anonymous_denial_is_exact_and_precedes_route_handlers_and_sql(
 
     assert response.status_code == 403
     assert_json_response(response)
-    assert response.json() == {
-        "detail": "Authentication credentials were not provided."
-    }
+    assert response.json() == AUTHORIZATION_ERROR
     assert captured.captured_queries == []
     assert SemanticQueryRun.objects.count() == 0
 
@@ -349,9 +365,7 @@ def test_configured_route_permission_denial_precedes_handlers_audit_and_sql(
 
     assert response.status_code == 403
     assert_json_response(response)
-    assert response.json() == {
-        "detail": "You do not have permission to perform this action."
-    }
+    assert response.json() == AUTHORIZATION_ERROR
     assert captured.captured_queries == []
     assert SemanticQueryRun.objects.count() == 0
 
@@ -383,13 +397,7 @@ def test_query_missing_or_blank_question_uses_normalized_parse_envelope_without_
 
     assert response.status_code == 400
     assert_json_response(response)
-    assert response.json() == {
-        "response_type": "error",
-        "error": {
-            "code": "asklens.parse.invalid",
-            "message": "The query request could not be parsed.",
-        },
-    }
+    assert response.json() == PARSE_ERROR
     assert captured.captured_queries == []
     assert SemanticQueryRun.objects.count() == 0
 
@@ -441,39 +449,75 @@ def test_query_transport_parse_denials_do_not_reach_orchestration_or_audit(
     assert_json_response(response)
     if case == "unsupported-media":
         assert response.status_code == 415
-        assert response.json() == {
-            "detail": 'Unsupported media type "text/plain" in request.'
-        }
-    elif case == "malformed-json":
-        assert response.status_code == 400
-        assert set(response.json()) == {"detail"}
-        assert response.json()["detail"].startswith("JSON parse error - ")
     else:
         assert response.status_code == 400
-        assert response.json() == {
-            "response_type": "error",
-            "error": {
-                "code": "asklens.parse.invalid",
-                "message": "The query request could not be parsed.",
-            },
-        }
+    assert response.json() == PARSE_ERROR
     assert captured.captured_queries == []
     assert SemanticQueryRun.objects.count() == 0
 
 
-def test_query_unknown_key_is_ignored_and_optional_defaults_are_currently_permissive(
+@pytest.mark.parametrize(
+    "unknown_key",
+    (
+        "unexpected",
+        "user",
+        "permissions",
+        "tenant_id",
+        "scope_token",
+        "audit_database_alias",
+    ),
+)
+def test_query_rejects_every_unknown_top_level_key_before_orchestration_audit_and_sql(
+    unknown_key: str,
+    api_client: APIClient,
+    user,
+    registered_orders: None,
+    monkeypatch,
+) -> None:
+    """Unknown input, including policy-like claims, fails without reflection."""
+
+    private_value = f"private-{unknown_key}-value"
+
+    def fail_orchestrator(*args, **kwargs):
+        raise AssertionError("Unknown request keys must not reach orchestration.")
+
+    monkeypatch.setattr(
+        "django_asklens.api.views.execute_asklens_query_request",
+        fail_orchestrator,
+    )
+    api_client.force_authenticate(user=user)
+
+    with CaptureQueriesContext(connection) as captured:
+        response = api_client.post(
+            "/asklens/query/",
+            {
+                "question": QUESTION,
+                "plan": aggregate_plan(),
+                unknown_key: private_value,
+            },
+            format="json",
+        )
+
+    assert response.status_code == 400
+    assert response.json() == PARSE_ERROR
+    assert unknown_key not in response.content.decode()
+    assert private_value not in response.content.decode()
+    assert captured.captured_queries == []
+    assert SemanticQueryRun.objects.count() == 0
+
+
+def test_query_optional_defaults_and_success_shape_remain_unchanged(
     api_client: APIClient,
     user,
     registered_orders: None,
 ) -> None:
-    """DRF currently ignores an unknown top-level key and applies optional defaults."""
+    """Strict input does not alter valid optional defaults or success bodies."""
 
     api_client.force_authenticate(user=user)
     payload = {
         "question": QUESTION,
         "plan": aggregate_plan(),
         "presentation": {"kind": "table"},
-        "unexpected": "discarded-client-value",
     }
 
     default_response = api_client.post("/asklens/query/", payload, format="json")
@@ -486,8 +530,6 @@ def test_query_unknown_key_is_ignored_and_optional_defaults_are_currently_permis
     assert default_response.status_code == 200
     assert default_response.data["presentation"] == {"kind": "table"}
     assert "debug" not in default_response.data
-    assert "unexpected" not in default_response.data
-    assert "discarded-client-value" not in str(default_response.data)
     assert without_presentation.status_code == 200
     assert "presentation" not in without_presentation.data
     assert "debug" not in without_presentation.data
@@ -504,7 +546,6 @@ def test_query_unknown_key_is_ignored_and_optional_defaults_are_currently_permis
         audit_text = json.dumps(run.plan)
         assert PRIVATE_BINDING not in audit_text
         assert PRIVATE_PERMISSION not in audit_text
-        assert "discarded-client-value" not in audit_text
 
 
 def test_hidden_and_nonexistent_members_share_opaque_error_zero_app_sql_and_safe_audit(
@@ -537,8 +578,7 @@ def test_hidden_and_nonexistent_members_share_opaque_error_zero_app_sql_and_safe
     for response in responses:
         assert response.status_code == 400
         assert_json_response(response)
-        assert set(response.data) == {"question", "status", "error", "run_id"}
-        assert response.data["status"] == SemanticQueryRun.Status.FAILED
+        assert set(response.data) == {"error", "run_id"}
         assert response.data["error"] == {
             "code": "asklens.member.unavailable",
             "message": "A requested query member is unavailable.",
@@ -597,7 +637,7 @@ def test_nonstaff_debug_denial_precedes_trusted_execution_audit_and_sql(
 
     assert response.status_code == 403
     assert_json_response(response)
-    assert response.json() == {"detail": "Debug mode is restricted to staff users."}
+    assert response.json() == AUTHORIZATION_ERROR
     assert captured.captured_queries == []
     assert SemanticQueryRun.objects.count() == 0
 
@@ -694,5 +734,5 @@ def test_run_detail_characterizes_owner_permission_and_opaque_nonexistence(
     for response in (staff_response, other_response, missing_response):
         assert response.status_code == 404
         assert_json_response(response)
-        assert response.json() == {"detail": "AskLens run not found."}
+        assert response.json() == MEMBER_UNAVAILABLE_ERROR
     assert SemanticQueryRun.objects.count() == 1

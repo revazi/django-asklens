@@ -213,16 +213,32 @@ Current successful behavior is `HTTP 200` with `response_type: "query"`, the rev
 
 ### 6. Keep denials opaque and diagnose host setup
 
-With the documented session setup, anonymous `GET /asklens/catalog/` and `POST /asklens/query/` currently return `HTTP 403` at the route gate and create no AskLens audit row. A host that replaces the authentication/permission classes owns any transport-level status or envelope differences and must preserve pre-orchestration denial.
+With the documented session setup, anonymous `GET /asklens/catalog/` and `POST /asklens/query/` return `HTTP 403` with `asklens.authorization.denied` at the route gate and create no AskLens audit row. A host that replaces the authentication/permission classes can change the transport status and required authentication headers, but failures emitted by these AskLens views still use the route-local envelope below and must preserve pre-orchestration denial.
 
-A normal authenticated user without the resource permission sees no resource in the catalog. If that user submits the known question anyway, current query behavior is `HTTP 400` with only the safe member error (plus normal run metadata):
+Every handled failure from the four AskLens DRF views has exactly one body shape:
+
+```json
+{
+  "error": {
+    "code": "asklens.parse.invalid",
+    "message": "The AskLens request could not be parsed."
+  }
+}
+```
+
+Only a privacy-aware database-audited AskLens failure may add top-level `run_id`. Failure bodies never add `response_type`, echo `question`, repeat `status`, or expose DRF `detail`. Parser/media/method failures use `asklens.parse.invalid`; authentication/permission/debug denials use `asklens.authorization.denied`; opaque missing/inaccessible runs use `asklens.member.unavailable`; throttling uses `asklens.budget.exceeded`; and audit-unavailable/unexpected failures use `asklens.execute.failed`. HTTP statuses and applicable `Allow`, `WWW-Authenticate`, and `Retry-After` headers are preserved.
+
+`POST /asklens/query/` accepts only `question`, `debug`, `include_presentation`, `plan`, and `presentation` at the top level. Every other key—including client-supplied user, permission, tenant, scope, or audit-routing claims—is rejected before shared orchestration, audit, or application-data SQL. The response does not reflect the unknown key/value or serializer diagnostics.
+
+A normal authenticated user without the resource permission sees no resource in the catalog. If that user submits the known question anyway, current query behavior is `HTTP 400` with only the safe member error and optional database audit id:
 
 ```json
 {
   "error": {
     "code": "asklens.member.unavailable",
     "message": "A requested query member is unavailable."
-  }
+  },
+  "run_id": 1
 }
 ```
 

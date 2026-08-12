@@ -1,11 +1,30 @@
 """DRF views for the AskLens API."""
 
+import logging
+from typing import Any
+
+from django.core.exceptions import PermissionDenied as DjangoPermissionDenied
 from django.db import DatabaseError
 from django.db.utils import ConnectionDoesNotExist
-from rest_framework.exceptions import APIException, NotFound
+from django.http import Http404
+from rest_framework.exceptions import (
+    APIException,
+    AuthenticationFailed,
+    MethodNotAllowed,
+    NotAcceptable,
+    NotAuthenticated,
+    NotFound,
+    ParseError,
+    Throttled,
+    UnsupportedMediaType,
+    ValidationError,
+)
+from rest_framework.exceptions import (
+    PermissionDenied as DRFPermissionDenied,
+)
 from rest_framework.request import Request
 from rest_framework.response import Response
-from rest_framework.views import APIView
+from rest_framework.views import APIView, set_rollback
 
 from django_asklens.api.permissions import get_api_permission_classes
 from django_asklens.api.serializers import (
@@ -14,6 +33,7 @@ from django_asklens.api.serializers import (
 )
 from django_asklens.catalog.capabilities import build_capabilities
 from django_asklens.catalog.registry import serialize_catalog
+from django_asklens.exceptions import AskLensError, public_error_payload
 from django_asklens.execution.audit import (
     _AuditDatabaseUnavailable,
     _resolve_audit_database_alias,
@@ -30,6 +50,73 @@ __all__ = [
     "QueryView",
 ]
 
+logger = logging.getLogger(__name__)
+
+_PARSE_ERROR = {
+    "code": "asklens.parse.invalid",
+    "message": "The AskLens request could not be parsed.",
+}
+_AUTHORIZATION_ERROR = {
+    "code": "asklens.authorization.denied",
+    "message": "The current request is not authorized.",
+}
+_MEMBER_UNAVAILABLE_ERROR = {
+    "code": "asklens.member.unavailable",
+    "message": "A requested query member is unavailable.",
+}
+_BUDGET_ERROR = {
+    "code": "asklens.budget.exceeded",
+    "message": "The AskLens request exceeds an execution limit.",
+}
+_EXECUTION_ERROR = {
+    "code": "asklens.execute.failed",
+    "message": "The AskLens request could not be completed.",
+}
+
+
+def _error_envelope(
+    error: dict[str, Any],
+    *,
+    run_id: int | None = None,
+) -> dict[str, Any]:
+    """Return the only HTTP error envelope emitted by AskLens DRF views."""
+
+    payload: dict[str, Any] = {"error": dict(error)}
+    if run_id is not None:
+        payload["run_id"] = run_id
+    return payload
+
+
+def _framework_error(exc: Exception) -> dict[str, Any]:
+    """Map one route-local framework exception to a fixed safe ErrorDocument."""
+
+    if isinstance(exc, (Http404, NotFound)):
+        return _MEMBER_UNAVAILABLE_ERROR
+    if isinstance(
+        exc,
+        (
+            AuthenticationFailed,
+            NotAuthenticated,
+            DRFPermissionDenied,
+            DjangoPermissionDenied,
+        ),
+    ):
+        return _AUTHORIZATION_ERROR
+    if isinstance(exc, Throttled):
+        return _BUDGET_ERROR
+    if isinstance(
+        exc,
+        (
+            MethodNotAllowed,
+            NotAcceptable,
+            ParseError,
+            UnsupportedMediaType,
+            ValidationError,
+        ),
+    ):
+        return _PARSE_ERROR
+    return _EXECUTION_ERROR
+
 
 class AskLensAPIView(APIView):
     """Base API view with configurable AskLens permissions."""
@@ -38,6 +125,28 @@ class AskLensAPIView(APIView):
         """Instantiate configured permission classes."""
 
         return [permission() for permission in get_api_permission_classes()]
+
+    def handle_exception(self, exc: Exception) -> Response:
+        """Normalize only AskLens-view failures while retaining DRF semantics."""
+
+        if isinstance(exc, AskLensError):
+            set_rollback()
+            response = Response(status=400)
+            response.exception = True
+            error = public_error_payload(exc)
+        else:
+            try:
+                response = super().handle_exception(exc)
+            except Exception:
+                set_rollback()
+                logger.exception("Unexpected AskLens API error.")
+                response = Response(status=500)
+                response.exception = True
+                error = _EXECUTION_ERROR
+            else:
+                error = _framework_error(exc)
+        response.data = _error_envelope(error)
+        return response
 
 
 class CatalogView(AskLensAPIView):
@@ -66,16 +175,7 @@ class QueryView(AskLensAPIView):
 
         serializer = QueryRequestSerializer(data=request.data)
         if not serializer.is_valid():
-            return Response(
-                {
-                    "response_type": "error",
-                    "error": {
-                        "code": "asklens.parse.invalid",
-                        "message": "The query request could not be parsed.",
-                    },
-                },
-                status=400,
-            )
+            return Response(_error_envelope(_PARSE_ERROR), status=400)
         outcome = execute_asklens_query_request(
             request,
             question=serializer.validated_data["question"],
@@ -84,6 +184,12 @@ class QueryView(AskLensAPIView):
             provided_plan=serializer.validated_data.get("plan"),
             provided_presentation=serializer.validated_data.get("presentation"),
         )
+        if outcome.response_type == "error":
+            run_id = outcome.run.pk if outcome.run is not None else None
+            return Response(
+                _error_envelope(outcome.payload["error"], run_id=run_id),
+                status=outcome.status_code,
+            )
         return Response(outcome.payload, status=outcome.status_code)
 
 

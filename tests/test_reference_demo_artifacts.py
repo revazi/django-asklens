@@ -18,6 +18,9 @@ PILOT_INTAKE_WORKSHEET = ROOT / "docs" / "pilot-intake-worksheet.md"
 PERFORMANCE_SCRIPT = ROOT / "scripts" / "performance-baseline.sh"
 PERFORMANCE_GUIDE = ROOT / "docs" / "performance-baseline.md"
 HTTP_ENVELOPE_CROSSWALK = ROOT / "docs" / "http-internal-envelope-crosswalk.md"
+WHEEL_SMOKE = ROOT / ".github" / "scripts" / "wheel_smoke.py"
+API_SERIALIZERS = ROOT / "django_asklens" / "api" / "serializers.py"
+API_VIEWS = ROOT / "django_asklens" / "api" / "views.py"
 
 
 def read_text(path: Path) -> str:
@@ -99,7 +102,8 @@ def test_http_internal_envelope_crosswalk_maps_current_non_identity() -> None:
         "Deliberate root `django_asklens` exports remain retained.",
         "Private `_build_success_payload()` and `_build_capabilities_payload()` "
         "helpers are implementation details, not supported imports.",
-        "API-4 and API-6 remain separately gated cleanup candidates.",
+        "API-4a changes only strict input and AskLens-route errors; API-4b "
+        "success composition and API-6 remain separately gated.",
     ):
         assert current_export_truth in normalized
 
@@ -116,9 +120,14 @@ def test_http_internal_envelope_crosswalk_maps_current_non_identity() -> None:
     for required in (
         "Schema validation is not authorization.",
         "not every HTTP body is an internal document",
-        "strict unknown request keys",
+        "strict `QueryRequestSerializer`",
+        "one `{error, run_id?}` adapter shape",
+        "`WWW-Authenticate`",
+        "`Retry-After`",
+        "unrelated host DRF endpoints",
         "API-3",
-        "API-4",
+        "API-4a",
+        "API-4b",
         "API-5",
         "API-6",
         "authorization-filtered queryset",
@@ -134,6 +143,46 @@ def test_http_internal_envelope_crosswalk_maps_current_non_identity() -> None:
         "does not authorize",
     ):
         assert required in normalized
+
+    for stale_error_shape in (
+        '`{response_type: "error", error: {...}}`',
+        '`{question, status: "failed", error, run_id?}`',
+        "DRF `detail` errors.",
+        "serializer behavior ignores unknown top-level request keys",
+    ):
+        assert stale_error_shape not in crosswalk
+
+
+def test_api4a_source_and_exact_wheel_evidence_are_strict_and_route_local() -> None:
+    """Source and installed-wheel checks pin the breaking HTTP error boundary."""
+
+    serializers = read_text(API_SERIALIZERS)
+    views = read_text(API_VIEWS)
+    wheel_smoke = read_text(WHEEL_SMOKE)
+
+    assert "key not in self.fields" in serializers
+    assert "The query request contains unsupported fields." in serializers
+    for required in (
+        "class AskLensAPIView(APIView)",
+        "def handle_exception(self, exc: Exception) -> Response",
+        'payload: dict[str, Any] = {"error": dict(error)}',
+        '"asklens.authorization.denied"',
+        '"asklens.budget.exceeded"',
+        '"asklens.execute.failed"',
+        'if outcome.response_type == "error"',
+    ):
+        assert required in views
+    assert "EXCEPTION_HANDLER" not in views
+
+    for required in (
+        "APIRequestFactory",
+        '"permissions": ["private-client-policy-value"]',
+        "strict_response.status_code == 400",
+        '"code": "asklens.parse.invalid"',
+        'method_response["Allow"] == "GET, HEAD, OPTIONS"',
+        "method_response.status_code == 405",
+    ):
+        assert required in wheel_smoke
 
 
 def test_package_provenance_separates_published_and_unreleased_docs() -> None:
@@ -435,6 +484,10 @@ def test_authenticated_api_quickstart_is_current_private_and_disposable() -> Non
         "authorized_client.post(",
         '"/asklens/query/"',
         "CaptureQueriesContext",
+        "strict_input_response.status_code == 400",
+        '"permissions": [client_policy_value]',
+        '"code": "asklens.parse.invalid"',
+        'set(denial_payload) == {"error", "run_id"}',
         'denial_code == "asklens.member.unavailable"',
         "denial_application_data_queries == 0",
         'statuses == ["failed", "success", "success"]',

@@ -167,6 +167,9 @@ def test_demo_frontend_renders_for_reporting_user() -> None:
     assert 'class="tag-strip" aria-label="Session summary"' not in content
     assert 'id="capabilities-status"' not in content
     assert "capabilities.summary" not in content
+    assert "payload?.error?.message || response.statusText" in content
+    assert "payload?.detail" not in content
+    assert "payload = { detail: text }" not in content
     assert content.index("Session") < content.index("Tenant row scope")
     assert content.index("Tenant row scope") < content.index("Saved queries")
     assert content.index("Saved queries") < content.index("Suggestions")

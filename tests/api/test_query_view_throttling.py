@@ -20,7 +20,7 @@ class QueryThrottleDenyAll(BaseThrottle):
         return False
 
     def wait(self) -> float | None:
-        return None
+        return 2.1
 
 
 @pytest.fixture
@@ -70,6 +70,13 @@ def test_query_view_throttle_blocks_before_facade_and_audit(
         response = QueryView.as_view(throttle_classes=(QueryThrottleDenyAll,))(request)
 
     assert response.status_code == 429
+    assert response.data == {
+        "error": {
+            "code": "asklens.budget.exceeded",
+            "message": "The AskLens request exceeds an execution limit.",
+        }
+    }
+    assert response["Retry-After"] == "3"
     assert facade_calls["executed"] is False
     assert events == []
     assert len(captured) == 0

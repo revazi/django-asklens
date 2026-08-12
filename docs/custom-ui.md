@@ -217,6 +217,23 @@ if (response.response_type === "capabilities") {
 }
 ```
 
+## Handle failures
+
+Every handled failure from the four AskLens DRF views uses one route-local shape:
+
+```json
+{
+  "error": {
+    "code": "asklens.authorization.denied",
+    "message": "The current request is not authorized."
+  }
+}
+```
+
+A privacy-aware accepted AskLens failure may also include top-level `run_id` when the database audit sink created a row. Do not look for legacy `response_type`, echoed `question`, redundant `status`, or DRF `detail` fields. Branch on `error.code`, display only `error.message`, and continue honoring the HTTP status plus `Allow`, `WWW-Authenticate`, or `Retry-After` headers where applicable. This adapter is local to AskLens routes; unrelated host DRF endpoints keep the host's configured exception behavior.
+
+Query request objects are strict. Send only `question`, `debug`, `include_presentation`, `plan`, and `presentation`; do not send user IDs, permissions, tenant IDs, scope tokens, audit aliases, or other policy claims. Unknown top-level keys fail before orchestration and are not echoed.
+
 ## Saving queries
 
 A custom UI can save useful questions in local storage, bookmarks, a project-owned database table, or another application-owned model. AskLens does not ship a first-class server-side saved-query model in alpha. A saved item can store:

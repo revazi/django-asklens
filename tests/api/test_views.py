@@ -237,11 +237,10 @@ def test_query_endpoint_normalizes_transport_parse_errors(
 
     assert response.status_code == 400
     assert response.data == {
-        "response_type": "error",
         "error": {
             "code": "asklens.parse.invalid",
-            "message": "The query request could not be parsed.",
-        },
+            "message": "The AskLens request could not be parsed.",
+        }
     }
     assert SemanticQueryRun.objects.count() == 0
 
@@ -916,7 +915,7 @@ def test_query_errors_are_audited_safely(
     )
 
     assert response.status_code == 400
-    assert response.data["status"] == SemanticQueryRun.Status.FAILED
+    assert set(response.data) == {"error", "run_id"}
     assert response.data["error"] == {
         "code": "asklens.member.unavailable",
         "message": "A requested query member is unavailable.",
@@ -969,7 +968,12 @@ def test_run_detail_endpoint_blocks_other_regular_users(api_client: APIClient) -
     response = api_client.get(f"/asklens/runs/{run.pk}/")
 
     assert response.status_code == 404
-    assert response.json() == {"detail": "AskLens run not found."}
+    assert response.json() == {
+        "error": {
+            "code": "asklens.member.unavailable",
+            "message": "A requested query member is unavailable.",
+        }
+    }
 
 
 def test_debug_mode_is_staff_only(

@@ -115,7 +115,7 @@ For query-help UX, AskLens can infer generic row-scope breadth from scoped permi
 
 All AskLens API views use `DJANGO_ASKLENS["API_PERMISSION_CLASSES"]`. The default gate is `django_asklens.access.IsAuthenticated`. API projects can configure DRF permission classes or other DRF-compatible classes appropriate for the project, for example staff-only, role-based, or feature-flagged access.
 
-Run detail applies an additional audit-row policy after that route gate: the owner may read the row, while cross-user review requires global `asklens.view_semanticqueryrun`; `is_staff` alone is insufficient. Lookup is authorization-filtered, so missing and inaccessible IDs share one opaque `404` and reads create no audit row. This global Django permission is for audit review only and must not be accepted from client input or confused with resource/field permission strings.
+Run detail applies an additional audit-row policy after that route gate: the owner may read the row, while cross-user review requires global `asklens.view_semanticqueryrun`; `is_staff` alone is insufficient. Lookup is authorization-filtered, so missing and inaccessible IDs share one opaque `404` `asklens.member.unavailable` envelope and reads create no audit row. This global Django permission is for audit review only and must not be accepted from client input or confused with resource/field permission strings.
 
 Use host DRF/proxy throttling before AskLens execution for route-level request-volume control; see [Host throttling and audit controls](host-throttle-and-audit-controls.md) for examples.
 
