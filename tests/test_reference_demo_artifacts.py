@@ -17,12 +17,93 @@ PRIVATE_EVALUATION_GUIDE = ROOT / "docs" / "private-candidate-evaluation.md"
 PILOT_INTAKE_WORKSHEET = ROOT / "docs" / "pilot-intake-worksheet.md"
 PERFORMANCE_SCRIPT = ROOT / "scripts" / "performance-baseline.sh"
 PERFORMANCE_GUIDE = ROOT / "docs" / "performance-baseline.md"
+HTTP_ENVELOPE_CROSSWALK = ROOT / "docs" / "http-internal-envelope-crosswalk.md"
 
 
 def read_text(path: Path) -> str:
     """Return one committed source artifact as UTF-8 text."""
 
     return path.read_text(encoding="utf-8")
+
+
+def test_http_internal_envelope_crosswalk_maps_current_non_identity() -> None:
+    """The API-2 map stays internal, source-bound, and explicit about wrappers."""
+
+    assert HTTP_ENVELOPE_CROSSWALK.is_file()
+    crosswalk = read_text(HTTP_ENVELOPE_CROSSWALK)
+
+    for heading in (
+        "# Current HTTP/internal-envelope crosswalk",
+        "## Status, baseline, and evidence",
+        "## Terms",
+        "## Route and outcome matrix",
+        "## `GET /asklens/catalog/`",
+        "## `GET /asklens/capabilities/`",
+        "## `POST /asklens/query/` success: query result",
+        "## `POST /asklens/query/` success: capabilities and help",
+        "## Errors and denials",
+        "## `GET /asklens/runs/<int:pk>/`",
+        "## Current non-identities and cleanup candidates",
+        "## Recommended sequential cleanup order",
+        "## Preserved security and package boundaries",
+        "## Limitations",
+    ):
+        assert heading in crosswalk
+
+    for term in (
+        "**Internal document**",
+        "**Exact document**",
+        "**Embedded document**",
+        "**HTTP adapter field**",
+        "**Wrapper**",
+        "**Transport/framework error**",
+        "**Audit representation**",
+    ):
+        assert term in crosswalk
+
+    matrix_header = (
+        "| Route / outcome | Status | Body source | Internal-document relationship "
+        "| Adapter fields | Audit effect | Current cleanup implication |"
+    )
+    assert matrix_header in crosswalk
+
+    for source_link in (
+        "../tests/api/test_http_characterization.py",
+        "../django_asklens/api/views.py",
+        "../django_asklens/querying.py",
+        "../django_asklens/api/serializers.py",
+        "../django_asklens/contracts/_models.py",
+        "../tests/contracts/test_schemas.py",
+        "internal-contracts.md",
+        "conformance.md",
+    ):
+        assert source_link in crosswalk
+
+    for document_name in (
+        "`catalog`",
+        "`capabilities`",
+        "`query-plan`",
+        "`result`",
+        "`error`",
+    ):
+        assert document_name in crosswalk
+
+    normalized = " ".join(crosswalk.split())
+    for required in (
+        "Schema validation is not authorization.",
+        "not every HTTP body is an internal document",
+        "strict unknown request keys",
+        "API-3",
+        "API-4",
+        "API-5",
+        "API-6",
+        "internal, draft, unfrozen, and unversioned",
+        "not a public specification",
+        "not a compatibility promise",
+        "not an independent security audit",
+        "does not authorize",
+    ):
+        assert required in normalized
 
 
 def test_package_provenance_separates_published_and_unreleased_docs() -> None:
