@@ -5,6 +5,7 @@ from typing import Any
 
 import pytest
 from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Permission
 from django.db import connection
 from django.test.utils import CaptureQueriesContext
 from rest_framework.test import APIClient
@@ -628,15 +629,23 @@ def test_staff_debug_success_contains_only_validated_plan_debug_surface(
     assert run.status == SemanticQueryRun.Status.SUCCESS
 
 
-def test_run_detail_characterizes_owner_staff_other_and_missing_distinction(
+def test_run_detail_characterizes_owner_permission_and_opaque_nonexistence(
     api_client: APIClient,
     user,
     staff_user,
     registered_orders: None,
 ) -> None:
-    """Run detail currently distinguishes an inaccessible run from a missing run."""
+    """Run detail uses explicit audit permission and one opaque 404 response."""
 
     other = get_user_model().objects.create_user(username="api-characterization-other")
+    reviewer = get_user_model().objects.create_user(
+        username="api-characterization-reviewer"
+    )
+    permission = Permission.objects.get(
+        content_type__app_label="asklens",
+        codename="view_semanticqueryrun",
+    )
+    reviewer.user_permissions.add(permission)
     api_client.force_authenticate(user=user)
     query = api_client.post(
         "/asklens/query/",
@@ -647,6 +656,8 @@ def test_run_detail_characterizes_owner_staff_other_and_missing_distinction(
     path = f"/asklens/runs/{run.pk}/"
 
     owner_response = api_client.get(path)
+    api_client.force_authenticate(user=reviewer)
+    reviewer_response = api_client.get(path)
     api_client.force_authenticate(user=staff_user)
     staff_response = api_client.get(path)
     api_client.force_authenticate(user=other)
@@ -654,8 +665,8 @@ def test_run_detail_characterizes_owner_staff_other_and_missing_distinction(
     missing_response = api_client.get(f"/asklens/runs/{run.pk + 999_999}/")
 
     assert owner_response.status_code == 200
-    assert staff_response.status_code == 200
-    assert owner_response.data == staff_response.data
+    assert reviewer_response.status_code == 200
+    assert owner_response.data == reviewer_response.data
     assert set(owner_response.data) == {
         "id",
         "question",
@@ -672,17 +683,16 @@ def test_run_detail_characterizes_owner_staff_other_and_missing_distinction(
         "intent": "aggregate",
     }
     assert owner_response.data["status"] == SemanticQueryRun.Status.SUCCESS
+    assert owner_response.data["error"] is None
     assert "user" not in owner_response.data
     detail_text = str(owner_response.data)
     assert QUESTION not in detail_text
     assert PRIVATE_BINDING not in detail_text
     assert PRIVATE_PERMISSION not in detail_text
 
-    assert other_response.status_code == 403
-    assert_json_response(other_response)
-    assert other_response.json() == {
-        "detail": "You do not have access to this AskLens run."
-    }
-    assert missing_response.status_code == 404
-    assert_json_response(missing_response)
-    assert set(missing_response.json()) == {"detail"}
+    assert not staff_user.has_perm("asklens.view_semanticqueryrun")
+    for response in (staff_response, other_response, missing_response):
+        assert response.status_code == 404
+        assert_json_response(response)
+        assert response.json() == {"detail": "AskLens run not found."}
+    assert SemanticQueryRun.objects.count() == 1

@@ -484,7 +484,7 @@ def test_configured_api_permission_class_applies_to_all_asklens_routes(
     assert SemanticQueryRun.objects.count() == 1
 
 
-def test_staff_user_can_view_other_users_run(
+def test_explicit_audit_view_permission_allows_cross_user_run_review(
     api_client: APIClient,
     tenant_data: TenantData,
 ) -> None:
@@ -494,6 +494,11 @@ def test_staff_user_can_view_other_users_run(
         plan={},
         status=SemanticQueryRun.Status.SUCCESS,
     )
+    permission = Permission.objects.get(
+        content_type__app_label="asklens",
+        codename="view_semanticqueryrun",
+    )
+    tenant_data.staff_user.user_permissions.add(permission)
     api_client.force_authenticate(user=tenant_data.staff_user)
 
     response = api_client.get(f"/asklens/runs/{run.pk}/")
