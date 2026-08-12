@@ -8,6 +8,8 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, Literal
 
+from django.db import connections
+from django.db.utils import ConnectionDoesNotExist
 from django.utils import timezone
 from django.utils.module_loading import import_string
 
@@ -19,6 +21,25 @@ type _AuditEvent = Mapping[str, Any]
 type _AuditSink = Callable[[_AuditEvent], Any]
 
 logger = logging.getLogger(__name__)
+
+
+class _AuditDatabaseUnavailable(RuntimeError):
+    """Signal private invalid or unavailable audit database configuration."""
+
+
+def _resolve_audit_database_alias() -> str | None:
+    """Return the optional server-owned built-in audit database alias."""
+
+    alias = get_asklens_setting("AUDIT_DATABASE_ALIAS")
+    if alias is None:
+        return None
+    if not isinstance(alias, str) or not alias or alias != alias.strip():
+        raise _AuditDatabaseUnavailable
+    try:
+        connections[alias]
+    except ConnectionDoesNotExist as exc:
+        raise _AuditDatabaseUnavailable from exc
+    return alias
 
 
 @dataclass(frozen=True, slots=True)
@@ -189,12 +210,18 @@ def _write_database_audit(event: _AuditEvent, *, request: Any) -> Any:
     error_code = event.get("error_code")
     error_message = str(event.get("error_message", ""))
     error = f"{error_code}: {error_message}" if error_code else ""
-    return SemanticQueryRun.objects.create(
-        user=user,
-        question=question,
-        plan=plan,
-        status=str(event["status"]),
-        row_count=int(event["row_count"]),
-        duration_ms=event.get("duration_ms"),
-        error=error,
+    values = {
+        "question": question,
+        "plan": plan,
+        "status": str(event["status"]),
+        "row_count": int(event["row_count"]),
+        "duration_ms": event.get("duration_ms"),
+        "error": error,
+    }
+    alias = _resolve_audit_database_alias()
+    if alias is None:
+        return SemanticQueryRun.objects.create(user=user, **values)
+    return SemanticQueryRun.objects.using(alias).create(
+        user_id=getattr(user, "pk", None),
+        **values,
     )

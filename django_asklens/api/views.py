@@ -1,7 +1,8 @@
 """DRF views for the AskLens API."""
 
-from django.shortcuts import get_object_or_404
-from rest_framework.exceptions import PermissionDenied
+from django.db import DatabaseError
+from django.db.utils import ConnectionDoesNotExist
+from rest_framework.exceptions import APIException, NotFound
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -13,6 +14,10 @@ from django_asklens.api.serializers import (
 )
 from django_asklens.catalog.capabilities import build_capabilities
 from django_asklens.catalog.registry import serialize_catalog
+from django_asklens.execution.audit import (
+    _AuditDatabaseUnavailable,
+    _resolve_audit_database_alias,
+)
 from django_asklens.models import SemanticQueryRun
 from django_asklens.permissions import get_request_permissions
 from django_asklens.querying import (
@@ -101,15 +106,40 @@ class QueryView(AskLensAPIView):
         return Response(outcome.payload, status=outcome.status_code)
 
 
+class _AuditRecordsUnavailable(APIException):
+    """Return one fixed safe response for audit database failures."""
+
+    status_code = 503
+    default_detail = "AskLens audit records are unavailable."
+    default_code = "audit_unavailable"
+
+
 class QueryRunDetailView(AskLensAPIView):
     """Return one audited query run."""
 
     def get(self, request: Request, pk: int) -> Response:
-        """Return a query run if the requester may view it."""
+        """Return a run selected through current authorization and audit routing."""
 
-        run = get_object_or_404(SemanticQueryRun, pk=pk)
-        if not can_view_run(request, run):
-            raise PermissionDenied("You do not have access to this AskLens run.")
+        try:
+            alias = _resolve_audit_database_alias()
+            queryset = SemanticQueryRun.objects.all()
+            if alias is not None:
+                queryset = queryset.using(alias)
+            user = request.user
+            if not getattr(user, "is_authenticated", False):
+                queryset = queryset.none()
+            elif not user.has_perm("asklens.view_semanticqueryrun"):
+                queryset = queryset.filter(user_id=user.pk)
+            try:
+                run = queryset.get(pk=pk)
+            except SemanticQueryRun.DoesNotExist:
+                raise NotFound("AskLens run not found.") from None
+        except (
+            _AuditDatabaseUnavailable,
+            ConnectionDoesNotExist,
+            DatabaseError,
+        ):
+            raise _AuditRecordsUnavailable from None
         return Response(SemanticQueryRunSerializer(run).data)
 
 
@@ -117,6 +147,7 @@ def can_view_run(request: Request, run: SemanticQueryRun) -> bool:
     """Return whether a request user can view a run."""
 
     user = request.user
-    if getattr(user, "is_staff", False):
-        return True
-    return bool(getattr(user, "is_authenticated", False) and run.user_id == user.pk)
+    return bool(
+        getattr(user, "is_authenticated", False)
+        and (run.user_id == user.pk or user.has_perm("asklens.view_semanticqueryrun"))
+    )

@@ -302,11 +302,22 @@ Audit settings are server-owned:
 DJANGO_ASKLENS = {
     "AUDIT_MODE": "database",  # "database", "disabled", or "custom"
     "AUDIT_INCLUDE_CONTENT": False,
+    "AUDIT_DATABASE_ALIAS": None,  # or one trusted non-empty Django alias
     "AUDIT_SINK": None,  # callable/import path required for "custom"
 }
 ```
 
-A custom sink receives a safe operational event mapping and adds no database SQL unless the host sink chooses to do so. Disabled mode adds no audit SQL. Setting `AUDIT_INCLUDE_CONTENT=True` adds the question and complete validated plan to database/custom events; enable it only with an explicit retention, access, redaction, and deletion policy. Audit-sink failure is logged server-side and does not trigger rejected-plan execution or replace a successful query result.
+A custom sink receives a safe operational event mapping and adds no database SQL unless the host sink chooses to do so. Disabled mode adds no audit SQL. Setting `AUDIT_INCLUDE_CONTENT=True` adds the question and complete validated plan to database/custom events; enable it only with an explicit retention, access, redaction, deletion, backup, and replica policy. Audit-sink failure is logged server-side and does not trigger rejected-plan execution or replace a successful query result.
+
+`AUDIT_DATABASE_ALIAS=None` preserves ordinary Django database routing for built-in audit writes and run-detail reads. A configured non-empty alias is server-owned and used explicitly for both operations; HTTP/query payloads cannot select it, and failure never falls back to `default`. A malformed, missing, or unavailable alias produces normal audit-sink failure behavior for writes and one fixed safe unavailable response for run-detail reads without reflecting database diagnostics. Explicit lifecycle-command `--database` selection is independent and unchanged.
+
+### Run-detail access and display policy
+
+`GET /asklens/runs/<id>/` is an audit view, not an internal result or error document. Configured API permission classes run first. After that route gate, a row is fetched only through an authorization-filtered queryset: the owner may read it, and cross-user audit review requires Django's global `asklens.view_semanticqueryrun` permission. `is_staff` alone is insufficient; active superusers follow Django's normal `has_perm()` behavior. Missing and inaccessible IDs return the same opaque `404` body, and reads create no audit row.
+
+The current content setting is enforced again at serialization time. Unless `AUDIT_INCLUDE_CONTENT` is exactly the boolean `True`, `question` is blank and `plan` contains only safe resource/intent operational metadata, even if a legacy or manually populated row retained more content. With explicit boolean `True`, an authorized viewer may receive the stored question and full plan; the host must then govern retention, access, redaction, deletion, backups, replicas, and every other display/export path.
+
+The model's free-form `error` text is never returned. Failed rows expose a structured safe `{code, message}` derived from a recognized AskLens code and its canonical public message; unknown or malformed stored text becomes one fixed generic safe error. Successful rows and blank errors return `null`. Do not place private Django bindings, permission strings, tenant identifiers, credentials, rows, provider payloads, raw rejected content, or database diagnostics in audit responses or host-written audit fields.
 
 ### Manual database-audit lifecycle commands
 

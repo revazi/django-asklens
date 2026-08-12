@@ -114,6 +114,9 @@ For query-help UX, AskLens can infer generic row-scope breadth from scoped permi
 ## Route-level gates
 
 All AskLens API views use `DJANGO_ASKLENS["API_PERMISSION_CLASSES"]`. The default gate is `django_asklens.access.IsAuthenticated`. API projects can configure DRF permission classes or other DRF-compatible classes appropriate for the project, for example staff-only, role-based, or feature-flagged access.
+
+Run detail applies an additional audit-row policy after that route gate: the owner may read the row, while cross-user review requires global `asklens.view_semanticqueryrun`; `is_staff` alone is insufficient. Lookup is authorization-filtered, so missing and inaccessible IDs share one opaque `404` and reads create no audit row. This global Django permission is for audit review only and must not be accepted from client input or confused with resource/field permission strings.
+
 Use host DRF/proxy throttling before AskLens execution for route-level request-volume control; see [Host throttling and audit controls](host-throttle-and-audit-controls.md) for examples.
 
 ```python
@@ -136,6 +139,6 @@ DJANGO_ASKLENS = {
   `statement_timeout` in `OPTIONS` is the correct PostgreSQL connection setting pattern.
 - Request timeout remains host-owned at the ASGI/WSGI/proxy boundary and should remain coordinated with database statement timeout.
 - If strict read-only query credentials are required, evaluate `AUDIT_MODE="custom"` or `disabled`; otherwise route audit writes through approved host-owned write routing.
-- `.using("asklens_read")` changes only scoped data-query execution; built-in database audit writes continue through normal Django write connection routing.
-- If your application uses a separate audit connection, ensure the same tenant and cross-database topology assumptions (including FK constraints and replica consistency) are explicit and reviewed.
+- `.using("asklens_read")` on a scope queryset changes only application-data execution. Built-in audit writes and run-detail reads use ordinary Django routing while `AUDIT_DATABASE_ALIAS=None`, or one explicit non-empty server-owned `AUDIT_DATABASE_ALIAS` when configured. Clients cannot select the audit alias and failure never falls back to `default`; lifecycle command `--database` remains independent.
+- If your application uses a separate audit connection, ensure referenced-user/FK data, tenant and cross-database topology assumptions, write availability, migrations, and replica consistency are explicit and reviewed. Full-content retention also requires host-owned access, display/export redaction, deletion, backup, and replica policy.
 - Scope reads must be server-owned, explicit, and reviewed: no alias may be derived from client request fields, no broad fallback alias is allowed, and fail-closed errors must remain the host-owned control path. Using a valid Django database router is acceptable when it is explicit, deterministic, and not client-driven.

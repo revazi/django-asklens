@@ -968,7 +968,8 @@ def test_run_detail_endpoint_blocks_other_regular_users(api_client: APIClient) -
     api_client.force_authenticate(user=other)
     response = api_client.get(f"/asklens/runs/{run.pk}/")
 
-    assert response.status_code == 403
+    assert response.status_code == 404
+    assert response.json() == {"detail": "AskLens run not found."}
 
 
 def test_debug_mode_is_staff_only(

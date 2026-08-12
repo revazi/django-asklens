@@ -126,13 +126,42 @@ Do **not** include, export, or index these request-level values by default:
 - tenant IDs or raw user identifiers;
 - provider payloads.
 
-## 6) Sink failures and control boundaries
+## 6) Built-in database audit routing and read privacy
+
+`DJANGO_ASKLENS["AUDIT_DATABASE_ALIAS"]` is optional and server-owned. `None`
+preserves ordinary Django write/read routing. A configured non-empty alias is
+used explicitly for built-in `SemanticQueryRun` writes and
+`GET /asklens/runs/<id>/` reads; client payloads cannot override it and failures
+do not fall back to `default`. Malformed, nonexistent, unavailable, or missing-
+table aliases use normal sink-failure behavior on write and one fixed safe
+unavailable response on read without reflecting alias/database diagnostics.
+Lifecycle command `--database` selection remains an independent explicit
+operator choice.
+
+Configured API permission classes still gate run detail before lookup. The
+owner may read a row; cross-user review requires Django's global
+`asklens.view_semanticqueryrun` permission. `is_staff` alone is not enough, while
+active superusers follow normal Django permission behavior. Authorization is
+part of the queryset, so missing and inaccessible IDs share an opaque `404` and
+a read creates no new audit event.
+
+Run-detail serialization reapplies the current content policy. Unless
+`AUDIT_INCLUDE_CONTENT` is exactly boolean `True`, questions are blank and plans
+are reduced to safe resource/intent metadata even for legacy rows. Stored free-
+form error text is never reflected: recognized AskLens codes receive canonical
+safe messages, unknown/malformed text receives a fixed generic safe error, and
+success/blank errors become `null`. Full-content hosts own retention, access,
+redaction, deletion, backups, replicas, and every alternate display/export
+surface. Never place bindings, permission strings, tenant IDs, credentials,
+rows, provider payloads, or raw rejected input into host audit views.
+
+## 7) Sink failures and control boundaries
 
 `AUDIT_SINK` failures must be logged and ignored for execution flow.
 A sink error must not trigger query re-run, nor become an authorization or rate
 limiter gate.
 
-## 7) Manual built-in database-audit lifecycle commands
+## 8) Manual built-in database-audit lifecycle commands
 
 AskLens provides manual, preview-by-default redaction and irreversible purge for
 built-in `SemanticQueryRun` rows:
@@ -183,7 +212,7 @@ workflows; they are not universal host authorization or mutation controls and
 do not prevent ORM, direct database, custom-sink, or host-defined administrative
 writes. Restrict command execution and every other storage path separately.
 
-## 8) No mandatory telemetry or queueing dependencies
+## 9) No mandatory telemetry or queueing dependencies
 
 AskLens does not require OpenTelemetry, Prometheus, background queues, a cache,
 or service mesh to satisfy this hardening slice.

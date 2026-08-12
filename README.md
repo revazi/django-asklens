@@ -287,9 +287,11 @@ Live provider tests are opt-in and skipped by default. See [Provider configurati
 - AskLens executes read-only Django ORM queries only.
 - AskLens does not execute LLM-generated SQL.
 - AskLens does not create, update, or delete application data; its own optional/default audit sink may write one `SemanticQueryRun` metadata record per query attempt.
-- Default audit records omit questions, filter values, and complete plans unless `AUDIT_INCLUDE_CONTENT=True` is explicitly configured.
+- Default audit records omit questions, filter values, and complete plans unless `AUDIT_INCLUDE_CONTENT=True` is explicitly configured; run detail reapplies that current policy even to legacy rows.
+- Run detail is owner-only unless the current user has global `asklens.view_semanticqueryrun`; `is_staff` alone is insufficient, inaccessible/missing IDs share an opaque `404`, and stored free-form errors are returned only as canonical safe `{code, message}` metadata or `null`.
+- Built-in audit writes and run-detail reads may use one optional server-owned `AUDIT_DATABASE_ALIAS`; clients cannot select it and a configured alias never falls back to `default`.
 - AskLens does not send database rows, sample values, secrets, credentials, or `.env` content to providers by default.
-- Query runs are audited.
+- Query runs are audited; hosts own audit retention, access, redaction, deletion, backups, replicas, and any full-content policy.
 
 Review the [security checklist](docs/security-checklist.md) and [production checklist](docs/production-checklist.md) before enabling AskLens outside local development.
 

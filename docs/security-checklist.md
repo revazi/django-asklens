@@ -37,7 +37,7 @@ Use this checklist before enabling AskLens outside local development.
 - [ ] Verify anonymous route denials create no AskLens audit row, while each orchestrated denial/success creates exactly one metadata-only audit row under database mode; keep questions blank and plans limited to operational resource/intent unless full content is explicitly justified.
 - [ ] Treat host-owned throttling, concurrency, database statement timeout, and request timeout as required deployment controls; route authentication, semantic budgets, and row limits do not replace them.
 - [ ] Restrict `debug=true` to staff users or a stronger permission gate.
-- [ ] Ensure run-detail access is scoped to the requesting user unless a staff/admin policy is intended.
+- [ ] Keep run detail owner-only unless cross-user reviewers receive global `asklens.view_semanticqueryrun`; do not treat `is_staff` alone as audit access. Prove inaccessible and missing IDs share the same opaque `404` and reads create no audit row.
 - [ ] If using the optional API integration, verify configured `DJANGO_ASKLENS["API_PERMISSION_CLASSES"]` gates every AskLens route.
 - [ ] If using the optional API integration, configure host-side DRF/proxy throttles before execution and confirm throttled requests never reach AskLens facade logic.
   See [Host throttling and audit controls](host-throttle-and-audit-controls.md).
@@ -54,6 +54,8 @@ Use this checklist before enabling AskLens outside local development.
 ## Audit safety
 
 - [ ] Select `AUDIT_MODE` deliberately and keep `AUDIT_INCLUDE_CONTENT=False` by default.
+- [ ] If setting `AUDIT_DATABASE_ALIAS`, use one trusted non-empty server-owned alias and prove built-in writes/run-detail reads use it without client override or fallback to `default`; keep lifecycle command `--database` handling independent.
+- [ ] Test display-time redaction of legacy/full-content rows while current content policy is off, and consume run-detail errors only as canonical safe `{code, message}` or `null`, never stored free-form text.
 - [ ] Define retention, access, redaction, and deletion policy even for metadata-only records; AskLens does not schedule lifecycle work or automatically expire audit rows.
 - [ ] Preview built-in database content redaction with `redact_asklens_audit --before <strict-aware-RFC3339>` and review its point-in-time count before explicitly adding `--execute`; grant update permission only on the selected alias used for execution.
 - [ ] Preview irreversible deletion with `purge_asklens_audit --before <strict-aware-RFC3339>`; test backup/restore first and grant delete plus related-object permissions only on the selected execution alias.

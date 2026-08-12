@@ -231,7 +231,7 @@ def verify_browser_and_api(playwright: Playwright, base_url: str) -> None:
         )
         assert listed_audit["question"] == ""
         assert listed_audit["plan"] == {"resource": "members", "intent": "list"}
-        assert listed_audit["error"] == ""
+        assert listed_audit["error"] is None
         print("PASS scoped list query, typed canonical JSON, and API run route")
 
         no_report_context = browser.new_context()
