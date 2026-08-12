@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import importlib
 import importlib.util
 import os
 import sys
@@ -39,6 +40,25 @@ def smoke_core_install() -> None:
     import django_asklens.execution as execution_package
 
     assert django_asklens.__version__ == "0.1.0a1"
+    assert django_asklens.__all__ == [
+        "CONTRACT_SCHEMA_NAMES",
+        "Metric",
+        "SemanticResource",
+        "__version__",
+        "build_capabilities",
+        "get_contract_schema",
+        "get_resource",
+        "list_contract_schemas",
+        "register",
+        "serialize_catalog",
+    ]
+    assert importlib.util.find_spec("django_asklens.api.querying") is None
+    try:
+        importlib.import_module("django_asklens.api.querying")
+    except ModuleNotFoundError as exc:
+        assert exc.name == "django_asklens.api.querying"
+    else:
+        raise AssertionError("Removed API querying compatibility module is importable")
     assert django_asklens.list_contract_schemas() == (
         "catalog",
         "query-plan",
@@ -54,6 +74,13 @@ def smoke_core_install() -> None:
     assert not hasattr(execution_package, "execute_query")
     assert not hasattr(compiler_package, "compile_query_plan")
     configure_settings(installed_apps=["django_asklens"])
+
+    import django_asklens.querying as querying_package
+
+    assert querying_package.__all__ == [
+        "AskLensQueryResponse",
+        "execute_asklens_query_request",
+    ]
     commands = get_commands()
     assert commands["redact_asklens_audit"] == "django_asklens"
     assert commands["purge_asklens_audit"] == "django_asklens"
@@ -310,8 +337,17 @@ def smoke_api_extra_install() -> None:
     )
 
     import django_asklens.api.urls
+    from django_asklens.api import views
 
     assert django_asklens.api.urls.urlpatterns
+    assert views.__all__ == [
+        "AskLensAPIView",
+        "CapabilitiesView",
+        "CatalogView",
+        "QueryRunDetailView",
+        "QueryView",
+    ]
+    assert importlib.util.find_spec("django_asklens.api.querying") is None
 
 
 def configure_settings(

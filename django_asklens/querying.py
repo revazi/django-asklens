@@ -10,11 +10,7 @@ from django_asklens.catalog.capabilities import (
     build_query_guidance,
 )
 from django_asklens.catalog.registry import serialize_catalog
-from django_asklens.exceptions import (
-    AskLensError,
-    PublicErrorPayload,
-    public_error_payload,
-)
+from django_asklens.exceptions import AskLensError, public_error_payload
 from django_asklens.execution import QueryResult, execute_plan
 from django_asklens.execution.audit import (
     _audit_external_rejection,
@@ -43,24 +39,11 @@ from django_asklens.planning.intents import (
 from django_asklens.results import normalize_presentation
 from django_asklens.settings import get_asklens_setting
 
-QueryResponseType = Literal["query", "capabilities", "error"]
+_QueryResponseType = Literal["query", "capabilities", "error"]
 
 __all__ = [
     "AskLensQueryResponse",
-    "QueryResponseType",
-    "build_capabilities_payload",
-    "build_result_metadata",
-    "build_success_payload",
-    "enforce_debug_permission",
     "execute_asklens_query_request",
-    "get_query_help_for_capabilities",
-    "get_user_permissions",
-    "safe_error_category",
-    "safe_error_message",
-    "safe_error_payload",
-    "safe_provider_fallback_message",
-    "should_return_capabilities_fallback",
-    "should_use_unified_provider_response",
 ]
 
 
@@ -68,7 +51,7 @@ __all__ = [
 class AskLensQueryResponse:
     """A shared AskLens query/help response."""
 
-    response_type: QueryResponseType
+    response_type: _QueryResponseType
     payload: dict[str, Any]
     status_code: int = 200
     run: SemanticQueryRun | None = None
@@ -90,7 +73,7 @@ def execute_asklens_query_request(
     audit writes, and safe fallbacks do not drift across surfaces.
     """
 
-    enforce_debug_permission(request, debug=debug)
+    _enforce_debug_permission(request, debug=debug)
     permissions = get_request_permissions(request)
 
     try:
@@ -98,7 +81,7 @@ def execute_asklens_query_request(
             presentation = parse_presentation(provided_presentation)
             if provided_plan is not None:
                 untrusted_plan = provided_plan
-            elif should_use_unified_provider_response():
+            elif _should_use_unified_provider_response():
                 query_guidance = build_query_guidance(permissions=permissions)
                 provider_result = plan_asklens_response(
                     question,
@@ -109,7 +92,7 @@ def execute_asklens_query_request(
                     assert provider_result.query_help is not None
                     return AskLensQueryResponse(
                         response_type="capabilities",
-                        payload=build_capabilities_payload(
+                        payload=_build_capabilities_payload(
                             question,
                             intent=capabilities_intent(),
                             source="semantic_provider",
@@ -136,14 +119,14 @@ def execute_asklens_query_request(
                         query_help,
                         query_help_source,
                         query_help_error,
-                    ) = get_query_help_for_capabilities(
+                    ) = _get_query_help_for_capabilities(
                         question,
                         capabilities=query_guidance,
                         permissions=permissions,
                     )
                     return AskLensQueryResponse(
                         response_type="capabilities",
-                        payload=build_capabilities_payload(
+                        payload=_build_capabilities_payload(
                             question,
                             intent=routing_result.intent,
                             source=routing_result.source,
@@ -163,12 +146,12 @@ def execute_asklens_query_request(
             plan = query_result._validated_plan
             assert plan is not None
             run = _database_audit_record(query_result._audit_record)
-            payload = build_success_payload(
+            payload = _build_success_payload(
                 run=run,
                 question=question,
                 plan=plan.model_dump(mode="json"),
                 query_result=query_result.to_dict(),
-                presentation=build_presentation_payload(
+                presentation=_build_presentation_payload(
                     presentation,
                     query_result=query_result,
                     include_presentation=include_presentation,
@@ -181,14 +164,14 @@ def execute_asklens_query_request(
                 run=run,
             )
     except AskLensError as exc:
-        if should_return_capabilities_fallback(
+        if _should_return_capabilities_fallback(
             question,
             provided_plan=provided_plan,
         ):
             query_guidance = build_query_guidance(permissions=permissions)
             return AskLensQueryResponse(
                 response_type="capabilities",
-                payload=build_capabilities_payload(
+                payload=_build_capabilities_payload(
                     question,
                     intent=capabilities_intent(confidence=0.5),
                     source="fallback",
@@ -199,7 +182,7 @@ def execute_asklens_query_request(
                         permissions=tuple(permissions),
                     ),
                     query_help_source="deterministic_fallback",
-                    query_help_error=safe_provider_fallback_message(exc),
+                    query_help_error=_safe_provider_fallback_message(exc),
                 ),
             )
 
@@ -210,7 +193,7 @@ def execute_asklens_query_request(
                     _audit_external_rejection(request=request, error=exc)
                 )
 
-        error_payload = safe_error_payload(exc)
+        error_payload = public_error_payload(exc)
         payload: dict[str, Any] = {
             "question": question,
             "status": SemanticQueryRun.Status.FAILED,
@@ -226,13 +209,13 @@ def execute_asklens_query_request(
         )
 
 
-def should_use_unified_provider_response() -> bool:
+def _should_use_unified_provider_response() -> bool:
     """Return whether live query requests should use one unified provider call."""
 
     return get_asklens_setting("LLM_BACKEND") != "dummy"
 
 
-def should_return_capabilities_fallback(
+def _should_return_capabilities_fallback(
     question: str,
     *,
     provided_plan: Any,
@@ -241,22 +224,16 @@ def should_return_capabilities_fallback(
 
     return (
         provided_plan is None
-        and should_use_unified_provider_response()
+        and _should_use_unified_provider_response()
         and is_capabilities_fallback_question(question)
     )
 
 
-def enforce_debug_permission(request: Any, *, debug: bool) -> None:
+def _enforce_debug_permission(request: Any, *, debug: bool) -> None:
     """Restrict debug mode to staff users."""
 
     if debug and not getattr(request.user, "is_staff", False):
         raise PermissionDenied("Debug mode is restricted to staff users.")
-
-
-def get_user_permissions(request: Any) -> frozenset[str]:
-    """Return permission strings for the authenticated request."""
-
-    return get_request_permissions(request)
 
 
 def _database_audit_record(value: Any) -> SemanticQueryRun | None:
@@ -265,7 +242,7 @@ def _database_audit_record(value: Any) -> SemanticQueryRun | None:
     return value if isinstance(value, SemanticQueryRun) else None
 
 
-def get_query_help_for_capabilities(
+def _get_query_help_for_capabilities(
     question: str,
     *,
     capabilities: dict[str, Any],
@@ -301,11 +278,11 @@ def get_query_help_for_capabilities(
                 permissions=tuple(permissions or ()),
             ),
             "deterministic_fallback",
-            safe_provider_fallback_message(exc),
+            _safe_provider_fallback_message(exc),
         )
 
 
-def build_capabilities_payload(
+def _build_capabilities_payload(
     question: str,
     *,
     intent: QuestionIntent,
@@ -336,7 +313,7 @@ def build_capabilities_payload(
     return payload
 
 
-def build_success_payload(
+def _build_success_payload(
     *,
     run: SemanticQueryRun | None,
     question: str,
@@ -355,7 +332,7 @@ def build_success_payload(
         "data": query_result["data"],
         "row_count": query_result["row_count"],
         "duration_ms": query_result["duration_ms"],
-        "result_metadata": build_result_metadata(
+        "result_metadata": _build_result_metadata(
             limit=int(query_result["result_metadata"]["limit"]),
             limit_scope=query_result["result_metadata"]["limit_scope"],
             truncated=bool(query_result["result_metadata"]["truncated"]),
@@ -371,7 +348,7 @@ def build_success_payload(
     return payload
 
 
-def build_presentation_payload(
+def _build_presentation_payload(
     presentation: PresentationSpec | None,
     *,
     query_result: QueryResult,
@@ -397,7 +374,7 @@ def build_presentation_payload(
         return {"kind": "table"}
 
 
-def build_result_metadata(
+def _build_result_metadata(
     *,
     limit: int,
     limit_scope: str,
@@ -412,7 +389,7 @@ def build_result_metadata(
     }
 
 
-def safe_provider_fallback_message(exc: AskLensError) -> str:
+def _safe_provider_fallback_message(exc: AskLensError) -> str:
     """Return a provider-fallback reason without raw provider details."""
 
     if exc.code == "asklens.provider.failed":
@@ -432,21 +409,3 @@ def safe_provider_fallback_message(exc: AskLensError) -> str:
     else:  # pragma: no cover - AskLensErrorCode is exhaustive
         reason = "Provider output could not be used."
     return f"{reason} Returned deterministic AskLens help instead."
-
-
-def safe_error_category(exc: AskLensError) -> str:
-    """Return the stable namespaced public error code."""
-
-    return exc.code
-
-
-def safe_error_message(exc: AskLensError) -> str:
-    """Return the stable safe public error message."""
-
-    return exc.public_message
-
-
-def safe_error_payload(exc: AskLensError) -> PublicErrorPayload:
-    """Return the shared public error object for adapters."""
-
-    return public_error_payload(exc)

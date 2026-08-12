@@ -226,9 +226,43 @@ specification or as an authorization token. Existing plan consumers must still
 migrate payloads to the current strict shape and execute through the trusted
 facade.
 
+## 11. Update shared-orchestration and view imports
+
+The deprecated DRF-era compatibility module is removed. Replace imports such as:
+
+```python
+from django_asklens.api.querying import execute_asklens_query_request
+```
+
+with the framework-neutral canonical path:
+
+```python
+from django_asklens.querying import execute_asklens_query_request
+```
+
+`django_asklens.querying` publicly exports only
+`AskLensQueryResponse` and `execute_asklens_query_request`. Its payloads,
+permissions, audit behavior, and trusted `execute_plan()` delegation are
+unchanged by this import cleanup. Do not import orchestration steps such as
+payload builders, debug checks, provider fallbacks, or error helpers directly.
+
+Import optional DRF view classes from `django_asklens.api.views`; that module
+exports exactly `AskLensAPIView`, `CapabilitiesView`, `CatalogView`,
+`QueryRunDetailView`, and `QueryView`. Do not import orchestration helpers from
+the view module.
+
+The deliberate root imports from `django_asklens`—registration/catalog types and
+helpers, package version, and internal-schema accessors—remain retained. This is
+an intentional alpha cleanup without a compatibility shim. Repository usage and
+indexed public-code searches informed the removals, but they cannot prove every
+private consumer; inventory direct imports in each host project before replacing
+the package.
+
 ## Migration checklist
 
 - [ ] Route every executing adapter through `execute_plan()`.
+- [ ] Replace `django_asklens.api.querying` and direct orchestration-helper
+      imports with the canonical paths above.
 - [ ] Add `timezone=` to every resource.
 - [ ] Declare effective scope and every context scope provider.
 - [ ] Add field `binding`, `type`, and `nullable` metadata.

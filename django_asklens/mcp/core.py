@@ -11,14 +11,13 @@ from typing import Any
 
 from django_asklens.catalog.capabilities import build_capabilities
 from django_asklens.catalog.registry import serialize_catalog
-from django_asklens.exceptions import AskLensError
+from django_asklens.exceptions import AskLensError, public_error_payload
 from django_asklens.permissions import get_request_permissions
 from django_asklens.planning.schemas import get_query_plan_json_schema
 from django_asklens.planning.validation import parse_and_validate_query_plan
 from django_asklens.querying import (
     AskLensQueryResponse,
     execute_asklens_query_request,
-    safe_error_payload,
 )
 from django_asklens.settings import get_asklens_setting
 
@@ -227,7 +226,7 @@ def asklens_validate_plan(
             "valid": False,
             "executed": False,
             "rows_omitted": True,
-            "error": safe_error_payload(exc),
+            "error": public_error_payload(exc),
         }
 
     return {

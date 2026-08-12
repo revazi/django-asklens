@@ -20,17 +20,7 @@ from django_asklens.execution.audit import (
 )
 from django_asklens.models import SemanticQueryRun
 from django_asklens.permissions import get_request_permissions
-from django_asklens.querying import (
-    build_capabilities_payload,
-    build_success_payload,
-    enforce_debug_permission,
-    execute_asklens_query_request,
-    get_query_help_for_capabilities,
-    get_user_permissions,
-    safe_error_message,
-    should_return_capabilities_fallback,
-    should_use_unified_provider_response,
-)
+from django_asklens.querying import execute_asklens_query_request
 
 __all__ = [
     "AskLensAPIView",
@@ -38,15 +28,6 @@ __all__ = [
     "CatalogView",
     "QueryRunDetailView",
     "QueryView",
-    "build_capabilities_payload",
-    "build_success_payload",
-    "can_view_run",
-    "enforce_debug_permission",
-    "get_query_help_for_capabilities",
-    "get_user_permissions",
-    "safe_error_message",
-    "should_return_capabilities_fallback",
-    "should_use_unified_provider_response",
 ]
 
 
@@ -141,13 +122,3 @@ class QueryRunDetailView(AskLensAPIView):
         ):
             raise _AuditRecordsUnavailable from None
         return Response(SemanticQueryRunSerializer(run).data)
-
-
-def can_view_run(request: Request, run: SemanticQueryRun) -> bool:
-    """Return whether a request user can view a run."""
-
-    user = request.user
-    return bool(
-        getattr(user, "is_authenticated", False)
-        and (run.user_id == user.pk or user.has_perm("asklens.view_semanticqueryrun"))
-    )

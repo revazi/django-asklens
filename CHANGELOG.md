@@ -58,6 +58,8 @@ The project is alpha and APIs may change before a stable release.
 
 ### Removed
 
+- Removed the deprecated `django_asklens.api.querying` compatibility module. Import the supported shared orchestrator from `django_asklens.querying` instead; no module shim or alias remains.
+- Removed accidental orchestration-helper exports from `django_asklens.querying` and `django_asklens.api.views`. Canonical querying exports are now `AskLensQueryResponse` and `execute_asklens_query_request`; the view module exports only its five view classes. Deliberate root `django_asklens` exports remain unchanged.
 - Removed `compile_query_plan`, `CompiledQuery`, and `execute_query` from public package exports. Python callers must use `execute_plan()`; there is no supported unsafe execution API.
 - Removed the `include_internal=True` catalog option; public catalog serialization no longer exposes Django model labels.
 - Removed the standalone `create_query_run` compatibility export so supported execution cannot bypass the configured privacy-aware audit policy/sink.
