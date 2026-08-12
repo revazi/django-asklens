@@ -143,7 +143,12 @@ def test_run_detail_staff_without_permission_gets_opaque_404(
     response = api_client.get(f"/asklens/runs/{audit_run.pk}/")
 
     assert response.status_code == 404
-    assert response.json() == {"detail": "AskLens run not found."}
+    assert response.json() == {
+        "error": {
+            "code": "asklens.member.unavailable",
+            "message": "A requested query member is unavailable.",
+        }
+    }
 
 
 def test_run_detail_explicit_view_permission_allows_cross_user_review(
@@ -209,7 +214,10 @@ def test_run_detail_anonymous_and_configured_route_gates_still_run_first(
 
     assert configured_denial.status_code == 403
     assert configured_denial.json() == {
-        "detail": "You do not have permission to perform this action."
+        "error": {
+            "code": "asklens.authorization.denied",
+            "message": "The current request is not authorized.",
+        }
     }
     assert SemanticQueryRun.objects.count() == 1
 
@@ -240,8 +248,18 @@ def test_run_detail_inaccessible_and_missing_are_one_query_opaque_404s_without_a
 
     assert [response.status_code for response in responses] == [404, 404]
     assert [response.json() for response in responses] == [
-        {"detail": "AskLens run not found."},
-        {"detail": "AskLens run not found."},
+        {
+            "error": {
+                "code": "asklens.member.unavailable",
+                "message": "A requested query member is unavailable.",
+            }
+        },
+        {
+            "error": {
+                "code": "asklens.member.unavailable",
+                "message": "A requested query member is unavailable.",
+            }
+        },
     ]
 
 
@@ -420,7 +438,6 @@ def test_configured_alias_controls_database_audit_write_and_read_without_client_
             {
                 "question": QUESTION,
                 "plan": aggregate_plan(),
-                "audit_database_alias": "default",
             },
             format="json",
         )
@@ -472,7 +489,12 @@ def test_malformed_audit_alias_returns_fixed_safe_detail_response(
     response = api_client.get(f"/asklens/runs/{run.pk}/")
 
     assert response.status_code == 503
-    assert response.json() == {"detail": "AskLens audit records are unavailable."}
+    assert response.json() == {
+        "error": {
+            "code": "asklens.execute.failed",
+            "message": "The AskLens request could not be completed.",
+        }
+    }
     if malformed_alias:
         assert str(malformed_alias) not in response.content.decode()
 
@@ -512,5 +534,10 @@ def test_invalid_audit_alias_fails_safely_without_default_fallback(
     detail = api_client.get(f"/asklens/runs/{default_run.pk}/")
 
     assert detail.status_code == 503
-    assert detail.json() == {"detail": "AskLens audit records are unavailable."}
+    assert detail.json() == {
+        "error": {
+            "code": "asklens.execute.failed",
+            "message": "The AskLens request could not be completed.",
+        }
+    }
     assert "missing_synthetic_alias" not in detail.content.decode()

@@ -7,6 +7,9 @@ from django.core.management import call_command
 from django.core.management.base import CommandError
 
 from django_asklens.catalog.registry import default_registry
+from tests.test_project.management.commands.validate_live_asklens_demo import (
+    summarize_error,
+)
 
 pytestmark = pytest.mark.django_db
 
@@ -70,6 +73,30 @@ def test_validate_live_demo_command_can_run_offline_smoke(settings) -> None:
     assert "USER admin" in output
     assert "HTTP 200 capabilities" in output
     assert "suggestions=" in output
+
+
+def test_validate_live_demo_error_summary_consumes_only_current_error_envelope() -> (
+    None
+):
+    """The demo command no longer parses the removed DRF detail shape."""
+
+    summary = summarize_error(
+        403,
+        {
+            "error": {
+                "code": "asklens.authorization.denied",
+                "message": "The current request is not authorized.",
+            }
+        },
+    )
+
+    assert summary == (
+        "HTTP 403 error=asklens.authorization.denied: "
+        "The current request is not authorized."
+    )
+    assert summarize_error(500, {"detail": "private old diagnostic"}) == (
+        "HTTP 500 error=asklens.execute.failed"
+    )
 
 
 def test_validate_live_demo_command_reports_missing_seed_user(settings) -> None:

@@ -561,6 +561,40 @@ anonymous_query_response = anonymous_client.post(
 )
 assert anonymous_catalog_response.status_code == 403
 assert anonymous_query_response.status_code == 403
+expected_authorization_error = {
+    "error": {
+        "code": "asklens.authorization.denied",
+        "message": "The current request is not authorized.",
+    }
+}
+assert anonymous_catalog_response.json() == expected_authorization_error
+assert anonymous_query_response.json() == expected_authorization_error
+assert SemanticQueryRun.objects.count() == 0
+
+# Unknown top-level input, including client policy claims, is rejected before
+# orchestration, audit, or registered application-data SQL.
+client_policy_value = "private-client-permission-value"
+with CaptureQueriesContext(connection) as strict_input_queries:
+    strict_input_response = authorized_client.post(
+        "/asklens/query/",
+        data=json.dumps(
+            {"question": QUESTION, "permissions": [client_policy_value]}
+        ),
+        content_type="application/json",
+    )
+assert strict_input_response.status_code == 400
+assert strict_input_response.json() == {
+    "error": {
+        "code": "asklens.parse.invalid",
+        "message": "The AskLens request could not be parsed.",
+    }
+}
+assert client_policy_value not in json.dumps(strict_input_response.json())
+application_table = ScopedFact._meta.db_table.lower()
+assert all(
+    application_table not in query["sql"].lower()
+    for query in strict_input_queries.captured_queries
+)
 assert SemanticQueryRun.objects.count() == 0
 
 # An authenticated principal without the resource permission receives only the
@@ -574,14 +608,13 @@ with CaptureQueriesContext(connection) as captured:
     )
 denial_payload = denial_response.json()
 assert denial_response.status_code == 400
-assert denial_payload["status"] == "failed"
+assert set(denial_payload) == {"error", "run_id"}
 assert denial_payload["error"] == {
     "code": "asklens.member.unavailable",
     "message": "A requested query member is unavailable.",
 }
 denial_code = denial_payload["error"]["code"]
 assert denial_code == "asklens.member.unavailable"
-application_table = ScopedFact._meta.db_table.lower()
 denial_application_data_queries = sum(
     application_table in query["sql"].lower() for query in captured.captured_queries
 )

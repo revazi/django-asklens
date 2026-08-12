@@ -42,13 +42,23 @@ _SAFE_AUDIT_INTENTS = frozenset({"list", "aggregate"})
 
 
 class QueryRequestSerializer(serializers.Serializer):
-    """Validate query endpoint input."""
+    """Validate the strict query endpoint input object."""
 
     question = serializers.CharField(allow_blank=False, trim_whitespace=True)
     debug = serializers.BooleanField(default=False, required=False)
     include_presentation = serializers.BooleanField(default=True, required=False)
     plan = serializers.JSONField(required=False)
     presentation = serializers.JSONField(required=False)
+
+    def to_internal_value(self, data: Any) -> dict[str, Any]:
+        """Reject unknown top-level fields without reflecting their content."""
+
+        if isinstance(data, Mapping) and any(key not in self.fields for key in data):
+            raise serializers.ValidationError(
+                "The query request contains unsupported fields.",
+                code="unknown",
+            )
+        return super().to_internal_value(data)
 
 
 class SemanticQueryRunSerializer(serializers.ModelSerializer):

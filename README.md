@@ -283,6 +283,8 @@ Live provider tests are opt-in and skipped by default. See [Provider configurati
 - Filter operators and JSON values are checked against canonical field types before scope resolution; decimals remain strings, explicit enum aliases are server-registered, and Django choices are not auto-exposed.
 - Result columns include type/nullability metadata. Empty aggregates and decimal serialization are deterministic, and unsupported runtime values fail instead of being stringified.
 - Provider and submitted-plan output is untrusted and validated by the normal API, admin, and MCP orchestration before execution.
+- The optional query API rejects unknown top-level keys—including client policy claims—before orchestration, audit, or application-data SQL without reflecting their names, values, or serializer diagnostics.
+- All handled failures from the four AskLens DRF views use one `{error, run_id?}` envelope with fixed safe messages; statuses and applicable `Allow`, `WWW-Authenticate`, and `Retry-After` headers are preserved. This route-local behavior does not change unrelated host DRF endpoints.
 - Use `django_asklens.execution.execute_plan()` for Python execution; it revalidates mappings and existing `QueryPlan` objects for the current request. `run_query_plan()` is a deprecated wrapper that also requires the current request. The compiler and compiled-query executor are internal and are not public exports.
 - AskLens executes read-only Django ORM queries only.
 - AskLens does not execute LLM-generated SQL.

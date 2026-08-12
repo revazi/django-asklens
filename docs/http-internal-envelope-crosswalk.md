@@ -3,12 +3,12 @@
 ## Status, baseline, and evidence
 
 This began as the API-2 current-state map for the optional Django REST
-framework adapter. Its implementation baseline is clean `main` at
-`09715e3db731803c58577c1a6bcde54c152b73de`, the squash-merged API-2 commit.
-The authorized API-5 change deliberately replaces the run-detail/audit-boundary
-behavior recorded at that baseline. The current API-3 cleanup updates only the
-Python export surface; the HTTP-envelope map remains a current implementation
-crosswalk rather than a stable contract.
+framework adapter. Its original implementation baseline was clean `main` at
+`09715e3db731803c58577c1a6bcde54c152b73de`. API-5 later replaced the run-detail/
+audit boundary, API-3 cleaned the Python export surface, and authorized API-4a
+now replaces permissive top-level query input plus the three divergent AskLens-
+route error wrappers. This remains a current implementation crosswalk rather
+than a stable contract.
 
 The five internal documents are `catalog`, `capabilities`, `query-plan`,
 `result`, and `error`. The evidence for the mapping is:
@@ -39,8 +39,9 @@ exports. `django_asklens.querying.__all__` is exactly `AskLensQueryResponse` and
 `AskLensAPIView`, `CapabilitiesView`, `CatalogView`, `QueryRunDetailView`, and
 `QueryView`. Deliberate root `django_asklens` exports remain retained. Private
 `_build_success_payload()` and `_build_capabilities_payload()` helpers are
-implementation details, not supported imports. API-4 and API-6 remain separately
-gated cleanup candidates.
+implementation details, not supported imports. API-4a changes only strict input
+and AskLens-route errors; API-4b success composition and API-6 remain separately
+gated.
 
 ## Terms
 
@@ -56,9 +57,10 @@ gated cleanup candidates.
   audit-reference member that is not part of the identified internal document.
 - **Wrapper** — an HTTP object that embeds an internal document or spreads its
   members alongside HTTP adapter fields.
-- **Transport/framework error** — an error produced by DRF parsing,
-  authentication, permission, routing, or method handling rather than an
-  AskLens internal `error` document.
+- **Transport/framework error** — a failure produced by DRF parsing,
+  authentication, permission, throttling, routing, or method handling. On the
+  four AskLens views, API-4a maps it to a fixed safe internal `error` child;
+  unrelated host DRF endpoints retain host-configured behavior.
 - **Audit representation** — the policy-dependent serialization of a stored
   `SemanticQueryRun`; it is an operational record, not a query/result/error
   contract document.
@@ -75,12 +77,12 @@ current-request trusted execution path.
 | `GET /asklens/capabilities/` success | `200` | `build_capabilities()` | Entire body is the exact resource-independent `capabilities` document | None | No query-run audit | Preserve exact identity and resource independence |
 | `POST /asklens/query/` query success | `200` | private `_build_success_payload()` after `execute_plan()` | Embedded exact `query-plan`; required `result` members are spread into a larger wrapper; body is not a `result` document | `question`, `response_type`, optional `run_id`, optional `presentation`, `explanation`, optional `debug` | One configured execution audit event; a database run and `run_id` exist only when the database sink returns a run | Prefer an explicit complete `result` child in a separately authorized cleanup |
 | `POST /asklens/query/` capabilities/help success | `200` | private `_build_capabilities_payload()` | Embedded exact `capabilities` and permission-scoped `catalog`; help wrapper is not one of the five documents | `question`, `response_type`, `capability_intent`, `routing_source`, `query_help_source`, `query_help`, optional `query_help_error`, `explanation` | No plan execution and no query-run audit | Make wrapper composition explicit without calling help a machine contract |
-| `POST /asklens/query/` request-serializer rejection | `400` | `QueryView.post()` | `error` child is an exact internal `error`; outer `{response_type,error}` object is not | `response_type` | No audit | Consider one coherent safe error envelope and strict unknown request keys |
-| `POST /asklens/query/` AskLens failure after request acceptance | `400` | `execute_asklens_query_request()` | `error` child is an exact internal `error`; outer `{question,status,error,run_id?}` object is not | `question`, `status`, optional `run_id` | Configured safe failure audit; rejection performs zero application-data SQL, though database mode may insert metadata | Reconcile this wrapper with request and framework failures |
-| Any route, DRF/parser/auth/permission/method/not-found rejection | `400`, `403`, `404`, `405`, or `415` | DRF exception handling | `{detail: ...}` is a transport/framework error, not an internal `error` | `detail` | Transport and route-gate denials before orchestration do not audit; run-detail reads also create no new audit | Decide whether one envelope includes framework exceptions without weakening DRF gates |
+| `POST /asklens/query/` request-serializer rejection | `400` | strict `QueryRequestSerializer` plus `QueryView.post()` | Exact internal `error` child under the sole `{error}` envelope | None | No audit and no application-data SQL | Unknown keys and malformed request shape reject without reflected diagnostics |
+| `POST /asklens/query/` AskLens failure after request acceptance | `400` | `execute_asklens_query_request()` adapted by `QueryView.post()` | Exact existing internal `error` child under `{error,run_id?}` | Optional database audit `run_id` only | Configured safe failure audit; rejection performs zero application-data SQL, though database mode may insert metadata | Preserve shared orchestration/audit while removing question/status wrapper fields |
+| Any AskLens route, parser/media/auth/permission/debug/method/throttle/not-found/unexpected rejection | Existing `4xx`/`5xx` status | route-local `AskLensAPIView.handle_exception()` | Fixed exact internal `error` child under `{error}` | None | Transport/route/strict-input denials remain unaudited; run-detail reads create no audit | Preserve applicable `Allow`, `WWW-Authenticate`, and `Retry-After`; non-AskLens host views are unchanged |
 | `GET /asklens/runs/<int:pk>/` success | `200` | Authorization-filtered selected-alias lookup plus `SemanticQueryRunSerializer` | Audit representation only; not `query-plan`, `result`, or `error` identity | All serialized audit fields; `error` is safe structured audit metadata, not stored text or schema identity | Reads an existing database audit row; creates no new query-run audit | API-5 deliberately hardens access, content display, error output, and routing without claiming schema identity |
-| `GET /asklens/runs/<int:pk>/` inaccessible/missing | `404` / `404` | One authorization-filtered lookup and DRF `NotFound` | Same fixed `{detail: ...}` transport/framework error | `detail` | No new query-run audit | Preserve existence opacity; configured route gates still run first |
-| `GET /asklens/runs/<int:pk>/` invalid/unavailable audit alias | `503` | Fixed safe DRF exception | `{detail: ...}` transport/framework error, not an internal `error` | `detail` | No fallback read and no audit side effect | Do not reflect alias/database diagnostics or fall back to `default` |
+| `GET /asklens/runs/<int:pk>/` inaccessible/missing | `404` / `404` | One authorization-filtered lookup and route-local adapter | Same fixed `{error: {code: "asklens.member.unavailable", ...}}` envelope | None | No new query-run audit | Preserve existence opacity; configured route gates still run first |
+| `GET /asklens/runs/<int:pk>/` invalid/unavailable audit alias | `503` | Fixed route-local adapter response | Exact fixed `asklens.execute.failed` child under `{error}` | None | No fallback read and no audit side effect | Do not reflect alias/database diagnostics or fall back to `default` |
 
 The status column records current defaults and characterized outcomes, not a
 future compatibility guarantee.
@@ -118,10 +120,11 @@ audit.
 
 ## `POST /asklens/query/` success: query result
 
-The request serializer accepts `question`, optional `debug`, optional
-`include_presentation`, optional `plan`, and optional `presentation`. Current DRF
-serializer behavior ignores unknown top-level request keys; strict unknown
-request keys are a cleanup candidate, not current behavior.
+The strict request serializer accepts only `question`, optional `debug`, optional
+`include_presentation`, optional `plan`, and optional `presentation`. Every other
+top-level key—including user, permission, tenant, scope, and audit-routing
+claims—is rejected before shared orchestration, audit, or application-data SQL.
+Neither the unknown name/value nor serializer diagnostics are reflected.
 
 On query success, shared orchestration calls `execute_plan()` with the untrusted
 plan and current request. The response is a wrapper with three categories:
@@ -178,36 +181,56 @@ non-auditing help behavior is distinct from a data-query success.
 
 ## Errors and denials
 
-Current HTTP failures have three non-identical forms:
+Every handled failure emitted by the four views inheriting `AskLensAPIView` now
+uses exactly one HTTP adapter shape:
 
-1. **Request serializer parse wrapper.** Missing/blank `question` or a non-object
-   JSON value handled by `QueryRequestSerializer` returns `400` as
-   `{response_type: "error", error: {...}}`. The nested `error` value is an exact
-   internal `error` document with `asklens.parse.invalid`; the outer object is an
-   HTTP wrapper. It does not create an audit row.
-2. **Accepted-plan/AskLens failure wrapper.** After request-serializer
-   acceptance, an `AskLensError` from planning, plan parsing/validation, scope,
-   budget, binding, compilation, execution, or provider processing returns `400`
-   as `{question, status: "failed", error, run_id?}`.
-   The nested safe `error` is an exact internal `error` document containing only
-   code, message, and an optional bounded JSON Pointer. The outer object is not
-   an ErrorDocument. Audit policy controls the failure event and optional
-   database `run_id`; rejection still performs zero application-data SQL, with
-   at most the allowed metadata audit insert in database mode.
-3. **DRF `detail` errors.** Malformed JSON, unsupported media type,
-   authentication denial, configured route-permission denial, non-staff debug
-   denial, disallowed method, run nonexistence/opacity, and audit-database
-   unavailability are handled as DRF/framework exceptions with `{detail: ...}`
-   and the applicable `400`, `403`, `404`, `405`, `415`, or `503`. These bodies
-   are transport/framework errors, not internal `error` documents. Run-detail
-   now gives inaccessible and missing IDs the same fixed opaque `404`; invalid
-   or unavailable server-owned audit routing gives one fixed safe `503`.
+```json
+{
+  "error": {
+    "code": "asklens.parse.invalid",
+    "message": "The AskLens request could not be parsed.",
+    "pointer": "/optional-safe-pointer"
+  },
+  "run_id": 123
+}
+```
 
-Thus `error` is an exact internal ErrorDocument only when it is the nested
-`error` child of the first two AskLens wrappers. The wrappers themselves and
-all DRF `detail` objects are not ErrorDocuments. A future coherent envelope must
-not expose raw parser, serializer, provider, policy, ORM, or traceback detail,
-and must preserve authentication and permission checks before execution.
+`pointer` remains optional inside the exact internal ErrorDocument. Top-level
+`run_id` is present only when an accepted AskLens planning/execution failure
+created a database audit row. Request-shape, unknown-key, parser/media,
+authentication/permission/debug, method, throttle, not-found, audit-unavailable,
+and unexpected failures have no run id. No failure body contains
+`response_type`, an echoed `question`, redundant `status`, or DRF `detail`.
+
+The route-local fixed mappings are:
+
+- request/JSON parser/media/content negotiation/method failures →
+  `asklens.parse.invalid`, “The AskLens request could not be parsed.”;
+- authentication/configured permission/Django or DRF permission/debug denials →
+  `asklens.authorization.denied`, “The current request is not authorized.”;
+- opaque missing/inaccessible run lookup → `asklens.member.unavailable` with
+  the existing opaque member message;
+- throttling → `asklens.budget.exceeded`, “The AskLens request exceeds an
+  execution limit.”; and
+- unavailable audit records, unclassified framework exceptions, and unexpected
+  route-local exceptions → `asklens.execute.failed`, “The AskLens request could
+  not be completed.”
+
+Accepted AskLens planning, parse/validation, authorization, scope, budget,
+binding, compilation, execution, and provider failures retain their existing
+exact `error` child, including a bounded safe pointer, while `QueryView` removes
+the shared Python orchestrator's question/status wrapper only at the HTTP
+boundary. Their configured privacy-aware failure audit and optional database
+`run_id` are unchanged. Rejections continue to perform zero application-data
+SQL, with at most the allowed metadata audit insert after orchestration has
+accepted the request.
+
+The adapter calls DRF's normal exception handling first for handled framework
+exceptions, so HTTP statuses plus applicable `Allow`, `WWW-Authenticate`, and
+`Retry-After` headers remain intact. Authentication, permission, and throttle
+ordering remains DRF-owned and precedes handlers. The override exists only on
+`AskLensAPIView`; unrelated host DRF endpoints retain host-configured exception
+bodies, and there is no global exception-handler setting.
 
 ## `GET /asklens/runs/<int:pk>/`
 
@@ -241,14 +264,16 @@ uses an authorization-filtered queryset: the authenticated owner may read the
 row, while cross-user review requires Django's global
 `asklens.view_semanticqueryrun` permission. `is_staff` alone is insufficient;
 active superusers follow normal `has_perm()` behavior. Missing and inaccessible
-IDs receive the same fixed opaque `404`, and reading detail creates no audit row.
+IDs receive the same fixed opaque `404` `asklens.member.unavailable` envelope,
+and reading run detail creates no audit row.
 
 `AUDIT_DATABASE_ALIAS=None` preserves ordinary Django read routing. A configured
 non-empty server-owned alias is applied explicitly to both built-in database
 audit writes and run-detail reads; no client field selects it and there is no
 fallback to `default`. Malformed, nonexistent, unavailable, or missing-table
 configuration uses normal sink-failure behavior for writes and a fixed safe
-`503` for reads without reflected diagnostics. Explicit lifecycle-command
+`503` `asklens.execute.failed` envelope for reads without reflected diagnostics.
+Explicit lifecycle-command
 `--database` selection remains independent.
 
 ## Current non-identities and cleanup candidates
@@ -262,26 +287,27 @@ forcing schema equality:
 - The capabilities/help body embeds exact `capabilities` and `catalog`
   documents, but routing and human-help fields make the wrapper a separate
   adapter shape.
-- The two AskLens error wrappers differ from each other, and DRF exceptions use
-  a third `{detail}` form. Only nested `error` children are exact internal
-  `error` documents.
+- AskLens-route errors now share one `{error, run_id?}` adapter shape. The nested
+  `error` is an exact internal ErrorDocument; optional top-level `run_id` is an
+  HTTP audit reference rather than part of that document.
 - Run detail serializes a policy-dependent audit representation, not query/
   result/error schema identity. API-5 now makes that representation safe at the
   current access, content, stored-error, and database-routing boundary.
 
+API-4a is no longer a remaining candidate: `QueryRequestSerializer` rejects
+unknown top-level keys, and only the four AskLens DRF views normalize serializer,
+parser/media, authentication, permission/debug, method, throttle, opaque lookup,
+audit-unavailable, accepted AskLens, and unexpected errors. Required headers,
+route ordering, audit effects, member opacity, and zero application-data SQL are
+preserved.
+
 Remaining candidates for separately authorized alpha cleanup are:
 
-1. Make `QueryRequestSerializer` reject unknown top-level keys instead of
-   silently discarding them.
-2. Choose one coherent safe HTTP error envelope and decide explicitly how DRF
-   parser, authentication, permission, method, and not-found exception handling
-   enters it. Keep route gates, opaque members, bounded pointers, and safe
-   messages unchanged.
-3. Make query success embed a complete result document, for example under
+1. Make query success embed a complete result document, for example under
    `result`, rather than spreading its fields. That target naturally preserves
    optional `empty`; any alternative should explicitly justify why spreading is
    clearer and prove complete result parity.
-4. Define the capabilities-help wrapper as explicit composition of exact
+2. Define the capabilities-help wrapper as explicit composition of exact
    `capabilities`, exact permission-scoped `catalog`, and separately named help
    and routing fields. Do not relabel human help as the internal capabilities
    document.
@@ -289,12 +315,13 @@ Remaining candidates for separately authorized alpha cleanup are:
 API-3 is no longer a remaining candidate: it removes the deprecated Python
 compatibility module and accidental helper exports while retaining the two
 canonical querying exports, five view-class exports, and deliberate root
-exports. Thin-adapter/orchestration and HTTP-envelope cleanup remains assigned to
-API-4; optional-extra/import/wheel parity remains assigned to API-6.
+exports. API-4a now completes strict-input/error cleanup; API-4b success-
+envelope composition and optional-extra/import/wheel parity in API-6 remain
+gated.
 
 The accepted alpha-breaking direction means a later authorized cleanup need not
 retain accidental wire shapes or add compatibility/migration machinery. It does
-not make a proposed shape stable and does not authorize API-4, API-6, or any
+not make this current shape stable and does not authorize API-4b, API-6, or any
 additional runtime edit.
 
 ## Recommended sequential cleanup order
@@ -310,25 +337,23 @@ separately even when the alpha permits breaking changes.
    alpha security/privacy hardening change, not an exploit claim or a declaration
    that the audit representation is a stable schema.
 2. API-3 removes only the independently evidenced accidental Python/
-   compatibility exports under the accepted alpha decision; it does not change
-   the HTTP wrappers mapped here.
+   compatibility exports under the accepted alpha decision.
+3. API-4a enforces strict unknown query keys and one safe route-local error
+   envelope while preserving statuses, headers, gates, opacity, audit, and
+   application-data SQL boundaries.
 
 **Remaining separately gated candidates:**
 
-3. A narrow API-4 input/error slice could enforce strict unknown request keys and
-   normalize errors only with regression evidence for pre-handler auth, opaque
-   member denial, safe diagnostics, current-request scope, audit privacy, and
-   zero application-data SQL on rejection.
-4. A following API-4 slice could embed a complete `result` child and make the
-   capabilities-help composition explicit while keeping the DRF view thin and
-   preserving parity with shared orchestration.
+4. API-4b could embed a complete `result` child and make the capabilities-help
+   composition explicit while keeping the DRF view thin and preserving parity
+   with shared orchestration.
 5. API-6 could finish with core/API optional-import, dependency-extra,
    source/wheel route, and artifact parity evidence.
 
 Each remaining item should be a small separately authorized tranche with
 characterization first, narrow and full evidence, independent review, and an
-explicit stop at its gate. This recommendation does not authorize API-4, API-6,
-or any additional item.
+explicit stop at its gate. This recommendation does not authorize API-4b,
+API-6, or any additional item.
 
 ## Preserved security and package boundaries
 
@@ -361,13 +386,13 @@ Any later cleanup must preserve all of these current invariants:
 
 The five schemas remain internal, draft, unfrozen, and unversioned. This
 crosswalk does not freeze the HTTP API, publish a specification, establish a
-compatibility promise, or prove backend neutrality. Documenting API-5 does not
-extend its bounded behavior change. This is not a public specification and not
+compatibility promise, or prove backend neutrality. API-4a changes only the
+strict-input/error adapter boundary; it does not extend API-5 audit access or
+implement API-4b success composition. This is not a public specification and not
 a compatibility promise.
 
-The evidence is repository code and maintainer-operated tests at one exact
-baseline plus the bounded API-5 implementation and current API-3 export cleanup.
-It is not external pilot/adoption evidence, not production certification, and
-not an independent security audit. Passing the drift test or a later review does
-not make run detail schema-identical to an internal document, approve an API
-contract, authorize a release, or open API-4 or API-6.
+The evidence is repository code and maintainer-operated tests over the bounded
+API-2/API-3/API-4a/API-5 changes. It is not external pilot/adoption evidence or
+production certification, and it is not an independent security audit. Passing the drift
+test or a later review does not make run detail schema-identical to an internal
+document, approve an API contract, authorize a release, or open API-4b or API-6.

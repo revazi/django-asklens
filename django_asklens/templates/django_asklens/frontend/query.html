@@ -1269,14 +1269,11 @@
         try {
           payload = JSON.parse(text);
         } catch (_error) {
-          payload = { detail: text };
+          payload = null;
         }
       }
       if (!response.ok) {
-        const message = payload?.error?.message
-          || (typeof payload?.error === "string" ? payload.error : null)
-          || payload?.detail
-          || response.statusText;
+        const message = payload?.error?.message || response.statusText;
         throw new Error(message);
       }
       return payload;

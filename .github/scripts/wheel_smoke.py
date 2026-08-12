@@ -336,6 +336,8 @@ def smoke_api_extra_install() -> None:
         root_urlconf="django_asklens.api.urls",
     )
 
+    from rest_framework.test import APIRequestFactory, force_authenticate
+
     import django_asklens.api.urls
     from django_asklens.api import views
 
@@ -348,6 +350,38 @@ def smoke_api_extra_install() -> None:
         "QueryView",
     ]
     assert importlib.util.find_spec("django_asklens.api.querying") is None
+
+    user = SimpleNamespace(is_authenticated=True)
+    request = APIRequestFactory().post(
+        "/asklens/query/",
+        {
+            "question": "Synthetic installed-wheel question",
+            "permissions": ["private-client-policy-value"],
+        },
+        format="json",
+    )
+    force_authenticate(request, user=user)
+    strict_response = views.QueryView.as_view()(request)
+    assert strict_response.status_code == 400
+    assert strict_response.data == {
+        "error": {
+            "code": "asklens.parse.invalid",
+            "message": "The AskLens request could not be parsed.",
+        }
+    }
+    assert "private-client-policy-value" not in str(strict_response.data)
+
+    method_request = APIRequestFactory().post("/asklens/catalog/", {}, format="json")
+    force_authenticate(method_request, user=user)
+    method_response = views.CatalogView.as_view()(method_request)
+    assert method_response.status_code == 405
+    assert method_response["Allow"] == "GET, HEAD, OPTIONS"
+    assert method_response.data == {
+        "error": {
+            "code": "asklens.parse.invalid",
+            "message": "The AskLens request could not be parsed.",
+        }
+    }
 
 
 def configure_settings(

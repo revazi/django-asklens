@@ -31,7 +31,7 @@ Use this checklist before enabling AskLens outside local development.
 ## API safety
 
 - [ ] Require authentication for `/asklens/catalog/`, `/asklens/query/`, and `/asklens/runs/<id>/`; prove anonymous catalog/query requests are rejected at the route gate before AskLens orchestration and create no query-run audit row.
-- [ ] Keep resource authorization in server-owned permission assignment and row identity in the server-owned `scope_provider(request)`; never trust client user IDs, permission strings, tenant IDs, or scope tokens.
+- [ ] Keep resource authorization in server-owned permission assignment and row identity in the server-owned `scope_provider(request)`; never trust client user IDs, permission strings, tenant IDs, scope tokens, or audit aliases. Verify every unknown query-request key is rejected before orchestration/audit/application SQL without reflection.
 - [ ] For a normal authenticated user's first request, inspect the authenticated user's permission-scoped catalog first. If a resource is absent, diagnose the host's permission assignment and one controlled startup registration import rather than revealing hidden membership.
 - [ ] For authenticated unavailable-member queries, preserve zero registered application-data SQL and do not weaken `asklens.member.unavailable` or return permission/catalog details to make setup debugging easier.
 - [ ] Verify anonymous route denials create no AskLens audit row, while each orchestrated denial/success creates exactly one metadata-only audit row under database mode; keep questions blank and plans limited to operational resource/intent unless full content is explicitly justified.
@@ -76,7 +76,7 @@ Use this checklist before enabling AskLens outside local development.
 - [ ] No mandatory OpenTelemetry/Prometheus/queue/cache service dependencies are required for this alpha hardening scope.
 - [ ] Use a read-only database role or replica as defense in depth if your deployment can enforce it outside AskLens.
 - [ ] Monitor query volume, budget rejections, and slow queries using normal Django/database tooling.
-- [ ] Consume stable failures through `error.code` and `error.message`; confirm unknown and unauthorized members both return `asklens.member.unavailable` without catalog or permission detail.
+- [ ] Consume AskLens-route failures only through the `{error, run_id?}` envelope and its `error.code`/`error.message`; do not parse DRF `detail`, echoed questions, `response_type`, or redundant status fields. Confirm unknown and unauthorized members both return `asklens.member.unavailable` without catalog or permission detail.
 - [ ] Review logs to ensure errors do not include stack traces, secrets, raw credentials, provider payload dumps, or sensitive row values.
 - [ ] Run point-in-time dependency evidence as a metadata check:
   ```bash

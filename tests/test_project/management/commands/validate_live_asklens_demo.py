@@ -188,5 +188,9 @@ def summarize_response(response) -> str:
 def summarize_error(status_code: int, payload: Mapping[str, Any]) -> str:
     """Return a safe error summary."""
 
-    error = payload.get("error") or payload.get("detail") or "Request failed"
-    return f"HTTP {status_code} error={error}"
+    error = payload.get("error")
+    if isinstance(error, Mapping):
+        code = error.get("code", "asklens.execute.failed")
+        message = error.get("message", "The AskLens request could not be completed.")
+        return f"HTTP {status_code} error={code}: {message}"
+    return f"HTTP {status_code} error=asklens.execute.failed"

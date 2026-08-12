@@ -31,6 +31,8 @@ The project is alpha and APIs may change before a stable release.
 
 ### Changed
 
+- Deliberately changed the alpha HTTP error contract for the four AskLens DRF views to one `{error, run_id?}` envelope. Request/parser/media/method failures use `asklens.parse.invalid`; authentication/permission/debug denials use `asklens.authorization.denied`; opaque run lookup uses `asklens.member.unavailable`; throttling uses `asklens.budget.exceeded`; and audit-unavailable/unexpected failures use `asklens.execute.failed`. Status codes and applicable `Allow`, `WWW-Authenticate`, and `Retry-After` headers are preserved; success responses are unchanged.
+- `QueryRequestSerializer` now rejects every unknown top-level key before shared orchestration, audit, or application-data SQL instead of silently discarding it. Rejections do not reflect the key, value, or serializer diagnostics.
 - Raised the optional API and development Django REST Framework minimum to 3.18 for Django 6.1 compatibility; DRF remains excluded from core dependencies and imports.
 - Split CI support evidence into explicit Django 5.2, 6.0, and 6.1 bands while retaining the protected `6.x` check-name alias as an explicitly Django-6.1-bound compatibility name.
 - Shared API/admin/MCP/provider orchestration now delegates data execution to `execute_plan()`.
@@ -67,6 +69,7 @@ The project is alpha and APIs may change before a stable release.
 
 ### Security
 
+- AskLens-route transport and framework failures no longer return DRF `detail`, raw parser/authentication/permission diagnostics, echoed questions, or redundant failure status fields. Route gates and throttles still run before handlers; strict-input and transport denials remain unaudited; accepted AskLens failures retain privacy-aware audit and optional database `run_id` behavior.
 - Directly constructed `QueryPlan` objects can no longer bypass current field permissions or configured plan limits through the public facade or compatibility runner.
 - Unknown and unauthorized resources, fields, and metrics now share the same public `asklens.member.unavailable` code and message; internal member names, permission tokens, scope failures, compiler causes, and database causes are not included in public execution errors.
 - Added regression evidence that preview validation cannot authorize later execution and that ordinary plans are revalidated against current resource, field, metric, policy, catalog, identity, and request scope.

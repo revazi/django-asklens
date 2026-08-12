@@ -79,7 +79,7 @@ When DRF throttling or proxy rate decisions reject a request, execution does not
 reach AskLens request orchestration in this package.
 Expected result:
 
-- HTTP `429` from DRF/proxy response handling;
+- HTTP `429`; AskLens DRF views use the fixed `asklens.budget.exceeded` error envelope and preserve DRF's `Retry-After` header when supplied, while an upstream proxy owns its response;
 - no call to `execute_asklens_query_request`;
 - no AskLens query audit event for that request;
 - independent host logs for rate-limit denial decisions can be kept distinct from
@@ -134,7 +134,8 @@ used explicitly for built-in `SemanticQueryRun` writes and
 `GET /asklens/runs/<id>/` reads; client payloads cannot override it and failures
 do not fall back to `default`. Malformed, nonexistent, unavailable, or missing-
 table aliases use normal sink-failure behavior on write and one fixed safe
-unavailable response on read without reflecting alias/database diagnostics.
+`asklens.execute.failed` envelope on read without reflecting alias/database
+diagnostics.
 Lifecycle command `--database` selection remains an independent explicit
 operator choice.
 
