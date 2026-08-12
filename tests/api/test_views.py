@@ -14,7 +14,7 @@ from django_asklens.admin_querying import build_admin_result, execute_admin_quer
 from django_asklens.catalog.capabilities import build_query_guidance
 from django_asklens.catalog.registry import default_registry
 from django_asklens.models import SemanticQueryRun
-from django_asklens.querying import get_query_help_for_capabilities
+from django_asklens.querying import _get_query_help_for_capabilities
 from tests.test_project.models import Customer, Order
 
 pytestmark = pytest.mark.django_db
@@ -299,7 +299,7 @@ def test_live_query_help_uses_provider(
         lambda: QueryHelpProvider(),
     )
 
-    query_help, source, error = get_query_help_for_capabilities(
+    query_help, source, error = _get_query_help_for_capabilities(
         "What can I query?",
         capabilities=build_query_guidance(),
     )
@@ -324,7 +324,7 @@ def test_query_help_fallback_returns_safe_error(
         lambda: InvalidQueryHelpProvider(),
     )
 
-    query_help, source, error = get_query_help_for_capabilities(
+    query_help, source, error = _get_query_help_for_capabilities(
         "What can I query?",
         capabilities=build_query_guidance(),
     )

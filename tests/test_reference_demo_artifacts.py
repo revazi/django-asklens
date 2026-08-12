@@ -89,6 +89,30 @@ def test_http_internal_envelope_crosswalk_maps_current_non_identity() -> None:
         assert document_name in crosswalk
 
     normalized = " ".join(crosswalk.split())
+    for current_export_truth in (
+        "API-3 removes the deprecated `django_asklens.api.querying` module and "
+        "dead helper exports.",
+        "`django_asklens.querying.__all__` is exactly `AskLensQueryResponse` and "
+        "`execute_asklens_query_request`.",
+        "`django_asklens.api.views.__all__` contains only `AskLensAPIView`, "
+        "`CapabilitiesView`, `CatalogView`, `QueryRunDetailView`, and `QueryView`.",
+        "Deliberate root `django_asklens` exports remain retained.",
+        "Private `_build_success_payload()` and `_build_capabilities_payload()` "
+        "helpers are implementation details, not supported imports.",
+        "API-4 and API-6 remain separately gated cleanup candidates.",
+    ):
+        assert current_export_truth in normalized
+
+    for stale_api3_claim in (
+        "`build_success_payload()`",
+        "`build_capabilities_payload()`",
+        "Assign compatibility/public-export inventory",
+        "API-3 can remove",
+        "does not authorize API-3",
+        "open API-3",
+    ):
+        assert stale_api3_claim not in crosswalk
+
     for required in (
         "Schema validation is not authorization.",
         "not every HTTP body is an internal document",
