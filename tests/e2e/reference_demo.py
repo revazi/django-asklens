@@ -155,21 +155,24 @@ def verify_browser_and_api(playwright: Playwright, base_url: str) -> None:
         aggregate = json.loads(result_card.locator("details pre").inner_text())
         assert aggregate["response_type"] == "query"
         assert aggregate["plan"]["intent"] == "aggregate"
-        assert aggregate["result_metadata"] == {
+        assert aggregate["result"]["result_metadata"] == {
             "limit": 10,
             "limit_scope": "groups",
             "truncated": False,
         }
-        aggregate_columns = {column["key"]: column for column in aggregate["columns"]}
+        aggregate_columns = {
+            column["key"]: column for column in aggregate["result"]["columns"]
+        }
         assert aggregate_columns["product_name"]["type"] == "string"
         assert aggregate_columns["gross_revenue"]["type"] == "integer"
         assert all(
             isinstance(row["gross_revenue"], int)
             and not isinstance(row["gross_revenue"], bool)
-            for row in aggregate["data"]
+            for row in aggregate["result"]["data"]
         )
         assert all(
-            row["product_name"].startswith("North ") for row in aggregate["data"]
+            row["product_name"].startswith("North ")
+            for row in aggregate["result"]["data"]
         )
 
         aggregate_audit = response_json(
@@ -180,7 +183,7 @@ def verify_browser_and_api(playwright: Playwright, base_url: str) -> None:
             "resource": "billing_lines",
             "intent": "aggregate",
         }
-        assert aggregate_audit["row_count"] == aggregate["row_count"]
+        assert aggregate_audit["row_count"] == aggregate["result"]["row_count"]
         assert "product_name" not in aggregate_audit["plan"]
         print("PASS browser aggregate query and metadata-only audit")
 
@@ -203,20 +206,22 @@ def verify_browser_and_api(playwright: Playwright, base_url: str) -> None:
             csrf_token=csrf_token,
         )
         assert listed["response_type"] == "query"
-        assert listed["row_count"] == 3
-        assert listed["result_metadata"] == {
+        assert listed["result"]["row_count"] == 3
+        assert listed["result"]["result_metadata"] == {
             "limit": 3,
             "limit_scope": "rows",
             "truncated": True,
         }
-        listed_columns = {column["key"]: column for column in listed["columns"]}
+        listed_columns = {
+            column["key"]: column for column in listed["result"]["columns"]
+        }
         assert {key: column["type"] for key, column in listed_columns.items()} == {
             "facility.name": "string",
             "gender": "enum",
             "member_since": "datetime",
             "created_via_portal": "boolean",
         }
-        for row in listed["data"]:
+        for row in listed["result"]["data"]:
             assert set(row) == set(listed_columns)
             assert row["facility.name"] == "North Studio"
             assert row["gender"] in {"female", "male", "non_binary", "not_provided"}

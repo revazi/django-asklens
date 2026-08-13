@@ -180,8 +180,12 @@ zeros (`"20.00"` becomes `"20"`), while scalar decimal fields preserve scale
 ungrouped aggregates are `null`; empty grouped aggregates return no rows.
 
 `QueryResult.to_dict()` and `serialize_query_result()` return only core query
-results. API/provider/MCP orchestration may add optional sibling
-`presentation` metadata.
+results. Shared query/provider orchestration now embeds that complete mapping
+under `result`, including optional `empty: true`; HTTP adapter fields such as
+question, validated plan, run id, presentation, explanation, and staff debug
+remain siblings. MCP keeps its deliberate adapter row-policy shape after
+consuming the same shared result, so its default row omission and optional row
+cap remain unchanged.
 
 ## 8. Review audit and error handling
 
@@ -203,10 +207,11 @@ scope guidance, limitations, and examples. The current shape separates them:
   permissions, a registry, or a catalog.
 - `serialize_catalog(permissions=...)` and `GET /asklens/catalog/` return
   permission-scoped resources, fields, enums, metrics, and timezones.
-- Human guidance/examples are returned as `query_help` by help questions and
-  remain internal to permission-scoped provider prompting.
-- Query-help responses contain sibling `capabilities`, `catalog`, and
-  `query_help` documents.
+- Human guidance/examples are returned under `help.content` by help questions
+  and remain internal to permission-scoped provider prompting.
+- Query-help responses contain sibling exact `capabilities` and permission-
+  scoped `catalog` documents, plus adapter-only `routing` and human `help`
+  objects. `help.content` is not an internal machine document.
 - MCP full discovery contains sibling `capabilities` and `catalog`; compact MCP
   discovery uses `capabilities` plus adapter-level `resource_summaries`.
 
@@ -241,9 +246,10 @@ from django_asklens.querying import execute_asklens_query_request
 ```
 
 `django_asklens.querying` publicly exports only
-`AskLensQueryResponse` and `execute_asklens_query_request`. Its payloads,
-permissions, audit behavior, and trusted `execute_plan()` delegation are
-unchanged by this import cleanup. Do not import orchestration steps such as
+`AskLensQueryResponse` and `execute_asklens_query_request`. Its permissions,
+audit behavior, and trusted `execute_plan()` delegation are unchanged by this
+import cleanup. Its current success payloads deliberately use the complete
+`result` child and explicit `routing`/`help` composition described above. Do not import orchestration steps such as
 payload builders, debug checks, provider fallbacks, or error helpers directly.
 
 Import optional DRF view classes from `django_asklens.api.views`; that module
@@ -270,10 +276,11 @@ the package.
 - [ ] Update metric requests to `{ "metric": "name" }`.
 - [ ] Update filter and temporal values to canonical forms.
 - [ ] Move plan visualization to sibling presentation metadata.
-- [ ] Update result consumers for `truncated`, typed columns, aggregate decimal
-      canonicalization, scalar decimal scale preservation, and optional
-      presentation.
+- [ ] Update result consumers for the complete `result` child, `truncated`,
+      optional `empty`, typed columns, aggregate decimal canonicalization,
+      scalar decimal scale preservation, and optional sibling presentation.
 - [ ] Read machine capabilities and permission-scoped catalog as separate
-      documents; read human suggestions from `query_help`.
+      documents; read routing from `routing` and human suggestions from
+      `help.content`.
 - [ ] Run tenant, permission, boundary, package, and PostgreSQL tests appropriate
       to the deployment before release.

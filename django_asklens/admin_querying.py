@@ -40,16 +40,17 @@ def build_admin_result(result: dict[str, Any]) -> dict[str, Any]:
 def build_admin_query_result(result: dict[str, Any]) -> dict[str, Any]:
     """Return a template-friendly representation of query rows."""
 
-    columns = result["columns"]
+    query_result = result["result"]
+    columns = query_result["columns"]
     return {
         "response_type": "query",
         "columns": columns,
         "rows": [
             {"cells": [row.get(column["key"], "") for column in columns]}
-            for row in result["data"]
+            for row in query_result["data"]
         ],
-        "row_count": result["row_count"],
-        "duration_ms": result["duration_ms"],
+        "row_count": query_result["row_count"],
+        "duration_ms": query_result["duration_ms"],
         "presentation": result.get("presentation"),
     }
 
@@ -57,13 +58,14 @@ def build_admin_query_result(result: dict[str, Any]) -> dict[str, Any]:
 def build_admin_capabilities_result(result: dict[str, Any]) -> dict[str, Any]:
     """Return a template-friendly representation of query help."""
 
-    query_help = result.get("query_help") or {}
+    help_payload = result.get("help") or {}
+    query_help = help_payload.get("content") or {}
     suggestions = query_help.get("suggestions") or []
     return {
         "response_type": "capabilities",
         "answer": query_help.get("answer") or "",
-        "query_help_source": result.get("query_help_source", ""),
-        "query_help_error": result.get("query_help_error", ""),
+        "query_help_source": help_payload.get("source", ""),
+        "query_help_error": help_payload.get("error", ""),
         "suggestions": [
             {
                 "question": suggestion.get("question", ""),

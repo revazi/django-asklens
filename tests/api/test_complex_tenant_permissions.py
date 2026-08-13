@@ -347,7 +347,7 @@ def test_complex_billing_query_scopes_rows_to_granted_facility(
     )
 
     assert north_response.status_code == 200, north_response.data
-    assert north_response.data["data"] == [
+    assert north_response.data["result"]["data"] == [
         {"product_name": "Membership", "gross_revenue": 10000},
         {"product_name": "Retail", "gross_revenue": 5000},
     ]
@@ -360,7 +360,7 @@ def test_complex_billing_query_scopes_rows_to_granted_facility(
     )
 
     assert south_response.status_code == 200, south_response.data
-    assert south_response.data["data"] == [
+    assert south_response.data["result"]["data"] == [
         {"product_name": "Membership", "gross_revenue": 7000},
         {"product_name": "Retail", "gross_revenue": 3000},
     ]
@@ -385,7 +385,7 @@ def test_complex_contact_resource_scopes_to_facilities_with_pii_grant(
     )
 
     assert response.status_code == 200, response.data
-    assert response.data["data"] == [
+    assert response.data["result"]["data"] == [
         {
             "facility.name": "North Studio",
             "first_name": "North",
@@ -484,7 +484,7 @@ def test_capability_help_for_single_facility_user_avoids_multi_facility_examples
     assert f"facility:{complex_tenant_data.north.id}" not in str(response.data)
     suggestion_questions = [
         suggestion["question"]
-        for suggestion in response.data["query_help"]["suggestions"]
+        for suggestion in response.data["help"]["content"]["suggestions"]
     ]
     suggestion_text = "\n".join(suggestion_questions).lower()
     assert "list facilities with facility name" not in suggestion_text

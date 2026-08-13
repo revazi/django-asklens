@@ -78,7 +78,7 @@ Common UI uses include:
 - combine catalog field types with capability operator rules
 - display visible resources/fields in a help panel
 - hide the query composer when the catalog has no resources
-- render starter questions from `query_help.suggestions`
+- render starter questions from `help.content.suggestions`
 
 ## Ask a question
 
@@ -91,7 +91,9 @@ Content-Type: application/json
 {"question": "Show orders by status"}
 ```
 
-A data-query response includes `response_type: "query"`, normalized rows, column metadata, and result limit metadata:
+A data-query response includes `response_type: "query"`, adapter metadata, and
+one complete core `result` document with normalized rows, column metadata,
+timing, and deterministic limit metadata:
 
 ```json
 {
@@ -99,51 +101,62 @@ A data-query response includes `response_type: "query"`, normalized rows, column
   "question": "Show orders by status",
   "response_type": "query",
   "plan": {"resource": "orders", "intent": "aggregate", "limit": 10},
-  "columns": [
-    {"key": "status", "label": "Status", "type": "string", "nullable": false},
-    {
-      "key": "order_count",
-      "label": "Orders",
-      "type": "integer",
-      "nullable": false
+  "result": {
+    "columns": [
+      {"key": "status", "label": "Status", "type": "string", "nullable": false},
+      {
+        "key": "order_count",
+        "label": "Orders",
+        "type": "integer",
+        "nullable": false
+      }
+    ],
+    "data": [
+      {"status": "paid", "order_count": 120},
+      {"status": "pending", "order_count": 34}
+    ],
+    "row_count": 2,
+    "duration_ms": 18,
+    "result_metadata": {
+      "limit": 10,
+      "limit_scope": "groups",
+      "truncated": false
     }
-  ],
-  "data": [
-    {"status": "paid", "order_count": 120},
-    {"status": "pending", "order_count": 34}
-  ],
-  "row_count": 2,
-  "result_metadata": {
-    "limit": 10,
-    "limit_scope": "groups",
-    "truncated": false
   },
-  "duration_ms": 18,
   "presentation": {"kind": "bar", "x": {"field": "status"}, "y": {"field": "order_count"}}
 }
 ```
 
-For grouped aggregate/chart responses, `result_metadata.limit` caps returned groups or slices. For list/table responses, it caps returned rows. If `result_metadata.truncated` is true, another matching row/group exists beyond the returned limit; show a message such as “Showing the first N results. Refine filters or increase the limit.” Ungrouped aggregates have effective limit one and are never truncated. AskLens does not provide cursor pagination.
+For grouped aggregate/chart responses, `result.result_metadata.limit` caps
+returned groups or slices. For list/table responses, it caps returned rows. If
+`result.result_metadata.truncated` is true, another matching row/group exists
+beyond the returned limit; show a message such as “Showing the first N results.
+Refine filters or increase the limit.” Ungrouped aggregates have effective limit
+one and are never truncated. AskLens does not provide cursor pagination.
 
-Use each column's canonical `type` and `nullable` metadata rather than inferring types from the first row. Decimal values are strings to preserve precision. Empty ungrouped aggregates contain one row (`count=0`, other aggregate values `null`); empty grouped aggregates contain no rows.
+Use each column's canonical `type` and `nullable` metadata rather than inferring
+types from the first row. Decimal values are strings to preserve precision.
+Empty ungrouped aggregates contain one row (`count=0`, other aggregate values
+`null`); empty grouped aggregates contain no rows and add `result.empty: true`.
 
-Render tables by iterating `columns` for headers and `data` for row values:
+Render tables by iterating `result.columns` for headers and `result.data` for row
+values:
 
 ```js
 function renderTable(response) {
   const table = document.createElement("table");
   const thead = table.createTHead();
   const header = thead.insertRow();
-  response.columns.forEach((column) => {
+  response.result.columns.forEach((column) => {
     const th = document.createElement("th");
     th.textContent = column.label || column.key;
     header.appendChild(th);
   });
 
   const tbody = table.createTBody();
-  response.data.forEach((row) => {
+  response.result.data.forEach((row) => {
     const tr = tbody.insertRow();
-    response.columns.forEach((column) => {
+    response.result.columns.forEach((column) => {
       const td = tr.insertCell();
       td.textContent = row[column.key] ?? "";
     });
@@ -152,14 +165,15 @@ function renderTable(response) {
 }
 ```
 
-Render charts with any charting library by mapping `presentation.x.field` and `presentation.y.field` to values in `data`:
+Render charts with any charting library by mapping `presentation.x.field` and
+`presentation.y.field` to values in `result.data`:
 
 ```js
 function toBarSeries(response) {
   const x = response.presentation?.x?.field;
   const y = response.presentation?.y?.field;
   if (!x || !y) return null;
-  return response.data.map((row) => ({
+  return response.result.data.map((row) => ({
     label: row[x],
     value: row[y],
   }));
@@ -182,36 +196,46 @@ Content-Type: application/json
 {"question": "Show orders by status", "include_presentation": false}
 ```
 
-When `include_presentation` is false, the response still includes `columns`, `data`, `row_count`, and audit metadata.
+When `include_presentation` is false, the response still includes the complete
+`result` child and audit metadata.
 
 ## Handle help responses
 
-Questions such as `show me example queries` or `what can I ask?` return `response_type: "capabilities"` and do not execute a database query. An abbreviated response is:
+Questions such as `show me example queries` or `what can I ask?` return
+`response_type: "capabilities"` and do not execute a database query. Exact
+machine `capabilities` and permission-scoped `catalog` documents are siblings of
+adapter-only `routing` and human `help` objects:
 
 ```json
 {
   "response_type": "capabilities",
-  "query_help_source": "deterministic",
+  "routing": {"intent": {"intent": "capabilities"}, "source": "fallback"},
   "capabilities": {"intents": ["list", "aggregate"], "filter_logic": "implicit_and"},
   "catalog": {"resources": [{"name": "orders", "label": "Orders"}]},
-  "query_help": {
-    "answer": "Try these examples.",
-    "suggestions": [
-      {
-        "question": "Show count of Orders by Status",
-        "resource_name": "orders",
-        "plan": {"resource": "orders", "intent": "aggregate"}
-      }
-    ]
+  "help": {
+    "source": "deterministic",
+    "content": {
+      "answer": "Try these examples.",
+      "suggestions": [
+        {
+          "question": "Show count of Orders by Status",
+          "resource_name": "orders",
+          "plan": {"resource": "orders", "intent": "aggregate"}
+        }
+      ]
+    }
   }
 }
 ```
+
+`help.content` is human guidance, not the internal machine capabilities
+document. An optional safe fallback reason appears as `help.error`.
 
 Your UI should branch on `response_type`:
 
 ```js
 if (response.response_type === "capabilities") {
-  renderSuggestions(response.query_help.suggestions);
+  renderSuggestions(response.help.content.suggestions);
 } else {
   renderTable(response);
 }

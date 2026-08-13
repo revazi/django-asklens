@@ -5,10 +5,10 @@
 This began as the API-2 current-state map for the optional Django REST
 framework adapter. Its original implementation baseline was clean `main` at
 `09715e3db731803c58577c1a6bcde54c152b73de`. API-5 later replaced the run-detail/
-audit boundary, API-3 cleaned the Python export surface, and authorized API-4a
-now replaces permissive top-level query input plus the three divergent AskLens-
-route error wrappers. This remains a current implementation crosswalk rather
-than a stable contract.
+audit boundary, API-3 cleaned the Python export surface, API-4a replaced
+permissive top-level query input plus divergent AskLens-route errors, and API-4b
+now replaces spread query/help success fields with explicit composition. This
+remains a current implementation crosswalk rather than a stable contract.
 
 The five internal documents are `catalog`, `capabilities`, `query-plan`,
 `result`, and `error`. The evidence for the mapping is:
@@ -39,9 +39,9 @@ exports. `django_asklens.querying.__all__` is exactly `AskLensQueryResponse` and
 `AskLensAPIView`, `CapabilitiesView`, `CatalogView`, `QueryRunDetailView`, and
 `QueryView`. Deliberate root `django_asklens` exports remain retained. Private
 `_build_success_payload()` and `_build_capabilities_payload()` helpers are
-implementation details, not supported imports. API-4a changes only strict input
-and AskLens-route errors; API-4b success composition and API-6 remain separately
-gated.
+implementation details, not supported imports. API-4a owns strict input and
+AskLens-route errors; API-4b owns success composition. API-6 remains the next
+separate packaging/import-parity PR after API-4b's post-merge gate.
 
 ## Terms
 
@@ -75,8 +75,8 @@ current-request trusted execution path.
 | --- | --- | --- | --- | --- | --- | --- |
 | `GET /asklens/catalog/` success | `200` | `serialize_catalog(permissions=current_request_permissions)` | Entire body is the exact permission-scoped `catalog` document | None | No query-run audit | Preserve exact identity and the safe metadata boundary |
 | `GET /asklens/capabilities/` success | `200` | `build_capabilities()` | Entire body is the exact resource-independent `capabilities` document | None | No query-run audit | Preserve exact identity and resource independence |
-| `POST /asklens/query/` query success | `200` | private `_build_success_payload()` after `execute_plan()` | Embedded exact `query-plan`; required `result` members are spread into a larger wrapper; body is not a `result` document | `question`, `response_type`, optional `run_id`, optional `presentation`, `explanation`, optional `debug` | One configured execution audit event; a database run and `run_id` exist only when the database sink returns a run | Prefer an explicit complete `result` child in a separately authorized cleanup |
-| `POST /asklens/query/` capabilities/help success | `200` | private `_build_capabilities_payload()` | Embedded exact `capabilities` and permission-scoped `catalog`; help wrapper is not one of the five documents | `question`, `response_type`, `capability_intent`, `routing_source`, `query_help_source`, `query_help`, optional `query_help_error`, `explanation` | No plan execution and no query-run audit | Make wrapper composition explicit without calling help a machine contract |
+| `POST /asklens/query/` query success | `200` | private `_build_success_payload()` after `execute_plan()` | Embedded exact `query-plan` plus a complete exact `result` child, including optional `empty` | `question`, `response_type`, optional `run_id`, optional `presentation`, `explanation`, optional `debug` | One configured execution audit event; a database run and `run_id` exist only when the database sink returns a run | Preserve exact result identity and shared-orchestrator parity |
+| `POST /asklens/query/` capabilities/help success | `200` | private `_build_capabilities_payload()` | Embedded exact `capabilities` and permission-scoped `catalog`; `routing` and human `help` are explicit adapter objects, not internal documents | `question`, `response_type`, `routing`, `help`, `explanation` | No plan execution and no query-run audit | Keep machine documents distinct from human guidance |
 | `POST /asklens/query/` request-serializer rejection | `400` | strict `QueryRequestSerializer` plus `QueryView.post()` | Exact internal `error` child under the sole `{error}` envelope | None | No audit and no application-data SQL | Unknown keys and malformed request shape reject without reflected diagnostics |
 | `POST /asklens/query/` AskLens failure after request acceptance | `400` | `execute_asklens_query_request()` adapted by `QueryView.post()` | Exact existing internal `error` child under `{error,run_id?}` | Optional database audit `run_id` only | Configured safe failure audit; rejection performs zero application-data SQL, though database mode may insert metadata | Preserve shared orchestration/audit while removing question/status wrapper fields |
 | Any AskLens route, parser/media/auth/permission/debug/method/throttle/not-found/unexpected rejection | Existing `4xx`/`5xx` status | route-local `AskLensAPIView.handle_exception()` | Fixed exact internal `error` child under `{error}` | None | Transport/route/strict-input denials remain unaudited; run-detail reads create no audit | Preserve applicable `Allow`, `WWW-Authenticate`, and `Retry-After`; non-AskLens host views are unchanged |
@@ -132,23 +132,21 @@ plan and current request. The response is a wrapper with three categories:
 1. `plan` is an embedded current `query-plan` document. It is the normalized
    `QueryPlan` from the completed trusted execution, not a public prepared plan
    or reusable authorization token.
-2. `columns`, `data`, `row_count`, `duration_ms`, and `result_metadata` are the
-   exact core `result` fields copied from `QueryResult.to_dict()` and spread at
-   the HTTP top level. Because the wrapper also has adapter members, the whole
-   HTTP body is not an exact `result` document.
+2. `result` is the complete `QueryResult.to_dict()` mapping and therefore an
+   exact current internal result document. It contains `columns`, `data`,
+   `row_count`, `duration_ms`, and `result_metadata`, and preserves optional
+   `empty: true` when no rows are emitted.
 3. `question`, `response_type: "query"`, `explanation`, optional database
    `run_id`, optional normalized `presentation`, and optional staff-only `debug`
    are HTTP adapter fields. Presentation and debug do not alter plan semantics
    or returned values.
 
-The internal `result` serializer adds optional `empty: true` when `data` has no
-rows and omits `empty` otherwise. The private `_build_success_payload()` helper
-currently selects the five required result fields listed above and does not copy
-`empty`, even when it was present in the core result mapping. The HTTP wrapper
-therefore does not preserve that optional emitted marker. The five selected
-values still cover all required fields of the current result schema, but field
-spreading and the omission mean the response must not be described as identical
-to the core result object.
+Result members are no longer duplicated or spread at the HTTP top level. The
+shared framework-neutral orchestrator owns this composition; `QueryView` still
+returns its payload directly on success. Admin and the packaged frontend consume
+the nested result. MCP consumes the same shared result and deliberately adapts
+it back into its existing row-policy response so default row omission and the
+separate MCP return cap remain intact.
 
 Trusted execution emits one audit event according to server-owned policy. With
 the default database metadata-only policy, the stored run has operational
@@ -168,13 +166,17 @@ executing a plan. The wrapper embeds:
 - `catalog`: an exact current-request permission-scoped internal `catalog`
   document.
 
-The sibling fields `question`, `response_type: "capabilities"`,
-`capability_intent`, `routing_source`, `query_help_source`, `query_help`, optional
-`query_help_error`, and `explanation` belong to routing and human-help
-orchestration. `query_help` is a strict help model, but it is not one of the five
-internal machine documents and must not be presented as one. A validated help
-suggestion may contain a current-shape `plan`; that plan remains untrusted and is
-revalidated with the then-current request if submitted for execution.
+The sibling adapter objects are now explicit:
+
+- `routing` contains the strict capability-intent value under `intent` and the
+  routing source under `source`; and
+- `help` contains `source`, strict human guidance under `content`, and optional
+  safe provider-fallback text under `error`.
+
+`help.content` is a strict help model, but neither `routing` nor `help` is one of
+the five internal machine documents. A validated help suggestion may contain a
+current-shape `plan`; that plan remains untrusted and is revalidated with the
+then-current request if submitted for execution.
 
 This outcome performs no query execution and creates no query-run audit. That
 non-auditing help behavior is distinct from a data-query success.
@@ -278,15 +280,14 @@ Explicit lifecycle-command
 
 ## Current non-identities and cleanup candidates
 
-The crosswalk intentionally records these current non-identities rather than
-forcing schema equality:
+The crosswalk intentionally records exact identities and remaining non-
+identities without forcing the complete HTTP wrapper into one schema:
 
-- The query-success body embeds `query-plan` but spreads `result` fields beside
-  adapter fields and drops the core serializer's optional emitted `empty`
-  marker.
+- Query success embeds exact `query-plan` and complete exact `result` children;
+  the surrounding HTTP body remains an adapter wrapper.
 - The capabilities/help body embeds exact `capabilities` and `catalog`
-  documents, but routing and human-help fields make the wrapper a separate
-  adapter shape.
+  documents. Explicit `routing` and `help` objects remain adapter shapes, and
+  `help.content` is not relabeled as a machine document.
 - AskLens-route errors now share one `{error, run_id?}` adapter shape. The nested
   `error` is an exact internal ErrorDocument; optional top-level `run_id` is an
   HTTP audit reference rather than part of that document.
@@ -301,28 +302,17 @@ audit-unavailable, accepted AskLens, and unexpected errors. Required headers,
 route ordering, audit effects, member opacity, and zero application-data SQL are
 preserved.
 
-Remaining candidates for separately authorized alpha cleanup are:
+API-4b is no longer a remaining candidate: it embeds the complete result,
+preserves `empty`, and explicitly separates machine documents from routing and
+human help. API-3 previously removed the deprecated Python compatibility module
+and accidental helper exports while retaining the two canonical querying
+exports, five view-class exports, and deliberate root exports. API-4a completed
+strict-input/error cleanup.
 
-1. Make query success embed a complete result document, for example under
-   `result`, rather than spreading its fields. That target naturally preserves
-   optional `empty`; any alternative should explicitly justify why spreading is
-   clearer and prove complete result parity.
-2. Define the capabilities-help wrapper as explicit composition of exact
-   `capabilities`, exact permission-scoped `catalog`, and separately named help
-   and routing fields. Do not relabel human help as the internal capabilities
-   document.
-
-API-3 is no longer a remaining candidate: it removes the deprecated Python
-compatibility module and accidental helper exports while retaining the two
-canonical querying exports, five view-class exports, and deliberate root
-exports. API-4a now completes strict-input/error cleanup; API-4b success-
-envelope composition and optional-extra/import/wheel parity in API-6 remain
-gated.
-
-The accepted alpha-breaking direction means a later authorized cleanup need not
-retain accidental wire shapes or add compatibility/migration machinery. It does
-not make this current shape stable and does not authorize API-4b, API-6, or any
-additional runtime edit.
+The accepted alpha-breaking direction permits these replacements without
+compatibility/deprecation or consumer migration machinery. It does not make the
+current shape stable. API-6 is authorized only as the next separate PR after
+API-4b merge, cleanup, and passing post-merge CI; it is not part of API-4b.
 
 ## Recommended sequential cleanup order
 
@@ -341,19 +331,15 @@ separately even when the alpha permits breaking changes.
 3. API-4a enforces strict unknown query keys and one safe route-local error
    envelope while preserving statuses, headers, gates, opacity, audit, and
    application-data SQL boundaries.
-
-**Remaining separately gated candidates:**
-
-4. API-4b could embed a complete `result` child and make the capabilities-help
+4. API-4b embeds a complete `result` child and makes capabilities/help
    composition explicit while keeping the DRF view thin and preserving parity
    with shared orchestration.
-5. API-6 could finish with core/API optional-import, dependency-extra,
-   source/wheel route, and artifact parity evidence.
 
-Each remaining item should be a small separately authorized tranche with
-characterization first, narrow and full evidence, independent review, and an
-explicit stop at its gate. This recommendation does not authorize API-4b,
-API-6, or any additional item.
+**Next separately gated workflow:**
+
+5. API-6 is authorized to finish core/API optional-import, dependency-extra,
+   source/wheel route, and artifact parity evidence only after API-4b merge,
+   cleanup, and green post-merge CI.
 
 ## Preserved security and package boundaries
 
@@ -386,13 +372,13 @@ Any later cleanup must preserve all of these current invariants:
 
 The five schemas remain internal, draft, unfrozen, and unversioned. This
 crosswalk does not freeze the HTTP API, publish a specification, establish a
-compatibility promise, or prove backend neutrality. API-4a changes only the
-strict-input/error adapter boundary; it does not extend API-5 audit access or
-implement API-4b success composition. This is not a public specification and not
-a compatibility promise.
+compatibility promise, or prove backend neutrality. API-4b changes only success
+composition; it does not extend API-5 audit access or API-4a request/error
+behavior. This is not a public specification and not a compatibility promise.
 
 The evidence is repository code and maintainer-operated tests over the bounded
-API-2/API-3/API-4a/API-5 changes. It is not external pilot/adoption evidence or
-production certification, and it is not an independent security audit. Passing the drift
-test or a later review does not make run detail schema-identical to an internal
-document, approve an API contract, authorize a release, or open API-4b or API-6.
+API-2/API-3/API-4a/API-4b/API-5 changes. It is not external pilot/adoption
+evidence or production certification, and it is not an independent security audit. Passing
+the drift test or a later review does not make run detail schema-identical to an
+internal document, approve an API contract, authorize a release, or start
+API-6 before the explicit API-4b post-merge gate.

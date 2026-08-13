@@ -269,14 +269,17 @@ def test_route_successes_have_current_json_status_and_top_level_shapes(
         "question",
         "response_type",
         "plan",
+        "result",
+        "explanation",
+        "run_id",
+        "presentation",
+    }
+    assert set(query.data["result"]) == {
         "columns",
         "data",
         "row_count",
         "duration_ms",
         "result_metadata",
-        "explanation",
-        "run_id",
-        "presentation",
     }
     assert query.data["response_type"] == "query"
     assert set(run_detail.data) == {
@@ -506,12 +509,12 @@ def test_query_rejects_every_unknown_top_level_key_before_orchestration_audit_an
     assert SemanticQueryRun.objects.count() == 0
 
 
-def test_query_optional_defaults_and_success_shape_remain_unchanged(
+def test_query_optional_defaults_remain_and_success_shape_is_nested(
     api_client: APIClient,
     user,
     registered_orders: None,
 ) -> None:
-    """Strict input does not alter valid optional defaults or success bodies."""
+    """Strict input keeps valid defaults under the API-4b success envelope."""
 
     api_client.force_authenticate(user=user)
     payload = {

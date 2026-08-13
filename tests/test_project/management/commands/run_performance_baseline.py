@@ -423,10 +423,10 @@ def _run_baseline_query(*, request, query: BaselineQuery) -> dict[str, Any]:
             f"with error code {error_code}."
         )
 
-    payload = response.payload
+    payload = response.payload.get("result")
     if not isinstance(payload, Mapping):
         raise CommandError(
-            f"Baseline query {query.name!r} produced an invalid payload."
+            f"Baseline query {query.name!r} produced an invalid result payload."
         )
 
     _validate_result_columns(

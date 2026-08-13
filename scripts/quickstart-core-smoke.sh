@@ -430,17 +430,15 @@ def stable_projection(payload):
     """Exclude caller echo, run id, and timing from deterministic comparison."""
 
     return {
-        key: payload[key]
-        for key in (
-            "response_type",
-            "plan",
-            "columns",
-            "data",
-            "row_count",
-            "result_metadata",
-            "presentation",
-            "explanation",
-        )
+        "response_type": payload["response_type"],
+        "plan": payload["plan"],
+        "result": {
+            key: value
+            for key, value in payload["result"].items()
+            if key != "duration_ms"
+        },
+        "presentation": payload["presentation"],
+        "explanation": payload["explanation"],
     }
 
 
@@ -639,32 +637,28 @@ assert second_response.status_code == 200
 first_payload = first_response.json()
 second_payload = second_response.json()
 expected_response_keys = {
-    "columns",
-    "data",
-    "duration_ms",
     "explanation",
     "plan",
     "presentation",
     "question",
     "response_type",
-    "result_metadata",
-    "row_count",
+    "result",
     "run_id",
 }
 assert set(first_payload) == expected_response_keys
 assert set(second_payload) == expected_response_keys
 assert first_payload["response_type"] == "query"
-assert first_payload["row_count"] == 2
-assert second_payload["row_count"] == 2
-assert first_payload["columns"] == [
+assert first_payload["result"]["row_count"] == 2
+assert second_payload["result"]["row_count"] == 2
+assert first_payload["result"]["columns"] == [
     {"key": "summary", "label": "Summary", "type": "string", "nullable": False}
 ]
 expected_rows = [
     {"summary": "First authorized synthetic fact"},
     {"summary": "Second authorized synthetic fact"},
 ]
-assert first_payload["data"] == expected_rows
-assert second_payload["data"] == expected_rows
+assert first_payload["result"]["data"] == expected_rows
+assert second_payload["result"]["data"] == expected_rows
 assert first_payload["plan"]["resource"] == "scoped_facts"
 assert first_payload["plan"]["intent"] == "list"
 assert set(first_payload["plan"]) == {
@@ -738,7 +732,7 @@ print(f"api_member_denial_code={denial_code}")
 print(f"api_member_denial_application_data_queries={denial_application_data_queries}")
 print(f"api_success_first_status={first_response.status_code}")
 print(f"api_success_second_status={second_response.status_code}")
-print(f"api_success_row_count={first_payload['row_count']}")
+print(f"api_success_row_count={first_payload['result']['row_count']}")
 print(f"api_success_repeat_sha256={first_hash}")
 print("api_success_repeat_stable=true")
 print(f"api_audit_count={len(runs)}")

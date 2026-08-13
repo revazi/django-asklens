@@ -182,9 +182,10 @@ result = execute_plan(payload, request=request)
 response_payload = result.to_dict()
 ```
 
-`QueryResult.to_dict()` contains only core columns, rows, timing, and limit
-metadata. Optional display metadata is a separate presentation envelope and is
-never accepted by `execute_plan()` as part of QueryPlan.
+`QueryResult.to_dict()` contains only core columns, rows, timing, limit metadata,
+and the optional `empty: true` marker. Optional display metadata is a separate
+presentation envelope and is never accepted by `execute_plan()` as part of
+QueryPlan.
 
 `execute_plan(...)` repeats current semantic validation and then resolves the resource's fail-closed scope policy. `global` uses the registered model manager only when deliberately declared on that resource. `context_scoped` may be inherited from `DEFAULT_SCOPE_MODE`, but still requires the current request and a trusted provider returning an unevaluated `QuerySet` for the registered model. Missing or invalid scope fails with `asklens.scope.unavailable` and never broadens to the default manager.
 
@@ -233,7 +234,10 @@ Serialized columns include canonical `type` and `nullable`. Decimal results rema
 
 Replace `from django_asklens.compiler import compile_query_plan` and `from django_asklens.execution import execute_query` with `execute_plan()`. `CompiledQuery` is also internal. AskLens intentionally provides no public operation that executes a caller-supplied compiled or merely shape-valid plan. `run_query_plan()` remains available for one alpha cycle, emits `DeprecationWarning`, requires the current request, and revalidates its input.
 
-Do not infer truncation from `row_count == plan.limit` or the old `build_result_metadata(plan=..., row_count=...)` helper shape. Consume the trusted `result_metadata` returned by `QueryResult.to_dict()` or the API/MCP response.
+Do not infer truncation from `row_count == plan.limit` or the old
+`build_result_metadata(plan=..., row_count=...)` helper shape. Consume the
+trusted `result_metadata` returned directly by `QueryResult.to_dict()`, under
+the HTTP shared-orchestrator `result` child, or in the MCP response.
 
 ### Stable execution errors
 
@@ -286,15 +290,25 @@ response = execute_asklens_query_request(
 )
 
 if response.response_type == "capabilities":
-    suggestions = response.payload["query_help"]["suggestions"]
+    suggestions = response.payload["help"]["content"]["suggestions"]
 elif response.response_type == "query":
-    rows = response.payload["data"]
+    rows = response.payload["result"]["data"]
 else:
     error_code = response.payload["error"]["code"]
     error_message = response.payload["error"]["message"]
 ```
 
-By default, execution writes one `SemanticQueryRun` containing operational metadata only. `question` is blank and `plan` contains only validated resource/intent metadata; rejected raw plans are not stored. Capability/help responses do not create query-run records because they do not execute a database query.
+The shared query-success payload embeds the complete existing core result under
+`result`, including optional `empty: true`; adapter question, plan, audit,
+presentation, explanation, and staff debug fields remain siblings. Capability/
+help payloads keep exact `capabilities` and permission-scoped `catalog` children,
+with adapter routing under `routing` and human guidance under `help`. These are
+intentional alpha response shapes, not public contract stability.
+
+By default, execution writes one `SemanticQueryRun` containing operational
+metadata only. `question` is blank and `plan` contains only validated resource/
+intent metadata; rejected raw plans are not stored. Capability/help responses do
+not create query-run records because they do not execute a database query.
 
 Audit settings are server-owned:
 

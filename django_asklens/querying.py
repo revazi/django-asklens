@@ -294,23 +294,27 @@ def _build_capabilities_payload(
 ) -> dict[str, Any]:
     """Build a natural-language help response without executing a query."""
 
-    payload = {
+    help_payload = {
+        "source": query_help_source,
+        "content": query_help.model_dump(mode="json"),
+    }
+    if query_help_error:
+        help_payload["error"] = query_help_error
+    return {
         "question": question,
         "response_type": "capabilities",
-        "capability_intent": intent.model_dump(mode="json"),
-        "routing_source": source,
+        "routing": {
+            "intent": intent.model_dump(mode="json"),
+            "source": source,
+        },
         "capabilities": build_capabilities(),
         "catalog": serialize_catalog(permissions=permissions),
-        "query_help_source": query_help_source,
-        "query_help": query_help.model_dump(mode="json"),
+        "help": help_payload,
         "explanation": (
             "Returned machine capabilities, permission-scoped catalog metadata, "
             "and query-writing help without executing a database query."
         ),
     }
-    if query_help_error:
-        payload["query_help_error"] = query_help_error
-    return payload
 
 
 def _build_success_payload(
@@ -328,15 +332,7 @@ def _build_success_payload(
         "question": question,
         "response_type": "query",
         "plan": plan,
-        "columns": query_result["columns"],
-        "data": query_result["data"],
-        "row_count": query_result["row_count"],
-        "duration_ms": query_result["duration_ms"],
-        "result_metadata": _build_result_metadata(
-            limit=int(query_result["result_metadata"]["limit"]),
-            limit_scope=query_result["result_metadata"]["limit_scope"],
-            truncated=bool(query_result["result_metadata"]["truncated"]),
-        ),
+        "result": dict(query_result),
         "explanation": "Executed a validated read-only AskLens query plan.",
     }
     if run is not None:
@@ -372,21 +368,6 @@ def _build_presentation_payload(
         )
     except AskLensError:
         return {"kind": "table"}
-
-
-def _build_result_metadata(
-    *,
-    limit: int,
-    limit_scope: str,
-    truncated: bool,
-) -> dict[str, Any]:
-    """Return accurate effective-limit metadata from trusted execution."""
-
-    return {
-        "limit": limit,
-        "limit_scope": limit_scope,
-        "truncated": truncated,
-    }
 
 
 def _safe_provider_fallback_message(exc: AskLensError) -> str:

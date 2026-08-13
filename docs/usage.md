@@ -206,10 +206,18 @@ payload = response.json()
 assert payload["response_type"] == "query"
 assert payload["plan"]["resource"] == "orders"
 assert payload["plan"]["intent"] == "list"
-assert payload["columns"][0]["key"] == "status"
+assert payload["result"]["columns"][0]["key"] == "status"
 ```
 
-Current successful behavior is `HTTP 200` with `response_type: "query"`, the revalidated semantic `plan`, typed `columns`, authorized scoped rows in `data`, `row_count`, deterministic `result_metadata`, and a `run_id`. The response also echoes the question submitted by that authorized caller. It must not expose the Django binding, permission token, model label, scope identity, other users' rows, provider envelope, or credentials. Repeating the synthetic request with unchanged scoped data gives the same canonical projection after excluding `run_id` and `duration_ms`.
+Current successful behavior is `HTTP 200` with `response_type: "query"`, the
+revalidated semantic `plan`, one complete `result` child containing typed
+columns, authorized scoped rows, `row_count`, timing, deterministic
+`result_metadata`, and a `run_id`. The response also echoes the question
+submitted by that authorized caller. It must not expose the Django binding,
+permission token, model label, scope identity, other users' rows, provider
+envelope, or credentials. Repeating the synthetic request with unchanged scoped
+data gives the same canonical projection after excluding `run_id` and
+`result.duration_ms`.
 
 ### 6. Keep denials opaque and diagnose host setup
 
@@ -462,7 +470,17 @@ Content-Type: application/json
 {"question": "Show orders by status"}
 ```
 
-A successful data-query response includes `response_type: "query"`, the question, validated plan, column metadata, normalized rows, limit metadata, optional presentation, timing, and audit run id. Presentation is outside QueryPlan and cannot affect authorization, scope, compilation, ordering, limits, or returned values. In live mode, deciding between data query and capability help plus producing the data `QueryPlan` and optional presentation happens in one provider call. Advanced clients may submit a previously returned `query_help.suggestions[].plan` with the question; AskLens revalidates the plan against current request permissions and executes it directly instead of making another LLM call.
+A successful data-query response includes `response_type: "query"`, the question,
+validated plan, a complete `result` child, optional presentation, and audit run
+id. The result child contains column metadata, normalized rows, row count,
+timing, deterministic limit metadata, and optional `empty: true`. Presentation
+is outside QueryPlan and cannot affect authorization, scope, compilation,
+ordering, limits, or returned values. In live mode, deciding between data query
+and capability help plus producing the data `QueryPlan` and optional
+presentation happens in one provider call. Advanced clients may submit a
+previously returned `help.content.suggestions[].plan` with the question; AskLens
+revalidates the plan against current request permissions and executes it
+directly instead of making another LLM call.
 
 For local benchmark checks on the synthetic project, use [Synthetic performance
 baseline](performance-baseline.md).
@@ -472,20 +490,24 @@ baseline](performance-baseline.md).
   "question": "Show orders by status",
   "response_type": "query",
   "plan": {"resource": "orders", "intent": "aggregate", "limit": 10},
-  "columns": [
-    {"key": "status", "label": "Status", "type": "enum", "nullable": false},
-    {
-      "key": "order_count",
-      "label": "Number Of Orders",
-      "type": "integer",
-      "nullable": false
+  "result": {
+    "columns": [
+      {"key": "status", "label": "Status", "type": "enum", "nullable": false},
+      {
+        "key": "order_count",
+        "label": "Number Of Orders",
+        "type": "integer",
+        "nullable": false
+      }
+    ],
+    "data": [{"status": "paid", "order_count": 2}],
+    "row_count": 1,
+    "duration_ms": 4,
+    "result_metadata": {
+      "limit": 10,
+      "limit_scope": "groups",
+      "truncated": false
     }
-  ],
-  "data": [{"status": "paid", "order_count": 2}],
-  "result_metadata": {
-    "limit": 10,
-    "limit_scope": "groups",
-    "truncated": false
   },
   "presentation": {
     "kind": "bar",
@@ -496,32 +518,49 @@ baseline](performance-baseline.md).
 }
 ```
 
-For grouped aggregate/chart responses, `limit` caps returned groups/slices; for list responses it caps returned rows. AskLens fetches `limit + 1` internally and returns at most `limit`, so `result_metadata.truncated` is true only when another matching row/group exists. Ungrouped aggregates have effective limit one and always report `truncated: false`. On an empty scope they still return one row: count metrics are `0` and sum/average/minimum/maximum metrics are `null`; empty grouped aggregates return no rows. This metadata is accurate truncation detection, not cursor pagination.
+For grouped aggregate/chart responses, `result.result_metadata.limit` caps
+returned groups/slices; for list responses it caps returned rows. AskLens fetches
+`limit + 1` internally and returns at most `limit`, so
+`result.result_metadata.truncated` is true only when another matching row/group
+exists. Ungrouped aggregates have effective limit one and always report
+`truncated: false`. On an empty scope they still return one row: count metrics
+are `0` and sum/average/minimum/maximum metrics are `null`; empty grouped
+aggregates return no rows and add `result.empty: true`. This metadata is accurate
+truncation detection, not cursor pagination.
 
 Column metadata includes canonical `type` and `nullable`. Decimal values are JSON strings, floats are JSON numbers, and unknown runtime objects are rejected rather than stringified. See [Registration](registration.md) for the per-type operator matrix and explicit enum aliases.
 
-Capability/help questions return a non-row response and do not execute a database query. In live mode, `query_help_source` is `semantic_provider` when the unified provider response chose capability help and suggestions passed catalog-reference plus locally synthesized plan validation. An abbreviated response is:
+Capability/help questions return a non-row response and do not execute a
+database query. In live mode, `help.source` is `semantic_provider` when the
+unified provider response chose capability help and suggestions passed catalog-
+reference plus locally synthesized plan validation. The exact machine documents
+remain separate from adapter routing and human help:
 
 ```json
 {
   "question": "What can I query?",
   "response_type": "capabilities",
-  "routing_source": "fallback",
-  "query_help_source": "deterministic",
+  "routing": {"intent": {"intent": "capabilities"}, "source": "fallback"},
   "capabilities": {"intents": ["list", "aggregate"], "filter_logic": "implicit_and"},
   "catalog": {"resources": [{"name": "orders", "label": "Orders"}]},
-  "query_help": {
-    "answer": "You can ask read-only list and aggregate questions over 1 resource.",
-    "suggestions": [
-      {
-        "question": "Show count of Orders by Status",
-        "resource_name": "orders",
-        "plan": {"resource": "orders", "intent": "aggregate"}
-      }
-    ]
+  "help": {
+    "source": "deterministic",
+    "content": {
+      "answer": "You can ask read-only list and aggregate questions over 1 resource.",
+      "suggestions": [
+        {
+          "question": "Show count of Orders by Status",
+          "resource_name": "orders",
+          "plan": {"resource": "orders", "intent": "aggregate"}
+        }
+      ]
+    }
   }
 }
 ```
+
+`help.content` is not an internal machine document. A safe provider fallback
+reason, when present, is `help.error`.
 
 ## 5. Optional packaged frontend
 

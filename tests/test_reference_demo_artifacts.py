@@ -102,8 +102,10 @@ def test_http_internal_envelope_crosswalk_maps_current_non_identity() -> None:
         "Deliberate root `django_asklens` exports remain retained.",
         "Private `_build_success_payload()` and `_build_capabilities_payload()` "
         "helpers are implementation details, not supported imports.",
-        "API-4a changes only strict input and AskLens-route errors; API-4b "
-        "success composition and API-6 remain separately gated.",
+        "API-4a owns strict input and AskLens-route errors; API-4b owns success "
+        "composition.",
+        "API-6 remains the next separate packaging/import-parity PR after "
+        "API-4b's post-merge gate.",
     ):
         assert current_export_truth in normalized
 
@@ -122,6 +124,10 @@ def test_http_internal_envelope_crosswalk_maps_current_non_identity() -> None:
         "not every HTTP body is an internal document",
         "strict `QueryRequestSerializer`",
         "one `{error, run_id?}` adapter shape",
+        "complete exact `result` child",
+        "`routing` and human `help`",
+        "`help.content`",
+        "MCP consumes the same shared result",
         "`WWW-Authenticate`",
         "`Retry-After`",
         "unrelated host DRF endpoints",
@@ -140,17 +146,21 @@ def test_http_internal_envelope_crosswalk_maps_current_non_identity() -> None:
         "not a public specification",
         "not a compatibility promise",
         "not an independent security audit",
-        "does not authorize",
     ):
         assert required in normalized
 
-    for stale_error_shape in (
+    for stale_shape in (
         '`{response_type: "error", error: {...}}`',
         '`{question, status: "failed", error, run_id?}`',
         "DRF `detail` errors.",
         "serializer behavior ignores unknown top-level request keys",
+        "spreads `result` fields",
+        "drops the core serializer's optional emitted `empty`",
+        "`query_help_source`, `query_help`",
+        "does not authorize API-4b",
+        "could embed a complete `result` child",
     ):
-        assert stale_error_shape not in crosswalk
+        assert stale_shape not in crosswalk
 
 
 def test_api4a_source_and_exact_wheel_evidence_are_strict_and_route_local() -> None:

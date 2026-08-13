@@ -388,9 +388,9 @@ def test_live_query_endpoint_uses_one_unified_call_for_help(
     assert response.status_code == 200
     assert provider.calls == 1
     assert response.data["response_type"] == "capabilities"
-    assert response.data["routing_source"] == "semantic_provider"
-    assert response.data["query_help_source"] == "semantic_provider"
-    [suggestion] = response.data["query_help"]["suggestions"]
+    assert response.data["routing"]["source"] == "semantic_provider"
+    assert response.data["help"]["source"] == "semantic_provider"
+    [suggestion] = response.data["help"]["content"]["suggestions"]
     assert suggestion["resource_name"] == "orders"
     assert suggestion["plan"]["resource"] == "orders"
     assert SemanticQueryRun.objects.count() == 0
@@ -438,11 +438,11 @@ def test_live_query_endpoint_uses_one_unified_call_for_query(
     assert provider.calls == 1
     assert response.data["response_type"] == "query"
     assert response.data["plan"]["resource"] == "orders"
-    assert response.data["data"] == [
+    assert response.data["result"]["data"] == [
         {"status": "paid", "order_count": 2},
         {"status": "pending", "order_count": 1},
     ]
-    assert response.data["result_metadata"] == {
+    assert response.data["result"]["result_metadata"] == {
         "limit": 10,
         "limit_scope": "groups",
         "truncated": False,
@@ -472,12 +472,12 @@ def test_query_endpoint_reports_accurate_group_truncation(
 
     assert response.status_code == 200
     assert response.data["response_type"] == "query"
-    assert response.data["row_count"] == 1
-    assert response.data["result_metadata"]["limit"] == 1
-    assert response.data["result_metadata"]["limit_scope"] == "groups"
-    assert response.data["result_metadata"]["truncated"] is True
-    assert "limit_reached" not in response.data["result_metadata"]
-    assert "has_more" not in response.data["result_metadata"]
+    assert response.data["result"]["row_count"] == 1
+    assert response.data["result"]["result_metadata"]["limit"] == 1
+    assert response.data["result"]["result_metadata"]["limit_scope"] == "groups"
+    assert response.data["result"]["result_metadata"]["truncated"] is True
+    assert "limit_reached" not in response.data["result"]["result_metadata"]
+    assert "has_more" not in response.data["result"]["result_metadata"]
 
 
 def test_query_endpoint_intercepts_capabilities_question_without_provider_or_audit(
@@ -502,12 +502,14 @@ def test_query_endpoint_intercepts_capabilities_question_without_provider_or_aud
     assert response.data["catalog"]["resources"][0]["name"] == "orders"
     assert "summary" not in response.data["capabilities"]
     assert "examples" not in response.data["capabilities"]
-    assert response.data["routing_source"] == "fallback"
-    assert response.data["capability_intent"]["intent"] == "capabilities"
-    assert response.data["query_help_source"] == "deterministic"
-    assert "query_help_error" not in response.data
-    assert response.data["query_help"]["suggestions"]
-    assert response.data["query_help"]["suggestions"][0]["resource_name"] == "orders"
+    assert response.data["routing"]["source"] == "fallback"
+    assert response.data["routing"]["intent"]["intent"] == "capabilities"
+    assert response.data["help"]["source"] == "deterministic"
+    assert "error" not in response.data["help"]
+    assert response.data["help"]["content"]["suggestions"]
+    assert (
+        response.data["help"]["content"]["suggestions"][0]["resource_name"] == "orders"
+    )
     assert "database query" in response.data["explanation"]
     assert "run_id" not in response.data
     assert "plan" not in response.data
@@ -576,7 +578,7 @@ def test_admin_query_page_uses_shared_capabilities_flow(
     assert reused_existing_run is False
     assert result is not None
     assert result["response_type"] == "capabilities"
-    assert result["query_help"]["suggestions"]
+    assert result["help"]["content"]["suggestions"]
     admin_result = build_admin_result(result)
     assert admin_result["response_type"] == "capabilities"
     assert admin_result["suggestions"]
@@ -602,7 +604,7 @@ def test_query_endpoint_returns_result_and_records_successful_run(
     assert response.status_code == 200
     assert response.data["question"] == QUESTION
     assert response.data["plan"]["resource"] == "orders"
-    assert response.data["data"] == [
+    assert response.data["result"]["data"] == [
         {"status": "paid", "order_count": 2},
         {"status": "pending", "order_count": 1},
     ]
@@ -646,7 +648,7 @@ def test_query_endpoint_executes_provided_valid_plan_without_planner(
 
     assert response.status_code == 200
     assert response.data["plan"]["resource"] == "orders"
-    assert response.data["data"] == [
+    assert response.data["result"]["data"] == [
         {"status": "paid", "order_count": 2},
         {"status": "pending", "order_count": 1},
     ]
@@ -864,7 +866,7 @@ def test_invalid_presentation_reference_cannot_change_query_execution(
     )
 
     assert response.status_code == 200
-    assert response.data["data"] == [
+    assert response.data["result"]["data"] == [
         {"status": "paid", "order_count": 2},
         {"status": "pending", "order_count": 1},
     ]
@@ -888,8 +890,8 @@ def test_query_endpoint_can_return_data_without_presentation(
     )
 
     assert response.status_code == 200
-    assert response.data["columns"]
-    assert response.data["data"] == [
+    assert response.data["result"]["columns"]
+    assert response.data["result"]["data"] == [
         {"status": "paid", "order_count": 2},
         {"status": "pending", "order_count": 1},
     ]

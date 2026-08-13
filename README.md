@@ -186,7 +186,8 @@ Content-Type: application/json
 {"question": "Show orders by status"}
 ```
 
-Successful data responses include:
+Successful data responses keep adapter metadata outside one complete core
+`result` document:
 
 ```json
 {
@@ -194,31 +195,37 @@ Successful data responses include:
   "question": "Show orders by status",
   "response_type": "query",
   "plan": {"resource": "orders", "intent": "aggregate", "limit": 100},
-  "columns": [
-    {"key": "status", "label": "Status", "type": "string", "nullable": false},
-    {
-      "key": "order_count",
-      "label": "Orders",
-      "type": "integer",
-      "nullable": false
+  "result": {
+    "columns": [
+      {"key": "status", "label": "Status", "type": "string", "nullable": false},
+      {
+        "key": "order_count",
+        "label": "Orders",
+        "type": "integer",
+        "nullable": false
+      }
+    ],
+    "data": [{"status": "paid", "order_count": 12}],
+    "row_count": 1,
+    "duration_ms": 4,
+    "result_metadata": {
+      "limit": 100,
+      "limit_scope": "groups",
+      "truncated": false
     }
-  ],
-  "data": [{"status": "paid", "order_count": 12}],
-  "row_count": 1,
-  "result_metadata": {
-    "limit": 100,
-    "limit_scope": "groups",
-    "truncated": false
   },
   "presentation": {"kind": "bar"}
 }
 ```
 
-Help questions such as `show me example queries` return `response_type: "capabilities"` with suggestions instead of running a database query.
+Help questions such as `show me example queries` return `response_type:
+"capabilities"` with exact `capabilities` and permission-scoped `catalog`
+children, plus separate `routing` and human `help` objects, without running a
+database query.
 
 ## Building a UI
 
-When installed with the `api` extra, AskLens is API-first. Build your own UI with React, Vue, HTMX, Django templates, a mobile client, or any chart/table library by rendering the returned `columns` and `data` arrays.
+When installed with the `api` extra, AskLens is API-first. Build your own UI with React, Vue, HTMX, Django templates, a mobile client, or any chart/table library by rendering the returned `result.columns` and `result.data` arrays.
 
 The packaged frontend is optional and intended as a dependency-free demo/reference UI. Projects that need product-specific layout, charts, saved queries, or workflows should call the API directly. See [Building a custom AskLens UI](docs/custom-ui.md).
 
