@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import importlib
+import importlib.metadata
 import importlib.util
 import os
 import sys
@@ -18,7 +19,7 @@ def main() -> None:
     """Run the requested wheel smoke scenario."""
 
     mode = sys.argv[1]
-    assert f"{django.get_version()}.".startswith(os.environ["DJANGO_VERSION_PREFIX"])
+    assert_supported_django_band()
     if mode == "core":
         smoke_core_install()
     elif mode == "mcp":
@@ -292,6 +293,7 @@ def smoke_core_install() -> None:
         ).resource
         == "orders"
     )
+    assert_modules_not_loaded("rest_framework", "fastmcp")
 
 
 def smoke_mcp_extra_install() -> None:
@@ -325,12 +327,26 @@ def smoke_mcp_extra_install() -> None:
     result = asyncio.run(server.call_tool("asklens_capabilities", {}))
     assert result.structured_content["response_type"] == "capabilities"
     assert seen_contexts and seen_contexts[0].__class__.__name__ == "Context"
+    assert_modules_not_loaded("rest_framework")
 
 
 def smoke_api_extra_install() -> None:
     """Check the optional API extra installs DRF and API URLs."""
 
     assert importlib.util.find_spec("rest_framework") is not None
+    assert importlib.util.find_spec("fastmcp") is None
+
+    from rest_framework import VERSION as drf_version
+
+    installed_drf_version = importlib.metadata.version("djangorestframework")
+    assert drf_version == installed_drf_version
+    drf_major_minor = tuple(int(part) for part in drf_version.split(".")[:2])
+    assert (3, 18) <= drf_major_minor < (4, 0), drf_version
+    print(
+        "PASS resolved API wheel versions: "
+        f"Django {django.get_version()}, djangorestframework {drf_version}"
+    )
+
     configure_settings(
         installed_apps=["rest_framework", "django_asklens"],
         root_urlconf="django_asklens.api.urls",
@@ -382,6 +398,37 @@ def smoke_api_extra_install() -> None:
             "message": "The AskLens request could not be parsed.",
         }
     }
+    assert_modules_not_loaded("fastmcp")
+
+
+def assert_supported_django_band() -> None:
+    """Assert and report the actual Django release in the requested CI band."""
+
+    expected_prefix = os.environ["DJANGO_VERSION_PREFIX"]
+    supported_bands = {
+        "5.2.": ((5, 2), (5, 3)),
+        "6.0.": ((6, 0), (6, 1)),
+        "6.1.": ((6, 1), (6, 2)),
+    }
+    assert expected_prefix in supported_bands, expected_prefix
+    lower, upper = supported_bands[expected_prefix]
+    actual = django.VERSION[:2]
+    assert lower <= actual < upper, django.get_version()
+    assert f"{django.get_version()}.".startswith(expected_prefix)
+
+
+def assert_modules_not_loaded(*package_names: str) -> None:
+    """Assert no module from any named optional package was imported."""
+
+    imported = sorted(
+        module_name
+        for module_name in sys.modules
+        if any(
+            module_name == package_name or module_name.startswith(f"{package_name}.")
+            for package_name in package_names
+        )
+    )
+    assert not imported, f"Unexpected optional modules imported: {imported}"
 
 
 def configure_settings(
