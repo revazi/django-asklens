@@ -311,6 +311,10 @@ def apply_mcp_response_policy(
     """Return a normalized MCP payload for one AskLens query outcome."""
 
     payload = dict(outcome.payload)
+    if outcome.response_type == "query":
+        query_result = payload.pop("result", None)
+        if isinstance(query_result, Mapping):
+            payload.update(query_result)
     payload.setdefault("response_type", outcome.response_type)
     if outcome.status_code != 200:
         payload.setdefault("status_code", outcome.status_code)

@@ -339,7 +339,9 @@ def test_query_endpoint_applies_scope_provider_for_tenant_isolation(
     )
 
     assert alpha_response.status_code == 200
-    assert alpha_response.data["data"] == [{"status": "paid", "order_count": 2}]
+    assert alpha_response.data["result"]["data"] == [
+        {"status": "paid", "order_count": 2}
+    ]
 
     api_client.force_authenticate(user=tenant_data.beta_user)
     beta_response = api_client.post(
@@ -349,7 +351,9 @@ def test_query_endpoint_applies_scope_provider_for_tenant_isolation(
     )
 
     assert beta_response.status_code == 200
-    assert beta_response.data["data"] == [{"status": "pending", "order_count": 3}]
+    assert beta_response.data["result"]["data"] == [
+        {"status": "pending", "order_count": 3}
+    ]
 
 
 def test_crafted_plan_cannot_filter_by_sensitive_tenant_field_without_permission(
@@ -404,7 +408,7 @@ def test_permissioned_sensitive_field_still_respects_tenant_scope_provider(
     )
 
     assert response.status_code == 200, response.data
-    assert response.data["data"] == [
+    assert response.data["result"]["data"] == [
         {"account.slug": "alpha", "status": "paid"},
         {"account.slug": "alpha", "status": "paid"},
     ]
@@ -440,7 +444,7 @@ def test_configured_request_permission_getter_scopes_catalog_and_query(
     assert catalog_response.status_code == 200
     assert "account.slug" in str(catalog_response.data)
     assert query_response.status_code == 200, query_response.data
-    assert query_response.data["data"] == [
+    assert query_response.data["result"]["data"] == [
         {"account.slug": "alpha", "status": "paid"},
         {"account.slug": "alpha", "status": "paid"},
     ]

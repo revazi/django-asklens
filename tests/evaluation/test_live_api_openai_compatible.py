@@ -205,7 +205,9 @@ def test_live_openai_compatible_api_query_is_tenant_scoped_and_audited(
     )
 
     assert response.status_code == 200, response.data
-    statuses = {row["status"] for row in response.data["data"] if "status" in row}
+    statuses = {
+        row["status"] for row in response.data["result"]["data"] if "status" in row
+    }
     assert statuses == {"paid", "pending"}
     assert "failed" not in statuses
     assert "account.slug" not in response.data["plan"]
@@ -215,7 +217,7 @@ def test_live_openai_compatible_api_query_is_tenant_scoped_and_audited(
     run = SemanticQueryRun.objects.get(pk=response.data["run_id"])
     assert run.user == live_tenant_user
     assert run.status == SemanticQueryRun.Status.SUCCESS
-    assert run.row_count == response.data["row_count"]
+    assert run.row_count == response.data["result"]["row_count"]
 
 
 def test_live_openai_compatible_api_rejects_or_sanitizes_tenant_field_request(
@@ -243,4 +245,4 @@ def test_live_openai_compatible_api_rejects_or_sanitizes_tenant_field_request(
 
     assert run.status == SemanticQueryRun.Status.SUCCESS
     assert "account.slug" not in response.data["plan"]
-    assert "account.slug" not in str(response.data["data"])
+    assert "account.slug" not in str(response.data["result"]["data"])

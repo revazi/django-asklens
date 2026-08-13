@@ -230,7 +230,7 @@ def test_public_orchestrator_still_executes_through_the_trusted_path(settings) -
         assert outcome.response_type == "query"
         assert outcome.status_code == 200
         assert outcome.payload["plan"]["resource"] == "export_surface_orders"
-        assert outcome.payload["data"] == []
+        assert outcome.payload["result"]["data"] == []
         assert outcome.run is None
     finally:
         default_registry.clear()

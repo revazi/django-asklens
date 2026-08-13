@@ -1390,33 +1390,35 @@
     }
 
     function renderQueryResponse(payload, question) {
+      const result = payload.result || {};
       const wrapper = document.createElement("div");
       wrapper.className = "result-card";
       const meta = document.createElement("ul");
       meta.className = "result-meta";
       meta.append(
         renderPill(`Run #${payload.run_id || "—"}`),
-        renderPill(`${payload.row_count ?? 0} rows`),
-        renderPill(`${payload.duration_ms ?? "—"} ms`),
+        renderPill(`${result.row_count ?? 0} rows`),
+        renderPill(`${result.duration_ms ?? "—"} ms`),
         renderPill(`Presentation: ${payload.presentation?.kind || "table"}`),
       );
       wrapper.appendChild(meta);
       wrapper.appendChild(renderQueryActions(question, payload.plan || null));
-      const metricGrid = renderMetricGrid(payload);
+      const metricGrid = renderMetricGrid(result);
       if (metricGrid) {
         wrapper.appendChild(metricGrid);
       }
-      const chart = renderBarPreview(payload);
+      const chart = renderBarPreview(result, payload.presentation);
       if (chart) {
         wrapper.appendChild(chart);
       }
-      wrapper.appendChild(renderTable(payload.columns || [], payload.data || []));
+      wrapper.appendChild(renderTable(result.columns || [], result.data || []));
       wrapper.appendChild(renderRawDetails(payload));
       return wrapper;
     }
 
     function renderCapabilitiesResponse(payload, question) {
-      const queryHelp = payload.query_help || null;
+      const helpPayload = payload.help || {};
+      const queryHelp = helpPayload.content || null;
       if (queryHelp?.suggestions?.length) {
         pinnedSuggestions = queryHelp.suggestions;
         renderPinnedSuggestions();
@@ -1428,7 +1430,7 @@
       meta.className = "result-meta";
       meta.append(
         renderPill("Capabilities"),
-        renderPill(queryHelpSourceLabel(payload.query_help_source)),
+        renderPill(queryHelpSourceLabel(helpPayload.source)),
         renderPill("No DB query"),
       );
       wrapper.appendChild(meta);
@@ -1440,12 +1442,12 @@
       title.textContent = queryHelp?.answer || "What can I query?";
       const summary = document.createElement("p");
       summary.className = "small";
-      summary.textContent = payload.query_help?.answer || payload.explanation || "AskLens query help is available.";
+      summary.textContent = queryHelp?.answer || payload.explanation || "AskLens query help is available.";
       answer.append(title, summary);
-      if (payload.query_help_error) {
+      if (helpPayload.error) {
         const reason = document.createElement("p");
         reason.className = "small";
-        reason.textContent = `Reason: ${payload.query_help_error}`;
+        reason.textContent = `Reason: ${helpPayload.error}`;
         answer.appendChild(reason);
       }
       wrapper.appendChild(answer);
@@ -1675,14 +1677,14 @@
       return grid;
     }
 
-    function renderBarPreview(payload) {
-      const rows = payload.data || [];
+    function renderBarPreview(result, presentation) {
+      const rows = result.data || [];
       if (!rows.length) {
         return null;
       }
-      const columns = payload.columns || [];
-      const xField = getHintField(payload.presentation?.x) || getLabelColumns(payload)[0]?.key;
-      const yField = getHintField(payload.presentation?.y) || getNumericColumns(payload)[0]?.key;
+      const columns = result.columns || [];
+      const xField = getHintField(presentation?.x) || getLabelColumns(result)[0]?.key;
+      const yField = getHintField(presentation?.y) || getNumericColumns(result)[0]?.key;
       if (!xField || !yField || rows.length < 2) {
         return null;
       }

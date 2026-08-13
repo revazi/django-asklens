@@ -493,7 +493,7 @@ def test_north_billing_owner_name_query_returns_only_owner(settings) -> None:
     assert "facility_staff_assignments" not in str(catalog_response.data)
     assert response.status_code == 200, response.data
     assert response.data["plan"]["resource"] == "facility_owners"
-    assert response.data["data"] == [
+    assert response.data["result"]["data"] == [
         {
             "facility.name": "North Studio",
             "user.first_name": "Facility",
@@ -525,7 +525,7 @@ def test_facility_owner_can_query_facility_owner_name(settings) -> None:
     )
 
     assert response.status_code == 200, response.data
-    assert response.data["data"] == [
+    assert response.data["result"]["data"] == [
         {
             "facility.name": "North Studio",
             "user.first_name": "Facility",

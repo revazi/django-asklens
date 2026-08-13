@@ -164,23 +164,26 @@ def summarize_response(response) -> str:
         return summarize_error(response.status_code, payload)
 
     if payload.get("response_type") == "capabilities":
-        capabilities = payload.get("capabilities", {})
-        query_help = payload.get("query_help", {})
+        routing = payload.get("routing", {})
+        help_payload = payload.get("help", {})
+        query_help = help_payload.get("content", {})
+        catalog = payload.get("catalog", {})
         return (
             f"HTTP {response.status_code} capabilities "
-            f"routing={payload.get('routing_source', 'unknown')} "
-            f"help={payload.get('query_help_source', 'unknown')} "
-            f"resources={len(capabilities.get('resources', []))} "
+            f"routing={routing.get('source', 'unknown')} "
+            f"help={help_payload.get('source', 'unknown')} "
+            f"resources={len(catalog.get('resources', []))} "
             f"suggestions={len(query_help.get('suggestions', []))}"
         )
 
     plan = payload.get("plan", {})
-    columns = [column.get("key", "") for column in payload.get("columns", [])]
+    result = payload.get("result", {})
+    columns = [column.get("key", "") for column in result.get("columns", [])]
     return (
         f"HTTP {response.status_code} query "
         f"resource={plan.get('resource', 'unknown')} "
         f"intent={plan.get('intent', 'unknown')} "
-        f"rows={payload.get('row_count', 0)} "
+        f"rows={result.get('row_count', 0)} "
         f"columns={','.join(columns)}"
     )
 
