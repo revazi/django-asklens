@@ -184,6 +184,13 @@ jobs:
               raise SystemExit(f"Missing expected sdist files: {missing_sdist_files}")
           PY
 
+      - name: Snapshot source API route behavior
+        run: >-
+          uv run --no-sync python .github/scripts/api_route_snapshot.py
+          --provenance source
+          --source-root "$GITHUB_WORKSPACE"
+          --output "$RUNNER_TEMP/asklens-source-api-routes.json"
+
       - name: Smoke test core wheel install without DRF
         run: |
           bash .github/scripts/wheel-smoke.sh \
@@ -199,6 +206,8 @@ jobs:
             "${{ matrix.django-version-prefix }}"
 
       - name: Smoke test API extra wheel install
+        env:
+          ASKLENS_SOURCE_API_SNAPSHOT: ${{ runner.temp }}/asklens-source-api-routes.json
         run: |
           bash .github/scripts/wheel-smoke.sh \
             api \
