@@ -2,6 +2,111 @@
 
 The source repository includes a synthetic Django test project with complex tenant, role, member, subscription, billing, payment, and schedule models. It is designed for local AskLens integration testing without host-application code or sensitive data. This guide is for a source checkout, not an installed package runtime.
 
+## SQLite frontend and admin first run (start to reset)
+
+This is the shortest browser journey through the synthetic source demo. It uses
+the deterministic offline `DummyProvider`, keeps live providers disabled, and
+is technical repository evidence only—not production, external usability, or a
+security certification.
+
+### 1. Start the small synthetic app
+
+Prerequisites are Python 3.12 or newer, `uv`, and a fresh source checkout. From
+the repository root, install the locked development environment, create the
+ignored SQLite database, seed the small deterministic dataset, and start the
+Django development server:
+
+```bash
+uv sync --locked --group dev
+
+DJANGO_SETTINGS_MODULE=tests.test_project.demo_settings \
+uv run python -m django migrate --run-syncdb
+
+DJANGO_SETTINGS_MODULE=tests.test_project.demo_settings \
+uv run python -m django seed_complex_test_project --size small
+
+DJANGO_ASKLENS_DEMO_LIVE_LLM=0 \
+DJANGO_SETTINGS_MODULE=tests.test_project.demo_settings \
+uv run python -m django runserver 127.0.0.1:8000
+```
+
+Open <http://127.0.0.1:8000/>. The generic Django admin login is the expected
+first page; the demo does not add another authentication system.
+
+### 2. Prove row scope first with `facility-owner`
+
+Sign in before using the superuser:
+
+```text
+username: `facility-owner`
+password: `12admin34`
+```
+
+The session panel says `Offline dummy plans`, and the tenant row scope is North
+Studio only. It must not show South Studio. Submit the exact offline question
+`Show paid billing revenue by product`; the deterministic result contains only
+North-scoped products. Open **Raw response** to inspect the complete result,
+including `result.result_metadata` (`limit`, limit scope, and `truncated`).
+
+A successful data question creates a metadata-only audit row. Under the current
+default `AUDIT_INCLUDE_CONTENT=False` policy, question text stays blank and the
+complete plan is not stored; only safe operational metadata such as resource,
+intent, status, row count, and duration is retained. Raw result rows are not
+copied into the audit record.
+
+### 3. Explore frontend, admin query, and audit roles separately
+
+Log out, then use the synthetic superuser for a separately labeled admin
+exploration path:
+
+```text
+username: `admin`
+password: `12admin34`
+```
+
+The superuser scope reads `All demo facilities (superuser)`, so it is not the
+identity to use when demonstrating tenant isolation. The three pages have
+different roles:
+
+- `/` — frontend data/help page using the same authenticated API and trusted
+  execution path;
+- `/admin/asklens/asklensquery/` — separate admin query/help page; and
+- `/admin/asklens/semanticqueryrun/` — view-only audit page. Its search box
+  searches existing audit rows and does not run a query; add, edit, delete, and
+  bulk delete are denied even to the superuser.
+
+On the admin query/help page, submit `show me example queries`. The deterministic
+offline help response lists suggestions but executes no application-data query
+and does not create an audit row. A data question on either query page does
+execute through AskLens and creates its normal metadata-only audit row.
+
+### 4. Confirm the safe no-report denial
+
+Log out and sign in with:
+
+```text
+username: `no-report`
+password: `12admin34`
+```
+
+Opening `/` returns the expected safe `403 Forbidden`. This generic denial is
+intentional: it does not disclose which resource, reporting grant, or tenant
+scope exists. Diagnose this local synthetic account from trusted host setup;
+do not weaken the public denial to expose hidden membership.
+
+### 5. Stop and reset only the synthetic SQLite demo
+
+Press Ctrl-C in the development-server terminal. From the repository root,
+remove only this ignored synthetic SQLite file to clear seeded users, domain
+data, sessions, and AskLens audit rows:
+
+```bash
+rm -f .asklens-test-project.sqlite3
+```
+
+Do not reuse the demo credentials or this reset command for a real project. The
+command does not remove other databases, virtual environments, or source files.
+
 ## PostgreSQL 18 reference workflow
 
 This synthetic reference app provides internal, draft alpha-candidate evidence only. It is not production or security certification, external pilot evidence, a public specification, or backend-neutral proof. Live providers stay disabled throughout the committed smoke.
@@ -41,22 +146,12 @@ bash scripts/reference-demo-smoke.sh --teardown
 
 The Compose database uses deterministic credentials (`asklens_demo` / `asklens-demo-only`) that are committed and intended only for this synthetic loopback demo. It does not use a developer's existing PostgreSQL server. PostgreSQL data lives in a Docker-managed named volume rather than a host bind mount; the orchestration deliberately removes that project-scoped volume during teardown. Do not reuse these credentials or this Compose configuration for production data.
 
-## Start the SQLite admin/demo server
+## SQLite dataset profiles and extended exploration
 
-Use the demo settings module so admin, sessions, templates, and a local SQLite database are enabled. For normal admin/frontend testing, use Django's development server:
-
-```bash
-DJANGO_SETTINGS_MODULE=tests.test_project.demo_settings \
-uv run python -m django migrate --run-syncdb
-
-DJANGO_SETTINGS_MODULE=tests.test_project.demo_settings \
-uv run python -m django seed_complex_test_project
-
-DJANGO_SETTINGS_MODULE=tests.test_project.demo_settings \
-uv run python -m django runserver 127.0.0.1:8000
-```
-
-The seed command supports opt-in size profiles. The default `small` profile keeps the fast two-facility demo dataset used by tests. `medium` and `large` keep that base demo and add deterministic scaled tenants under slugs like `demo-tenant-01`.
+The first-run path above uses the fast two-facility `small` profile. After
+migration, the seed command also supports opt-in `medium` and `large` profiles.
+They keep the base demo and add deterministic scaled tenants under slugs such as
+`demo-tenant-01`.
 
 ```bash
 # Fast default demo.

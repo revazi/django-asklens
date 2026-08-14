@@ -104,6 +104,48 @@ def login(
     return page, navigation.value
 
 
+def verify_admin_help_and_audit(browser: Any, base_url: str) -> None:
+    """Verify the separately labeled synthetic-superuser admin path."""
+
+    query_path = "/admin/asklens/asklensquery/"
+    audit_path = "/admin/asklens/semanticqueryrun/"
+    context = browser.new_context()
+    try:
+        page, navigation = login(context, base_url, "admin")
+        assert navigation is not None and navigation.status == 200
+
+        audit_response = page.goto(f"{base_url}{audit_path}")
+        assert audit_response is not None and audit_response.status == 200
+        audit_rows = page.locator("#result_list tbody tr")
+        expect(audit_rows).to_have_count(1)
+        assert page.locator('select[name="action"]').count() == 0
+
+        with page.expect_navigation(wait_until="domcontentloaded") as detail_navigation:
+            audit_rows.locator("th a").first.click()
+        assert detail_navigation.value.status == 200
+        assert page.locator('input[type="submit"]').count() == 0
+        assert page.locator("a.deletelink").count() == 0
+
+        query_response = page.goto(f"{base_url}{query_path}")
+        assert query_response is not None and query_response.status == 200
+        expect(
+            page.get_by_role("heading", name="AskLens query", exact=True)
+        ).to_be_visible()
+        page.locator("#id_question").fill("show me example queries")
+        with page.expect_navigation(wait_until="domcontentloaded") as help_navigation:
+            page.locator('input[type="submit"][value="Ask"]').click()
+        assert help_navigation.value.status == 200
+        expect(page.get_by_role("heading", name="Examples", exact=True)).to_be_visible()
+        assert page.get_by_role("heading", name="Audit record", exact=True).count() == 0
+
+        audit_response = page.goto(f"{base_url}{audit_path}")
+        assert audit_response is not None and audit_response.status == 200
+        expect(page.locator("#result_list tbody tr")).to_have_count(1)
+        print("PASS separate admin help and view-only metadata audit")
+    finally:
+        context.close()
+
+
 def verify_browser_and_api(playwright: Playwright, base_url: str) -> None:
     """Verify the demo UI and authenticated HTTP API with Playwright."""
 
@@ -187,6 +229,8 @@ def verify_browser_and_api(playwright: Playwright, base_url: str) -> None:
         assert "product_name" not in aggregate_audit["plan"]
         print("PASS browser aggregate query and metadata-only audit")
 
+        verify_admin_help_and_audit(browser, base_url)
+
         list_plan = {
             "resource": "members",
             "intent": "list",
@@ -246,6 +290,9 @@ def verify_browser_and_api(playwright: Playwright, base_url: str) -> None:
             )
             assert denied_navigation is not None and denied_navigation.status == 403
             assert denied_page.url == f"{base_url}/"
+            expect(
+                denied_page.get_by_role("heading", name="403 Forbidden", exact=True)
+            ).to_be_visible()
             denied_catalog = no_report_context.request.get(
                 f"{base_url}/asklens/catalog/"
             )

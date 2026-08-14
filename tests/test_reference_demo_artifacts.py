@@ -959,6 +959,79 @@ def test_postgresql_ci_matrix_is_parameterized() -> None:
     assert migrate_command in job
 
 
+def test_short_source_demo_is_scoped_offline_and_resettable() -> None:
+    """U4 keeps one concise, browser-verified source-demo journey."""
+
+    demo = read_text(ROOT / "docs" / "test-project-demo.md")
+    candidate = read_text(PRIVATE_EVALUATION_GUIDE)
+    readme = read_text(ROOT / "README.md")
+    playwright = read_text(PLAYWRIGHT_TEST)
+
+    heading = "## SQLite frontend and admin first run (start to reset)"
+    next_heading = "## PostgreSQL 18 reference workflow"
+    assert heading in demo
+    section = demo[demo.index(heading) : demo.index(next_heading)]
+    normalized = " ".join(section.split())
+
+    for required in (
+        "source checkout",
+        "deterministic offline `DummyProvider`",
+        "live providers disabled",
+        "uv sync --locked --group dev",
+        "seed_complex_test_project --size small",
+        "runserver 127.0.0.1:8000",
+        "username: `facility-owner`",
+        "North Studio only",
+        "Show paid billing revenue by product",
+        "Offline dummy plans",
+        "Raw response",
+        "result.result_metadata",
+        "metadata-only audit row",
+        "username: `admin`",
+        "superuser",
+        "`/` — frontend data/help page",
+        "`/admin/asklens/asklensquery/` — separate admin query/help page",
+        "`/admin/asklens/semanticqueryrun/` — view-only audit page",
+        "show me example queries",
+        "does not create an audit row",
+        "username: `no-report`",
+        "expected safe `403 Forbidden`",
+        "Ctrl-C",
+        "rm -f .asklens-test-project.sqlite3",
+        "only this ignored synthetic SQLite file",
+    ):
+        assert " ".join(required.split()) in normalized
+
+    assert section.index("username: `facility-owner`") < section.index(
+        "username: `admin`"
+    )
+    assert "All demo facilities (superuser)" in section
+    assert "question text stays blank and the complete plan is not stored" in normalized
+
+    demo_link = (
+        "[source demo frontend/admin first run]"
+        "(docs/test-project-demo.md#sqlite-frontend-and-admin-first-run-start-to-reset)"
+    )
+    assert demo_link in readme
+    assert "test-project-demo.md#postgresql-18-reference-workflow" in candidate
+    assert (
+        "test-project-demo.md#one-command-postgresql-18--playwright-reference"
+        not in candidate
+    )
+
+    assert "superuser-only" not in playwright
+    assert "separately labeled synthetic-superuser admin path" in playwright
+    for required in (
+        "def verify_admin_help_and_audit(",
+        '"/admin/asklens/asklensquery/"',
+        '"/admin/asklens/semanticqueryrun/"',
+        '"show me example queries"',
+        '"PASS separate admin help and view-only metadata audit"',
+        'name="403 Forbidden"',
+    ):
+        assert required in playwright
+
+
 def test_source_demo_and_candidate_commands_are_documented() -> None:
     """A checkout documents setup, smoke, manual, teardown, and limitations."""
 
