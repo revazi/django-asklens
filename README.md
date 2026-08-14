@@ -229,6 +229,8 @@ When installed with the `api` extra, AskLens is API-first. Build your own UI wit
 
 The packaged frontend is optional and intended as a dependency-free demo/reference UI. Projects that need product-specific layout, charts, saved queries, or workflows should call the API directly. See [Building a custom AskLens UI](docs/custom-ui.md).
 
+For a concise source-checkout journey that starts with the scoped `facility-owner` identity, then separates frontend, admin query, view-only audit, safe denial, and reset steps, follow the [source demo frontend/admin first run](docs/test-project-demo.md#sqlite-frontend-and-admin-first-run-start-to-reset). It uses only synthetic data and deterministic offline help; it is not the published `0.1.0a1` package quickstart.
+
 ## Optional packaged frontend
 
 If you want the built-in reference UI, install the `api` extra and mount both API and frontend URLs:

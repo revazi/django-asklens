@@ -183,7 +183,7 @@ Minimum smoke:
 - optional API/MCP paths are exercised only if their extras are in scope; MCP identity remains server-owned and row return stays disabled by default;
 - statement/request timeout, rate, concurrency, and read-only-role controls are verified using the participant's host tooling, not inferred from AskLens structural limits.
 
-The repository's [synthetic PostgreSQL/Playwright smoke](test-project-demo.md#one-command-postgresql-18--playwright-reference) can be run separately from a source checkout to understand the reference behavior. It must not replace participant-owned registration, scope, and host-control checks.
+The repository's [synthetic PostgreSQL/Playwright smoke](test-project-demo.md#postgresql-18-reference-workflow) can be run separately from a source checkout to understand the reference behavior. It must not replace participant-owned registration, scope, and host-control checks.
 
 ## 6. Measure time to first correctly scoped query safely
 
