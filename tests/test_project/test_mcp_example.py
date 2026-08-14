@@ -3,6 +3,7 @@
 from collections.abc import Iterator
 from datetime import UTC, datetime
 from decimal import Decimal
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -180,6 +181,36 @@ def sensitive_plan() -> dict[str, Any]:
         "select": ["customer.email"],
         "limit": 10,
     }
+
+
+def test_mcp_quickstart_docs_cover_the_bounded_safe_flow() -> None:
+    """The MCP entry points keep the exact-artifact and trust boundaries together."""
+
+    repository_root = Path(__file__).resolve().parents[2]
+    guide = (repository_root / "docs" / "mcp-integration.md").read_text()
+    example = (repository_root / "examples" / "mcp" / "README.md").read_text()
+    docs_index = (repository_root / "docs" / "index.md").read_text()
+
+    for document in (guide, example):
+        assert "${ASKLENS_CANDIDATE_WHEEL}[mcp]" in document
+        assert "server-owned" in document
+        assert "asklens_capabilities" in document
+        assert "resource_summaries" in document
+        assert "asklens_validate_plan" in document
+        assert "asklens_execute_plan" in document
+        assert "include_rows=False" in document
+        assert "row_return_denied" in document
+        for forbidden_argument in (
+            "username",
+            "user",
+            "permissions",
+            "tenant",
+            "scope",
+        ):
+            assert f"`{forbidden_argument}`" in document
+
+    assert "'django-asklens[mcp]'" not in guide
+    assert "Bounded MCP quickstart" in docs_index
 
 
 def test_test_project_registers_asklens_tools_on_mcp_server(

@@ -2,6 +2,91 @@
 
 Status: AskLens ships dependency-free MCP adapter helpers, an `AskLensMCPToolSet` wrapper, and an optional FastMCP bridge under `django_asklens.mcp`. The repository also includes an opt-in ASGI/Uvicorn MCP endpoint for the runnable local test project. Django AskLens does not provide a production authentication layer; host projects remain responsible for authenticating MCP callers, mapping trusted server-side context to a Django request-like object, and testing each context-scoped resource provider. Resource registration fails when neither an explicit resource mode nor the safe context-scoped project default supplies the scope policy. MCP/Python/client-provider call sites also need host-side auth, rate limits, and timeout/concurrency controls before calling AskLens; see [Host throttling and audit controls](host-throttle-and-audit-controls.md).
 
+## Bounded MCP quickstart
+
+This path is for unreleased current source or a maintainer-supplied private
+candidate, not the published PyPI alpha. Follow the
+[exact-candidate verification](installation.md#maintainer-supplied-private-candidate-evaluation),
+then install that local wheel in a fresh environment:
+
+```bash
+export ASKLENS_CANDIDATE_WHEEL=/verified/path/django_asklens-0.1.0a1-py3-none-any.whl
+python -m pip install "${ASKLENS_CANDIDATE_WHEEL}[mcp]"
+```
+
+The unchanged `0.1.0a1` filename does not identify current bytes. Do not
+substitute an unverified package name or call this same-version replacement a
+release or upgrade.
+
+Authenticate the MCP connection in the host, then map its trusted server-owned
+context to one Django request-like object:
+
+```python
+from types import SimpleNamespace
+
+from django_asklens.mcp import AskLensMCPToolSet, create_fastmcp_server
+
+
+def request_from_context(context):
+    principal = authenticated_principal_from_context(context)  # Host-owned.
+    return SimpleNamespace(
+        user=principal.user,
+        reporting_tenant=principal.reporting_tenant,
+    )
+
+
+toolset = AskLensMCPToolSet(request_factory=request_from_context)
+server = create_fastmcp_server(toolset)
+```
+
+The host-defined authentication function must reject invalid sessions. Derive
+custom permissions and every context scope from the resulting request. FastMCP
+injects its server context; no tool schema should accept client `username`,
+`user`, `permissions`, `tenant`, or `scope` selectors.
+
+Use compact discovery and only fetch details when needed:
+
+```text
+asklens_capabilities() -> permission-scoped resource_summaries
+asklens_query_plan_schema()
+asklens_describe_resource(resource="orders")
+```
+
+Then validate and execute a synthetic semantic plan:
+
+```python
+plan = {
+    "resource": "orders",
+    "intent": "aggregate",
+    "group_by": [{"field": "status"}],
+    "metrics": [{"metric": "order_count"}],
+    "limit": 10,
+}
+validation = asklens_validate_plan(plan=plan)
+assert validation["valid"] is True
+execution = asklens_execute_plan(plan=validation["plan"], include_rows=False)
+```
+
+Validation reports `executed: false`; it is not authorization. Execution
+revalidates the current request, resolves scope, applies budgets, and audits.
+The safe default returns `rows_omitted: true` with empty `data`. A deliberate
+`include_rows=True` request while `MCP_ALLOW_ROW_RETURN` is false still omits
+rows and reports `row_return_denied: true`. Row omission is not query-cost
+control.
+
+First-run checks:
+
+- Test each registered context-scoped provider with the authenticated request.
+- Keep the provider-backed `asklens_query` tool disabled unless required.
+- Verify every tool schema omits `username`, `user`, `permissions`, `tenant`,
+  and `scope` arguments.
+- Keep row return off and add host authentication, transport protection, route
+  gates, rate limits, timeouts, concurrency controls, and audit policy.
+
+See the tested [`examples/mcp/` checklist](../examples/mcp/) and
+`tests/test_project/test_mcp_example.py`. The repository demo is synthetic local
+evidence, not production authentication or a production-wire acceptance test.
+
 ## Why AskLens still matters with MCP
 
 MCP can provide a transport layer between an AI client and application tools. A Django-aware MCP server can also authenticate a caller and map the caller to a Django user.
@@ -32,10 +117,10 @@ Without AskLens, an MCP server that supports ad hoc analytics would still need t
 
 AskLens intentionally does not depend on a generic Django MCP package. Some generic implementations expose broad model/admin/DRF surfaces or depend on Django REST Framework, which conflicts with AskLens' optional-DRF core design and explicit semantic registration model.
 
-The dependency-free helpers live in the main `django-asklens` package. The optional FastMCP bridge is available through the `mcp` extra:
+The dependency-free helpers live in the main `django-asklens` package. The optional FastMCP bridge is available through the `mcp` extra. For the unreleased current contract, install only the exact verified local artifact shown in the bounded quickstart:
 
 ```bash
-python -m pip install 'django-asklens[mcp]'
+python -m pip install "${ASKLENS_CANDIDATE_WHEEL}[mcp]"
 ```
 
 A separate package such as `django-asklens-mcp` may make sense later if AskLens grows a larger transport/server integration with its own dependency cadence. It is not needed for the current bridge layer.

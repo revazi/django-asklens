@@ -25,7 +25,7 @@ Django AskLens was created by [Revaz Zakalashvili](https://github.com/revazi) ([
 - [Custom UI guide](custom-ui.md)
 - [Registration API](registration.md)
 - [Provider configuration](providers.md)
-- [MCP integration notes](mcp-integration.md) — framework-neutral adapter helpers and wrapper
+- [Bounded MCP quickstart and integration notes](mcp-integration.md) — exact local extra, trusted context mapping, compact discovery, and safe row defaults
 - [Security checklist](security-checklist.md)
 - [Production checklist](production-checklist.md)
 - [Host throttling and audit controls](host-throttle-and-audit-controls.md)
