@@ -160,6 +160,25 @@ def test_demo_fastmcp_server_registers_asklens_tools(
     ]
 
 
+def test_demo_fastmcp_tool_schemas_exclude_client_policy_arguments(
+    mcp_server_settings: None,
+    registered_orders: None,
+) -> None:
+    """Every client-visible tool schema leaves identity and policy server-owned."""
+
+    async def run() -> dict[str, dict[str, Any]]:
+        server = create_demo_asklens_mcp_server()
+        tools = await server.list_tools()
+        return {tool.name: tool.parameters for tool in tools}
+
+    schemas = asyncio.run(run())
+    forbidden_arguments = {"username", "user", "permissions", "tenant", "scope"}
+
+    for schema in schemas.values():
+        assert schema["additionalProperties"] is False
+        assert forbidden_arguments.isdisjoint(schema["properties"])
+
+
 def test_fastmcp_bridge_passes_context_to_toolset_request_factory(
     mcp_server_settings: None,
     registered_orders: None,
