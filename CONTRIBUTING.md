@@ -24,6 +24,18 @@ uv run python -m build
 uv run twine check dist/*
 ```
 
+Run the informational package branch-coverage baseline separately when changing
+critical boundaries:
+
+```bash
+bash scripts/coverage-baseline.sh
+```
+
+The coverage baseline has no percentage threshold; review missing branches in
+the affected boundary rather than treating the aggregate percentage as proof of
+correctness or security. See the
+[critical-boundary map](docs/test-coverage.md) for scope and limitations.
+
 Live LLM tests are opt-in and must not run by default.
 
 ## Pull request expectations

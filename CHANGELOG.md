@@ -29,6 +29,7 @@ The project is alpha and APIs may change before a stable release.
 - Added a source-checkout PostgreSQL 18 Compose reference database and one-command Playwright/Chromium smoke over the real synthetic ASGI/API/FastMCP demo, with project-scoped teardown and live providers disabled.
 - Added isolated source-wheel core/API/MCP install and published-`0.1.0a1` replacement evidence. It leaves the repository version unchanged and performs no upload, tag, or release.
 - Added API-6 package evidence that core source/wheel imports load neither DRF nor FastMCP, API wheels resolve the supported Django 5.2/6.0/6.1 and DRF `>=3.18,<4` bounds without FastMCP, and canonical responses for all four AskLens routes match source behavior exactly.
+- Added an informational, branch-aware `django_asklens` coverage baseline and critical-boundary map using a development-only coverage dependency, with no percentage threshold.
 
 ### Changed
 

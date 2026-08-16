@@ -88,7 +88,7 @@ with zipfile.ZipFile(wheel) as archive:
         raise SystemExit("Expected one wheel METADATA file.")
     metadata = Parser().parsestr(archive.read(metadata_names[0]).decode("utf-8"))
 
-forbidden_prefixes = ("docker", "playwright", "psycopg")
+forbidden_prefixes = ("coverage", "docker", "playwright", "psycopg")
 requirements = metadata.get_all("Requires-Dist", [])
 requirement_names = {
     re.split(r"[ (;<>=!~]", requirement.lower().replace("_", "-"), maxsplit=1)[0]
@@ -106,7 +106,9 @@ with tarfile.open(sdist, "r:gz") as archive:
     source_names = set(archive.getnames())
 required_source_suffixes = {
     "/compose.yaml",
+    "/docs/test-coverage.md",
     "/scripts/alpha-candidate-package-smoke.sh",
+    "/scripts/coverage-baseline.sh",
     "/scripts/reference-demo-smoke.sh",
     "/tests/e2e/reference_demo.py",
 }
@@ -117,7 +119,10 @@ missing_source = sorted(
 )
 if missing_source:
     raise SystemExit(f"Source distribution omitted reference evidence: {missing_source}")
-print("PASS source wheel runtime metadata excludes Docker, Playwright, and psycopg")
+print(
+    "PASS source wheel runtime metadata excludes coverage, Docker, Playwright, "
+    "and psycopg"
+)
 print("PASS source distribution contains the documented opt-in evidence artifacts")
 PY
 
