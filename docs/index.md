@@ -32,6 +32,7 @@ Django AskLens was created by [Revaz Zakalashvili](https://github.com/revazi) ([
 - [Multi-tenant security](multitenancy-security.md)
 - [Evaluation fixtures](evaluation.md)
 - [Synthetic performance baseline](performance-baseline.md)
+- [Test coverage baseline and critical-boundary map](test-coverage.md)
 - [PR7 deterministic hardening evidence](hardening-pr7-deterministic-evidence.md)
 - [PR8 locked dependency vulnerability audit evidence](hardening-pr8-locked-dependency-vulnerability-audit.md)
 - [Runnable complex test project](test-project-demo.md)

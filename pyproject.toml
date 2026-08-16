@@ -81,6 +81,7 @@ Changelog = "https://github.com/revazi/django-asklens/blob/main/CHANGELOG.md"
 [dependency-groups]
 dev = [
     "build>=1",
+    "coverage>=7,<8",
     "djangorestframework>=3.18,<4.0",
     "fastmcp>=3.4,<4",
     "mypy>=1.13",
@@ -107,6 +108,15 @@ testpaths = ["tests"]
 markers = [
     "postgresql: database-sensitive tests required on PostgreSQL 15 and 18",
 ]
+
+[tool.coverage.run]
+branch = true
+source = ["django_asklens"]
+relative_files = true
+
+[tool.coverage.report]
+show_missing = true
+skip_empty = true
 
 [tool.ruff]
 line-length = 88

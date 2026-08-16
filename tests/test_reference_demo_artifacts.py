@@ -655,6 +655,7 @@ def test_package_evidence_is_isolated_and_never_releases() -> None:
     assert "--force-reinstall" in script
     assert "wheel-smoke.sh" in script
     assert "core api mcp" in script
+    assert "coverage" in script
     assert "playwright" in script
     assert "psycopg" in script
     assert "docker" in script
@@ -720,7 +721,7 @@ def test_dev_tools_do_not_leak_into_runtime_metadata() -> None:
         for dependency in requirements
     ).lower()
 
-    for forbidden in ("docker", "playwright", "psycopg"):
+    for forbidden in ("coverage", "docker", "playwright", "psycopg"):
         assert forbidden not in runtime
         assert forbidden not in extras
     assert metadata["project"]["version"] == "0.1.0a1"

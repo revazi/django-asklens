@@ -81,7 +81,12 @@ jobs:
         run: uv run --no-sync python -m django makemigrations asklens --check --dry-run --settings=tests.test_project.settings
 
       - name: Run tests
+        if: matrix.python-version != '3.12' || matrix.django-version != '5.2'
         run: uv run --no-sync pytest --strict-config --strict-markers
+
+      - name: Run informational branch coverage baseline
+        if: matrix.python-version == '3.12' && matrix.django-version == '5.2'
+        run: bash scripts/coverage-baseline.sh
 
       - name: Build package
         run: uv run --no-sync python -m build
@@ -116,7 +121,7 @@ jobs:
               requirement
               for requirement in metadata.get_all("Requires-Dist", [])
               if requirement.lower().replace("_", "-").startswith(
-                  ("playwright", "psycopg")
+                  ("coverage", "playwright", "psycopg")
               )
           ]
           if forbidden_requirements:
@@ -171,7 +176,9 @@ jobs:
               "/docs/private-candidate-evaluation.md",
               "/docs/providers.md",
               "/docs/security-checklist.md",
+              "/docs/test-coverage.md",
               "/scripts/alpha-candidate-package-smoke.sh",
+              "/scripts/coverage-baseline.sh",
               "/scripts/reference-demo-smoke.sh",
               "/tests/e2e/reference_demo.py",
           }
