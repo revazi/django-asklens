@@ -13,6 +13,18 @@ PACKAGE_SCRIPT = ROOT / "scripts" / "alpha-candidate-package-smoke.sh"
 CORE_QUICKSTART_SCRIPT = ROOT / "scripts" / "quickstart-core-smoke.sh"
 CORE_QUICKSTART_GUIDE = ROOT / "docs" / "quickstart-core.md"
 PLAYWRIGHT_TEST = ROOT / "tests" / "e2e" / "reference_demo.py"
+FRONTEND_TEMPLATE = (
+    ROOT / "django_asklens" / "templates" / "django_asklens" / "frontend" / "query.html"
+)
+DEMO_VIEW = ROOT / "tests" / "test_project" / "demo_views.py"
+DEMO_DENIAL_TEMPLATE = (
+    ROOT
+    / "tests"
+    / "test_project"
+    / "templates"
+    / "test_project"
+    / "asklens_demo_denied.html"
+)
 PRIVATE_EVALUATION_GUIDE = ROOT / "docs" / "private-candidate-evaluation.md"
 PILOT_INTAKE_WORKSHEET = ROOT / "docs" / "pilot-intake-worksheet.md"
 PERFORMANCE_SCRIPT = ROOT / "scripts" / "performance-baseline.sh"
@@ -996,7 +1008,9 @@ def test_short_source_demo_is_scoped_offline_and_resettable() -> None:
         "show me example queries",
         "does not create an audit row",
         "username: `no-report`",
-        "expected safe `403 Forbidden`",
+        "HTTP status `403`",
+        "Access unavailable",
+        "Sign out and switch account",
         "Ctrl-C",
         "rm -f .asklens-test-project.sqlite3",
         "only this ignored synthetic SQLite file",
@@ -1007,7 +1021,7 @@ def test_short_source_demo_is_scoped_offline_and_resettable() -> None:
         "username: `admin`"
     )
     assert "All demo facilities (superuser)" in section
-    assert "question text stays blank and the complete plan is not stored" in normalized
+    assert "question, complete plan, and result rows are omitted" in normalized
 
     demo_link = (
         "[source demo frontend/admin first run]"
@@ -1028,7 +1042,96 @@ def test_short_source_demo_is_scoped_offline_and_resettable() -> None:
         '"/admin/asklens/semanticqueryrun/"',
         '"show me example queries"',
         '"PASS separate admin help and view-only metadata audit"',
-        'name="403 Forbidden"',
+        'name="Access unavailable"',
+    ):
+        assert required in playwright
+
+
+def test_u6_frontend_explanations_and_demo_recovery_stay_bounded() -> None:
+    """U6 explains trusted metadata without changing execution or denial policy."""
+
+    frontend = read_text(FRONTEND_TEMPLATE)
+    demo_view = read_text(DEMO_VIEW)
+    denial = read_text(DEMO_DENIAL_TEMPLATE)
+    demo_guide = read_text(ROOT / "docs" / "test-project-demo.md")
+    playwright = read_text(PLAYWRIGHT_TEST)
+
+    for required in (
+        "This context is supplied by the server.",
+        "Current authorization and row scope are rechecked for every execution",
+        "these labels do not grant access",
+        "result.result_metadata",
+        "Limit:",
+        "Truncated:",
+        "Truncation applies only to this current authorized query.",
+        "A yes value means additional matching rows or groups were detected",
+        "Raw response",
+        "audit_privacy_notice",
+    ):
+        assert required in frontend
+
+    for required in (
+        "get_demo_audit_privacy_notice",
+        'get_asklens_setting("AUDIT_MODE") == "database"',
+        'get_asklens_setting("AUDIT_INCLUDE_CONTENT") is False',
+        '"audit_privacy_notice": get_demo_audit_privacy_notice()',
+        '"test_project/asklens_demo_denied.html"',
+        "status=403",
+    ):
+        assert required in demo_view
+
+    for required in (
+        "Access unavailable",
+        "This page is not available for this account.",
+        'action="/admin/logout/"',
+        "{% csrf_token %}",
+        'method="post"',
+        "Sign out and switch account",
+    ):
+        assert required in denial
+    for forbidden in (
+        "resource",
+        "report",
+        "grant",
+        "permission",
+        "membership",
+        "tenant",
+        "scope",
+        "binding",
+        "diagnostic",
+    ):
+        assert forbidden not in denial.lower()
+
+    guide_heading = "## What the reference frontend explains"
+    assert guide_heading in demo_guide
+    guide_section = demo_guide[
+        demo_guide.index(guide_heading) : demo_guide.index(
+            "## PostgreSQL 18 reference workflow"
+        )
+    ]
+    normalized_guide = " ".join(guide_section.split())
+    for required in (
+        "server-supplied context labels are not authority",
+        "rechecked for every execution",
+        "current authorized query",
+        "additional matching rows or groups",
+        "does not provide pagination",
+        "metadata-only database audit",
+        "AUDIT_INCLUDE_CONTENT=False",
+        "question, complete plan, and result rows are omitted",
+        "Raw response remains available",
+        "API envelopes and trusted execution payloads are unchanged",
+    ):
+        assert required in normalized_guide
+
+    for required in (
+        '"Limit: 10 groups"',
+        '"Truncated: no"',
+        '"Limit: 3 rows"',
+        '"Truncated: yes"',
+        'name="Access unavailable"',
+        'name="Sign out and switch account"',
+        "expected_audit_rows=2",
     ):
         assert required in playwright
 

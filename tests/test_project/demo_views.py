@@ -1,9 +1,10 @@
 """Demo-only views for the runnable AskLens test project."""
 
 from django.contrib.auth.views import redirect_to_login
-from django.core.exceptions import PermissionDenied
+from django.shortcuts import render
 
 from django_asklens.frontend.views import render_asklens_frontend
+from django_asklens.settings import get_asklens_setting
 from tests.test_project.models import Facility, StaffAssignment, StaffGrant
 from tests.test_project.permissions import (
     get_request_permissions,
@@ -63,7 +64,11 @@ def asklens_demo(request):
     if not getattr(user, "is_authenticated", False):
         return redirect_to_login(request.get_full_path(), login_url="/admin/login/")
     if not can_access_asklens_demo(request):
-        raise PermissionDenied("You do not have permission to use the AskLens demo.")
+        return render(
+            request,
+            "test_project/asklens_demo_denied.html",
+            status=403,
+        )
 
     return render_asklens_frontend(
         request,
@@ -73,8 +78,23 @@ def asklens_demo(request):
             "starter_questions": get_demo_questions(request),
             "scope_title": "Tenant row scope",
             "scope_labels": get_facility_scope_labels(request),
+            "audit_privacy_notice": get_demo_audit_privacy_notice(),
         },
     )
+
+
+def get_demo_audit_privacy_notice() -> str | None:
+    """Return accurate demo-only wording for metadata-only database audit."""
+
+    if (
+        get_asklens_setting("AUDIT_MODE") == "database"
+        and get_asklens_setting("AUDIT_INCLUDE_CONTENT") is False
+    ):
+        return (
+            "Operational run metadata is stored while the question, complete plan, "
+            "and result rows are omitted."
+        )
+    return None
 
 
 def can_access_asklens_demo(request) -> bool:

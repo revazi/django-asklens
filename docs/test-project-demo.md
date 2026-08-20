@@ -42,17 +42,20 @@ username: `facility-owner`
 password: `12admin34`
 ```
 
-The session panel says `Offline dummy plans`, and the tenant row scope is North
-Studio only. It must not show South Studio. Submit the exact offline question
-`Show paid billing revenue by product`; the deterministic result contains only
-North-scoped products. Open **Raw response** to inspect the complete result,
-including `result.result_metadata` (`limit`, limit scope, and `truncated`).
+The tenant row scope is immediately visible as North Studio only. It must not
+show South Studio. The separate session panel says `Offline dummy plans`. Submit
+the exact offline question `Show paid billing revenue by product`; the
+deterministic result contains only North-scoped products. Its visible result
+boundary shows the effective groups limit and `Truncated: no`. **Raw response**
+remains available for the complete unchanged payload, including
+`result.result_metadata` (`limit`, `limit_scope`, and `truncated`).
 
-A successful data question creates a metadata-only audit row. Under the current
-default `AUDIT_INCLUDE_CONTENT=False` policy, question text stays blank and the
-complete plan is not stored; only safe operational metadata such as resource,
-intent, status, row count, and duration is retained. Raw result rows are not
-copied into the audit record.
+A successful data question creates a metadata-only audit row. Because the
+current demo actually uses database audit with `AUDIT_INCLUDE_CONTENT=False`,
+the inline audit notice explains that operational run metadata is stored while
+the question, complete plan, and result rows are omitted. The stored metadata
+includes safe operational fields such as resource, intent, status, row count,
+and duration.
 
 ### 3. Explore frontend, admin query, and audit roles separately
 
@@ -89,10 +92,12 @@ username: `no-report`
 password: `12admin34`
 ```
 
-Opening `/` returns the expected safe `403 Forbidden`. This generic denial is
-intentional: it does not disclose which resource, reporting grant, or tenant
-scope exists. Diagnose this local synthetic account from trusted host setup;
-do not weaken the public denial to expose hidden membership.
+Opening `/` still returns HTTP status `403` with a neutral **Access
+unavailable** page. It discloses no resource, reporting grant, membership, or
+tenant scope. Use its CSRF-protected **Sign out and switch account** POST action
+to return to the existing Django admin login. Diagnose this local synthetic
+account from trusted host setup; API denial envelopes remain opaque and route-
+level denials still create no AskLens audit row.
 
 ### 5. Stop and reset only the synthetic SQLite demo
 
@@ -106,6 +111,28 @@ rm -f .asklens-test-project.sqlite3
 
 Do not reuse the demo credentials or this reset command for a real project. The
 command does not remove other databases, virtual environments, or source files.
+
+## What the reference frontend explains
+
+The server-supplied context labels are not authority. They make the current
+safe display context visible, while current authorization and row scope are
+rechecked for every execution. Empty labels in the packaged frontend default
+render no scope section.
+
+Visible result metadata is limited to the existing canonical
+`result.result_metadata` values: effective `limit`, `limit_scope` (`rows` or
+`groups`), and `truncated` (`yes` or `no`). Truncation applies only to the
+current authorized query. `yes` means additional matching rows or groups were
+detected beyond the returned result. It does not provide pagination, claim
+unscoped completeness, or imply access outside the current scope. **Raw
+response remains available** and unchanged.
+
+The inline privacy notice is demo/server-policy-bound. It appears only while the
+current demo uses metadata-only database audit with
+`AUDIT_INCLUDE_CONTENT=False`; it says operational run metadata is stored while
+the question, complete plan, and result rows are omitted. Other audit modes and
+full-content opt-in omit that notice, and the packaged frontend makes no global
+audit guarantee. API envelopes and trusted execution payloads are unchanged.
 
 ## PostgreSQL 18 reference workflow
 

@@ -5,8 +5,10 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AnonymousUser
 from django.core.exceptions import PermissionDenied
 from django.test import RequestFactory, override_settings
+from rest_framework.test import APIClient
 
 from django_asklens.frontend.views import asklens_frontend
+from django_asklens.models import SemanticQueryRun
 from tests.test_project.demo_views import asklens_demo
 from tests.test_project.models import Facility, StaffAssignment, StaffGrant
 
@@ -66,6 +68,11 @@ def test_packaged_frontend_defaults_to_authenticated_users() -> None:
     assert "AskLens" in content
     assert 'data-query-url="/asklens/query/"' in content
     assert "Read-only answers from approved data." in content
+    assert 'id="asklens-scope-labels"' not in content
+    assert 'id="scope-list"' not in content
+    assert "Visible row scope" not in content
+    assert "Operational run metadata is stored" not in content
+    assert "question, complete plan, and result rows are omitted" not in content
 
 
 @override_settings(
@@ -83,8 +90,12 @@ def test_packaged_frontend_supports_project_permission_check() -> None:
         asklens_frontend(request)
 
 
-def test_demo_frontend_denies_staff_user_without_reporting_grants() -> None:
-    """A staff login alone is not enough to load the demo frontend."""
+@override_settings(
+    ROOT_URLCONF="tests.test_project.demo_urls",
+    TEMPLATES=TEMPLATE_SETTINGS,
+)
+def test_demo_frontend_denial_is_opaque_with_csrf_post_recovery() -> None:
+    """A denied demo login gets one neutral, CSRF-protected recovery action."""
 
     user = get_user_model().objects.create_user(
         username="no-report",
@@ -94,8 +105,71 @@ def test_demo_frontend_denies_staff_user_without_reporting_grants() -> None:
     request = RequestFactory().get("/")
     request.user = user
 
-    with pytest.raises(PermissionDenied):
-        asklens_demo(request)
+    response = asklens_demo(request)
+    content = response.content.decode()
+    lower_content = content.lower()
+
+    assert response.status_code == 403
+    assert "Access unavailable" in content
+    assert "This page is not available for this account." in content
+    assert '<form method="post" action="/admin/logout/">' in content
+    assert 'name="csrfmiddlewaretoken"' in content
+    assert 'name="next" value="/admin/login/?next=/"' in content
+    assert "Sign out and switch account" in content
+    for forbidden in (
+        "no-report",
+        "north studio",
+        "south studio",
+        "resource",
+        "report",
+        "grant",
+        "permission",
+        "membership",
+        "tenant",
+        "scope",
+        "binding",
+        "row",
+        "diagnostic",
+    ):
+        assert forbidden not in lower_content
+
+
+def test_no_report_api_denial_stays_opaque_and_unaudited(settings) -> None:
+    """Demo route recovery does not alter API denial envelopes or auditing."""
+
+    settings.DJANGO_ASKLENS = {
+        "API_PERMISSION_CLASSES": [
+            "tests.test_project.permissions.CanUseComplexAnalytics",
+        ],
+        "REQUEST_PERMISSIONS_GETTER": (
+            "tests.test_project.permissions.get_request_permissions"
+        ),
+        "AUDIT_MODE": "database",
+        "AUDIT_INCLUDE_CONTENT": False,
+    }
+    user = get_user_model().objects.create_user(
+        username="no-report",
+        password="pw",
+        is_staff=True,
+    )
+    client = APIClient()
+    client.force_authenticate(user=user)
+
+    response = client.post(
+        "/asklens/query/",
+        {"question": "private denial question"},
+        format="json",
+    )
+
+    assert response.status_code == 403
+    assert response.json() == {
+        "error": {
+            "code": "asklens.authorization.denied",
+            "message": "The current request is not authorized.",
+        }
+    }
+    assert "private denial question" not in response.content.decode()
+    assert SemanticQueryRun.objects.count() == 0
 
 
 @override_settings(TEMPLATES=TEMPLATE_SETTINGS)
@@ -159,7 +233,25 @@ def test_demo_frontend_renders_for_reporting_user() -> None:
     assert "Reason:" in content
     assert "Tenant row scope" in content
     assert "North Studio" in content
+    assert "South Studio" not in content
+    assert (
+        "This context is supplied by the server. Current authorization and row "
+        "scope are rechecked for every execution; these labels do not grant access."
+        in content
+    )
+    assert (
+        '<section class="card scope-context" aria-label="Tenant row scope">' in content
+    )
+    assert "Operational run metadata is stored" in content
+    assert "question, complete plan, and result rows are omitted" in content
     assert "Raw response" in content
+    assert "Limit:" in content
+    assert "Truncated:" in content
+    assert "Truncation applies only to this current authorized query." in content
+    assert (
+        "A yes value means additional matching rows or groups were detected" in content
+    )
+    assert "the returned result." in content
     assert (
         '<details class="card disclosure session-disclosure" '
         'aria-label="Current session">' in content
@@ -170,11 +262,53 @@ def test_demo_frontend_renders_for_reporting_user() -> None:
     assert "payload?.error?.message || response.statusText" in content
     assert "payload?.detail" not in content
     assert "payload = { detail: text }" not in content
-    assert content.index("Session") < content.index("Tenant row scope")
-    assert content.index("Tenant row scope") < content.index("Saved queries")
+    assert content.index("Tenant row scope") < content.index("Session")
+    assert content.index("Session") < content.index("Saved queries")
     assert content.index("Saved queries") < content.index("Suggestions")
     assert content.index("Suggestions") < content.index("Visible catalog")
     assert '<details class="card disclosure" aria-label="Visible catalog">' in content
+
+
+@pytest.mark.parametrize(
+    "audit_settings",
+    [
+        {"AUDIT_MODE": "disabled", "AUDIT_INCLUDE_CONTENT": False},
+        {"AUDIT_MODE": "database", "AUDIT_INCLUDE_CONTENT": True},
+        {"AUDIT_MODE": "custom", "AUDIT_INCLUDE_CONTENT": False},
+    ],
+)
+@override_settings(TEMPLATES=TEMPLATE_SETTINGS)
+def test_demo_frontend_omits_audit_notice_outside_metadata_only_database_mode(
+    settings,
+    audit_settings,
+) -> None:
+    """Demo audit wording appears only for the policy it accurately describes."""
+
+    settings.DJANGO_ASKLENS = audit_settings
+    user = get_user_model().objects.create_user(
+        username="north-billing",
+        password="pw",
+        is_staff=True,
+    )
+    facility = Facility.objects.create(name="North Studio", slug="north-studio")
+    assignment = StaffAssignment.objects.create(
+        user=user,
+        facility=facility,
+        role=StaffAssignment.Role.STAFF,
+    )
+    StaffGrant.objects.create(
+        assignment=assignment,
+        name=StaffGrant.BILLING_REPORTS_VIEW,
+    )
+    request = RequestFactory().get("/")
+    request.user = user
+
+    response = asklens_demo(request)
+    content = response.content.decode()
+
+    assert response.status_code == 200
+    assert "Operational run metadata is stored" not in content
+    assert "question, complete plan, and result rows are omitted" not in content
 
 
 @override_settings(
