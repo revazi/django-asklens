@@ -1103,6 +1103,22 @@
           </div>
         </section>
         <div class="side-scroll">
+          {% if scope_labels %}
+          <section class="card scope-context" aria-label="{{ scope_title }}">
+            <h2>{{ scope_title }}</h2>
+            <p class="small">This context is supplied by the server. Current authorization and row scope are rechecked for every execution; these labels do not grant access.</p>
+            {{ scope_labels|json_script:"asklens-scope-labels" }}
+            <ul class="resource-list" id="scope-list"></ul>
+          </section>
+          {% endif %}
+
+          {% if audit_privacy_notice %}
+          <section class="card audit-privacy-notice" aria-label="Audit privacy">
+            <h2>Audit privacy</h2>
+            <p class="small">{{ audit_privacy_notice }}</p>
+          </section>
+          {% endif %}
+
           <details class="card disclosure session-disclosure" aria-label="Current session">
             <summary>
               <span>Session</span>
@@ -1116,11 +1132,6 @@
                   <span class="pill"><code>{{ llm_backend }}</code></span>
                   {% if llm_model %}<span class="pill"><code>{{ llm_model }}</code></span>{% endif %}
                 </div>
-              </section>
-              <section class="session-section {% if not scope_labels %}hidden{% endif %}" aria-label="{{ scope_title }}">
-                <h3>{{ scope_title }}</h3>
-                {{ scope_labels|json_script:"asklens-scope-labels" }}
-                <ul class="resource-list" id="scope-list"></ul>
               </section>
             </div>
           </details>
@@ -1209,7 +1220,10 @@
     const queryUrl = app.dataset.queryUrl;
     const csrfToken = document.querySelector("[name=csrfmiddlewaretoken]").value;
     const starterQuestions = JSON.parse(document.getElementById("asklens-starter-questions").textContent);
-    const scopeLabels = JSON.parse(document.getElementById("asklens-scope-labels").textContent);
+    const scopeLabelsElement = document.getElementById("asklens-scope-labels");
+    const scopeLabels = scopeLabelsElement
+      ? JSON.parse(scopeLabelsElement.textContent)
+      : [];
 
     const thread = document.getElementById("thread");
     const form = document.getElementById("query-form");
@@ -1402,6 +1416,10 @@
         renderPill(`Presentation: ${payload.presentation?.kind || "table"}`),
       );
       wrapper.appendChild(meta);
+      const resultMetadata = renderResultMetadata(result.result_metadata);
+      if (resultMetadata) {
+        wrapper.appendChild(resultMetadata);
+      }
       wrapper.appendChild(renderQueryActions(question, payload.plan || null));
       const metricGrid = renderMetricGrid(result);
       if (metricGrid) {
@@ -1414,6 +1432,36 @@
       wrapper.appendChild(renderTable(result.columns || [], result.data || []));
       wrapper.appendChild(renderRawDetails(payload));
       return wrapper;
+    }
+
+    function renderResultMetadata(resultMetadata) {
+      if (
+        !resultMetadata ||
+        !Number.isInteger(resultMetadata.limit) ||
+        !["rows", "groups"].includes(resultMetadata.limit_scope) ||
+        typeof resultMetadata.truncated !== "boolean"
+      ) {
+        return null;
+      }
+
+      const boundary = document.createElement("section");
+      boundary.className = "card result-boundary";
+      boundary.setAttribute("aria-label", "Result limit and truncation");
+      const values = document.createElement("ul");
+      values.className = "result-meta";
+      values.append(
+        renderPill(`Limit: ${resultMetadata.limit} ${resultMetadata.limit_scope}`),
+        renderPill(`Truncated: ${resultMetadata.truncated ? "yes" : "no"}`),
+      );
+      const explanation = document.createElement("p");
+      explanation.className = "small";
+      explanation.textContent = (
+        "Truncation applies only to this current authorized query. " +
+        "A yes value means additional matching rows or groups were detected beyond " +
+        "the returned result."
+      );
+      boundary.append(values, explanation);
+      return boundary;
     }
 
     function renderCapabilitiesResponse(payload, question) {
@@ -1838,6 +1886,9 @@
     }
 
     function renderScope() {
+      if (!scopeList) {
+        return;
+      }
       scopeList.replaceChildren();
       scopeLabels.forEach((label) => {
         const item = document.createElement("li");

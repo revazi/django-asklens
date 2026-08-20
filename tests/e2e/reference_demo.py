@@ -104,7 +104,12 @@ def login(
     return page, navigation.value
 
 
-def verify_admin_help_and_audit(browser: Any, base_url: str) -> None:
+def verify_admin_help_and_audit(
+    browser: Any,
+    base_url: str,
+    *,
+    expected_audit_rows: int,
+) -> None:
     """Verify the separately labeled synthetic-superuser admin path."""
 
     query_path = "/admin/asklens/asklensquery/"
@@ -117,7 +122,7 @@ def verify_admin_help_and_audit(browser: Any, base_url: str) -> None:
         audit_response = page.goto(f"{base_url}{audit_path}")
         assert audit_response is not None and audit_response.status == 200
         audit_rows = page.locator("#result_list tbody tr")
-        expect(audit_rows).to_have_count(1)
+        expect(audit_rows).to_have_count(expected_audit_rows)
         assert page.locator('select[name="action"]').count() == 0
 
         with page.expect_navigation(wait_until="domcontentloaded") as detail_navigation:
@@ -140,7 +145,7 @@ def verify_admin_help_and_audit(browser: Any, base_url: str) -> None:
 
         audit_response = page.goto(f"{base_url}{audit_path}")
         assert audit_response is not None and audit_response.status == 200
-        expect(page.locator("#result_list tbody tr")).to_have_count(1)
+        expect(page.locator("#result_list tbody tr")).to_have_count(expected_audit_rows)
         print("PASS separate admin help and view-only metadata audit")
     finally:
         context.close()
@@ -158,17 +163,25 @@ def verify_browser_and_api(playwright: Playwright, base_url: str) -> None:
         page, navigation = login(context, base_url, "facility-owner")
         assert navigation is not None and navigation.status == 200
         expect(page.get_by_role("heading", name="AskLens", exact=True)).to_be_visible()
+        scope_context = page.locator('section[aria-label="Tenant row scope"]')
+        expect(scope_context).to_be_visible()
+        expect(scope_context).to_contain_text("North Studio")
+        expect(scope_context).to_contain_text("supplied by the server")
+        expect(scope_context).to_contain_text("rechecked for every execution")
+        assert "South Studio" not in page.locator("body").inner_text()
+        expect(page.locator(".audit-privacy-notice")).to_contain_text(
+            "Operational run metadata is stored"
+        )
+        expect(page.locator(".audit-privacy-notice")).to_contain_text(
+            "question, complete plan, and result rows are omitted"
+        )
         page.locator('details[aria-label="Current session"] summary').click()
         expect(page.get_by_text("Offline dummy plans", exact=True)).to_be_visible()
-        expect(page.locator("#scope-list")).to_contain_text("North Studio")
-        assert "South Studio" not in page.locator("#scope-list").inner_text()
 
         page.locator('details[aria-label="Visible catalog"] summary').click()
         expect(page.locator("#capabilities-list")).to_contain_text(
             "Billing lines", timeout=15_000
         )
-        csrf_token = page.locator('[name="csrfmiddlewaretoken"]').input_value()
-
         catalog = response_json(context.request.get(f"{base_url}/asklens/catalog/"))
         resources = {resource["name"] for resource in catalog["resources"]}
         assert resources == EXPECTED_OWNER_RESOURCES
@@ -193,6 +206,14 @@ def verify_browser_and_api(playwright: Playwright, base_url: str) -> None:
         result_card = page.locator(".result-card").last
         expect(result_card).to_contain_text("North membership")
         assert "South membership" not in result_card.inner_text()
+        expect(result_card.get_by_text("Limit: 10 groups", exact=True)).to_be_visible()
+        expect(result_card.get_by_text("Truncated: no", exact=True)).to_be_visible()
+        expect(result_card).to_contain_text(
+            "Truncation applies only to this current authorized query."
+        )
+        expect(result_card).to_contain_text(
+            "A yes value means additional matching rows or groups were detected"
+        )
         result_card.locator("details summary", has_text="Raw response").click()
         aggregate = json.loads(result_card.locator("details pre").inner_text())
         assert aggregate["response_type"] == "query"
@@ -229,8 +250,6 @@ def verify_browser_and_api(playwright: Playwright, base_url: str) -> None:
         assert "product_name" not in aggregate_audit["plan"]
         print("PASS browser aggregate query and metadata-only audit")
 
-        verify_admin_help_and_audit(browser, base_url)
-
         list_plan = {
             "resource": "members",
             "intent": "list",
@@ -243,12 +262,23 @@ def verify_browser_and_api(playwright: Playwright, base_url: str) -> None:
             "order_by": [{"field": "member_since", "direction": "asc"}],
             "limit": 3,
         }
-        listed = post_json(
-            context,
-            f"{base_url}/asklens/query/",
-            {"question": "Reference list query", "plan": list_plan},
-            csrf_token=csrf_token,
+        page.evaluate(
+            "([question, plan]) => useQuestion(question, plan)",
+            ["Reference list query", list_plan],
         )
+        page.locator("#send-button").click()
+        expect(page.locator("#composer-status")).to_have_text("Done.", timeout=20_000)
+        list_result_card = page.locator(".result-card").last
+        expect(
+            list_result_card.get_by_text("Limit: 3 rows", exact=True)
+        ).to_be_visible()
+        expect(
+            list_result_card.get_by_text("Truncated: yes", exact=True)
+        ).to_be_visible()
+        expect(list_result_card).to_contain_text("North Studio")
+        assert "South Studio" not in list_result_card.inner_text()
+        list_result_card.locator("details summary", has_text="Raw response").click()
+        listed = json.loads(list_result_card.locator("details pre").inner_text())
         assert listed["response_type"] == "query"
         assert listed["result"]["row_count"] == 3
         assert listed["result"]["result_metadata"] == {
@@ -291,15 +321,70 @@ def verify_browser_and_api(playwright: Playwright, base_url: str) -> None:
             assert denied_navigation is not None and denied_navigation.status == 403
             assert denied_page.url == f"{base_url}/"
             expect(
-                denied_page.get_by_role("heading", name="403 Forbidden", exact=True)
+                denied_page.get_by_role(
+                    "heading", name="Access unavailable", exact=True
+                )
             ).to_be_visible()
-            denied_catalog = no_report_context.request.get(
-                f"{base_url}/asklens/catalog/"
+            denied_text = denied_page.locator("body").inner_text().lower()
+            for forbidden in (
+                "no-report",
+                "north studio",
+                "south studio",
+                "resource",
+                "report",
+                "grant",
+                "permission",
+                "membership",
+                "tenant",
+                "scope",
+                "binding",
+                "diagnostic",
+            ):
+                assert forbidden not in denied_text
+
+            denied_catalog = response_json(
+                no_report_context.request.get(f"{base_url}/asklens/catalog/"),
+                expected_status=403,
             )
-            assert denied_catalog.status == 403
+            authorization_error = {
+                "error": {
+                    "code": "asklens.authorization.denied",
+                    "message": "The current request is not authorized.",
+                }
+            }
+            assert denied_catalog == authorization_error
+            denied_csrf_token = denied_page.locator(
+                '[name="csrfmiddlewaretoken"]'
+            ).input_value()
+            denied_query = post_json(
+                no_report_context,
+                f"{base_url}/asklens/query/",
+                {"question": "private denial question"},
+                csrf_token=denied_csrf_token,
+                expected_status=403,
+            )
+            assert denied_query == authorization_error
+
+            recovery = denied_page.get_by_role(
+                "button", name="Sign out and switch account", exact=True
+            )
+            expect(recovery).to_be_visible()
+            with denied_page.expect_navigation(
+                wait_until="domcontentloaded"
+            ) as recovery_navigation:
+                recovery.click()
+            assert recovery_navigation.value.status == 200
+            expect(denied_page.locator("#id_username")).to_be_visible()
+            assert denied_page.url == f"{base_url}/admin/login/?next=/"
         finally:
             no_report_context.close()
-        print("PASS fail-closed no-report browser and API access")
+
+        verify_admin_help_and_audit(
+            browser,
+            base_url,
+            expected_audit_rows=2,
+        )
+        print("PASS fail-closed no-report browser/API access and recovery")
     finally:
         context.close()
         browser.close()
