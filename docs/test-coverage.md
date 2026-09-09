@@ -82,6 +82,97 @@ model.
 | Result serialization | [`results/serialization.py`](../django_asklens/results/serialization.py), [`results/presentation.py`](../django_asklens/results/presentation.py) | [`test_serialization.py`](../tests/results/test_serialization.py), [`test_presentation.py`](../tests/results/test_presentation.py), [`test_ordering_truncation.py`](../tests/execution/test_ordering_truncation.py) | Canonical safe values, deterministic metadata, empty results, presentation separation, ordering, and accurate truncation. |
 | Audit privacy and lifecycle | [`execution/audit.py`](../django_asklens/execution/audit.py), [`management/_audit_lifecycle.py`](../django_asklens/management/_audit_lifecycle.py) | [`test_audit_boundary.py`](../tests/execution/test_audit_boundary.py), [`test_audit_lifecycle_commands.py`](../tests/management/test_audit_lifecycle_commands.py), [`test_audit_purge_command.py`](../tests/management/test_audit_purge_command.py) | Metadata-only defaults, server-owned sink/alias policy, failure isolation, safe output, preview defaults, and bounded explicit lifecycle operations. |
 
+## Issue #82 assertion-gap disposition
+
+Reviewed against clean `main` at
+`12ba7eb1522e09154ffcfd27cdf31987498b9ee2`, after the tests-only CSRF/denial
+correction in PR #90. Rerunning `bash scripts/coverage-baseline.sh` produced
+**935 passed, 8 skipped** and the same package totals as the historical baseline:
+4,450 statements, 427 missed, 1,316 branches, 211 partial branches, 88%.
+This refresh does not replace the historical environment-bound measurements or
+establish an assertion-completeness threshold.
+
+The following is a focused source/assertion inspection of the nine boundaries
+above, not an exhaustive branch audit. A gap means evidence is missing or weaker
+than the named invariant; it does **not** mean a runtime vulnerability was found.
+
+| Boundary | Existing asserted evidence retained | Disposition / remaining gap |
+| --- | --- | --- |
+| Trusted execution facade | `test_context_revalidation.py` rejects reuse of previews across permissions/catalogs with zero SQL; `test_internal_boundaries.py` checks context identity, lazy compilation, and non-serialization. | **Selected:** permission revocation during provider planning in the same adapter operation, rather than only between separately constructed requests. Permission-resolver exception/invalid-return branches remain a separate negative-evidence candidate. |
+| Optional API adapter | `test_hostile_query_payloads.py` distinguishes transport rejection from trusted rejection, checks zero application-table SQL, exact error envelopes, allowed audit INSERTs, and private sentinels. | **Selected:** real API execution of a stale provider plan with current-request identity checks. The existing successful convergence spy alone asserts a call count, not this negative case. Do not duplicate the seeded hostile corpus. |
+| Optional MCP adapter | `test_core.py` covers scope rejection, unknown/hidden member opacity, current scoped results, row omission/denial, host-plus-request row opt-in, and output caps. | **Selected:** provider-time revocation with row return explicitly enabled, so omission cannot hide an execution defect. Compound over-budget execution while rows are omitted remains a smaller composition gap; core budget coverage is already present. |
+| Admin and frontend adapters | `test_views.py` checks successful admin facade convergence; `test_admin_view_only.py` blocks direct and bulk audit mutation; `test_demo_frontend.py` now validates the excluded CSRF token and rejects leaks elsewhere. | **Selected:** stale-provider rejection through the real admin execution helper. Existing frontend-backed HTTP and browser paths remain separate evidence; this is not another browser/logout test. |
+| Fail-closed scope | `test_scope_policy.py` rejects missing policy/provider, invalid project defaults, wrong-model/non-QuerySet/evaluated scope results, and provider exceptions; `none()` is a valid zero-row scope. API/MCP and tenant suites add execution/isolation evidence. | No duplicate registration/scope corpus selected. Current core coverage is substantially stronger than the stale pre-R2 scope summaries. Cross-adapter failure composition is not proven exhaustively. |
+| Structural budgets | `test_budgets.py` tests below/at/above dimensions and above-budget zero-total-SQL rejection; generated core tests add safe custom audit events and private-value sentinels. | Retain these tests. Do not equate row omission with budget enforcement, percentage coverage with cost bounds, or SQLite tests with production statement-timeout evidence. |
+| Private bindings and compilation | Registry/planner tests omit private bindings/policy from metadata; `test_orm.py` changes bindings independently of public keys; public-error tests hide compilation/execution diagnostics. | No new binding-policy semantics selected. `runner.py`'s specialized `FieldError`/`KeyError` conversion branches were unmeasured in this baseline and merit focused error/audit assertions, not an API redesign. |
+| Result serialization | `test_serialization.py` rejects unsupported/non-finite values, missing keys, nullability violations, and unknown enum results. `test_facade.py::test_unregistered_enum_result_fails_inside_trusted_execution` proves rejection after one real data read. | The core guard is already tested. A remaining composition gap is serialization failure through adapters with metadata-only failed auditing and no successful result/audit. This is a post-read failure: **do not assert zero SQL** or misclassify it as pre-execution rejection. |
+| Audit privacy and lifecycle | `test_audit_boundary.py` covers metadata-only success/rejection, disabled/custom modes, and sink failure before/after successful execution; lifecycle/routing tests cover the built-in database policy. | **Selected:** exactly one safe database audit INSERT after adapter revocation, no successful audit and no protected content. Invalid audit configuration/imports and resolver failures remain operational negative-evidence candidates, coordinated with #84 rather than silently changing policy. |
+
+### Risk-ranked follow-up
+
+These priorities rank the consequences of an undetected regression, not the
+severity of a discovered vulnerability:
+
+1. **High disclosure impact — selected:** provider-time permission revocation
+   across API/admin/MCP. Preserve the same current request and revalidate the
+   returned ordinary plan, stop before scope/compilation/data SQL, and audit only
+   safe rejection metadata. Retained-permission controls must actually retrieve
+   the synthetic protected row.
+2. **High failure-boundary impact — remaining:** current permission-resolver
+   exceptions/invalid returns and invalid audit configuration or sink imports.
+   Inspect facade and adapter outcomes separately; current context construction
+   and orchestration have different exception boundaries. Any revealed runtime
+   defect needs its own failing regression and separately bounded fix (#84
+   coordination); no blanket fallback or broadened access is acceptable.
+3. **High disclosure/correctness impact — remaining:** specialized binding errors
+   and post-read serialization rejection composed with adapter/audit behavior.
+   Reuse existing core error/value tests rather than claiming these guards are
+   currently absent.
+4. **Medium composition gap — remaining:** explicit MCP row omission combined
+   with above-budget execution and audit assertions. Core budgets and MCP row
+   policy each have tests; their conjunction is the missing assertion.
+5. **Lower incremental value here — retain/defer:** defensive serializer/type
+   permutations already largely covered by schema/value tests, additional
+   generator cases without a named invariant, and aggregate percentage increases.
+   Semantic/schema decisions belong with #83; operational load evidence with
+   #84/#85. No new percentage gate or dependency is proposed.
+
+### Selected adapter regression matrix
+
+[`test_adapter_revalidation.py`](../tests/execution/test_adapter_revalidation.py)
+adds twelve deterministic cases: three executing adapters (DRF API, admin helper,
+MCP question helper), two real orchestration branches (dummy planner and unified
+provider response), and revoked/retained field permission. Only provider I/O is
+substituted with an in-process double; parsing, planner validation, facade,
+compiler, ORM reads, response shaping, and database auditing are real. The
+provider changes a server-owned permission set after receiving authorized
+metadata and before returning its plan. This is not a concurrent database
+transaction/policy-change timing guarantee.
+
+Assertions cover exact current request identity and plan at the facade, current
+permission reads, one provider call, metadata-only provider inputs without sample
+rows/private bindings/policy tokens, no scope or compilation after denial, exact
+safe adapter errors, and SQL/audit effects. Success controls retrieve the
+synthetic row with one data SELECT and one audit INSERT. Denials perform only
+one metadata audit INSERT. Caller-supplied questions remain intentionally echoed
+by the existing admin/MCP orchestration; the privacy checks distinguish that
+existing behavior from private filter values, database rows, and stored audit
+content rather than silently imposing a new response contract.
+
+A local, test-only fault injection that substitutes the original permission set
+for the facade's current resolver made **all six revoked cases fail**; the
+unmodified implementation passes all twelve cases. Runtime source was not edited
+for that probe. This demonstrates sensitivity to one specific stale-policy
+regression, not exhaustive mutation testing. The new module carries the existing
+`postgresql` marker for representative PostgreSQL CI, while provider network I/O
+remains disabled. Real MCP transport, browser behavior, production permission
+backends, and independent security review remain separate evidence.
+
+Maintainer prerelease review is deferred, not independently completed. This
+first assertion-gap disposition plus the selected tests does not close every
+follow-up above, approve #82's review, enter R6, authorize a release, or certify
+production security.
+
 ## Interpretation and limitations
 
 - The recorded percentage is one local Python/Django/SQLite baseline. CI reruns
