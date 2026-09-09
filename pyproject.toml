@@ -66,7 +66,7 @@ api = [
     "djangorestframework>=3.18,<4.0",
 ]
 mcp = [
-    "fastmcp>=3.4,<4",
+    "fastmcp>=3.4,<5",
 ]
 
 [project.urls]
@@ -83,7 +83,7 @@ dev = [
     "build>=1",
     "coverage>=7,<8",
     "djangorestframework>=3.18,<4.0",
-    "fastmcp>=3.4,<4",
+    "fastmcp>=3.4,<5",
     "httpx>=0.28.1,<0.29",
     "mypy>=1.13",
     "playwright>=1.62,<2",
