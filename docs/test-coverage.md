@@ -92,9 +92,11 @@ correction in PR #90. Rerunning `bash scripts/coverage-baseline.sh` produced
 This refresh does not replace the historical environment-bound measurements or
 establish an assertion-completeness threshold.
 
-The following is a focused source/assertion inspection of the nine boundaries
-above, not an exhaustive branch audit. A gap means evidence is missing or weaker
-than the named invariant; it does **not** mean a runtime vulnerability was found.
+The following table and ranking record that preflight; completed follow-ups below
+supersede their remaining-gap labels where explicitly stated. This is a focused
+source/assertion inspection of the nine boundaries above, not an exhaustive
+branch audit. A gap means evidence is missing or weaker than the named invariant;
+it does **not** mean a runtime vulnerability was found.
 
 | Boundary | Existing asserted evidence retained | Disposition / remaining gap |
 | --- | --- | --- |
@@ -172,6 +174,58 @@ Maintainer prerelease review is deferred, not independently completed. This
 first assertion-gap disposition plus the selected tests does not close every
 follow-up above, approve #82's review, enter R6, authorize a release, or certify
 production security.
+
+### Completed failure-boundary follow-ups
+
+The subsequent context-failure inspection found actual error-boundary defects.
+Separately authorized runtime fixes in PRs #93/#94 normalized audit configuration
+and sink-import failures, preserved original safe rejections when auditing could
+not resolve, and normalized initial permission-resolver errors across executing
+adapters. Failed permission resolution cannot authorize help with absent or stale
+permissions; fresh facade revalidation remains. Dedicated
+[`audit configuration tests`](../tests/execution/test_audit_configuration_failures.py)
+and [`permission resolution tests`](../tests/execution/test_permission_resolution_failures.py)
+cover those cases and audit-mode effects. Both fixes passed exact PR and
+post-merge CI; the original fifteen regression cases from draft #92 also replayed
+unchanged with fifteen passes. This is bounded correction, not completion of
+#84's wider operational/lifecycle work.
+
+The next tests-only slice inspects runtime at `7d89a4b` and adds
+[`test_failure_audit_composition.py`](../tests/execution/test_failure_audit_composition.py).
+It composes injected compiler `FieldError`/`KeyError` and a **real stored
+unregistered enum after a valid row** with core Python, DRF API, admin execution
+helper and MCP execution helper responses. Database, disabled, custom and failing
+custom audit modes are covered. A valid two-row control confirms the same fixture
+can return real results. No runtime defect was found in these selected cases.
+
+The forty-eight negative cases assert exact error categories and opaque output,
+no partial result, one failed execution-audit attempt and no successful audit,
+metadata-only content, and no duplicate audit after sink failure. Binding errors
+perform zero application-data SQL; serialization rejection performs one SELECT
+before failure. Database mode adds exactly one failed audit INSERT; other modes
+add no SQL. A spy on the existing execution-audit boundary detects moving result
+validation after successful auditing even where a later adapter serialization
+would still reject the result. This does not promise that serialization failures
+are detectable before reading data.
+
+Local test-only fault injections produced thirty-two failing binding cases when
+the specialized exception classification was bypassed, and sixteen failing
+serialization cases when the runner's serialization guard was removed. The
+unchanged runtime passes all forty-nine cases. Those probes did not edit runtime
+source and demonstrate sensitivity to two named regressions, not exhaustive
+mutation/fuzz testing. Tests use synthetic fixtures and deterministic in-process
+dummy planning for the admin helper; no live provider or real MCP transport is
+involved. The existing PostgreSQL marker selects representative backend CI.
+
+The complete working-tree coverage run for this tests-only slice (package source
+unchanged from `7d89a4b`) passed **1,057 tests, with 8 skips**: 4,459 statements,
+403 missed, 1,316 branches, 203 partial branches, 89%. This includes the preceding
+runtime corrections and their regression tests; the difference from the older
+88% baseline is not attributable solely to this slice and is not a new threshold.
+
+Remaining #82 composition work includes MCP omitted-row budget assertions.
+Maintainer prerelease review remains deferred; none of these follow-ups is
+independent review, milestone approval, or production security certification.
 
 ## Interpretation and limitations
 
