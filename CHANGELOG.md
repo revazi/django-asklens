@@ -8,6 +8,7 @@ The project is alpha and APIs may change before a stable release.
 
 ### Fixed
 
+- Initial query permission-resolver failures now return the existing safe `asklens.authorization.denied` error through API/admin/MCP orchestration, rather than raw helper exceptions or a generic API `500`. The query API now returns `400` for these failures, matching execution-time authorization errors; route authentication/permission status codes are unchanged. Failure stops planning and help fallback, retains fresh facade revalidation, and follows the configured audit mode without storing private content by default. No settings or database migration is required.
 - Invalid audit mode types and custom audit sink import/initialization failures now use the existing safe `asklens.binding.invalid` error instead of escaping as raw exceptions. Failure to resolve auditing preserves an existing safe rejection and never selects another sink or triggers data execution.
 
 ### Added

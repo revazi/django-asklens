@@ -10,7 +10,11 @@ from django_asklens.catalog.capabilities import (
     build_query_guidance,
 )
 from django_asklens.catalog.registry import serialize_catalog
-from django_asklens.exceptions import AskLensError, public_error_payload
+from django_asklens.exceptions import (
+    AskLensError,
+    AuthorizationDeniedError,
+    public_error_payload,
+)
 from django_asklens.execution import QueryResult, execute_plan
 from django_asklens.execution.audit import (
     _audit_external_rejection,
@@ -74,9 +78,15 @@ def execute_asklens_query_request(
     """
 
     _enforce_debug_permission(request, debug=debug)
-    permissions = get_request_permissions(request)
+    permissions: frozenset[str] | None = None
 
     try:
+        try:
+            permissions = get_request_permissions(request)
+        except Exception as exc:
+            msg = "AskLens could not resolve current request permissions."
+            raise AuthorizationDeniedError(msg) from exc
+
         with _execution_audit_content(question=question):
             presentation = parse_presentation(provided_presentation)
             if provided_plan is not None:
@@ -164,9 +174,14 @@ def execute_asklens_query_request(
                 run=run,
             )
     except AskLensError as exc:
-        if _should_return_capabilities_fallback(
-            question,
-            provided_plan=provided_plan,
+        # A failed resolver cannot authorize help using absent or stale policy.
+        if (
+            permissions is not None
+            and exc.code != AuthorizationDeniedError.code
+            and _should_return_capabilities_fallback(
+                question,
+                provided_plan=provided_plan,
+            )
         ):
             query_guidance = build_query_guidance(permissions=permissions)
             return AskLensQueryResponse(
