@@ -79,7 +79,7 @@ def test_coverage_runner_is_reproducible_and_ci_visible() -> None:
 
     assert "Run informational branch coverage baseline" in workflow
     assert "bash scripts/coverage-baseline.sh" in workflow
-    assert '("coverage", "playwright", "psycopg")' in workflow
+    assert '("coverage", "httpx", "playwright", "psycopg")' in workflow
     assert '"/docs/test-coverage.md"' in workflow
     assert '"/scripts/coverage-baseline.sh"' in workflow
     assert "matrix.python-version == '3.12'" in workflow

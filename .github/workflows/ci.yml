@@ -121,7 +121,7 @@ jobs:
               requirement
               for requirement in metadata.get_all("Requires-Dist", [])
               if requirement.lower().replace("_", "-").startswith(
-                  ("coverage", "playwright", "psycopg")
+                  ("coverage", "httpx", "playwright", "psycopg")
               )
           ]
           if forbidden_requirements:
