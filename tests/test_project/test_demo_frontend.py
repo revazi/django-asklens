@@ -1,9 +1,14 @@
 """Tests for the runnable AskLens demo frontend page."""
 
+import re
+
 import pytest
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AnonymousUser
 from django.core.exceptions import PermissionDenied
+from django.http import HttpResponse
+from django.middleware.csrf import CsrfViewMiddleware
 from django.test import RequestFactory, override_settings
 from rest_framework.test import APIClient
 
@@ -26,6 +31,55 @@ TEMPLATE_SETTINGS = [
         },
     }
 ]
+
+
+DENIAL_PRIVATE_TEXT = (
+    "no-report",
+    "north studio",
+    "south studio",
+    "resource",
+    "report",
+    "grant",
+    "permission",
+    "membership",
+    "tenant",
+    "scope",
+    "binding",
+    "row",
+    "diagnostic",
+)
+
+
+def check_recovery_csrf(token: str | None, secret: str | None) -> HttpResponse | None:
+    """Exercise Django's CSRF gate for the recovery POST without logging out."""
+
+    data = {} if token is None else {"csrfmiddlewaretoken": token}
+    request = RequestFactory().post("/admin/logout/", data)
+    if secret is not None:
+        request.COOKIES[settings.CSRF_COOKIE_NAME] = secret
+    middleware = CsrfViewMiddleware(lambda _request: HttpResponse())
+    middleware.process_request(request)
+    return middleware.process_view(request, lambda _request: HttpResponse(), (), {})
+
+
+def assert_denial_content_is_opaque(content: str, csrf_secret: str) -> str:
+    """Exclude only one valid CSRF field value, never other response content."""
+
+    fields = list(
+        re.finditer(
+            r'<input type="hidden" name="csrfmiddlewaretoken" '
+            r'value="([A-Za-z0-9]{64})">',
+            content,
+        )
+    )
+    assert len(fields) == 1
+    field = fields[0]
+    token = field.group(1)
+    assert check_recovery_csrf(token, csrf_secret) is None
+    public_content = content[: field.start(1)] + content[field.end(1) :]
+    for forbidden in DENIAL_PRIVATE_TEXT:
+        assert forbidden not in public_content.lower()
+    return token
 
 
 def test_demo_frontend_redirects_anonymous_user() -> None:
@@ -94,9 +148,16 @@ def test_packaged_frontend_supports_project_permission_check() -> None:
     ROOT_URLCONF="tests.test_project.demo_urls",
     TEMPLATES=TEMPLATE_SETTINGS,
 )
-def test_demo_frontend_denial_is_opaque_with_csrf_post_recovery() -> None:
+@pytest.mark.parametrize("csrf_marker", ["row", "report", "permission"])
+def test_demo_frontend_denial_is_opaque_with_csrf_post_recovery(
+    monkeypatch, csrf_marker: str
+) -> None:
     """A denied demo login gets one neutral, CSRF-protected recovery action."""
 
+    monkeypatch.setattr(
+        "django.middleware.csrf._get_new_csrf_string",
+        lambda: csrf_marker.ljust(32, "a"),
+    )
     user = get_user_model().objects.create_user(
         username="no-report",
         password="pw",
@@ -107,7 +168,6 @@ def test_demo_frontend_denial_is_opaque_with_csrf_post_recovery() -> None:
 
     response = asklens_demo(request)
     content = response.content.decode()
-    lower_content = content.lower()
 
     assert response.status_code == 403
     assert "Access unavailable" in content
@@ -116,22 +176,62 @@ def test_demo_frontend_denial_is_opaque_with_csrf_post_recovery() -> None:
     assert 'name="csrfmiddlewaretoken"' in content
     assert 'name="next" value="/admin/login/?next=/"' in content
     assert "Sign out and switch account" in content
-    for forbidden in (
-        "no-report",
-        "north studio",
-        "south studio",
-        "resource",
-        "report",
-        "grant",
-        "permission",
-        "membership",
-        "tenant",
-        "scope",
-        "binding",
-        "row",
-        "diagnostic",
-    ):
-        assert forbidden not in lower_content
+    token = assert_denial_content_is_opaque(content, request.META["CSRF_COOKIE"])
+    assert csrf_marker in token
+
+
+@pytest.mark.parametrize(
+    "wrapper",
+    ["<p>{}</p>", '<div title="{}"></div>', "<!-- {} -->", '<input value="{}">'],
+)
+def test_denial_privacy_assertion_still_rejects_content_outside_csrf(
+    wrapper: str,
+) -> None:
+    """Token filtering cannot hide body, attribute, comment, or other input leaks."""
+
+    token = "row".ljust(32, "a") * 2
+    field = f'<input type="hidden" name="csrfmiddlewaretoken" value="{token}">'
+    assert assert_denial_content_is_opaque(field, "a" * 32) == token
+    for private_text in (*DENIAL_PRIVATE_TEXT, token):
+        with pytest.raises(AssertionError):
+            assert_denial_content_is_opaque(
+                field + wrapper.format(private_text), "a" * 32
+            )
+
+
+@pytest.mark.parametrize("field_count", [0, 2])
+def test_denial_privacy_assertion_requires_exactly_one_csrf_field(
+    field_count: int,
+) -> None:
+    """Missing or duplicated CSRF fields are not silently normalized away."""
+
+    token = "row".ljust(32, "a") * 2
+    field = f'<input type="hidden" name="csrfmiddlewaretoken" value="{token}">'
+    with pytest.raises(AssertionError):
+        assert_denial_content_is_opaque(field * field_count, "a" * 32)
+
+
+@pytest.mark.parametrize("token", ["not-a-token", "a" * 32 + "b" * 32])
+def test_denial_privacy_assertion_rejects_invalid_csrf_values(token: str) -> None:
+    """Format alone cannot authorize excluding an arbitrary field value."""
+
+    field = f'<input type="hidden" name="csrfmiddlewaretoken" value="{token}">'
+    with pytest.raises(AssertionError):
+        assert_denial_content_is_opaque(field, "a" * 32)
+
+
+@pytest.mark.parametrize(
+    ("token", "secret"),
+    [(None, "a" * 32), ("a" * 32 + "b" * 32, "a" * 32), ("a" * 64, None)],
+)
+def test_recovery_csrf_gate_rejects_missing_or_mismatched_credentials(
+    token: str | None, secret: str | None
+) -> None:
+    """The real middleware rejects absent tokens/cookies and incorrect tokens."""
+
+    response = check_recovery_csrf(token, secret)
+    assert response is not None
+    assert response.status_code == 403
 
 
 def test_no_report_api_denial_stays_opaque_and_unaudited(settings) -> None:
