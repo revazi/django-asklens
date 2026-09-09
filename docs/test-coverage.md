@@ -223,9 +223,42 @@ unchanged from `7d89a4b`) passed **1,057 tests, with 8 skips**: 4,459 statements
 runtime corrections and their regression tests; the difference from the older
 88% baseline is not attributable solely to this slice and is not a new threshold.
 
-Remaining #82 composition work includes MCP omitted-row budget assertions.
-Maintainer prerelease review remains deferred; none of these follow-ups is
-independent review, milestone approval, or production security certification.
+### MCP omission and budget composition
+
+The final named #82 tests-only composition slice, based on runtime `7a3d727`,
+adds [`test_omission_budgets.py`](../tests/mcp/test_omission_budgets.py). It reuses
+the existing MCP fixtures and core budget tests rather than rebuilding the
+exhaustive per-dimension corpus. Forty deterministic cases exercise `MAX_ROWS`
+and `MAX_FILTERS` with default omission, host-allowed/caller-omitted rows,
+caller-requested/host-denied rows, and host-plus-caller row return capped at zero.
+
+Thirty-two rejection cases cross these policies with database, disabled, custom
+and failing-custom audit modes. They assert the real facade call, no preparation
+(and therefore no scope/compilation), zero application-data SQL, exact opaque
+budget errors, no result or output-policy pseudo-success, and metadata-only
+failed audit effects without duplicate attempts. Supplied plans cannot invoke
+provider planning. Eight at-boundary controls use the same plans and real grouped
+query: one SELECT plus one successful metadata audit INSERT, two result groups,
+and an empty MCP `data` array. Core truncation remains false, while a zero MCP
+output cap correctly reports its separate output truncation. Omitting or capping
+response rows is not an execution budget or statement-timeout control.
+
+The unchanged runtime passes all forty cases. A test-only replacement that
+ignored both host budgets made all thirty-two rejection cases fail even though
+the MCP output would still be empty. Runtime source was not edited; this is one
+named sensitivity probe, not exhaustive mutation testing. Successful MCP payloads
+still echo the supplied plan under the existing contract; private-filter checks
+apply to rejection payloads and stored audit content, not an invented prohibition
+on successful caller-plan echo. Tests carry the existing PostgreSQL marker but
+do not claim real-wire MCP, browser, provider-network, production-load, or
+application-specific scope evidence.
+
+The named #82 technical follow-ups are now covered by the selected tests and the
+separately authorized fixes above. Maintainer prerelease review of this
+disposition remains deferred and is **not completed**. This is not independent
+review, issue/milestone approval, exhaustive boundary coverage, or production
+security certification. Broader semantic/schema and operational work stays in
+its separately scoped issues; no next milestone or runtime change is unlocked.
 
 ## Interpretation and limitations
 
