@@ -88,7 +88,7 @@ with zipfile.ZipFile(wheel) as archive:
         raise SystemExit("Expected one wheel METADATA file.")
     metadata = Parser().parsestr(archive.read(metadata_names[0]).decode("utf-8"))
 
-forbidden_prefixes = ("coverage", "docker", "playwright", "psycopg")
+forbidden_prefixes = ("coverage", "docker", "httpx", "playwright", "psycopg")
 requirements = metadata.get_all("Requires-Dist", [])
 requirement_names = {
     re.split(r"[ (;<>=!~]", requirement.lower().replace("_", "-"), maxsplit=1)[0]
@@ -120,8 +120,8 @@ missing_source = sorted(
 if missing_source:
     raise SystemExit(f"Source distribution omitted reference evidence: {missing_source}")
 print(
-    "PASS source wheel runtime metadata excludes coverage, Docker, Playwright, "
-    "and psycopg"
+    "PASS source wheel runtime metadata excludes coverage, Docker, httpx, "
+    "Playwright, and psycopg"
 )
 print("PASS source distribution contains the documented opt-in evidence artifacts")
 PY

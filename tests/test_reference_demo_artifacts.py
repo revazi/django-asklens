@@ -668,6 +668,7 @@ def test_package_evidence_is_isolated_and_never_releases() -> None:
     assert "wheel-smoke.sh" in script
     assert "core api mcp" in script
     assert "coverage" in script
+    assert '"httpx"' in script
     assert "playwright" in script
     assert "psycopg" in script
     assert "docker" in script
@@ -722,8 +723,24 @@ def test_package_migration_probe_is_disposable_and_scoped() -> None:
     assert "0.1.0a1 to 0.2" not in script.lower()
 
 
+def test_httpx_is_an_explicit_locked_development_dependency() -> None:
+    """The ASGI test client must not rely on MCP's transitive dependencies."""
+
+    metadata = tomllib.loads(read_text(ROOT / "pyproject.toml"))
+    lock = tomllib.loads(read_text(ROOT / "uv.lock"))
+
+    assert "httpx>=0.28.1,<0.29" in metadata["dependency-groups"]["dev"]
+    asklens = next(
+        package for package in lock["package"] if package["name"] == "django-asklens"
+    )
+    assert {"name": "httpx"} in asklens["dev-dependencies"]["dev"]
+    assert {"name": "httpx", "specifier": ">=0.28.1,<0.29"} in asklens["metadata"][
+        "requires-dev"
+    ]["dev"]
+
+
 def test_dev_tools_do_not_leak_into_runtime_metadata() -> None:
-    """Docker, PostgreSQL, and Playwright remain source/dev-only tools."""
+    """Test and source-only tools remain absent from install requirements."""
 
     metadata = tomllib.loads(read_text(ROOT / "pyproject.toml"))
     runtime = "\n".join(metadata["project"]["dependencies"]).lower()
@@ -733,7 +750,7 @@ def test_dev_tools_do_not_leak_into_runtime_metadata() -> None:
         for dependency in requirements
     ).lower()
 
-    for forbidden in ("coverage", "docker", "playwright", "psycopg"):
+    for forbidden in ("coverage", "docker", "httpx", "playwright", "psycopg"):
         assert forbidden not in runtime
         assert forbidden not in extras
     assert metadata["project"]["version"] == "0.1.0a1"
