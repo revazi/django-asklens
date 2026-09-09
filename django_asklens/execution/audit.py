@@ -81,7 +81,7 @@ def _resolve_audit_policy_and_sink(
     """Resolve trusted audit configuration for one current request."""
 
     mode = get_asklens_setting("AUDIT_MODE")
-    if mode not in {"database", "disabled", "custom"}:
+    if not isinstance(mode, str) or mode not in {"database", "disabled", "custom"}:
         msg = "DJANGO_ASKLENS['AUDIT_MODE'] must be database, disabled, or custom."
         raise BindingInvalidError(msg)
 
@@ -98,7 +98,11 @@ def _resolve_audit_policy_and_sink(
 
     configured_sink = get_asklens_setting("AUDIT_SINK")
     if isinstance(configured_sink, str):
-        configured_sink = import_string(configured_sink)
+        try:
+            configured_sink = import_string(configured_sink)
+        except Exception as exc:
+            msg = "AskLens could not resolve the configured audit sink."
+            raise BindingInvalidError(msg) from exc
     if not callable(configured_sink):
         msg = "DJANGO_ASKLENS['AUDIT_SINK'] must be callable in custom mode."
         raise BindingInvalidError(msg)

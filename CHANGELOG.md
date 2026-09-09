@@ -6,6 +6,10 @@ The project is alpha and APIs may change before a stable release.
 
 ## Unreleased
 
+### Fixed
+
+- Invalid audit mode types and custom audit sink import/initialization failures now use the existing safe `asklens.binding.invalid` error instead of escaping as raw exceptions. Failure to resolve auditing preserves an existing safe rejection and never selects another sink or triggers data execution.
+
 ### Added
 
 - Began the R1 trusted-execution boundary with public `execute_plan(plan, *, request, registry=...)`, which treats mappings and existing `QueryPlan` objects as untrusted and repeats current permission, catalog, limit, and request-scope validation before ORM execution.
