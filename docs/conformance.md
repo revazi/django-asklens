@@ -45,9 +45,32 @@ suite:
 uv run pytest tests/conformance/test_replay.py
 ```
 
-PostgreSQL replay is a later R4 slice. Passing the SQLite corpus does not provide
-PostgreSQL evidence, production certification, backend neutrality, or an
-independent security review.
+PostgreSQL replay runs in required CI on these representative stacks:
+
+| PostgreSQL | Python | Django |
+| --- | --- | --- |
+| 15 | 3.12 | 5.2 |
+| 15 | 3.13 | 6.0 |
+| 18 | 3.13 | 6.1 |
+
+The [CI workflow](../.github/workflows/ci.yml) configures a disposable PostgreSQL
+service, PostgreSQL test settings, and the expected server major for each stack.
+After installing and checking the selected Django version, it runs:
+
+```bash
+uv run --no-sync pytest --strict-config --strict-markers -m postgresql tests/conformance/test_replay.py
+```
+
+This command relies on that CI setup; it is not a standalone local PostgreSQL
+bootstrap command. The [replay harness](../tests/conformance/test_replay.py)
+includes a server-major guard that rejects the wrong backend or major version.
+CI also runs the complete PostgreSQL-marked database-sensitive suite separately;
+those tests supplement, rather than replace, the language-neutral corpus.
+
+These are representative stacks, not a Cartesian matrix or evidence for every
+PostgreSQL version. Passing the SQLite corpus does not provide PostgreSQL
+evidence. Passing PostgreSQL replay is not production certification, backend
+neutrality, or an independent security review.
 
 Generated cases may supplement this corpus, but they must not replace explicit
 security and semantic cases. Contract conflicts are resolved in normative-prose,
