@@ -51,9 +51,15 @@ A separate top-level `conformance/` corpus provides explicit synthetic positive,
 
 ## Boundaries
 
-Fixed structural objects reject additional properties. Public catalogs omit
-private Django bindings, expressions, permission tokens, scope providers,
-QuerySets, and tenant identifiers. Machine capabilities omit resources, labels,
+Fixed structural objects reject additional properties. The query-plan schema
+also represents structural validators that generated Pydantic schemas cannot
+express on their own; for example, `contains` and `icontains` require nonempty
+string values. Development tests run an independent Draft 2020-12 validator
+against the packaged JSON files and language-neutral corpus rather than treating
+the generating Pydantic model as schema evidence.
+
+Public catalogs omit private Django bindings, expressions, permission tokens,
+scope providers, QuerySets, and tenant identifiers. Machine capabilities omit resources, labels,
 descriptions, examples, and human scope guidance. Public errors contain only a
 stable code, safe message, and optional bounded JSON Pointer.
 

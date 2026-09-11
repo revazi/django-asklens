@@ -669,6 +669,9 @@ def test_package_evidence_is_isolated_and_never_releases() -> None:
     assert "core api mcp" in script
     assert "coverage" in script
     assert '"httpx"' in script
+    assert '"jsonschema"' in script
+    assert "Draft202012Validator" in script
+    assert "source wheel query schema enforces containment value constraints" in script
     assert "playwright" in script
     assert "psycopg" in script
     assert "docker" in script
@@ -739,6 +742,22 @@ def test_httpx_is_an_explicit_locked_development_dependency() -> None:
     ]["dev"]
 
 
+def test_jsonschema_is_an_explicit_locked_development_dependency() -> None:
+    """Independent contract validation must not rely on a transitive tool."""
+
+    metadata = tomllib.loads(read_text(ROOT / "pyproject.toml"))
+    lock = tomllib.loads(read_text(ROOT / "uv.lock"))
+
+    assert "jsonschema>=4.26,<5" in metadata["dependency-groups"]["dev"]
+    asklens = next(
+        package for package in lock["package"] if package["name"] == "django-asklens"
+    )
+    assert {"name": "jsonschema"} in asklens["dev-dependencies"]["dev"]
+    assert {"name": "jsonschema", "specifier": ">=4.26,<5"} in asklens["metadata"][
+        "requires-dev"
+    ]["dev"]
+
+
 def test_dev_tools_do_not_leak_into_runtime_metadata() -> None:
     """Test and source-only tools remain absent from install requirements."""
 
@@ -750,7 +769,14 @@ def test_dev_tools_do_not_leak_into_runtime_metadata() -> None:
         for dependency in requirements
     ).lower()
 
-    for forbidden in ("coverage", "docker", "httpx", "playwright", "psycopg"):
+    for forbidden in (
+        "coverage",
+        "docker",
+        "httpx",
+        "jsonschema",
+        "playwright",
+        "psycopg",
+    ):
         assert forbidden not in runtime
         assert forbidden not in extras
     assert metadata["project"]["version"] == "0.1.0a1"

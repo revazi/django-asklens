@@ -85,6 +85,7 @@ dev = [
     "djangorestframework>=3.18,<4.0",
     "fastmcp>=3.4,<4",
     "httpx>=0.28.1,<0.29",
+    "jsonschema>=4.26,<5",
     "mypy>=1.13",
     "playwright>=1.62,<2",
     "psycopg[binary]>=3.2,<4",

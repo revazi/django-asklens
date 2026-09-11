@@ -73,10 +73,14 @@ sdist="$(find "$artifacts" -maxdepth 1 -type f -name 'django_asklens-*.tar.gz')"
 uv run --no-sync python - "$wheel" "$sdist" <<'PY'
 from email.parser import Parser
 from pathlib import Path
+import json
 import re
 import sys
 import tarfile
 import zipfile
+
+from jsonschema import Draft202012Validator
+from jsonschema.exceptions import ValidationError as SchemaValidationError
 
 wheel = Path(sys.argv[1])
 sdist = Path(sys.argv[2])
@@ -87,8 +91,43 @@ with zipfile.ZipFile(wheel) as archive:
     if len(metadata_names) != 1:
         raise SystemExit("Expected one wheel METADATA file.")
     metadata = Parser().parsestr(archive.read(metadata_names[0]).decode("utf-8"))
+    query_schema = json.loads(
+        archive.read(
+            "django_asklens/contracts/schemas/query-plan.schema.json"
+        ).decode("utf-8")
+    )
 
-forbidden_prefixes = ("coverage", "docker", "httpx", "playwright", "psycopg")
+Draft202012Validator.check_schema(query_schema)
+query_validator = Draft202012Validator(query_schema)
+for operator in ("contains", "icontains"):
+    valid_plan = {
+        "resource": "orders",
+        "intent": "list",
+        "filters": [{"field": "status", "op": operator, "value": "paid"}],
+    }
+    query_validator.validate(valid_plan)
+    for value in ("", 1, True):
+        invalid_plan = {
+            **valid_plan,
+            "filters": [{"field": "status", "op": operator, "value": value}],
+        }
+        try:
+            query_validator.validate(invalid_plan)
+        except SchemaValidationError:
+            pass
+        else:
+            raise SystemExit(
+                f"Packaged query schema accepted invalid {operator} value {value!r}."
+            )
+
+forbidden_prefixes = (
+    "coverage",
+    "docker",
+    "httpx",
+    "jsonschema",
+    "playwright",
+    "psycopg",
+)
 requirements = metadata.get_all("Requires-Dist", [])
 requirement_names = {
     re.split(r"[ (;<>=!~]", requirement.lower().replace("_", "-"), maxsplit=1)[0]
@@ -121,8 +160,9 @@ if missing_source:
     raise SystemExit(f"Source distribution omitted reference evidence: {missing_source}")
 print(
     "PASS source wheel runtime metadata excludes coverage, Docker, httpx, "
-    "Playwright, and psycopg"
+    "jsonschema, Playwright, and psycopg"
 )
+print("PASS source wheel query schema enforces containment value constraints")
 print("PASS source distribution contains the documented opt-in evidence artifacts")
 PY
 
