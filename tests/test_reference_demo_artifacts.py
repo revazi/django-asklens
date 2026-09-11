@@ -989,6 +989,49 @@ def test_postgresql_ci_matrix_is_parameterized() -> None:
     assert migrate_command in job
 
 
+def test_conformance_docs_match_current_postgresql_replay_evidence() -> None:
+    """Document the actual replay matrix without claiming exhaustive coverage."""
+
+    import re
+
+    guide = read_text(ROOT / "docs" / "conformance.md")
+    workflow = read_text(ROOT / ".github" / "workflows" / "ci.yml")
+    job_match = re.search(r"  postgresql:(.*?)  reference-demo:", workflow, re.DOTALL)
+    assert job_match is not None
+    job = job_match.group(1)
+    matrix = re.findall(
+        r'- postgresql-version: "([^"]+)"\s+'
+        r'python-version: "([^"]+)"\s+'
+        r'django-version: "([^"]+)"',
+        job,
+    )
+    assert matrix
+    documented_matrix = re.findall(
+        r"^\| (\d+) \| (\d+\.\d+) \| (\d+\.\d+) \|$", guide, re.MULTILINE
+    )
+    assert documented_matrix == matrix
+
+    normalized = " ".join(guide.split())
+    replay_command = (
+        "uv run --no-sync pytest --strict-config --strict-markers "
+        "-m postgresql tests/conformance/test_replay.py"
+    )
+    assert replay_command in " ".join(job.split())
+    assert replay_command in normalized
+    assert "../.github/workflows/ci.yml" in guide
+    assert "../tests/conformance/test_replay.py" in guide
+    for required in (
+        "PostgreSQL replay runs in required CI",
+        "server-major guard",
+        "representative stacks, not a Cartesian matrix",
+        "Passing the SQLite corpus does not provide PostgreSQL evidence",
+        "not production certification, backend neutrality, or an independent "
+        "security review",
+    ):
+        assert required in normalized
+    assert "PostgreSQL replay is a later" not in normalized
+
+
 def test_short_source_demo_is_scoped_offline_and_resettable() -> None:
     """U4 keeps one concise, browser-verified source-demo journey."""
 
