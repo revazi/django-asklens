@@ -4,6 +4,7 @@ from collections.abc import Mapping
 from typing import Any
 
 import pytest
+from jsonschema import Draft202012Validator
 from pydantic import ValidationError
 
 from django_asklens import (
@@ -171,6 +172,7 @@ def test_schema_accessors_return_exact_internal_draft_set() -> None:
 
     for name in CONTRACT_SCHEMA_NAMES:
         schema = get_contract_schema(name)
+        Draft202012Validator.check_schema(schema)
         assert schema == build_contract_schema(name)
         assert schema["$schema"] == DRAFT_2020_12
         assert schema["$id"] == f"{name}.schema.json"
@@ -200,6 +202,7 @@ def test_runtime_documents_validate_against_their_generated_schemas() -> None:
     assert "internal diagnostic" not in str(documents["error"])
     for name, document in documents.items():
         validate_contract_document(name, document)
+        Draft202012Validator(get_contract_schema(name)).validate(document)
 
 
 def test_contracts_reject_extra_or_private_shape() -> None:
@@ -282,7 +285,7 @@ def test_query_plan_schema_captures_structural_value_constraints() -> None:
     assert schema["properties"]["select"]["items"]["minLength"] == 1
     assert schema["properties"]["limit"]["minimum"] == 1
     assert filter_schema["properties"]["field"]["minLength"] == 1
-    assert len(filter_schema["allOf"]) == 5
+    assert len(filter_schema["allOf"]) == 6
     assert order_schema["oneOf"] == [
         {
             "properties": {

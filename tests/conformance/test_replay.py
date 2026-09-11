@@ -10,8 +10,11 @@ from unittest.mock import patch
 import pytest
 from django.db import connection
 from django.test.utils import CaptureQueriesContext
+from jsonschema import Draft202012Validator
+from jsonschema.exceptions import ValidationError as SchemaValidationError
 from pydantic import ValidationError
 
+from django_asklens import get_contract_schema, list_contract_schemas
 from django_asklens.catalog.capabilities import build_capabilities
 from django_asklens.contracts._generation import validate_contract_document
 from django_asklens.exceptions import PublicAskLensError, public_error_payload
@@ -93,6 +96,10 @@ def test_required_conformance_categories_exist() -> None:
 
 def test_fixture_documents_are_language_neutral_and_schema_checked() -> None:
     seen_case_ids: set[str] = set()
+    validators = {
+        name: Draft202012Validator(get_contract_schema(name))
+        for name in list_contract_schemas()
+    }
 
     for path, case in CASES:
         raw_text = path.read_text(encoding="utf-8")
@@ -125,16 +132,23 @@ def test_fixture_documents_are_language_neutral_and_schema_checked() -> None:
         )
 
         validate_contract_document("catalog", case["catalog"])
+        validators["catalog"].validate(case["catalog"])
         validate_contract_document("capabilities", case["capabilities"])
+        validators["capabilities"].validate(case["capabilities"])
         if case["category"] == "structural-negative":
             with pytest.raises(ValidationError):
                 validate_contract_document("query-plan", case["plan"])
+            with pytest.raises(SchemaValidationError):
+                validators["query-plan"].validate(case["plan"])
         else:
             validate_contract_document("query-plan", case["plan"])
+            validators["query-plan"].validate(case["plan"])
         if "result" in expected:
             validate_contract_document("result", expected["result"])
+            validators["result"].validate(expected["result"])
         else:
             validate_contract_document("error", expected["error"])
+            validators["error"].validate(expected["error"])
 
 
 @pytest.mark.django_db

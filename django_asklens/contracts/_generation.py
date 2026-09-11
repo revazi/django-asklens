@@ -116,13 +116,18 @@ def _tighten_query_plan_schema(schema: dict[str, Any]) -> None:
         },
         {
             "if": {
+                "properties": {"op": {"enum": ["contains", "icontains"]}},
+                "required": ["op"],
+            },
+            "then": {"properties": {"value": {"minLength": 1, "type": "string"}}},
+        },
+        {
+            "if": {
                 "properties": {
                     "op": {
                         "enum": [
                             "eq",
                             "neq",
-                            "contains",
-                            "icontains",
                             "gt",
                             "gte",
                             "lt",
