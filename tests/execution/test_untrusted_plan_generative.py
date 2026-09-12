@@ -33,6 +33,7 @@ FORBIDDEN_PUBLIC_MARKERS = (
     "order.objects",
 )
 DISTINCTIVE_NUMERIC_PRIVATE_TOKEN_MIN = 9_000_000_000
+DISTINCTIVE_STRING_PRIVATE_TOKEN_PREFIXES = ("seed-", "sentinel_", "marker_")
 
 
 def _generation_seed() -> int:
@@ -86,9 +87,33 @@ def _value_text(value: object) -> str:
 
 
 def _private_tokens(*values: object) -> tuple[str, ...]:
-    """Collect deterministic private tokens for safe-surface assertions."""
+    """Collect only generator-owned markers suitable for substring checks."""
 
-    return tuple(dict.fromkeys(_value_text(value) for value in values))
+    tokens: list[str] = []
+
+    def collect(value: object) -> None:
+        if isinstance(value, str):
+            if value.startswith(DISTINCTIVE_STRING_PRIVATE_TOKEN_PREFIXES):
+                tokens.append(value)
+            return
+        if value is None or isinstance(value, bool):
+            return
+        if isinstance(value, int):
+            if value >= DISTINCTIVE_NUMERIC_PRIVATE_TOKEN_MIN:
+                tokens.append(str(value))
+            return
+        if isinstance(value, list):
+            for item in value:
+                collect(item)
+            return
+        if isinstance(value, dict):
+            for key, item in value.items():
+                collect(key)
+                collect(item)
+
+    for value in values:
+        collect(value)
+    return tuple(dict.fromkeys(tokens))
 
 
 def _distinctive_numeric_private_token(rng: random.Random) -> int:
@@ -476,6 +501,30 @@ def test_generated_numeric_private_tokens_use_distinctive_synthetic_range() -> N
     assert invalid_numeric_tokens == []
 
 
+@pytest.mark.parametrize("value", [None, True, False, 42, 3.14, "paid"])
+def test_private_tokens_ignore_non_distinctive_json_primitives(value: object) -> None:
+    """Ordinary JSON literals cannot prove that private plan content leaked."""
+
+    assert _private_tokens(value) == ()
+
+
+def test_private_tokens_retain_nested_generator_owned_markers() -> None:
+    """Distinctive generated keys and values remain privacy sentinels."""
+
+    numeric_marker = DISTINCTIVE_NUMERIC_PRIVATE_TOKEN_MIN + 73
+    value = {
+        "sentinel_12345": [None, "seed-20260911-93471", numeric_marker],
+        "marker_67890": {"ordinary": False},
+    }
+
+    assert _private_tokens(value) == (
+        "sentinel_12345",
+        "seed-20260911-93471",
+        str(numeric_marker),
+        "marker_67890",
+    )
+
+
 def configure_custom_audit(settings, events: list[dict]) -> None:
     """Attach metadata-only in-memory audit sink used by generated-rejection tests."""
 
@@ -507,6 +556,33 @@ def _assert_no_token_leaks(
             assert token not in public_payload_text
             assert token not in error_text
             assert token not in event_text
+
+
+@pytest.mark.parametrize(
+    "leaking_surface",
+    ["public_payload_text", "error_text", "event_text"],
+)
+def test_private_token_assertion_detects_injected_distinctive_marker(
+    leaking_surface: str,
+) -> None:
+    """A real private marker must still fail on every checked safe surface."""
+
+    marker = "seed-private-leak-control-93471"
+    texts = {
+        "public_payload_text": "safe-public-payload",
+        "error_text": "safe-error",
+        "event_text": "safe-audit-event",
+    }
+    texts[leaking_surface] += marker
+    case = _GeneratedCase(
+        case_id="private-leak-control",
+        payload={},
+        expected_code="asklens.parse.invalid",
+        private_tokens=(marker,),
+    )
+
+    with pytest.raises(AssertionError):
+        _assert_no_token_leaks(case=case, **texts)
 
 
 @pytest.mark.parametrize(
