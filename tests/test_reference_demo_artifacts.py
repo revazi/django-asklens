@@ -140,6 +140,7 @@ def test_internal_surface_leakage_audit_stays_exact_and_bounded() -> None:
     assert SURFACE_LEAKAGE_AUDIT.is_file()
     audit = read_text(SURFACE_LEAKAGE_AUDIT)
     docs_index = read_text(ROOT / "docs" / "index.md")
+    internal_contracts = read_text(ROOT / "docs" / "internal-contracts.md")
 
     for heading in (
         "# Internal metadata, result, and error leakage audit",
@@ -212,6 +213,9 @@ def test_internal_surface_leakage_audit_stays_exact_and_bounded() -> None:
         "(internal-surface-leakage-audit.md)"
     )
     assert docs_link in docs_index
+    assert "[field-by-field surface audit](internal-surface-leakage-audit.md)" in (
+        internal_contracts
+    )
 
 
 def test_http_internal_envelope_crosswalk_maps_current_non_identity() -> None:
