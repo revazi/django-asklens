@@ -186,11 +186,19 @@ at one point in time and performs no writes. Only trusted operators should add
 
 Redaction execution needs update permission and only updates `question` and
 `plan` on selected built-in rows, retaining each audit row and its operational
-fields. Purge execution needs delete and related-object permissions and targets
-eligible `SemanticQueryRun` rows through its initial primary-key high-water
-boundary. Ordinary later higher-PK inserts wait for another run. Manually
-inserted or reused lower PKs and concurrent changes are not covered by a
-snapshot guarantee; actual deleted-row counts may differ from preview.
+fields. Redaction does not capture a primary-key high-water boundary: it selects
+batches until no eligible content remains. Concurrent deletes or rewrites can
+make its count differ from preview, while later eligible inserts, including
+higher-PK rows, can be included in the same run and prolong it. Each redaction
+batch commits independently; a failing batch rolls back its updates while rows
+handled by earlier committed batches remain redacted. Rerun preview and
+reconcile before retrying.
+
+Purge execution needs delete and related-object permissions and targets eligible
+`SemanticQueryRun` rows through its initial primary-key high-water boundary.
+Ordinary later higher-PK inserts wait for another run. Manually inserted or
+reused lower PKs and concurrent changes are not covered by a snapshot guarantee;
+actual deleted-row counts may differ from preview.
 
 Before purge, establish and test a backup/restore plan. Normal Django delete
 signals run, and collector relationships may cascade, update, protect, restrict,

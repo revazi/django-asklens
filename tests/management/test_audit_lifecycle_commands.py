@@ -10,6 +10,7 @@ from django.contrib.auth import get_user_model
 from django.core.management import call_command, get_commands
 from django.core.management.base import CommandError
 from django.db import DatabaseError, connections
+from django.db.models import QuerySet
 from django.test.utils import CaptureQueriesContext
 
 from django_asklens.management import _audit_lifecycle
@@ -313,6 +314,143 @@ def test_execute_uses_multiple_bounded_batches() -> None:
     assert len(updates) == 3
     assert SemanticQueryRun.objects.exclude(question="").count() == 0
     assert "Redacted rows: 5" in stdout
+
+
+@pytest.mark.django_db
+@pytest.mark.postgresql
+def test_concurrent_delete_continues_and_reports_only_matched_redactions(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    first = _create_run(created_at=NOW - timedelta(hours=2))
+    second = _create_run(created_at=NOW - timedelta(hours=2))
+    original_update = QuerySet.update
+    original_delete = QuerySet.delete
+    intercepted = False
+
+    def update_after_concurrent_delete(queryset, **kwargs):
+        nonlocal intercepted
+        if not intercepted:
+            intercepted = True
+            selected = list(queryset.values_list("pk", flat=True))
+            original_delete(SemanticQueryRun.objects.filter(pk__in=selected))
+        return original_update(queryset, **kwargs)
+
+    monkeypatch.setattr(QuerySet, "update", update_after_concurrent_delete)
+
+    stdout, _ = _call_redact("--before", VALID_BEFORE, "--batch-size", "1", "--execute")
+
+    assert not SemanticQueryRun.objects.filter(pk=first.pk).exists()
+    second.refresh_from_db()
+    assert second.question == ""
+    assert second.plan == {}
+    assert "Eligible rows (point-in-time): 2" in stdout
+    assert "Redacted rows: 1" in stdout
+
+
+@pytest.mark.django_db
+@pytest.mark.postgresql
+def test_redaction_includes_later_eligible_higher_primary_key(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    initial = _create_run(
+        pk=87_650_010,
+        created_at=NOW - timedelta(hours=2),
+        question="initial-redaction-question",
+    )
+    original_update = QuerySet.update
+    inserted: dict[str, SemanticQueryRun] = {}
+    inserting = False
+
+    def update_then_insert(queryset, **kwargs):
+        nonlocal inserting
+        updated = original_update(queryset, **kwargs)
+        if not inserted and not inserting:
+            inserting = True
+            try:
+                inserted["run"] = _create_run(
+                    using=queryset.db,
+                    pk=87_650_011,
+                    created_at=NOW - timedelta(hours=2),
+                    question="later-redaction-question",
+                )
+            finally:
+                inserting = False
+        return updated
+
+    monkeypatch.setattr(QuerySet, "update", update_then_insert)
+
+    stdout, stderr = _call_redact(
+        "--before", VALID_BEFORE, "--batch-size", "1", "--execute"
+    )
+
+    initial.refresh_from_db()
+    inserted["run"].refresh_from_db()
+    assert initial.question == inserted["run"].question == ""
+    assert initial.plan == inserted["run"].plan == {}
+    assert "Eligible rows (point-in-time): 1" in stdout
+    assert "Redacted rows: 2" in stdout
+    combined = f"{stdout}\n{stderr}"
+    assert str(initial.pk) not in combined
+    assert str(inserted["run"].pk) not in combined
+
+
+@pytest.mark.django_db
+@pytest.mark.postgresql
+def test_later_redaction_failure_rolls_back_its_batch_only(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    private_exception = "unique-private-redaction-database-exception"
+    first = _create_run(
+        pk=87_650_020,
+        created_at=NOW - timedelta(hours=2),
+        question="first-redaction-question",
+    )
+    second = _create_run(
+        pk=87_650_021,
+        created_at=NOW - timedelta(hours=2),
+        question="second-redaction-question",
+    )
+    original_update = QuerySet.update
+    update_calls = 0
+
+    def fail_after_second_update(queryset, **kwargs):
+        nonlocal update_calls
+        update_calls += 1
+        updated = original_update(queryset, **kwargs)
+        if update_calls == 2:
+            raise DatabaseError(private_exception)
+        return updated
+
+    monkeypatch.setattr(QuerySet, "update", fail_after_second_update)
+    stdout = StringIO()
+    stderr = StringIO()
+
+    with pytest.raises(CommandError) as error:
+        call_command(
+            "redact_asklens_audit",
+            "--before",
+            VALID_BEFORE,
+            "--batch-size",
+            "1",
+            "--execute",
+            stdout=stdout,
+            stderr=stderr,
+            no_color=True,
+        )
+
+    first.refresh_from_db()
+    second.refresh_from_db()
+    assert first.question == ""
+    assert first.plan == {}
+    assert second.question == "second-redaction-question"
+    assert second.plan == {"private": "plan"}
+    assert str(error.value) == (
+        "AskLens audit redaction could not update the selected database."
+    )
+    combined = f"{error.value}\n{stdout.getvalue()}\n{stderr.getvalue()}"
+    assert private_exception not in combined
+    assert str(first.pk) not in combined
+    assert str(second.pk) not in combined
 
 
 @pytest.mark.django_db(
