@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import re
 import subprocess
 import tomllib
@@ -77,29 +78,12 @@ def test_internal_semantic_decision_index_maps_exact_current_evidence() -> None:
     ):
         assert schema_link in decision_index
 
-    for fixture_id in (
-        "budget.filter-count",
-        "member-scope-security.cross-scope-isolation",
-        "member-scope-security.missing-scope",
-        "member-scope-security.unauthorized-resource",
-        "member-scope-security.unknown-field",
-        "ordering-truncation.group-default",
-        "ordering-truncation.list-default",
-        "positive.aggregate-grouped",
-        "positive.list-scoped",
-        "semantic.empty-aggregate",
-        "semantic.invalid-decimal",
-        "semantic.relative-days",
-        "serialization.canonical-values",
-        "structural-negative.contains-boolean",
-        "structural-negative.contains-empty-string",
-        "structural-negative.contains-integer",
-        "structural-negative.extra-member",
-        "structural-negative.icontains-boolean",
-        "structural-negative.icontains-empty-string",
-        "structural-negative.icontains-integer",
-        "structural-negative.non-integer-limit",
-    ):
+    fixture_ids = {
+        json.loads(path.read_text(encoding="utf-8"))["case_id"]
+        for path in (ROOT / "conformance").glob("*/*.json")
+    }
+    assert len(fixture_ids) == 21
+    for fixture_id in fixture_ids:
         assert f"`{fixture_id}`" in decision_index
 
     for test_link in (
@@ -135,6 +119,13 @@ def test_internal_semantic_decision_index_maps_exact_current_evidence() -> None:
         "not an independent security review",
     ):
         assert required in normalized
+
+    local_links = re.findall(r"\[[^\]]+\]\(([^)]+)\)", decision_index)
+    assert local_links
+    for target in local_links:
+        relative_path = target.split("#", maxsplit=1)[0]
+        assert relative_path
+        assert (SEMANTIC_DECISION_INDEX.parent / relative_path).is_file()
 
     docs_link = (
         "[Internal semantic decision index](internal-semantic-decision-index.md)"
