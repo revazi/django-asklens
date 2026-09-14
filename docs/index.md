@@ -23,6 +23,7 @@ Django AskLens was created by [Revaz Zakalashvili](https://github.com/revazi) ([
 - [Draft internal contract schemas](internal-contracts.md)
 - [Internal semantic decision index](internal-semantic-decision-index.md)
 - [Internal metadata, result, and error leakage audit](internal-surface-leakage-audit.md)
+- [Issue #84 failure-mode and host-control matrix](internal-failure-mode-matrix.md)
 - [Draft internal conformance corpus](conformance.md)
 - [Custom UI guide](custom-ui.md)
 - [Registration API](registration.md)
