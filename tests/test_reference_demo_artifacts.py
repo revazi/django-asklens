@@ -1665,6 +1665,27 @@ def test_audit_lifecycle_docs_and_artifacts_cover_irreversible_purge() -> None:
         assert "purge_asklens_audit" in document
 
     combined_guidance = "\n".join((core, host, production, security)).lower()
+    for guide in (core, host):
+        normalized_guide = guide.replace("\n", " ")
+        assert (
+            "Redaction does not capture a primary-key high-water boundary"
+            in normalized_guide
+        )
+        assert "later eligible inserts" in normalized_guide
+        assert (
+            "rows handled by earlier committed batches remain redacted"
+            in normalized_guide
+        )
+    for checklist in (production, security):
+        normalized_checklist = checklist.replace("\n", " ")
+        assert (
+            "Redaction has no primary-key high-water boundary" in normalized_checklist
+        )
+        assert "later eligible inserts can prolong the run" in normalized_checklist
+        assert (
+            "rows handled by earlier committed batches remain redacted"
+            in normalized_checklist
+        )
     for required in (
         "preview",
         "--execute",

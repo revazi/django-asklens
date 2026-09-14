@@ -317,6 +317,7 @@ def test_execute_uses_multiple_bounded_batches() -> None:
 
 
 @pytest.mark.django_db
+@pytest.mark.postgresql
 def test_concurrent_delete_continues_and_reports_only_matched_redactions(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -347,6 +348,7 @@ def test_concurrent_delete_continues_and_reports_only_matched_redactions(
 
 
 @pytest.mark.django_db
+@pytest.mark.postgresql
 def test_redaction_includes_later_eligible_higher_primary_key(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -393,6 +395,7 @@ def test_redaction_includes_later_eligible_higher_primary_key(
 
 
 @pytest.mark.django_db
+@pytest.mark.postgresql
 def test_later_redaction_failure_rolls_back_its_batch_only(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

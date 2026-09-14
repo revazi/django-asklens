@@ -359,6 +359,13 @@ counts, batch size, and mode—never high-water/row IDs or stored content.
 `redact_asklens_audit --execute` clears exactly `question` and `plan` in short
 primary-key batches while retaining the principal reference, status, row count,
 duration, error, and creation time. Its selected alias needs update permission.
+Redaction does not capture a primary-key high-water boundary: it selects batches
+until no eligible content remains. Concurrent deletes or rewrites can make the
+reported redaction count differ from preview, and later eligible inserts,
+including higher-PK rows, can be included in the same run and prolong it. Each
+batch commits independently. A failing batch rolls back its updates, while
+rows handled by earlier committed batches remain redacted. Rerun preview and
+reconcile before retrying.
 
 `purge_asklens_audit --execute` irrevocably targets rows with
 `created_at < before`. Make and test a host-appropriate backup/restore plan
