@@ -6,9 +6,10 @@ This began as the API-2 current-state map for the optional Django REST
 framework adapter. Its original implementation baseline was clean `main` at
 `09715e3db731803c58577c1a6bcde54c152b73de`. API-5 later replaced the run-detail/
 audit boundary, API-3 cleaned the Python export surface, API-4a replaced
-permissive top-level query input plus divergent AskLens-route errors, and API-4b
-now replaces spread query/help success fields with explicit composition. This
-remains a current implementation crosswalk rather than a stable contract.
+permissive top-level query input plus divergent AskLens-route errors, API-4b
+replaced spread query/help success fields with explicit composition, and API-6
+completed optional-package/import plus source-to-wheel route-parity evidence.
+This remains a current implementation crosswalk rather than a stable contract.
 
 The five internal documents are `catalog`, `capabilities`, `query-plan`,
 `result`, and `error`. The evidence for the mapping is:
@@ -21,6 +22,9 @@ The five internal documents are `catalog`, `capabilities`, `query-plan`,
   [schemas](../django_asklens/contracts/schemas/), packaged
   [accessors](../django_asklens/contracts/_access.py), and
   [schema/runtime tests](../tests/contracts/test_schemas.py);
+- the API-6 [package evidence](../tests/test_api6_package_evidence.py), canonical
+  [source route snapshot](../.github/scripts/api_route_snapshot.py), and
+  [installed-wheel probes](../.github/scripts/wheel_smoke.py);
 - the [draft internal contract documentation](internal-contracts.md) and
   [language-neutral conformance documentation](conformance.md); and
 - the current [result serializer](../django_asklens/results/__init__.py),
@@ -40,8 +44,9 @@ exports. `django_asklens.querying.__all__` is exactly `AskLensQueryResponse` and
 `QueryView`. Deliberate root `django_asklens` exports remain retained. Private
 `_build_success_payload()` and `_build_capabilities_payload()` helpers are
 implementation details, not supported imports. API-4a owns strict input and
-AskLens-route errors; API-4b owns success composition. API-6 remains the next
-separate packaging/import-parity PR after API-4b's post-merge gate.
+AskLens-route errors; API-4b owns success composition. API-6 is complete through
+PR #56 with optional-import, dependency-extra, and source-to-wheel route-parity
+evidence.
 
 ## Terms
 
@@ -311,8 +316,9 @@ strict-input/error cleanup.
 
 The accepted alpha-breaking direction permits these replacements without
 compatibility/deprecation or consumer migration machinery. It does not make the
-current shape stable. API-6 is authorized only as the next separate PR after
-API-4b merge, cleanup, and passing post-merge CI; it is not part of API-4b.
+current shape stable. API-6 is also complete through PR #56: its optional-import,
+dependency-extra, artifact, and source-to-wheel route-parity evidence confirmed
+the documented adapter boundaries without changing HTTP behavior.
 
 ## Recommended sequential cleanup order
 
@@ -335,11 +341,11 @@ separately even when the alpha permits breaking changes.
    composition explicit while keeping the DRF view thin and preserving parity
    with shared orchestration.
 
-**Next separately gated workflow:**
+**Completed packaging/parity workflow:**
 
-5. API-6 is authorized to finish core/API optional-import, dependency-extra,
-   source/wheel route, and artifact parity evidence only after API-4b merge,
-   cleanup, and green post-merge CI.
+5. API-6 completed core/API optional-import, dependency-extra, source/wheel route,
+   and artifact parity evidence through PR #56. Exact PR CI `31701535446` and
+   post-merge CI `31702708341` passed 12/12.
 
 ## Preserved security and package boundaries
 
@@ -380,5 +386,5 @@ The evidence is repository code and maintainer-operated tests over the bounded
 API-2/API-3/API-4a/API-4b/API-5 changes. It is not external pilot/adoption
 evidence or production certification, and it is not an independent security audit. Passing
 the drift test or a later review does not make run detail schema-identical to an
-internal document, approve an API contract, authorize a release, or start
-API-6 before the explicit API-4b post-merge gate.
+internal document, approve an API contract, authorize a release, or turn API-6
+parity evidence into a stable/public contract claim.

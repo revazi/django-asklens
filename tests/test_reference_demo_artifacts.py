@@ -89,6 +89,9 @@ def test_http_internal_envelope_crosswalk_maps_current_non_identity() -> None:
         "../django_asklens/api/serializers.py",
         "../django_asklens/contracts/_models.py",
         "../tests/contracts/test_schemas.py",
+        "../tests/test_api6_package_evidence.py",
+        "../.github/scripts/api_route_snapshot.py",
+        "../.github/scripts/wheel_smoke.py",
         "internal-contracts.md",
         "conformance.md",
     ):
@@ -116,8 +119,8 @@ def test_http_internal_envelope_crosswalk_maps_current_non_identity() -> None:
         "helpers are implementation details, not supported imports.",
         "API-4a owns strict input and AskLens-route errors; API-4b owns success "
         "composition.",
-        "API-6 remains the next separate packaging/import-parity PR after "
-        "API-4b's post-merge gate.",
+        "API-6 is complete through PR #56 with optional-import, dependency-extra, "
+        "and source-to-wheel route-parity evidence.",
     ):
         assert current_export_truth in normalized
 
@@ -171,6 +174,11 @@ def test_http_internal_envelope_crosswalk_maps_current_non_identity() -> None:
         "`query_help_source`, `query_help`",
         "does not authorize API-4b",
         "could embed a complete `result` child",
+        "API-6 remains the next",
+        "API-6 is authorized only as the next",
+        "Next separately gated workflow",
+        "API-6 is authorized to finish",
+        "start API-6 before",
     ):
         assert stale_shape not in crosswalk
 
