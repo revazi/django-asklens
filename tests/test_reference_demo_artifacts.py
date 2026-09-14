@@ -34,6 +34,7 @@ PERFORMANCE_GUIDE = ROOT / "docs" / "performance-baseline.md"
 HTTP_ENVELOPE_CROSSWALK = ROOT / "docs" / "http-internal-envelope-crosswalk.md"
 SEMANTIC_DECISION_INDEX = ROOT / "docs" / "internal-semantic-decision-index.md"
 SURFACE_LEAKAGE_AUDIT = ROOT / "docs" / "internal-surface-leakage-audit.md"
+FAILURE_MODE_MATRIX = ROOT / "docs" / "internal-failure-mode-matrix.md"
 WHEEL_SMOKE = ROOT / ".github" / "scripts" / "wheel_smoke.py"
 API_SERIALIZERS = ROOT / "django_asklens" / "api" / "serializers.py"
 API_VIEWS = ROOT / "django_asklens" / "api" / "views.py"
@@ -216,6 +217,78 @@ def test_internal_surface_leakage_audit_stays_exact_and_bounded() -> None:
     assert "[field-by-field surface audit](internal-surface-leakage-audit.md)" in (
         internal_contracts
     )
+
+
+def test_issue_84_failure_mode_matrix_stays_bounded_and_evidence_specific() -> None:
+    """The #84 disposition keeps package evidence distinct from host controls."""
+
+    assert FAILURE_MODE_MATRIX.is_file()
+    matrix = read_text(FAILURE_MODE_MATRIX)
+    docs_index = read_text(ROOT / "docs" / "index.md")
+
+    for heading in (
+        "# Issue #84 failure-mode and host-control matrix",
+        "## Status and scope",
+        "## Disposition labels",
+        "## Failure-mode matrix",
+        "## No current runtime-defect disposition",
+        "## Host-owned verification checklist",
+        "## Evidence limits",
+    ):
+        assert heading in matrix
+
+    assert re.findall(r"^\| FM-(\d{2}) \|", matrix, re.MULTILINE) == [
+        f"{number:02d}" for number in range(1, 21)
+    ]
+
+    for label in (
+        "Already evidenced",
+        "Evidenced by PR #106",
+        "Deterministic tests-only addition",
+        "Host-owned / unverifiable in package CI",
+        "Confirmed runtime defect requiring a separate decision",
+    ):
+        assert label in matrix
+
+    for source_link in (
+        "../tests/execution/test_postgresql_host_controls.py",
+        "../tests/execution/test_routing.py",
+        "../tests/execution/test_audit_boundary.py",
+        "../tests/execution/test_audit_configuration_failures.py",
+        "../tests/execution/test_permission_resolution_failures.py",
+        "../tests/api/test_run_detail_privacy.py",
+        "../tests/management/test_audit_lifecycle_commands.py",
+        "../tests/management/test_audit_purge_command.py",
+        "production-checklist.md",
+        "host-throttle-and-audit-controls.md",
+        "multitenancy-security.md",
+    ):
+        assert source_link in matrix
+
+    normalized = " ".join(matrix.split())
+    for required in (
+        "no timing-dependent sleep",
+        "does not prove that PostgreSQL cancels a production query",
+        "Request timeout and proxy/ASGI cancellation remain host-owned",
+        "backups, replicas, scheduling, legal retention, and custom-sink operations",
+        "No current runtime defect was confirmed",
+        "not snapshot isolation",
+        "not a production certification",
+        "not an independent review",
+    ):
+        assert required in normalized
+
+    local_links = re.findall(r"\[[^\]]+\]\(([^)]+)\)", matrix)
+    assert local_links
+    for target in local_links:
+        relative_path = target.split("#", maxsplit=1)[0]
+        assert relative_path
+        assert (FAILURE_MODE_MATRIX.parent / relative_path).is_file()
+
+    assert (
+        "[Issue #84 failure-mode and host-control matrix]"
+        "(internal-failure-mode-matrix.md)"
+    ) in docs_index
 
 
 def test_http_internal_envelope_crosswalk_maps_current_non_identity() -> None:
