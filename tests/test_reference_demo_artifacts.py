@@ -33,6 +33,7 @@ PERFORMANCE_SCRIPT = ROOT / "scripts" / "performance-baseline.sh"
 PERFORMANCE_GUIDE = ROOT / "docs" / "performance-baseline.md"
 HTTP_ENVELOPE_CROSSWALK = ROOT / "docs" / "http-internal-envelope-crosswalk.md"
 SEMANTIC_DECISION_INDEX = ROOT / "docs" / "internal-semantic-decision-index.md"
+SURFACE_LEAKAGE_AUDIT = ROOT / "docs" / "internal-surface-leakage-audit.md"
 WHEEL_SMOKE = ROOT / ".github" / "scripts" / "wheel_smoke.py"
 API_SERIALIZERS = ROOT / "django_asklens" / "api" / "serializers.py"
 API_VIEWS = ROOT / "django_asklens" / "api" / "views.py"
@@ -131,6 +132,90 @@ def test_internal_semantic_decision_index_maps_exact_current_evidence() -> None:
         "[Internal semantic decision index](internal-semantic-decision-index.md)"
     )
     assert docs_link in docs_index
+
+
+def test_internal_surface_leakage_audit_stays_exact_and_bounded() -> None:
+    """The #83 surface audit stays field-specific without portability claims."""
+
+    assert SURFACE_LEAKAGE_AUDIT.is_file()
+    audit = read_text(SURFACE_LEAKAGE_AUDIT)
+    docs_index = read_text(ROOT / "docs" / "index.md")
+    internal_contracts = read_text(ROOT / "docs" / "internal-contracts.md")
+
+    for heading in (
+        "# Internal metadata, result, and error leakage audit",
+        "## Status and scope",
+        "## Classification rules",
+        "## Exact internal documents",
+        "## HTTP adapter fields",
+        "## MCP adapter fields",
+        "## Provider and human guidance",
+        "## Audit-record detail",
+        "## Findings and disposition",
+        "## Limitations",
+    ):
+        assert heading in audit
+
+    assert re.findall(r"^\| SURFACE-(\d{2}) \|", audit, re.MULTILINE) == [
+        f"{number:02d}" for number in range(1, 13)
+    ]
+
+    for source_link in (
+        "../django_asklens/catalog/resources.py",
+        "../django_asklens/catalog/capabilities.py",
+        "../django_asklens/contracts/_models.py",
+        "../django_asklens/results/serialization.py",
+        "../django_asklens/exceptions.py",
+        "../django_asklens/querying.py",
+        "../django_asklens/api/views.py",
+        "../django_asklens/api/serializers.py",
+        "../django_asklens/mcp/core.py",
+        "../django_asklens/planning/prompts.py",
+        "../django_asklens/execution/audit.py",
+        "../tests/contracts/test_schemas.py",
+        "../tests/api/test_http_characterization.py",
+        "../tests/api/test_run_detail_privacy.py",
+        "../tests/mcp/test_core.py",
+        "../tests/planning/test_planner.py",
+        "../tests/execution/test_untrusted_plan_generative.py",
+    ):
+        assert source_link in audit
+
+    normalized = " ".join(audit.split())
+    for required in (
+        "internal, draft, and unfrozen",
+        "Exact internal document",
+        "HTTP adapter wrapper",
+        "MCP adapter wrapper",
+        "Normalized semantic metadata",
+        "Sanitized human guidance",
+        "Server-owned operational metadata",
+        "Caller-supplied echo",
+        "No confirmed private backend or policy leakage",
+        "bindings, model/table names, QuerySets, ORM expressions, permission "
+        "tokens, tenant or scope identifiers",
+        "not a public specification",
+        "not evidence of backend neutrality",
+        "not an independent security review",
+        "requires a separate API and privacy-policy decision",
+    ):
+        assert required in normalized
+
+    local_links = re.findall(r"\[[^\]]+\]\(([^)]+)\)", audit)
+    assert local_links
+    for target in local_links:
+        relative_path = target.split("#", maxsplit=1)[0]
+        assert relative_path
+        assert (SURFACE_LEAKAGE_AUDIT.parent / relative_path).is_file()
+
+    docs_link = (
+        "[Internal metadata, result, and error leakage audit]"
+        "(internal-surface-leakage-audit.md)"
+    )
+    assert docs_link in docs_index
+    assert "[field-by-field surface audit](internal-surface-leakage-audit.md)" in (
+        internal_contracts
+    )
 
 
 def test_http_internal_envelope_crosswalk_maps_current_non_identity() -> None:

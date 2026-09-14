@@ -61,7 +61,10 @@ the generating Pydantic model as schema evidence.
 Public catalogs omit private Django bindings, expressions, permission tokens,
 scope providers, QuerySets, and tenant identifiers. Machine capabilities omit resources, labels,
 descriptions, examples, and human scope guidance. Public errors contain only a
-stable code, safe message, and optional bounded JSON Pointer.
+stable code, safe message, and optional bounded JSON Pointer. The
+[field-by-field surface audit](internal-surface-leakage-audit.md) classifies
+these exact documents separately from HTTP/MCP wrappers, provider guidance, and
+audit-detail output without making a portability or stability claim.
 
 The result `data` member retains the approved list of row maps. Row keys are
 dynamic result-column names, so that one map allows additional properties only
