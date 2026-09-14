@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import json
+import re
 import subprocess
 import tomllib
 from pathlib import Path
@@ -30,6 +32,7 @@ PILOT_INTAKE_WORKSHEET = ROOT / "docs" / "pilot-intake-worksheet.md"
 PERFORMANCE_SCRIPT = ROOT / "scripts" / "performance-baseline.sh"
 PERFORMANCE_GUIDE = ROOT / "docs" / "performance-baseline.md"
 HTTP_ENVELOPE_CROSSWALK = ROOT / "docs" / "http-internal-envelope-crosswalk.md"
+SEMANTIC_DECISION_INDEX = ROOT / "docs" / "internal-semantic-decision-index.md"
 WHEEL_SMOKE = ROOT / ".github" / "scripts" / "wheel_smoke.py"
 API_SERIALIZERS = ROOT / "django_asklens" / "api" / "serializers.py"
 API_VIEWS = ROOT / "django_asklens" / "api" / "views.py"
@@ -39,6 +42,95 @@ def read_text(path: Path) -> str:
     """Return one committed source artifact as UTF-8 text."""
 
     return path.read_text(encoding="utf-8")
+
+
+def test_internal_semantic_decision_index_maps_exact_current_evidence() -> None:
+    """The internal index stays complete, evidence-specific, and unfrozen."""
+
+    assert SEMANTIC_DECISION_INDEX.is_file()
+    decision_index = read_text(SEMANTIC_DECISION_INDEX)
+    docs_index = read_text(ROOT / "docs" / "index.md")
+
+    for heading in (
+        "# Internal semantic decision index",
+        "## Status and use",
+        "## Evidence notation",
+        "## Trust and execution",
+        "## Registration, fields, and metrics",
+        "## Values and temporal semantics",
+        "## Aggregates and cardinality",
+        "## Ordering, results, and presentation",
+        "## Errors, document identity, and audit",
+        "## Coverage boundaries",
+    ):
+        assert heading in decision_index
+
+    assert re.findall(r"^\| SEM-(\d{2}) \|", decision_index, re.MULTILINE) == [
+        f"{number:02d}" for number in range(1, 47)
+    ]
+
+    for schema_link in (
+        "../django_asklens/contracts/schemas/catalog.schema.json",
+        "../django_asklens/contracts/schemas/query-plan.schema.json",
+        "../django_asklens/contracts/schemas/capabilities.schema.json",
+        "../django_asklens/contracts/schemas/result.schema.json",
+        "../django_asklens/contracts/schemas/error.schema.json",
+    ):
+        assert schema_link in decision_index
+
+    fixture_ids = {
+        json.loads(path.read_text(encoding="utf-8"))["case_id"]
+        for path in (ROOT / "conformance").glob("*/*.json")
+    }
+    assert len(fixture_ids) == 21
+    for fixture_id in fixture_ids:
+        assert f"`{fixture_id}`" in decision_index
+
+    for test_link in (
+        "../tests/catalog/test_registry.py",
+        "../tests/catalog/test_scope_policy.py",
+        "../tests/compiler/test_dates.py",
+        "../tests/compiler/test_orm.py",
+        "../tests/compiler/test_temporal_execution.py",
+        "../tests/contracts/test_schemas.py",
+        "../tests/execution/test_audit_boundary.py",
+        "../tests/execution/test_context_revalidation.py",
+        "../tests/execution/test_facade.py",
+        "../tests/execution/test_internal_boundaries.py",
+        "../tests/execution/test_ordering_truncation.py",
+        "../tests/execution/test_public_errors.py",
+        "../tests/planning/test_budgets.py",
+        "../tests/planning/test_schemas.py",
+        "../tests/planning/test_validation.py",
+        "../tests/results/test_presentation.py",
+        "../tests/results/test_serialization.py",
+    ):
+        assert test_link in decision_index
+
+    normalized = " ".join(decision_index.split())
+    for required in (
+        "internal, draft, and unfrozen",
+        "Schema applicability is not semantic coverage.",
+        "No dedicated language-neutral fixture",
+        "A missing fixture is an explicit evidence gap, not proof of a runtime defect.",
+        "not a public specification",
+        "not a compatibility promise",
+        "not evidence of backend neutrality",
+        "not an independent security review",
+    ):
+        assert required in normalized
+
+    local_links = re.findall(r"\[[^\]]+\]\(([^)]+)\)", decision_index)
+    assert local_links
+    for target in local_links:
+        relative_path = target.split("#", maxsplit=1)[0]
+        assert relative_path
+        assert (SEMANTIC_DECISION_INDEX.parent / relative_path).is_file()
+
+    docs_link = (
+        "[Internal semantic decision index](internal-semantic-decision-index.md)"
+    )
+    assert docs_link in docs_index
 
 
 def test_http_internal_envelope_crosswalk_maps_current_non_identity() -> None:

@@ -21,6 +21,7 @@ Django AskLens was created by [Revaz Zakalashvili](https://github.com/revazi) ([
 - [Migrating from 0.1 alpha to 0.2 alpha](migrating-0.1-to-0.2.md)
 - [Core Python API](core-python-api.md)
 - [Draft internal contract schemas](internal-contracts.md)
+- [Internal semantic decision index](internal-semantic-decision-index.md)
 - [Draft internal conformance corpus](conformance.md)
 - [Custom UI guide](custom-ui.md)
 - [Registration API](registration.md)
