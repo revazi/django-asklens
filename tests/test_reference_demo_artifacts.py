@@ -35,6 +35,7 @@ HTTP_ENVELOPE_CROSSWALK = ROOT / "docs" / "http-internal-envelope-crosswalk.md"
 SEMANTIC_DECISION_INDEX = ROOT / "docs" / "internal-semantic-decision-index.md"
 SURFACE_LEAKAGE_AUDIT = ROOT / "docs" / "internal-surface-leakage-audit.md"
 FAILURE_MODE_MATRIX = ROOT / "docs" / "internal-failure-mode-matrix.md"
+SUPPORT_LIFECYCLE_GUIDE = ROOT / "docs" / "support-lifecycle.md"
 WHEEL_SMOKE = ROOT / ".github" / "scripts" / "wheel_smoke.py"
 API_SERIALIZERS = ROOT / "django_asklens" / "api" / "serializers.py"
 API_VIEWS = ROOT / "django_asklens" / "api" / "views.py"
@@ -1189,6 +1190,47 @@ def test_django_install_range_is_not_a_future_ci_support_claim() -> None:
         "docs/private-candidate-evaluation.md",
     ):
         assert support_boundary in read_text(ROOT / relative_path)
+
+
+def test_support_lifecycle_policy_stays_evidence_bounded() -> None:
+    """Support admissions and retirements must not become stable promises."""
+
+    assert SUPPORT_LIFECYCLE_GUIDE.is_file()
+    guide = read_text(SUPPORT_LIFECYCLE_GUIDE)
+    docs_index = read_text(ROOT / "docs" / "index.md")
+    installation = read_text(ROOT / "docs" / "installation.md")
+    changelog = read_text(ROOT / "CHANGELOG.md")
+    manifest = read_text(ROOT / "MANIFEST.in")
+
+    for heading in (
+        "# Support lifecycle",
+        "## Status and provenance",
+        "## Current evidence",
+        "## Admission policy",
+        "## Retirement policy",
+        "## Ownership and exceptions",
+        "## Deferred stable-contract decisions",
+    ):
+        assert heading in guide
+
+    for required in (
+        "Python 3.12 and 3.13",
+        "Django 5.2, 6.0, and 6.1",
+        "PG15 / Python 3.12 / Django 5.2",
+        "PG15 / Python 3.13 / Django 6.0",
+        "PG18 / Python 3.13 / Django 6.1",
+        "resolver eligibility is not support evidence",
+        "not a Cartesian PostgreSQL matrix",
+        "one planned release notice",
+        "fail closed",
+        "issue #66",
+    ):
+        assert required in guide
+
+    assert "[Support lifecycle](support-lifecycle.md)" in docs_index
+    assert "[support lifecycle](support-lifecycle.md)" in installation
+    assert "Added an evidence-bounded support lifecycle policy" in changelog
+    assert "recursive-include docs *.md" in manifest
 
 
 def test_postgresql_ci_matrix_is_parameterized() -> None:
