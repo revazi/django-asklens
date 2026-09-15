@@ -14,6 +14,7 @@ The project is alpha and APIs may change before a stable release.
 
 ### Added
 
+- Added an evidence-bounded support lifecycle policy for admitting and retiring tested Python, Django, PostgreSQL, and optional-adapter lines without selecting a stable version or freezing the alpha surface.
 - Began the R1 trusted-execution boundary with public `execute_plan(plan, *, request, registry=...)`, which treats mappings and existing `QueryPlan` objects as untrusted and repeats current permission, catalog, limit, and request-scope validation before ORM execution.
 - Added stable namespaced public errors for parse, unavailable-member, plan, authorization, scope, budget, binding, compilation, execution, and provider failures.
 - Added server-owned audit modes: `database` (default), `disabled`, and `custom`, with an optional callable `AUDIT_SINK` for non-database operational events.
