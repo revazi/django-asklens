@@ -206,6 +206,11 @@ The default permission gate is `django_asklens.access.IsAuthenticated`, a lightw
 
 ## Compatibility
 
+The [support lifecycle](support-lifecycle.md) defines how a Python, Django,
+PostgreSQL, or optional-adapter line enters or leaves the tested list. It keeps
+resolver eligibility, exact-artifact CI evidence, and future stable guarantees
+separate; no stable compatibility surface has been accepted yet.
+
 Current development target:
 
 - Python 3.12+
