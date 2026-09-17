@@ -1641,6 +1641,24 @@ def test_asklens_specification_is_unversioned_django_implementation() -> None:
     assert '"/docs/private-candidate-evaluation.md"' not in workflow
     assert '"/docs/pilot-intake-worksheet.md"' not in workflow
     assert '"/docs/migrating-0.1-to-0.2.md"' not in workflow
+    for heading in (
+        "## What AskLens is",
+        "## Documents",
+        "## Query core",
+        "## Query plan",
+        "## Catalog and capabilities",
+        "## Trust model",
+        "## Scope",
+        "## Types and operators",
+        "## Results",
+        "## Errors",
+        "## Budgets",
+        "## Conformance",
+        "## Django implementation",
+        "## Non-goals",
+    ):
+        assert heading in spec
+
     for required in (
         "draft, unversioned",
         "Django AskLens in this repository is the first implementation",
@@ -1652,6 +1670,16 @@ def test_asklens_specification_is_unversioned_django_implementation() -> None:
         "error",
         "execute_plan",
         "not an NDC profile",
+        "One resource per plan",
+        "Implicit-AND",
+        '{"metric":',
+        "context_scoped",
+        "asklens.member.unavailable",
+        "truncated",
+        "last_n_days",
+        "schema-valid plan remains untrusted",
+        "Presentation cannot change",
+        "Server-owned",
     ):
         assert required in spec
     assert not (ROOT / "docs" / "private-candidate-evaluation.md").exists()
