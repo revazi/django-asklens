@@ -164,21 +164,23 @@ The [current alpha surface inventory](alpha-surface-inventory.md) maps exposed,
 optional, internal, and unsupported areas without accepting any stable surface.
 It is decision input, not a compatibility promise.
 
-Roadmap issue #66 recorded a `0.2.0` version target, no deprecation window, waived R5/R6
-required gates, accepted host-owned responsibilities, and kept the five packaged
-JSON Schemas internal, draft, unfrozen, and unversioned. It did not select an
-exact stable import, setting, command, HTTP, MCP, admin, frontend, or provider
-surface. This tree is not a 0.2.0 release.
+Roadmap issue #66 recorded a `0.2.0` first-release target. `0.1.0a1` was a
+testing artifact only and is not a supported upgrade origin. There is no
+deprecation window, R5/R6 are not required gates, host-owned responsibilities
+are accepted, and the five packaged JSON Schemas stay internal, draft, unfrozen, and unversioned.
+Do not add schema versions or handle previous-shape compatibility. It did not
+select an exact stable import, setting, command, HTTP, MCP, admin, frontend, or
+provider surface. This tree is not a 0.2.0 release.
 
 This policy still does not decide:
 
 - which Python imports, registration APIs, settings, commands, HTTP routes,
-  envelopes, MCP helpers, or admin/frontend/provider behavior become stable;
-- upgrade, rollback, or data-migration guarantees; or
+  envelopes, MCP helpers, or admin/frontend/provider behavior become stable; or
 - any backend-neutral, NDC, Drizzle, public-specification, production-readiness,
   or security-certification claim.
 
-Do not add document versions or extension negotiation. Current alpha migrations,
-changelog entries, and source/wheel checks are evidence of the current tree; they
-do not make this commit a release. Releases, support exceptions, and stable
-surface assertions still require explicit maintainer authorization.
+Do not add document versions or extension negotiation. Do not record or handle schema changes.
+Current first-install migrations, changelog entries, and
+source/wheel checks are evidence of the current tree; they do not make this
+commit a release. Releases, support exceptions, and stable surface assertions
+still require explicit maintainer authorization.
