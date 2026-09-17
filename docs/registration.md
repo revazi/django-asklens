@@ -18,6 +18,8 @@ DJANGO_ASKLENS = {
 
 The [core-only executable quickstart](quickstart-core.md) shows the complete `apps.py` and registration-module wiring. Identity, permissions, and context scope remain server-owned; startup wiring must not accept them from plan or client input.
 
+After startup, run `python manage.py check_asklens --fail-on-empty` to require at least one registered resource. The command reports aggregate counts only; it does not query application data, invoke scope providers, or expose names, bindings, permissions, or tenant metadata. Django runs host app initialization before the command handler, so this does not certify arbitrary `AppConfig.ready()` code as side-effect-free.
+
 ## `register()`
 
 ```python

@@ -14,6 +14,7 @@ The project is alpha and APIs may change before a stable release.
 
 ### Added
 
+- Added `check_asklens`, a counts-only process-local registry diagnostic with optional `--fail-on-empty`; it performs no application-data queries and does not invoke scope providers.
 - Added a current alpha surface inventory covering Python imports, settings, commands, optional HTTP/MCP adapters, database-owned artifacts, serialized documents, and unsupported areas without accepting a stable version or compatibility contract.
 - Added an evidence-bounded support lifecycle policy for admitting and retiring tested Python, Django, PostgreSQL, and optional-adapter lines without selecting a stable version or freezing the alpha surface.
 - Began the R1 trusted-execution boundary with public `execute_plan(plan, *, request, registry=...)`, which treats mappings and existing `QueryPlan` objects as untrusted and repeats current permission, catalog, limit, and request-scope validation before ORM execution.
