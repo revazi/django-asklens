@@ -1225,8 +1225,17 @@ def test_support_lifecycle_policy_stays_evidence_bounded() -> None:
         "one planned release notice",
         "fail closed",
         "issue #66",
+        "internal, draft, unfrozen, and unversioned",
+        "Do not add document versions",
+        "not a 0.2.0 release",
     ):
         assert required in guide
+
+    for stale_versioning_claim in (
+        "whether serialized documents need versions or extension negotiation",
+        "needs explicit version/extension policy first",
+    ):
+        assert stale_versioning_claim not in guide
 
     assert "[Support lifecycle](support-lifecycle.md)" in docs_index
     assert "[support lifecycle](support-lifecycle.md)" in installation
@@ -1270,8 +1279,17 @@ def test_alpha_surface_inventory_does_not_accept_a_stable_contract() -> None:
         "`asklens_execute_plan`",
         "internal, draft, unfrozen, and unversioned",
         "issue #66",
+        "do not add document versions",
+        "this tree is not a 0.2.0 release",
     ):
         assert required in inventory
+
+    for stale_versioning_claim in (
+        "needs explicit version/extension policy first",
+        "whether serialized documents need versions or extension negotiation",
+        "document-version, release, or support-exception",
+    ):
+        assert stale_versioning_claim not in inventory
 
     assert "[Alpha surface inventory](alpha-surface-inventory.md)" in docs_index
     assert "[current alpha surface inventory](alpha-surface-inventory.md)" in lifecycle
