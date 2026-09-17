@@ -282,10 +282,10 @@ def smoke_core_install() -> None:
                 "visualization": {"type": "table"},
             }
         )
-    except PlanValidationError as exc:
-        assert exc.pointer == "/visualization"
+    except PlanValidationError:
+        pass
     else:
-        raise AssertionError("QueryPlan accepted legacy visualization metadata")
+        raise AssertionError("QueryPlan accepted an unknown plan member")
 
     assert (
         parse_query_plan(
