@@ -4,11 +4,7 @@ from django.apps import apps
 
 import django_asklens
 from django_asklens.apps import AskLensConfig
-from django_asklens.settings import (
-    DEFAULTS,
-    get_asklens_setting,
-    get_asklens_settings,
-)
+from django_asklens.settings import DEFAULTS, get_asklens_settings
 
 
 def test_package_imports() -> None:
@@ -33,4 +29,5 @@ def test_settings_merge_project_overrides() -> None:
 
     assert asklens_settings["MAX_ROWS"] == 50
     assert asklens_settings["MAX_JOINS"] == DEFAULTS["MAX_JOINS"]
-    assert get_asklens_setting("ALLOW_RAW_SQL") is False
+    assert "ALLOW_RAW_SQL" not in DEFAULTS
+    assert "SEND_SAMPLE_ROWS_TO_LLM" not in DEFAULTS

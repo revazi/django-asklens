@@ -36,18 +36,6 @@ class DummyProvider:
         raise LLMProviderError(msg)
 
 
-def get_llm_provider():
-    """Return the configured provider instance.
-
-    Kept for compatibility with older internal imports; new code should import
-    from django_asklens.llms or django_asklens.llms.factory.
-    """
-
-    from django_asklens.llms.factory import get_llm_provider as get_configured_provider
-
-    return get_configured_provider()
-
-
 def get_dummy_plans_setting() -> Mapping[str, ProviderPayload]:
     """Return deterministic dummy provider envelopes from Django settings."""
 

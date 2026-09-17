@@ -162,14 +162,12 @@ def test_filter_operator_values_are_strictly_validated() -> None:
         parse_query_plan(payload)
 
 
-def test_legacy_visualization_is_rejected_with_migration_pointer() -> None:
+def test_unknown_plan_members_are_rejected() -> None:
     payload = valid_aggregate_plan_payload()
-    payload["visualization"] = {"type": "bar", "x": "status", "y": "order_count"}
+    payload["visualization"] = {"type": "bar"}
 
-    with pytest.raises(PlanValidationError, match="separate presentation") as caught:
+    with pytest.raises(PlanValidationError, match="visualization"):
         parse_query_plan(payload)
-
-    assert caught.value.pointer == "/visualization"
 
 
 def test_presentation_is_separate_and_strict() -> None:

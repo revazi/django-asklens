@@ -256,7 +256,7 @@ def test_execute_plan_rejects_client_controlled_timezone_before_sql(
     assert exc_info.value.code == "asklens.parse.invalid"
 
 
-def test_execute_plan_rejects_legacy_visualization_with_migration_pointer(
+def test_execute_plan_rejects_unknown_plan_members_before_sql(
     django_assert_num_queries,
 ) -> None:
     plan = {
@@ -275,7 +275,6 @@ def test_execute_plan_rejects_legacy_visualization_with_migration_pointer(
             )
 
     assert exc_info.value.code == "asklens.parse.invalid"
-    assert exc_info.value.pointer == "/visualization"
 
 
 def test_execute_plan_rejects_independent_metric_fanout_before_sql(

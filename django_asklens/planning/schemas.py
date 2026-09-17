@@ -206,12 +206,6 @@ def parse_query_plan(raw_plan: str | bytes | Mapping[str, Any]) -> QueryPlan:
     """Parse untrusted JSON/mapping input into a strict QueryPlan."""
 
     payload = parse_plan_payload(raw_plan)
-    if "visualization" in payload:
-        msg = (
-            "visualization is no longer part of QueryPlan; move display metadata "
-            "to the separate presentation envelope."
-        )
-        raise PlanParseError(msg, pointer="/visualization")
     try:
         return QueryPlan.model_validate(payload)
     except ValidationError as exc:

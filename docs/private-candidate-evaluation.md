@@ -144,8 +144,6 @@ DJANGO_ASKLENS = {
     "DEFAULT_SCOPE_MODE": "context_scoped",
     "LLM_BACKEND": "dummy",
     "LOG_LLM_IO": False,
-    "ALLOW_RAW_SQL": False,
-    "SEND_SAMPLE_ROWS_TO_LLM": False,
     "MCP_ALLOW_ROW_RETURN": False,
     "AUDIT_INCLUDE_CONTENT": False,
     # Choose database, disabled, or an approved custom sink deliberately.

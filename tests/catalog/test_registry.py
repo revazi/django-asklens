@@ -165,9 +165,6 @@ def test_public_register_api_registers_resource() -> None:
     assert catalog["resources"][0]["name"] == "orders"
     assert "model" not in catalog["resources"][0]
 
-    with pytest.raises(TypeError, match="include_internal"):
-        serialize_catalog(include_internal=True)
-
 
 def test_duplicate_resource_name_fails_loudly() -> None:
     registry = CatalogRegistry()

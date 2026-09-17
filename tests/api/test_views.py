@@ -683,7 +683,7 @@ def test_api_rejects_client_controlled_metric_backing_before_sql(
     }
 
 
-def test_api_rejects_legacy_plan_visualization_with_migration_pointer(
+def test_api_rejects_unknown_plan_members_before_sql(
     settings,
     api_client: APIClient,
     user,
@@ -707,7 +707,6 @@ def test_api_rejects_legacy_plan_visualization_with_migration_pointer(
     assert response.data["error"] == {
         "code": "asklens.parse.invalid",
         "message": "The query plan could not be parsed.",
-        "pointer": "/visualization",
     }
 
 
