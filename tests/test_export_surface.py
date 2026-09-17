@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import importlib
 import importlib.util
+import inspect
 import os
 import subprocess
 import sys
@@ -14,9 +15,10 @@ from types import SimpleNamespace
 import pytest
 
 import django_asklens
+import django_asklens.execution as execution
 import django_asklens.querying as querying
 from django_asklens import Metric
-from django_asklens.catalog.registry import default_registry
+from django_asklens.catalog.registry import CatalogRegistry, default_registry
 from tests.test_project.models import Order
 
 ROOT_EXPORTS = [
@@ -31,6 +33,7 @@ ROOT_EXPORTS = [
     "register",
     "serialize_catalog",
 ]
+EXECUTION_EXPORTS = ["QueryResult", "execute_plan"]
 QUERYING_EXPORTS = [
     "AskLensQueryResponse",
     "execute_asklens_query_request",
@@ -82,8 +85,19 @@ def test_exact_supported_exports() -> None:
     from django_asklens.api import views
 
     assert django_asklens.__all__ == ROOT_EXPORTS
+    assert execution.__all__ == EXECUTION_EXPORTS
     assert querying.__all__ == QUERYING_EXPORTS
     assert views.__all__ == VIEW_EXPORTS
+
+
+def test_alpha_compatibility_entry_points_are_removed() -> None:
+    """Current alpha code has no deprecated runner or legacy registration hook."""
+
+    with pytest.raises(ImportError):
+        _direct_import("django_asklens.execution", "run_query_plan")
+    assert not hasattr(execution, "run_query_plan")
+    assert "base_queryset" not in inspect.signature(CatalogRegistry.register).parameters
+    assert "base_queryset" not in inspect.signature(django_asklens.register).parameters
 
 
 @pytest.mark.parametrize("helper", REMOVED_QUERYING_HELPERS)
