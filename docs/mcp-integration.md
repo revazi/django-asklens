@@ -4,10 +4,8 @@ Status: AskLens ships dependency-free MCP adapter helpers, an `AskLensMCPToolSet
 
 ## Bounded MCP quickstart
 
-This path is for unreleased current source or a maintainer-supplied private
-candidate, not the published PyPI alpha. Follow the
-[exact-candidate verification](installation.md#maintainer-supplied-private-candidate-evaluation),
-then install that local wheel in a fresh environment:
+This path is for unreleased current source, not the published PyPI alpha.
+Install a local wheel in a fresh environment:
 
 ```bash
 export ASKLENS_CANDIDATE_WHEEL=/verified/path/django_asklens-0.1.0a1-py3-none-any.whl

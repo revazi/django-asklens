@@ -3,7 +3,7 @@
 [![PyPI](https://img.shields.io/pypi/v/django-asklens.svg)](https://pypi.org/project/django-asklens/)
 [![Python](https://img.shields.io/pypi/pyversions/django-asklens.svg)](https://pypi.org/project/django-asklens/)
 
-Django AskLens is a reusable Django package for safe natural-language querying over explicitly registered Django models, with an optional Django REST Framework API integration.
+Django AskLens is the Django implementation of the [AskLens specification](docs/asklens-specification.md): safe natural-language querying over explicitly registered Django models, with optional Django REST Framework and MCP adapters.
 
 AskLens does **not** let an LLM write SQL. It asks a provider for structured JSON, validates the plan against your registered catalog and permissions, compiles a read-only Django ORM query, executes with limits, and returns table/chart-ready JSON.
 
@@ -22,7 +22,7 @@ Django AskLens was created by [Revaz Zakalashvili](https://github.com/revazi) ([
 > python -m pip install 'django-asklens==0.1.0a1'
 > ```
 >
-> Then use the immutable [documentation tagged `v0.1.0a1`](https://github.com/revazi/django-asklens/blob/v0.1.0a1/README.md), not the unreleased-main quickstart below. Do not combine the published alpha with main-branch examples or mix published-alpha and unreleased-main artifacts across workers or clients. See [Installation](docs/installation.md) for pinned core, API, and MCP commands and the separate contributor/private-candidate paths.
+> Then use the immutable [documentation tagged `v0.1.0a1`](https://github.com/revazi/django-asklens/blob/v0.1.0a1/README.md), not the unreleased-main quickstart below. Do not combine the published alpha with main-branch examples or mix published-alpha and unreleased-main artifacts across workers or clients. See [Installation](docs/installation.md) for pinned core, API, and MCP commands.
 
 ## What it provides
 

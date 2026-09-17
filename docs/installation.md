@@ -1,6 +1,6 @@
 # Installation
 
-Choose instructions by artifact provenance. The published PyPI alpha, the unreleased `main` source tree, and a maintainer-supplied private candidate are different contexts and are not interchangeable.
+Choose instructions by artifact provenance. The published PyPI `0.1.0a1` testing artifact and the unreleased `main` source tree are different contexts and are not interchangeable.
 
 ## Published PyPI alpha: 0.1.0a1
 
@@ -53,21 +53,9 @@ The repository version intentionally remains `0.1.0a1` because no version bump o
 
 For PR10 evidence, the script creates a disposable SQLite Django project in its temporary workdir, applies the published package migrations (`0001_initial` and `0002_add_admin_query_proxy`), and creates one synthetic `SemanticQueryRun` row. It then replaces the install with the exact local wheel, re-runs `migrate --plan`, `migrate`, `showmigrations`, `check`, and `makemigrations --check --dry-run`, and verifies that the synthetic row, proxy model, and AskLens table shape survive. This is same-version replacement and migration-state preservation evidence only, not PostgreSQL migration evidence and not release evidence.
 
-## Maintainer-supplied private candidate evaluation
-
-This context applies only when a maintainer supplies an exact local wheel through an approved channel. Before any installation, require all three manifest values:
-
-- an immutable 40-character Git commit;
-- the exact wheel filename;
-- the wheel's SHA-256 digest.
-
-Do not rely on the shared `0.1.0a1` version or filename: verify all three before installing. Only after that verification, follow the [private candidate evaluation and onboarding guide](private-candidate-evaluation.md), which performs commit and SHA-256 checks before its local-wheel installation step.
-
-A current private candidate still reports `0.1.0a1`, so installing it is exact same-version replacement in an isolated environment, not a normal PyPI upgrade or public release. The guide does not authorize a version, tag, upload, beta, or production use. It keeps completed forms and evidence outside the repository. An optional [Privacy-Safe Pilot Intake Worksheet](pilot-intake-worksheet.md) template helps structure private evaluations safely.
-
 ## Authenticated API prerequisites for exact current artifacts
 
-These prerequisites document the current optional DRF adapter in unreleased source or a separately supplied exact verified wheel. They are not instructions for the published PyPI `0.1.0a1`, a release, or an upgrade. Verify the candidate's immutable commit, exact filename, and SHA-256 digest before installing its API extra in a fresh environment:
+These prerequisites document the current optional DRF adapter in unreleased source or an exact verified wheel. They are not instructions for the published PyPI `0.1.0a1`, a release, or an upgrade.
 
 ```bash
 python -m pip install '/verified/path/django_asklens-0.1.0a1-py3-none-any.whl[api]'

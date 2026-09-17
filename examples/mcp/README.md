@@ -6,11 +6,8 @@ evidence, not a production authentication or transport template.
 
 ## Bounded current-artifact checklist
 
-This `main`-branch example requires unreleased current source or a
-maintainer-supplied private candidate. Verify the candidate's immutable commit,
-exact filename, and SHA-256 using the
-[private-candidate instructions](../../docs/installation.md#maintainer-supplied-private-candidate-evaluation),
-then install that exact local wheel in a fresh environment:
+This `main`-branch example requires unreleased current source. Install an exact
+local wheel in a fresh environment:
 
 ```bash
 export ASKLENS_CANDIDATE_WHEEL=/verified/path/django_asklens-0.1.0a1-py3-none-any.whl

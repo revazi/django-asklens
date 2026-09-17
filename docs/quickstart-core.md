@@ -14,11 +14,9 @@ provider call, frontend, or MCP integration.
 > [`v0.1.0a1` documentation](https://github.com/revazi/django-asklens/blob/v0.1.0a1/README.md).
 > Do not combine those published bytes with this unreleased-main contract.
 
-For a maintainer-supplied candidate, verify its immutable commit, exact wheel
-filename, and SHA-256 digest before installation as described in
-[Installation](installation.md#maintainer-supplied-private-candidate-evaluation).
-The disposable smoke at the end instead builds one wheel from the current local
-source, installs that exact file, and reports its digest.
+The disposable smoke at the end builds one wheel from the current local source,
+installs that exact file, and reports its digest. See
+[Installation](installation.md#unreleased-mainsource-checkout-for-contributors).
 
 ## 1. Install the exact core artifact
 
