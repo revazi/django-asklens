@@ -164,11 +164,14 @@ urlpatterns = [
 
 The packaged frontend is optional and calls the AskLens API routes, so it also requires the `api` extra and API URLs. Production projects can build custom UIs directly on the API; see [Building a custom AskLens UI](custom-ui.md).
 
-Run migrations for AskLens-owned audit models:
+Run migrations for AskLens-owned audit models, then verify that startup populated the process-local registry:
 
 ```bash
 python -m django migrate asklens
+python manage.py check_asklens --fail-on-empty
 ```
+
+`check_asklens` prints only aggregate resource, scope-mode, field, and metric counts. It performs no application-data queries and does not invoke scope providers. Django initializes every installed host app before the command runs, so host `AppConfig.ready()` side effects remain the host's responsibility.
 
 ## Minimal settings
 

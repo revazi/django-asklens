@@ -149,6 +149,9 @@ none of them.
 
 Current operator commands are:
 
+- `check_asklens` — prints aggregate process-local registry counts and optionally
+  fails on an empty registry with `--fail-on-empty`; it does not query application
+  data or invoke scope providers.
 - `redact_asklens_audit` — preview by default; explicit `--execute` redacts
   eligible built-in audit content in bounded batches.
 - `purge_asklens_audit` — preview by default; explicit `--execute` irreversibly
