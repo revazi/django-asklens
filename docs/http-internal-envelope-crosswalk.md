@@ -376,11 +376,12 @@ Any later cleanup must preserve all of these current invariants:
 
 ## Limitations
 
-The five schemas remain internal, draft, unfrozen, and unversioned. This
-crosswalk does not freeze the HTTP API, publish a specification, establish a
-compatibility promise, or prove backend neutrality. API-4b changes only success
-composition; it does not extend API-5 audit access or API-4a request/error
-behavior. This is not a public specification and not a compatibility promise.
+The five schemas remain internal, draft, unfrozen, and unversioned. They are the
+[AskLens specification](asklens-specification.md) documents. This crosswalk does
+not freeze the HTTP API, establish a compatibility promise, or prove backend
+neutrality. API-4b changes only success composition; it does not extend API-5
+audit access or API-4a request/error behavior. This is not a public specification
+and not a compatibility promise.
 
 The evidence is repository code and maintainer-operated tests over the bounded
 API-2/API-3/API-4a/API-4b/API-5 changes. It is not external pilot/adoption

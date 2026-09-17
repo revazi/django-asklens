@@ -1,6 +1,6 @@
 # Django AskLens docs
 
-Django AskLens is an alpha reusable Django package for safe natural-language querying over explicitly registered Django models, with an optional Django REST Framework API integration.
+Django AskLens is the Django implementation of the [AskLens specification](asklens-specification.md): a read-only semantic query contract over explicitly registered models, with optional Django REST Framework and MCP adapters.
 
 Django AskLens was created by [Revaz Zakalashvili](https://github.com/revazi) ([revaz.zakalashvili@gmail.com](mailto:revaz.zakalashvili@gmail.com)).
 
@@ -16,7 +16,7 @@ Django AskLens was created by [Revaz Zakalashvili](https://github.com/revazi) ([
 - [AskLens specification](asklens-specification.md)
 - [Installation](installation.md)
 - [Support lifecycle](support-lifecycle.md)
-- [Alpha surface inventory](alpha-surface-inventory.md)
+- [Current Django AskLens surface](alpha-surface-inventory.md)
 - [Core-only executable quickstart](quickstart-core.md)
 - [Usage guide](usage.md)
 - [Core Python API](core-python-api.md)

@@ -1,24 +1,21 @@
-# Alpha surface inventory for stable-release decisions
+# Current Django AskLens surface
 
 ## Status
 
-This document inventories the current unreleased Django AskLens alpha surface so
-roadmap issue #66 can later select an intentionally narrow stable contract. It
-records exposure and evidence; it does not accept compatibility commitments.
-**No surface is accepted as stable** by this inventory.
+This document maps the current Django implementation of the [AskLens
+specification](asklens-specification.md). It records exposure and evidence.
+**No surface is accepted as stable** by this inventory. Breaking changes are
+allowed. This tree is not a 0.2.0 release.
 
-The inventory describes the source tree that first added it, based on `main` at
-`8841b490c46d2be03ee17434fd7ab8a058254ee7`. Recheck source, installed artifacts,
-and tests against any later release candidate. PyPI `0.1.0a1`, unreleased
-`main`, and a maintainer-supplied exact candidate remain different artifact
-contexts under the [support lifecycle](support-lifecycle.md).
+PyPI `0.1.0a1` was a testing artifact only. Unreleased `main` is a different
+artifact under the [support lifecycle](support-lifecycle.md).
 
 ## Classification rules
 
 | Classification | Meaning in this inventory |
 | --- | --- |
-| **Stable** | None accepted. Only an explicit #66 decision can put a named surface here. |
-| **Provisional** | Deliberately exposed or documented current alpha behavior. It may still change through a separately authorized, tested alpha change. |
+| **Stable** | Not claimed. This tree is a first-release Django implementation, not a frozen SemVer contract. |
+| **Provisional** | Deliberately exposed current behavior. It may still change. |
 | **Optional** | Exposed only when an extra, adapter, or reference surface is selected. Optional does not mean stable. |
 | **Internal** | Package implementation or evidence surface, not a supported caller contract even when Python can technically import it. |
 | **Unsupported** | Deliberately excluded behavior or claim. |
@@ -112,10 +109,8 @@ serialize_query_result
 serialize_rows
 ```
 
-These are provisional alpha helper/model surfaces, not one accepted stable unit.
-Structural parsing and preview validation never authorize execution. #66 must
-select names individually if any become stable rather than freezing every
-currently importable helper.
+These are provisional helper/model surfaces, not one frozen unit.
+Structural parsing and preview validation never authorize execution.
 
 ### Provider imports
 
@@ -140,9 +135,8 @@ whole settings mapping.
 | Frontend | `FRONTEND_PERMISSION_CHECK`, `FRONTEND_TITLE`, `FRONTEND_SUBTITLE`, `FRONTEND_STARTER_QUESTIONS` | Optional reference-frontend configuration. |
 | MCP | `MCP_ALLOW_ROW_RETURN`, `MCP_MAX_RETURNED_ROWS` | Optional adapter configuration; row return stays host-and-request gated. |
 
-Unknown settings behavior, default-value compatibility, import-string handling,
-and per-key deprecation rules remain #66/#67 decisions. This inventory changes
-none of them.
+Unknown settings behavior, default-value compatibility, and import-string
+handling are current implementation details. This inventory does not freeze them.
 
 ## Commands and database-owned surface
 
@@ -235,12 +229,10 @@ The package contains five current JSON documents and Draft 2020-12 schemas:
 - `result`
 - `error`
 
-They remain **internal, draft, unfrozen, and unversioned**. Issue #66 accepted
-this: do not add document versions, revisions, or extension negotiation. Current
-schema, language-neutral fixture, SQLite, PostgreSQL, HTTP-crosswalk, and
-leakage-audit evidence does not turn them into a public specification or
-compatibility promise. A schema-valid plan remains untrusted and must enter
-`execute_plan()`.
+They remain **internal, draft, unfrozen, and unversioned**. They are the
+machine-readable [AskLens specification](asklens-specification.md) documents.
+Do not add document versions, revisions, or extension negotiation. A
+schema-valid plan remains untrusted and must enter `execute_plan()`.
 
 HTTP and MCP wrappers are not automatically identical to these documents. Run
 detail is an audit representation. Help, routing, presentation, row-omission,
@@ -254,7 +246,7 @@ Internal surfaces include:
 - compiler functions, ORM aliases, Django bindings, expressions, QuerySets,
   model labels, scope providers, and diagnostic causes;
 - private orchestration, adapter, audit, schema-generation, and serialization
-  helpers whose names begin with `_` or are not selected by #66;
+  helpers whose names begin with `_`;
 - conformance harness setup, trusted clocks, synthetic scenario mappings, and
   test-project implementation details; and
 - local `.agents` planning/evidence files.
@@ -272,11 +264,10 @@ Unsupported behavior and claims include:
 - treating SQLite or representative PostgreSQL tuples as every-database or
   Cartesian production evidence.
 
-## Decision boundary
+## Current posture
 
 This inventory still accepts **no stable Python, HTTP, MCP, admin, frontend, or
-provider surface**. Issue #66 recorded these first-release answers without
-freezing that surface:
+provider surface**. Current first-release posture:
 
 - target first-release version is `0.2.0`, not `1.0.0`; this tree is not a 0.2.0 release;
 - `0.1.0a1` was a testing artifact only; it is not a supported upgrade origin;
@@ -284,30 +275,8 @@ freezing that surface:
   extension negotiation; do not add document versions;
 - do not record or handle schema changes or previous document shapes;
 - no deprecation window; breaking changes are accepted;
-- R5 and R6 are not required gates for this target;
 - host-owned responsibilities remain outside the package guarantee; and
 - raw SQL remains unsupported.
 
-Exact stable imports, settings, commands, routes/envelopes, and adapters were
-not selected. Until that acceptance, every current caller-facing item above
-remains provisional or optional alpha exposure. Stable remains an empty
-classification. Drizzle and public-specification gates are unchanged.
-Independent security review (#74) is unanswered and is not passed evidence.
-
-## Existing evidence to reuse
-
-Later decisions should reuse rather than duplicate:
-
-- `tests/test_export_surface.py` for deliberate root/querying/view exports;
-- `tests/test_import_boundaries.py` and `tests/test_api6_package_evidence.py` for
-  optional dependency and source/wheel isolation;
-- API characterization and the HTTP/internal-envelope crosswalk for routes;
-- MCP core/example/omission tests for helper and row-policy behavior;
-- contract-schema, conformance, semantic-index, and leakage-audit evidence for
-  serialized documents; and
-- lifecycle-command, migration, build/Twine, installed-wheel, PostgreSQL, and
-  reference-smoke evidence for current artifacts.
-
-A future stable-contract test should be added only after #66 accepts the exact
-surface. This inventory guard checks the map and its explicit empty-stable
-boundary; it is not a duplicate contract suite.
+Every current caller-facing item above remains provisional or optional Django
+implementation exposure. See the [AskLens specification](asklens-specification.md).

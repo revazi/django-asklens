@@ -1185,7 +1185,7 @@ def test_support_lifecycle_policy_stays_evidence_bounded() -> None:
         "## Admission policy",
         "## Retirement policy",
         "## Ownership and exceptions",
-        "## Deferred stable-contract decisions",
+        "## Current release posture",
     ):
         assert heading in guide
 
@@ -1199,7 +1199,7 @@ def test_support_lifecycle_policy_stays_evidence_bounded() -> None:
         "not a Cartesian PostgreSQL matrix",
         "one planned release notice",
         "fail closed",
-        "issue #66",
+        "AskLens specification",
         "internal, draft, unfrozen, and unversioned",
         "Do not add document versions",
         "not a 0.2.0 release",
@@ -1208,6 +1208,8 @@ def test_support_lifecycle_policy_stays_evidence_bounded() -> None:
         "Do not record or handle schema changes",
     ):
         assert required in guide
+
+    assert "issue #66" not in guide
 
     for stale_versioning_claim in (
         "whether serialized documents need versions or extension negotiation",
@@ -1235,7 +1237,7 @@ def test_alpha_surface_inventory_does_not_accept_a_stable_contract() -> None:
     internal_contracts = read_text(ROOT / "docs" / "internal-contracts.md")
 
     for heading in (
-        "# Alpha surface inventory for stable-release decisions",
+        "# Current Django AskLens surface",
         "## Classification rules",
         "## Python surfaces",
         "## Settings",
@@ -1244,7 +1246,7 @@ def test_alpha_surface_inventory_does_not_accept_a_stable_contract() -> None:
         "## Optional MCP surface",
         "## Serialized documents",
         "## Internal and unsupported surfaces",
-        "## Decision boundary",
+        "## Current posture",
     ):
         assert heading in inventory
 
@@ -1259,7 +1261,7 @@ def test_alpha_surface_inventory_does_not_accept_a_stable_contract() -> None:
         "`POST /asklens/query/`",
         "`asklens_execute_plan`",
         "internal, draft, unfrozen, and unversioned",
-        "issue #66",
+        "AskLens specification",
         "do not add document versions",
         "this tree is not a 0.2.0 release",
         "testing artifact only",
@@ -1267,6 +1269,8 @@ def test_alpha_surface_inventory_does_not_accept_a_stable_contract() -> None:
         "Do not record or handle previous-version schema changes",
     ):
         assert required in inventory
+
+    assert "issue #66" not in inventory
 
     for stale_versioning_claim in (
         "needs explicit version/extension policy first",
@@ -1281,8 +1285,8 @@ def test_alpha_surface_inventory_does_not_accept_a_stable_contract() -> None:
     assert "Do not record or handle previous document shapes" in internal_contracts
     assert "compatibility with replaced alpha shapes" not in internal_contracts
 
-    assert "[Alpha surface inventory](alpha-surface-inventory.md)" in docs_index
-    assert "[current alpha surface inventory](alpha-surface-inventory.md)" in lifecycle
+    assert "[Current Django AskLens surface](alpha-surface-inventory.md)" in docs_index
+    assert "[current Django AskLens surface](alpha-surface-inventory.md)" in lifecycle
     assert "Added a current alpha surface inventory" in changelog
     assert "recursive-include docs *.md" in manifest
 
