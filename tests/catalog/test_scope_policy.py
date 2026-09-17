@@ -13,7 +13,7 @@ from django_asklens.exceptions import (
     PublicAskLensError,
     ScopeUnavailableError,
 )
-from django_asklens.execution import execute_plan, run_query_plan
+from django_asklens.execution import execute_plan
 from tests.test_project.models import Customer, Order
 
 pytestmark = pytest.mark.django_db
@@ -175,30 +175,6 @@ def test_default_scope_mode_must_be_context_scoped(
     assert registry.all() == ()
 
 
-@pytest.mark.parametrize(
-    "legacy_base_queryset",
-    [None, lambda _request: Order.objects.none()],
-    ids=["explicit-none", "callable"],
-)
-def test_legacy_base_queryset_is_a_migration_error(
-    legacy_base_queryset: object,
-) -> None:
-    """Any use of the legacy hook must not silently choose context scope."""
-
-    registry = CatalogRegistry()
-
-    with pytest.raises(InvalidResourceError, match="base_queryset.*scope_provider"):
-        registry.register(
-            timezone="UTC",
-            model=Order,
-            name="orders",
-            fields={"id": {"binding": "id", "type": "integer", "nullable": False}},
-            base_queryset=legacy_base_queryset,
-        )
-
-    assert registry.all() == ()
-
-
 @pytest.mark.parametrize("scope_mode", [None, "", "tenant", object()])
 def test_scope_mode_must_be_global_or_context_scoped(scope_mode: object) -> None:
     """Unknown or malformed scope modes fail during registration."""
@@ -278,30 +254,6 @@ def test_explicit_global_scope_returns_default_manager_queryset() -> None:
 
     assert isinstance(queryset, QuerySet)
     assert queryset.model is Order
-
-
-def test_deprecated_runner_rejects_missing_current_request_before_sql(
-    django_assert_num_queries,
-) -> None:
-    """The compatibility path cannot execute even global scope without context."""
-
-    registry = CatalogRegistry()
-    registry.register(
-        timezone="UTC",
-        model=Order,
-        name="orders",
-        fields={"id": {"binding": "id", "type": "integer", "nullable": False}},
-        scope_mode="global",
-    )
-
-    with (
-        django_assert_num_queries(0),
-        pytest.warns(DeprecationWarning, match="execute_plan"),
-        pytest.raises(PublicAskLensError, match="not authorized") as caught,
-    ):
-        run_query_plan(order_plan(), registry=registry)
-
-    assert caught.value.code == "asklens.authorization.denied"
 
 
 def test_context_scope_requires_current_request() -> None:

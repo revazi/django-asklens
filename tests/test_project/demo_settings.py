@@ -22,10 +22,7 @@ def env_flag(environ, name: str) -> bool:
 def is_demo_mcp_enabled(environ=os.environ) -> bool:
     """Return whether the local demo should mount its opt-in MCP endpoint."""
 
-    return env_flag(environ, "DJANGO_ASKLENS_MCP_ENABLED") or env_flag(
-        environ,
-        "DJANGO_ASKLENS_DEMO_MCP",
-    )
+    return env_flag(environ, "DJANGO_ASKLENS_MCP_ENABLED")
 
 
 DJANGO_ASKLENS_MCP_ENABLED = is_demo_mcp_enabled()

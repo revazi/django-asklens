@@ -56,12 +56,12 @@ def test_demo_asklens_settings_can_enable_openai_compatible_backend() -> None:
     assert settings["DUMMY_PLANS"]
 
 
-def test_demo_mcp_endpoint_flag_supports_primary_and_legacy_env_names() -> None:
-    """The runnable demo mounts MCP only when an explicit env flag is set."""
+def test_demo_mcp_endpoint_requires_the_documented_env_name() -> None:
+    """The runnable demo mounts MCP only through its current explicit flag."""
 
     assert demo_settings.is_demo_mcp_enabled({}) is False
     assert demo_settings.is_demo_mcp_enabled({"DJANGO_ASKLENS_MCP_ENABLED": "1"})
-    assert demo_settings.is_demo_mcp_enabled({"DJANGO_ASKLENS_DEMO_MCP": "1"})
+    assert not demo_settings.is_demo_mcp_enabled({"DJANGO_ASKLENS_DEMO_MCP": "1"})
 
 
 def test_demo_asklens_settings_can_enable_mcp_row_return() -> None:

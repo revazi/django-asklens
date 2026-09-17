@@ -31,9 +31,6 @@ type ScopeMode = Literal["global", "context_scoped"]
 type ResourceOrderDirection = Literal["asc", "desc"]
 type DefaultOrder = tuple[tuple[str, ResourceOrderDirection], ...]
 type ScopeProvider = Callable[[Any], QuerySet]
-type BaseQuerySetHook = Callable[[Any], QuerySet]
-
-_BASE_QUERYSET_UNSET = object()
 
 
 class MetricCatalogItem(TypedDict):
@@ -420,7 +417,6 @@ class SemanticResource:
         scope_provider: ScopeProvider | None = None,
         default_order: Sequence[tuple[str, str]] | None = None,
         row_identity: str | None = None,
-        base_queryset: BaseQuerySetHook | None | object = _BASE_QUERYSET_UNSET,
         requires_permission: str | None = None,
         scope_resource: bool = False,
         examples_enabled: bool = True,
@@ -428,7 +424,6 @@ class SemanticResource:
         """Build and validate a semantic resource from developer configuration."""
 
         validate_model(model)
-        validate_legacy_base_queryset(base_queryset)
         validated_scope_mode = validate_scope_policy(
             scope_mode=resolve_scope_mode(scope_mode),
             scope_provider=scope_provider,
@@ -602,19 +597,6 @@ def validate_model(model: object) -> None:
 
     if not isinstance(model, type) or not issubclass(model, models.Model):
         msg = "Semantic resources must be registered with a Django model class."
-        raise InvalidResourceError(msg)
-
-
-def validate_legacy_base_queryset(
-    base_queryset: BaseQuerySetHook | None | object,
-) -> None:
-    """Reject any use of the legacy scope hook with migration guidance."""
-
-    if base_queryset is not _BASE_QUERYSET_UNSET:
-        msg = (
-            "base_queryset is no longer supported; use "
-            "scope_mode='context_scoped' and scope_provider=... instead."
-        )
         raise InvalidResourceError(msg)
 
 

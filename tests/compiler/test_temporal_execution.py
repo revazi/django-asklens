@@ -10,7 +10,7 @@ import pytest
 
 from django_asklens import Metric
 from django_asklens.catalog.registry import CatalogRegistry
-from django_asklens.execution import execute_plan, run_query_plan
+from django_asklens.execution import execute_plan
 from tests.test_project.models import CanonicalValueFixture
 
 pytestmark = [pytest.mark.django_db, pytest.mark.postgresql]
@@ -302,7 +302,9 @@ def test_datetime_range_is_half_open() -> None:
     )
 
 
-def test_last_n_days_includes_start_and_excludes_now_and_future() -> None:
+def test_last_n_days_includes_start_and_excludes_now_and_future(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     now = datetime(2026, 7, 27, 12, tzinfo=UTC)
     start = now - timedelta(days=1)
     for instant in (
@@ -314,18 +316,17 @@ def test_last_n_days_includes_start_and_excludes_now_and_future() -> None:
     ):
         create_value(day=instant.date(), instant=instant)
 
-    with pytest.warns(DeprecationWarning, match="execute_plan"):
-        result = run_query_plan(
-            {
-                "resource": "temporal_values",
-                "intent": "list",
-                "filters": [{"field": "instant", "op": "last_n_days", "value": 1}],
-                "select": ["instant"],
-            },
-            registry=build_registry(),
-            request=SimpleNamespace(user=None),
-            now=now,
-        )
+    monkeypatch.setattr("django_asklens.execution.runner.timezone.now", lambda: now)
+    result = execute_plan(
+        {
+            "resource": "temporal_values",
+            "intent": "list",
+            "filters": [{"field": "instant", "op": "last_n_days", "value": 1}],
+            "select": ["instant"],
+        },
+        registry=build_registry(),
+        request=SimpleNamespace(user=None),
+    )
 
     assert tuple(row["instant"] for row in result.rows) == (
         start,
@@ -333,7 +334,9 @@ def test_last_n_days_includes_start_and_excludes_now_and_future() -> None:
     )
 
 
-def test_relative_date_filter_projects_bounds_to_resource_calendar_dates() -> None:
+def test_relative_date_filter_projects_bounds_to_resource_calendar_dates(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     now = datetime(2026, 7, 27, 12, tzinfo=UTC)
     for day in (
         date(2026, 7, 25),
@@ -343,41 +346,41 @@ def test_relative_date_filter_projects_bounds_to_resource_calendar_dates() -> No
     ):
         create_value(day=day, instant=datetime.combine(day, time(12), tzinfo=UTC))
 
-    with pytest.warns(DeprecationWarning, match="execute_plan"):
-        result = run_query_plan(
-            {
-                "resource": "temporal_values",
-                "intent": "list",
-                "filters": [{"field": "day", "op": "last_n_days", "value": 1}],
-                "select": ["day"],
-                "order_by": [{"field": "day"}],
-            },
-            registry=build_registry(),
-            request=SimpleNamespace(user=None),
-            now=now,
-        )
+    monkeypatch.setattr("django_asklens.execution.runner.timezone.now", lambda: now)
+    result = execute_plan(
+        {
+            "resource": "temporal_values",
+            "intent": "list",
+            "filters": [{"field": "day", "op": "last_n_days", "value": 1}],
+            "select": ["day"],
+            "order_by": [{"field": "day"}],
+        },
+        registry=build_registry(),
+        request=SimpleNamespace(user=None),
+    )
 
     assert result.rows == ({"day": date(2026, 7, 26)}, {"day": date(2026, 7, 27)})
 
 
-def test_relative_date_projection_preserves_exclusive_midnight_upper_bound() -> None:
+def test_relative_date_projection_preserves_exclusive_midnight_upper_bound(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     now = datetime(2026, 7, 27, 0, 0, tzinfo=UTC)
     for day in (date(2026, 7, 26), date(2026, 7, 27)):
         create_value(day=day, instant=datetime.combine(day, time(12), tzinfo=UTC))
 
-    with pytest.warns(DeprecationWarning, match="execute_plan"):
-        result = run_query_plan(
-            {
-                "resource": "temporal_values",
-                "intent": "list",
-                "filters": [{"field": "day", "op": "last_n_days", "value": 1}],
-                "select": ["day"],
-                "order_by": [{"field": "day"}],
-            },
-            registry=build_registry(),
-            request=SimpleNamespace(user=None),
-            now=now,
-        )
+    monkeypatch.setattr("django_asklens.execution.runner.timezone.now", lambda: now)
+    result = execute_plan(
+        {
+            "resource": "temporal_values",
+            "intent": "list",
+            "filters": [{"field": "day", "op": "last_n_days", "value": 1}],
+            "select": ["day"],
+            "order_by": [{"field": "day"}],
+        },
+        registry=build_registry(),
+        request=SimpleNamespace(user=None),
+    )
 
     assert result.rows == ({"day": date(2026, 7, 26)},)
 
@@ -399,6 +402,7 @@ def test_relative_date_projection_preserves_exclusive_midnight_upper_bound() -> 
 def test_last_n_months_executes_at_dst_gap_and_fold_boundaries(
     now: datetime,
     expected_start: datetime,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     expected_end = now.astimezone(UTC)
     for instant in (
@@ -409,18 +413,17 @@ def test_last_n_months_executes_at_dst_gap_and_fold_boundaries(
     ):
         create_value(day=instant.date(), instant=instant)
 
-    with pytest.warns(DeprecationWarning, match="execute_plan"):
-        result = run_query_plan(
-            {
-                "resource": "temporal_values",
-                "intent": "list",
-                "filters": [{"field": "instant", "op": "last_n_months", "value": 1}],
-                "select": ["instant"],
-            },
-            registry=build_registry(resource_timezone="America/New_York"),
-            request=SimpleNamespace(user=None),
-            now=now,
-        )
+    monkeypatch.setattr("django_asklens.execution.runner.timezone.now", lambda: now)
+    result = execute_plan(
+        {
+            "resource": "temporal_values",
+            "intent": "list",
+            "filters": [{"field": "instant", "op": "last_n_months", "value": 1}],
+            "select": ["instant"],
+        },
+        registry=build_registry(resource_timezone="America/New_York"),
+        request=SimpleNamespace(user=None),
+    )
 
     assert tuple(row["instant"] for row in result.rows) == (
         expected_start,

@@ -9,7 +9,7 @@ import pytest
 from django_asklens import Metric
 from django_asklens.catalog.registry import CatalogRegistry
 from django_asklens.exceptions import PublicAskLensError
-from django_asklens.execution import execute_plan, run_query_plan
+from django_asklens.execution import execute_plan
 from django_asklens.planning import parse_query_plan
 from tests.test_project.models import CanonicalValueFixture, Customer, Facility, Order
 
@@ -509,22 +509,3 @@ def test_execute_plan_resolves_current_request_scope() -> None:
     )
 
     assert result.rows == ({"status": "pending"},)
-
-
-def test_deprecated_runner_revalidates_instead_of_trusting_query_plan(
-    django_assert_num_queries,
-) -> None:
-    """The compatibility runner must delegate to the safe facade behavior."""
-
-    with (
-        django_assert_num_queries(0),
-        pytest.warns(DeprecationWarning, match="execute_plan"),
-        pytest.raises(PublicAskLensError, match="requested query member") as caught,
-    ):
-        run_query_plan(
-            sensitive_plan(),
-            request=request_with("shop.view_orders"),
-            registry=build_registry(),
-        )
-
-    assert caught.value.code == "asklens.member.unavailable"
