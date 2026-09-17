@@ -11,11 +11,9 @@ guarantee.
 Artifact provenance remains part of every support statement:
 
 - PyPI currently publishes `django-asklens==0.1.0a1`; use its immutable tagged
-  documentation.
+  documentation. That package was a testing artifact only.
 - `main` contains an incompatible, unreleased 0.2-era target while still
   reporting version `0.1.0a1`.
-- A maintainer-supplied private candidate is identified by an immutable commit,
-  exact wheel filename, and SHA-256 digest; it is not a public release.
 
 Do not combine packages, workers, clients, documentation, or persisted plans
 from those contexts. An installation requirement tells a resolver which

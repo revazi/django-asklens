@@ -27,8 +27,7 @@ DEMO_DENIAL_TEMPLATE = (
     / "test_project"
     / "asklens_demo_denied.html"
 )
-PRIVATE_EVALUATION_GUIDE = ROOT / "docs" / "private-candidate-evaluation.md"
-PILOT_INTAKE_WORKSHEET = ROOT / "docs" / "pilot-intake-worksheet.md"
+ASKLENS_SPECIFICATION = ROOT / "docs" / "asklens-specification.md"
 PERFORMANCE_SCRIPT = ROOT / "scripts" / "performance-baseline.sh"
 PERFORMANCE_GUIDE = ROOT / "docs" / "performance-baseline.md"
 HTTP_ENVELOPE_CROSSWALK = ROOT / "docs" / "http-internal-envelope-crosswalk.md"
@@ -468,7 +467,7 @@ def test_api4a_source_and_exact_wheel_evidence_are_strict_and_route_local() -> N
 
 
 def test_package_provenance_separates_published_and_unreleased_docs() -> None:
-    """Published, source, and private-candidate instructions cannot be confused."""
+    """Published PyPI 0.1.0a1 instructions cannot be confused with current source."""
 
     readme = read_text(ROOT / "README.md")
     index = read_text(ROOT / "docs" / "index.md")
@@ -495,11 +494,10 @@ def test_package_provenance_separates_published_and_unreleased_docs() -> None:
 
     published_heading = "## Published PyPI alpha: 0.1.0a1"
     source_heading = "## Unreleased main/source checkout for contributors"
-    candidate_heading = "## Maintainer-supplied private candidate evaluation"
-    for heading in (published_heading, source_heading, candidate_heading):
+    for heading in (published_heading, source_heading):
         assert heading in install
     assert install.index(published_heading) < install.index(source_heading)
-    assert install.index(source_heading) < install.index(candidate_heading)
+    assert "## Maintainer-supplied private candidate evaluation" not in install
 
     published_section = install[
         install.index(published_heading) : install.index(source_heading)
@@ -516,32 +514,14 @@ def test_package_provenance_separates_published_and_unreleased_docs() -> None:
     ]
     assert tagged_docs in published_section
 
-    source_section = install[
-        install.index(source_heading) : install.index(candidate_heading)
-    ]
+    source_section = install[install.index(source_heading) :]
     assert "not a release or release candidate" in source_section
     assert "not a PyPI upgrade" in source_section
     assert "### Source-checkout alpha-candidate package evidence" in source_section
     assert "same-version replacement evidence" in source_section
     assert "not a normal upgrade or release" in source_section
-
-    candidate_section = install[install.index(candidate_heading) :]
-    guide_link = (
-        "[private candidate evaluation and onboarding guide]"
-        "(private-candidate-evaluation.md)"
-    )
-    for marker in (
-        "immutable 40-character Git commit",
-        "exact wheel filename",
-        "SHA-256 digest",
-    ):
-        assert marker in candidate_section
-        assert candidate_section.index(marker) < candidate_section.index(guide_link)
-    assert "verify all three before installing" in candidate_section
-    assert candidate_section.index("verify all three before installing") < (
-        candidate_section.index(guide_link)
-    )
-    assert "not a normal PyPI upgrade or public release" in candidate_section
+    assert "private-candidate-evaluation.md" not in install
+    assert "pilot-intake-worksheet.md" not in install
 
     index_heading = "## Package provenance: choose documentation by artifact"
     assert index_heading in index
@@ -552,12 +532,8 @@ def test_package_provenance_separates_published_and_unreleased_docs() -> None:
         "No public 0.2 package is being released by this documentation change." in index
     )
     assert tagged_docs in index
-
-    for local_document in (
-        ROOT / "docs" / "installation.md",
-        ROOT / "docs" / "private-candidate-evaluation.md",
-    ):
-        assert local_document.is_file()
+    assert "[AskLens specification](asklens-specification.md)" in index
+    assert ASKLENS_SPECIFICATION.is_file()
 
 
 def test_core_quickstart_is_linear_executable_and_fail_closed() -> None:
@@ -1188,7 +1164,6 @@ def test_django_install_range_is_not_a_future_ci_support_claim() -> None:
     for relative_path in (
         "README.md",
         "docs/installation.md",
-        "docs/private-candidate-evaluation.md",
     ):
         assert support_boundary in read_text(ROOT / relative_path)
 
@@ -1441,7 +1416,6 @@ def test_short_source_demo_is_scoped_offline_and_resettable() -> None:
     """U4 keeps one concise, browser-verified source-demo journey."""
 
     demo = read_text(ROOT / "docs" / "test-project-demo.md")
-    candidate = read_text(PRIVATE_EVALUATION_GUIDE)
     readme = read_text(ROOT / "README.md")
     playwright = read_text(PLAYWRIGHT_TEST)
 
@@ -1493,11 +1467,6 @@ def test_short_source_demo_is_scoped_offline_and_resettable() -> None:
         "(docs/test-project-demo.md#sqlite-frontend-and-admin-first-run-start-to-reset)"
     )
     assert demo_link in readme
-    assert "test-project-demo.md#postgresql-18-reference-workflow" in candidate
-    assert (
-        "test-project-demo.md#one-command-postgresql-18--playwright-reference"
-        not in candidate
-    )
 
     assert "superuser-only" not in playwright
     assert "separately labeled synthetic-superuser admin path" in playwright
@@ -1657,130 +1626,40 @@ def test_performance_baseline_guide_and_index_linked() -> None:
     assert "Synthetic performance baseline" in usage.replace("\n", " ")
 
 
-def test_private_candidate_guide_is_linked_provenanced_and_privacy_bounded() -> None:
-    """Private evaluation uses exact artifacts without release or data claims."""
+def test_asklens_specification_is_unversioned_django_implementation() -> None:
+    """The AskLens spec is the current unversioned contract Django implements."""
 
-    guide = read_text(PRIVATE_EVALUATION_GUIDE)
-    install = read_text(ROOT / "docs" / "installation.md")
+    spec = read_text(ASKLENS_SPECIFICATION)
     index = read_text(ROOT / "docs" / "index.md")
+    contracts = read_text(ROOT / "docs" / "internal-contracts.md")
     workflow = read_text(ROOT / ".github" / "workflows" / "ci.yml")
 
-    assert "(private-candidate-evaluation.md)" in install
-    assert "(private-candidate-evaluation.md)" in index
-    assert "(pilot-intake-worksheet.md)" in install
-    assert "(pilot-intake-worksheet.md)" in index
-    assert "(pilot-intake-worksheet.md)" in guide
-    assert '"/docs/private-candidate-evaluation.md"' in workflow
-    assert '"/docs/pilot-intake-worksheet.md"' in workflow
+    assert ASKLENS_SPECIFICATION.is_file()
+    assert "[AskLens specification](asklens-specification.md)" in index
+    assert "AskLens specification" in contracts
+    assert '"/docs/asklens-specification.md"' in workflow
+    assert '"/docs/private-candidate-evaluation.md"' not in workflow
+    assert '"/docs/pilot-intake-worksheet.md"' not in workflow
     assert '"/docs/migrating-0.1-to-0.2.md"' not in workflow
     for required in (
-        "maintainer-supplied candidate manifest",
-        "ASKLENS_CANDIDATE_COMMIT",
-        "ASKLENS_CANDIDATE_WHEEL",
-        "ASKLENS_CANDIDATE_SHA256",
-        "hmac.compare_digest",
-        "participant-owned, isolated staging",
-        "broad compatibility matrix",
-        "PostgreSQL 15 and 18",
-        "PG15 is tested with Py3.12/Django 5.2 and Py3.13/Django 6.0",
-        "PG18 is tested with Py3.13/Django 6.1",
-        "python3 -m venv .venv-asklens-evaluation",
-        "${ASKLENS_CANDIDATE_WHEEL}[api]",
-        "${ASKLENS_CANDIDATE_WHEEL}[mcp]",
-        "python manage.py migrate --plan",
-        "python manage.py migrate",
-        "python manage.py check",
-        '"LLM_BACKEND": "dummy"',
-        '"AUDIT_INCLUDE_CONTENT": False',
-        "statement timeout",
-        "request timeout",
-        "rate limits",
-        "read only",
-        "time to first correctly scoped query",
-        "completed evaluation forms and evidence outside this repository",
-        "Never put them in candidate manifests, portable fixtures, intake templates",
-        "Report suspected security vulnerabilities",
+        "draft, unversioned",
+        "Django AskLens in this repository is the first implementation",
+        "Do not add schema versions",
+        "catalog",
+        "query-plan",
+        "capabilities",
+        "result",
+        "error",
+        "execute_plan",
+        "not an NDC profile",
     ):
-        assert required in guide
-
-    assert "It is not a normal `0.1.0a1` to `0.2.0a*` upgrade" in guide
-    assert "pip install django-asklens==0.2" not in guide
-    assert "python3.12 -m venv" not in guide
-    assert "twine upload" not in guide
-    assert '"AUDIT_INCLUDE_CONTENT": True' not in guide
-    assert '"MCP_ALLOW_ROW_RETURN": True' not in guide
-
-
-def test_pilot_intake_worksheet_is_privacy_bounded() -> None:
-    """The intake worksheet strictly forbids exposing sensitive integration details."""
-
-    worksheet = read_text(PILOT_INTAKE_WORKSHEET).lower()
-
-    for required in (
-        "participant class",
-        "python version",
-        "django version",
-        "database engine",
-        "primary asklens surface",
-        "semantic fields",
-        "semantic metrics",
-        "scope mode",
-        "timezone configuration",
-        "role/membership condition",
-        "tenant isolation",
-        "allowed expectations",
-        "denial expectations",
-        "intent/mode",
-        "expected status",
-        "expected shape/count",
-        "cross-scope",
-        "hidden/filter-only/result-excluded/unknown member",
-        "client-supplied policy claims",
-        "missing context",
-        "structural budget",
-        "mcp row-return",
-        "provider metadata boundary",
-        "audit policy mode",
-        "storage owner",
-        "retention & deletion",
-        "prohibited artifacts",
-        "provider/client planning mode",
-        "initial smoke test",
-        "time to integration",
-        "time to first correctly scoped query",
-        "maintainer intervention",
-        "registration effort",
-        "baseline custom-report",
-        "asklens.member.unavailable",
-        "asklens.budget.exceeded",
-        "a correctly scoped application-data query may execute",
-        "no out-of-scope rows or aggregate influence",
-        "returned query data/rows are omitted unless host+request opt in",
-        "inspect the permission-scoped catalog and pre-provider request",
-        "truncation applies only within an accepted limit",
-        "omission is not a query-cost control",
-        "never include:** participant names, application names",
-        "exact schema/model/binding paths",
-        "database rows or sample values",
-        "questions containing private facts",
-        "tenant or user identifiers",
-        "permission strings, credentials, secrets, `.env` files",
-        "scope-provider code",
-        "full sensitive plan or filter values",
-        "provider payloads, provider logs, or full audit content",
-    ):
-        assert required in worksheet
-
-    for forbidden in (
-        "zero cross-tenant sql",
-        "asklens.parse.invalid or exact observed stable code",
-        "metadata/aggregate only; zero row exposure",
-        "passing a payload containing orm binding details",
-        "rejection or truncation depending on limit policy",
-        "provider adapter drops private bindings",
-        "local isolated sqlite",
-    ):
-        assert forbidden not in worksheet, f"Forbidden phrase found: {forbidden}"
+        assert required in spec
+    assert not (ROOT / "docs" / "private-candidate-evaluation.md").exists()
+    assert not (ROOT / "docs" / "pilot-intake-worksheet.md").exists()
+    assert not (ROOT / "docs" / "hardening-pr7-deterministic-evidence.md").exists()
+    assert not (
+        ROOT / "docs" / "hardening-pr8-locked-dependency-vulnerability-audit.md"
+    ).exists()
 
 
 def _extract_alias_block(settings_text: str, alias: str) -> str:

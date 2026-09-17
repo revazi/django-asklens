@@ -31,10 +31,10 @@ installed package. The source files are under
 
 ## Status and precedence
 
-These schemas are **internal, draft, and unfrozen**. They document the current
-Django 0.2 target and support conformance work; they are not a published
-specification, a compatibility promise, an NDC profile, or evidence of a
-backend-neutral implementation.
+These schemas are the machine-readable documents of the [AskLens specification](asklens-specification.md).
+They are **draft, unfrozen, and unversioned**. Django AskLens is the first
+implementation. They are not an NDC profile, a compatibility promise, or evidence
+of a second backend.
 
 The documents do not contain embedded AskLens contract versions, revisions, or
 negotiation fields. There is one current unversioned shape. Do not add schema versions.
@@ -47,7 +47,7 @@ When an internal contract conflict is found, use this order:
 3. language-neutral fixtures provide executable cases;
 4. Django must conform to those sources.
 
-A separate top-level `conformance/` corpus provides explicit synthetic positive, negative, security, budget, semantic, ordering, truncation, and serialization cases. The current Django implementation replays it on SQLite and on the required PostgreSQL 15/18 CI jobs. The source-checkout PostgreSQL 18 Compose/Playwright reference workflow adds demo-path evidence; it does not freeze these contracts or establish production, backend-neutral, public-specification, pilot, or independent-security evidence.
+A separate top-level `conformance/` corpus provides explicit synthetic positive, negative, security, budget, semantic, ordering, truncation, and serialization cases. The Django implementation replays it on SQLite and on the required PostgreSQL 15/18 CI jobs. The source-checkout PostgreSQL 18 Compose/Playwright reference workflow adds demo-path evidence. It does not freeze the specification or prove a second implementation.
 
 ## Boundaries
 

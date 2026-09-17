@@ -42,6 +42,7 @@ The project is alpha and APIs may change before a stable release.
 
 ### Changed
 
+- Django AskLens is documented as the first implementation of the AskLens specification. The spec is draft and unversioned; schema versioning and previous-shape compatibility are not used.
 - Recorded the first-release #66 clarification: `0.2.0` is the first real release target, `0.1.0a1` was a testing artifact only, and schema versions or previous-shape handling are not recorded. This does not bump the package version or make current `main` a 0.2.0 release.
 - Recorded the issue #66 document decision: the five packaged schemas stay internal, draft, unfrozen, and unversioned. Open document-versioning and extension-negotiation options are removed. This does not bump the package version, freeze a stable Python/HTTP/MCP surface, or make current `main` a 0.2.0 release.
 - Deliberately changed successful query/help envelopes. Query success now embeds the complete core result under `result`, including optional `empty`, instead of spreading result fields. Capability/help success keeps exact machine `capabilities` and permission-scoped `catalog` children while grouping adapter routing under `routing` and human guidance under `help`. Repository admin/frontend/MCP/demo consumers remain on the shared orchestrator; MCP preserves its separate default row-omission policy.
@@ -73,6 +74,7 @@ The project is alpha and APIs may change before a stable release.
 
 ### Removed
 
+- Removed private-candidate, pilot-intake, and historical PR7/PR8 evidence documents. Current docs point at the AskLens specification and the Django implementation.
 - Removed unused `ALLOW_RAW_SQL` and `SEND_SAMPLE_ROWS_TO_LLM` settings. AskLens has no raw-SQL or sample-row provider path, so those names are not configuration.
 - Removed the QueryPlan `visualization` migration special case. Unknown plan members fail as ordinary extra keys.
 - Removed the DummyProvider `get_llm_provider` re-export. Import the factory from `django_asklens.llms`.
