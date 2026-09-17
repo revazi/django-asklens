@@ -5,8 +5,6 @@ from collections.abc import Iterable, Mapping, Sequence
 from django.db import models
 
 from django_asklens.catalog.resources import (
-    _BASE_QUERYSET_UNSET,
-    BaseQuerySetHook,
     CatalogSnapshot,
     FieldConfig,
     FieldSpec,
@@ -41,7 +39,6 @@ class CatalogRegistry:
         scope_provider: ScopeProvider | None = None,
         default_order: Sequence[tuple[str, str]] | None = None,
         row_identity: str | None = None,
-        base_queryset: BaseQuerySetHook | None | object = _BASE_QUERYSET_UNSET,
         requires_permission: str | None = None,
         scope_resource: bool = False,
         examples_enabled: bool = True,
@@ -62,7 +59,6 @@ class CatalogRegistry:
             scope_provider=scope_provider,
             default_order=default_order,
             row_identity=row_identity,
-            base_queryset=base_queryset,
             requires_permission=requires_permission,
             scope_resource=scope_resource,
             examples_enabled=examples_enabled,
@@ -135,7 +131,6 @@ def register(
     scope_provider: ScopeProvider | None = None,
     default_order: Sequence[tuple[str, str]] | None = None,
     row_identity: str | None = None,
-    base_queryset: BaseQuerySetHook | None | object = _BASE_QUERYSET_UNSET,
     requires_permission: str | None = None,
     scope_resource: bool = False,
     examples_enabled: bool = True,
@@ -156,7 +151,6 @@ def register(
         scope_provider=scope_provider,
         default_order=default_order,
         row_identity=row_identity,
-        base_queryset=base_queryset,
         requires_permission=requires_permission,
         scope_resource=scope_resource,
         examples_enabled=examples_enabled,

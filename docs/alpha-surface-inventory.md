@@ -55,7 +55,7 @@ Other current import families are:
 | Import family | Exact current exposure | Classification and boundary |
 | --- | --- | --- |
 | `django_asklens.catalog` | `CatalogRegistry`, `FieldSpec`, `Metric`, `SemanticResource`, `default_registry`, `register`, `get_resource`, `serialize_catalog`, `build_capabilities` | Provisional registration/catalog surface. Public semantic keys remain separate from private Django bindings. |
-| `django_asklens.execution` | `QueryResult`, `execute_plan`, `run_query_plan` | Provisional trusted execution surface. `execute_plan` is mandatory for execution. `run_query_plan` is deprecated and is not a stable-surface candidate. |
+| `django_asklens.execution` | `QueryResult`, `execute_plan` | Provisional trusted execution surface. `execute_plan` is the only public execution function. |
 | `django_asklens.querying` | `AskLensQueryResponse`, `execute_asklens_query_request` | Provisional shared question/help orchestration. Current response composition is explicitly alpha. |
 | `django_asklens.exceptions` | `PublicAskLensError`, `public_error_payload`, current namespaced error behavior | Provisional documented failure surface. Internal diagnostic exception classes and causes are not a caller compatibility promise. |
 | `django_asklens.access` | `IsAuthenticated`, `can_access_asklens`, and permission-gate resolution helpers | Provisional access helpers. Hosts still own authentication and principal construction. |

@@ -48,7 +48,6 @@ The project is alpha and APIs may change before a stable release.
 - Raised the optional API and development Django REST Framework minimum to 3.18 for Django 6.1 compatibility; DRF remains excluded from core dependencies and imports.
 - Split CI support evidence into explicit Django 5.2, 6.0, and 6.1 bands while retaining the protected `6.x` check-name alias as an explicitly Django-6.1-bound compatibility name.
 - Shared API/admin/MCP/provider orchestration now delegates data execution to `execute_plan()`.
-- `run_query_plan()` is a deprecated compatibility wrapper that requires the current request and revalidates plans instead of trusting prior validation.
 - ORM compilation now consumes a private, non-serializable prepared representation bound to the current execution context and resolved resource queryset.
 - AskLens query-plan failures in the API and MCP helpers now expose an `error` object containing only `code`, safe `message`, and an optional safe JSON `pointer`, replacing raw diagnostic strings and transport-specific `error_category` values.
 - Invalid `/asklens/query/` request bodies now return `asklens.parse.invalid` without exposing DRF serializer field details.
@@ -58,9 +57,9 @@ The project is alpha and APIs may change before a stable release.
 - Database auditing now stores operational resource/intent/status/error/row-count/duration metadata by default; questions, filter values, and complete plans require explicit `AUDIT_INCLUDE_CONTENT=True` opt-in.
 - Deliberately changed the alpha run-detail contract: cross-user review now requires Django's global `asklens.view_semanticqueryrun` permission instead of `is_staff`; inaccessible and missing IDs share one opaque `404`; stored free-form errors serialize only as a recognized canonical `{code, message}` object (or a fixed generic safe error) and success/blank errors serialize as `null`.
 - Run detail now applies the current content policy at display time. Unless `AUDIT_INCLUDE_CONTENT` is the boolean `True`, even legacy/full-content rows return a blank question and only allowlisted resource/intent plan metadata. Explicit full-content display makes retention, access, redaction, deletion, backup, and replica handling host responsibilities.
-- Resource registration no longer has an implicit default-manager scope. Migrate `base_queryset=visible_rows` to a context-scoped registration with `scope_provider=visible_rows`; intentionally unrestricted resources must declare `scope_mode="global"`. Without a configured `DEFAULT_SCOPE_MODE`, omission still fails registration.
+- Resource registration has no implicit default-manager scope. Context-scoped resources use `scope_provider`; intentionally unrestricted resources must declare `scope_mode="global"`. Without a configured `DEFAULT_SCOPE_MODE`, omission fails registration.
 - Field registration no longer interprets public mapping keys as Django paths. Every field now declares its private `__`-separated binding and explicit public type/nullability; changing a binding does not change the public plan.
-- QueryPlan metrics now contain only `{"metric": "registered_name"}`. Operations, backing fields, result types, permissions, distinctness, and relationship policy are resolved from trusted registration; 0.1 `name`/`op`/`field` metric objects and the legacy field-level `metric=True` flag are rejected with migration guidance.
+- QueryPlan metrics contain only `{"metric": "registered_name"}`. Operations, backing fields, result types, permissions, distinctness, and relationship policy are resolved from trusted registration.
 - Every filter now requires a non-null `value`. Filter validation enforces canonical JSON value types before scope resolution: decimal inputs remain finite strings, floats remain finite JSON numbers, UUIDs normalize canonically, and enum values resolve only through explicit values/aliases. Django `choices` labels are no longer inferred as input aliases.
 - `neq` explicitly excludes null rows. Empty ungrouped aggregates return one row (`count=0`; `sum`/`avg`/`min`/`max=null`), while empty grouped aggregates return no rows.
 - Result serialization now preserves decimal strings, verifies canonical runtime types, declared columns, nullability, and registered enum outputs, and rejects unsupported objects instead of stringifying them. Callers that directly construct the alpha `ResultColumn` helper must add `nullable=True|False`; the legacy broad `number` label is no longer canonical.
@@ -72,12 +71,13 @@ The project is alpha and APIs may change before a stable release.
 
 ### Removed
 
+- Removed obsolete alpha compatibility surface: `run_query_plan`, the rejected `base_queryset` registration parameter, the old demo MCP environment alias, and the 0.1-to-0.2 migration guide. Current code exposes one execution path and one registration shape without shims or deprecation machinery.
 - Removed the deprecated `django_asklens.api.querying` compatibility module. Import the supported shared orchestrator from `django_asklens.querying` instead; no module shim or alias remains.
 - Removed accidental orchestration-helper exports from `django_asklens.querying` and `django_asklens.api.views`. Canonical querying exports are now `AskLensQueryResponse` and `execute_asklens_query_request`; the view module exports only its five view classes. Deliberate root `django_asklens` exports remain unchanged.
 - Removed `compile_query_plan`, `CompiledQuery`, and `execute_query` from public package exports. Python callers must use `execute_plan()`; there is no supported unsafe execution API.
 - Removed the `include_internal=True` catalog option; public catalog serialization no longer exposes Django model labels.
 - Removed the standalone `create_query_run` compatibility export so supported execution cannot bypass the configured privacy-aware audit policy/sink.
-- Removed `visualization` from QueryPlan, compiler state, core `QueryResult`, and core result serialization, along with the inert `DEFAULT_VISUALIZATION` setting. Legacy plan input is rejected with pointer `/visualization`; migrate it to the separate presentation envelope.
+- Removed `visualization` from QueryPlan, compiler state, core `QueryResult`, and core result serialization, along with the inert `DEFAULT_VISUALIZATION` setting. Presentation is a separate envelope.
 
 ### Security
 

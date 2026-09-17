@@ -1,6 +1,5 @@
 """Execute untrusted AskLens plans through the trusted facade."""
 
-import warnings
 from collections.abc import Mapping
 from dataclasses import dataclass, field, replace
 from datetime import datetime
@@ -108,30 +107,6 @@ def execute_plan(
         request=request,
         registry=registry,
         now=None,
-        require_request=True,
-    )
-    return _execute_public_plan(plan, context=context)
-
-
-def run_query_plan(
-    plan: UntrustedPlan,
-    *,
-    registry: CatalogRegistry = default_registry,
-    request: Any = None,
-    now: datetime | None = None,
-) -> QueryResult:
-    """Deprecated compatibility wrapper that revalidates before execution."""
-
-    warnings.warn(
-        "run_query_plan() is deprecated; use execute_plan() with the current "
-        "request instead.",
-        DeprecationWarning,
-        stacklevel=2,
-    )
-    context = _build_public_execution_context(
-        request=request,
-        registry=registry,
-        now=now,
         require_request=True,
     )
     return _execute_public_plan(plan, context=context)

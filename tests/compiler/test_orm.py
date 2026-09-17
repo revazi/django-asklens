@@ -10,7 +10,7 @@ import pytest
 from django_asklens import Metric
 from django_asklens.catalog.registry import CatalogRegistry
 from django_asklens.compiler.orm import _compile_prepared_query
-from django_asklens.execution import execute_plan, run_query_plan
+from django_asklens.execution import execute_plan
 from django_asklens.execution.runner import (
     _build_execution_context,
     _prepare_query_plan,
@@ -390,6 +390,7 @@ def test_changing_private_binding_does_not_change_public_plan(
 
 def test_filters_cover_in_contains_date_range_and_relative_dates(
     order_data: None,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     registry = build_registry()
     plan = validate_payload(
@@ -413,13 +414,15 @@ def test_filters_cover_in_contains_date_range_and_relative_dates(
         registry=registry,
     )
 
-    with pytest.warns(DeprecationWarning, match="execute_plan"):
-        result = run_query_plan(
-            plan,
-            registry=registry,
-            request=SimpleNamespace(user=None),
-            now=aware_datetime(2026, 3, 1),
-        )
+    monkeypatch.setattr(
+        "django_asklens.execution.runner.timezone.now",
+        lambda: aware_datetime(2026, 3, 1),
+    )
+    result = execute_plan(
+        plan,
+        registry=registry,
+        request=SimpleNamespace(user=None),
+    )
 
     assert result.rows == (
         {"customer.name": "Bob", "status": "paid"},

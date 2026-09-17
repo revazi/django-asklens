@@ -294,7 +294,7 @@ Live provider tests are opt-in and skipped by default. See [Provider configurati
 - Provider and submitted-plan output is untrusted and validated by the normal API, admin, and MCP orchestration before execution.
 - The optional query API rejects unknown top-level keys—including client policy claims—before orchestration, audit, or application-data SQL without reflecting their names, values, or serializer diagnostics.
 - All handled failures from the four AskLens DRF views use one `{error, run_id?}` envelope with fixed safe messages; statuses and applicable `Allow`, `WWW-Authenticate`, and `Retry-After` headers are preserved. This route-local behavior does not change unrelated host DRF endpoints.
-- Use `django_asklens.execution.execute_plan()` for Python execution; it revalidates mappings and existing `QueryPlan` objects for the current request. `run_query_plan()` is a deprecated wrapper that also requires the current request. The compiler and compiled-query executor are internal and are not public exports.
+- Use `django_asklens.execution.execute_plan()` for Python execution; it revalidates mappings and existing `QueryPlan` objects for the current request. The compiler and compiled-query executor are internal and are not public exports.
 - AskLens executes read-only Django ORM queries only.
 - AskLens does not execute LLM-generated SQL.
 - AskLens does not create, update, or delete application data; its own optional/default audit sink may write one `SemanticQueryRun` metadata record per query attempt.
@@ -324,7 +324,6 @@ Review the [security checklist](docs/security-checklist.md) and [production chec
 
 - [Installation](docs/installation.md)
 - [Usage guide](docs/usage.md)
-- [Migrating from 0.1 alpha to 0.2 alpha](docs/migrating-0.1-to-0.2.md)
 - [Core Python API](docs/core-python-api.md)
 - [Custom UI guide](docs/custom-ui.md)
 - [Registration API](docs/registration.md)

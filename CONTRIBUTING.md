@@ -56,7 +56,7 @@ Do not add or weaken safeguards around:
 - automatic exposure of all Django models or fields,
 - sending database rows or sample values to providers by default,
 - bypassing Django/DRF permissions,
-- tenant or row-level scoping through `base_queryset(request)`,
+- tenant or row-level scoping through `scope_provider(request)`,
 - query limits such as `MAX_ROWS`, `MAX_JOINS`, `MAX_METRICS`, and `MAX_GROUP_BY`.
 
 Provider output is always untrusted. It must parse as structured JSON and pass AskLens validation before any ORM query runs.

@@ -23,7 +23,7 @@ Use this checklist before enabling AskLens outside local development.
 - [ ] Keep `SEND_SAMPLE_ROWS_TO_LLM` disabled.
 - [ ] Set conservative values for plan bytes, filters, selected fields, ordering, groups, metrics, relationship depth/edges, `in` values, total filter values, returned rows/groups, and the default limit. See the complete setting list in the production checklist.
 - [ ] Confirm validation rejects unknown resources, fields, metrics, operators, mutation intents, and raw-SQL-like payloads.
-- [ ] Pass raw, parsed, saved, or caller-edited plans through `execute_plan()` with the current request. `run_query_plan()` is temporarily retained as a deprecated revalidating wrapper. The compiler and compiled-query executor are internal and are not public APIs.
+- [ ] Pass raw, parsed, saved, or caller-edited plans through `execute_plan()` with the current request. The compiler and compiled-query executor are internal and are not public APIs.
 - [ ] Confirm normal execution starts from the explicitly declared resource scope and test each provider for the current request context.
 - [ ] Review semantic default ordering and any private row-identity override; alternate identities must be concrete, non-null, and unconditionally unique.
 - [ ] Verify repeated limited queries are stable and `truncated` is true only when another row/group exists.
