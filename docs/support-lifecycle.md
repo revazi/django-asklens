@@ -2,11 +2,10 @@
 
 ## Status and provenance
 
-This is the support admission and retirement policy for Django AskLens while the
-project is alpha. It records what repository evidence is required before a
-Python, Django, PostgreSQL, or optional-adapter line is described as tested. It
-does not select a first stable version, freeze an API, or create a compatibility
-guarantee.
+This is the support admission and retirement policy for Django AskLens. It
+records what repository evidence is required before a Python, Django,
+PostgreSQL, or optional-adapter line is described as tested. It does not freeze
+an API or create a SemVer-stable compatibility guarantee.
 
 Artifact provenance remains part of every support statement:
 
@@ -156,29 +155,19 @@ silently skip required jobs, add blanket suppressions, weaken trust-boundary
 tests, or broaden package claims. Changes to required status checks, dependency
 majors, or public support bounds remain separately reviewed decisions.
 
-## Deferred stable-contract decisions
+## Current release posture
 
-The [current alpha surface inventory](alpha-surface-inventory.md) maps exposed,
+The [current Django AskLens surface](alpha-surface-inventory.md) maps exposed,
 optional, internal, and unsupported areas without accepting any stable surface.
-It is decision input, not a compatibility promise.
+See the [AskLens specification](asklens-specification.md).
 
-Roadmap issue #66 recorded a `0.2.0` first-release target. `0.1.0a1` was a
-testing artifact only and is not a supported upgrade origin. There is no
-deprecation window, R5/R6 are not required gates, host-owned responsibilities
-are accepted, and the five packaged JSON Schemas stay internal, draft, unfrozen, and unversioned.
-Do not add schema versions or handle previous-shape compatibility. It did not
-select an exact stable import, setting, command, HTTP, MCP, admin, frontend, or
-provider surface. This tree is not a 0.2.0 release.
-
-This policy still does not decide:
-
-- which Python imports, registration APIs, settings, commands, HTTP routes,
-  envelopes, MCP helpers, or admin/frontend/provider behavior become stable; or
-- any backend-neutral, NDC, Drizzle, public-specification, production-readiness,
-  or security-certification claim.
+`0.1.0a1` was a testing artifact only and is not a supported upgrade origin.
+There is no deprecation window. Host-owned responsibilities are accepted. The
+five packaged JSON Schemas stay internal, draft, unfrozen, and unversioned.
+Do not add schema versions or handle previous-shape compatibility. This tree is
+not a 0.2.0 release.
 
 Do not add document versions or extension negotiation. Do not record or handle schema changes.
-Current first-install migrations, changelog entries, and
-source/wheel checks are evidence of the current tree; they do not make this
-commit a release. Releases, support exceptions, and stable surface assertions
-still require explicit maintainer authorization.
+Current first-install migrations, changelog entries, and source/wheel checks are
+evidence of the current tree; they do not make this commit a release. A version
+bump, tag, or upload still requires explicit maintainer authorization.

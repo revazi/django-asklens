@@ -7,10 +7,11 @@ This is the exact-current #83 field audit for the Django 0.2 target at baseline
 documents and the supported HTTP, MCP, provider/guidance, and audit-detail
 surfaces that embed or adapt them.
 
-The audit is **internal, draft, and unfrozen**. It is not a public specification,
+The audit is **internal, draft, and unfrozen**. It is implementation evidence for
+the [AskLens specification](asklens-specification.md). It is not a public specification,
 not a compatibility promise, not evidence of backend neutrality, and not an
-independent security review. It does not freeze an adapter shape, approve a
-release, or authorize runtime, schema, fixture, audit-policy, or API changes.
+independent security review. It does not freeze an adapter shape or authorize
+runtime, schema, fixture, audit-policy, or API changes.
 
 The question is narrow: does a current outward-facing or provider-facing field
 reveal server-owned private backend or policy data such as bindings, model/table

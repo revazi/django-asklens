@@ -171,10 +171,8 @@ regression, not exhaustive mutation testing. The new module carries the existing
 remains disabled. Real MCP transport, browser behavior, production permission
 backends, and independent security review remain separate evidence.
 
-Maintainer prerelease review is deferred, not independently completed. This
-first assertion-gap disposition plus the selected tests does not close every
-follow-up above, approve #82's review, enter R6, authorize a release, or certify
-production security.
+This assertion-gap disposition plus the selected tests does not authorize a
+release or certify production security.
 
 ### Completed failure-boundary follow-ups
 

@@ -9,10 +9,10 @@ fixture, and focused Django evidence. It records the source tree at
 added.
 
 The index and the five contract documents are **internal, draft, and unfrozen**.
-They support review and drift detection; they are not a public specification,
-not a compatibility promise, not evidence of backend neutrality, and not an
-independent security review. They do not add serialized versions, freeze an API,
-or authorize a second implementation.
+They support review and drift detection for the [AskLens specification](asklens-specification.md).
+They are not a public specification, not a compatibility promise, not evidence of
+backend neutrality, and not an independent security review. They do not add
+serialized versions or authorize a second implementation.
 
 Use the precedence defined by [Draft internal contract schemas](internal-contracts.md):
 accepted prose defines semantics, JSON Schema defines wire shape,

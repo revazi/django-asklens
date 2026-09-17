@@ -42,6 +42,7 @@ The project is alpha and APIs may change before a stable release.
 
 ### Changed
 
+- Cleaned leftover stable-contract and #66 decision theater from the surface inventory, support lifecycle, and related evidence docs. Remaining docs point at the draft AskLens specification and current Django implementation.
 - Documented `tests.test_project` as the example Django AskLens integration, with a host-copy checklist for registration, scope, `execute_plan`, and optional adapters.
 - Expanded the AskLens specification to cover query plans, catalog/capabilities, trust, scope, types/operators, results, errors, budgets, and conformance. Docs now treat Django AskLens as the first implementation of that unversioned spec.
 - Django AskLens is documented as the first implementation of the AskLens specification. The spec is draft and unversioned; schema versioning and previous-shape compatibility are not used.
