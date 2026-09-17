@@ -1467,6 +1467,12 @@ def test_short_source_demo_is_scoped_offline_and_resettable() -> None:
         "(docs/test-project-demo.md#sqlite-frontend-and-admin-first-run-start-to-reset)"
     )
     assert demo_link in readme
+    assert "[Example Django AskLens integration](test-project-demo.md)" in read_text(
+        ROOT / "docs" / "index.md"
+    )
+    assert "example Django AskLens integration" in read_text(
+        ROOT / "docs" / "asklens-specification.md"
+    )
 
     assert "superuser-only" not in playwright
     assert "separately labeled synthetic-superuser admin path" in playwright
@@ -1479,6 +1485,24 @@ def test_short_source_demo_is_scoped_offline_and_resettable() -> None:
         'name="Access unavailable"',
     ):
         assert required in playwright
+
+
+def test_example_django_integration_guide_is_copyable() -> None:
+    """The source demo is the copyable Django AskLens integration example."""
+
+    demo = read_text(ROOT / "docs" / "test-project-demo.md")
+    for required in (
+        "# Example Django AskLens integration",
+        "## What to copy into a host project",
+        "tests.test_project",
+        "AppConfig.ready()",
+        "scope_provider",
+        "execute_plan",
+        "DummyProvider",
+        "django_asklens.api.urls",
+    ):
+        assert required in demo
+    assert "Do not invent a second example app" not in demo
 
 
 def test_u6_frontend_explanations_and_demo_recovery_stay_bounded() -> None:

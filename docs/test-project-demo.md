@@ -1,6 +1,33 @@
-# Runnable complex test project
+# Example Django AskLens integration
 
-The source repository includes a synthetic Django test project with complex tenant, role, member, subscription, billing, payment, and schedule models. It is designed for local AskLens integration testing without host-application code or sensitive data. This guide is for a source checkout, not an installed package runtime.
+`tests.test_project` is the example Django app for this repository. It shows a
+host integrating the [AskLens specification](asklens-specification.md): explicit
+registration, fail-closed scope, `execute_plan`, optional DRF/MCP, admin, and
+the reference frontend. Data is synthetic. The default planner is
+`DummyProvider`. Live providers stay off unless you opt in.
+
+This is a source-checkout example, not the published PyPI `0.1.0a1` package and
+not a second example app.
+
+## What to copy into a host project
+
+Copy the host wiring, not the synthetic models:
+
+1. Add `django_asklens` to `INSTALLED_APPS` and run `migrate asklens`.
+2. Register resources once from a project-owned `AppConfig.ready()` import, as
+   in `tests/test_project/apps.py` and `tests/test_project/asklens_registry.py`.
+3. Give every resource `scope_mode="global"` or `scope_mode="context_scoped"`.
+   Context-scoped resources need a trusted `scope_provider` that returns a lazy
+   QuerySet for the registered model.
+4. Execute with `execute_plan(plan, request=request)`. Do not compile or run
+   plans outside that facade.
+5. Optional HTTP: `path("", include("django_asklens.api.urls"))` as in
+   `tests/test_project/demo_urls.py`.
+6. Optional MCP, admin query, and reference frontend are adapters on the same
+   path. They must not weaken authorization or scope.
+
+For a minimal core-only path without this full demo, use the
+[core-only executable quickstart](quickstart-core.md).
 
 ## SQLite frontend and admin first run (start to reset)
 

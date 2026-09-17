@@ -268,8 +268,9 @@ Conflict order:
 - Optional extras: DRF routes, MCP helpers/FastMCP bridge, admin, reference
   frontend, dummy and OpenAI-compatible providers.
 
-See [document schemas](internal-contracts.md) and
-[conformance corpus](conformance.md).
+See [document schemas](internal-contracts.md),
+[conformance corpus](conformance.md), and the
+[example Django AskLens integration](test-project-demo.md).
 
 ## Non-goals
 
