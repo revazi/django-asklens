@@ -27,8 +27,6 @@ DEFAULTS: dict[str, Any] = {
     "MAX_METRICS": 5,
     "MAX_GROUP_BY": 3,
     "PROMPT_RESOURCE_SHORTLIST_LIMIT": 0,
-    "ALLOW_RAW_SQL": False,
-    "SEND_SAMPLE_ROWS_TO_LLM": False,
     "API_PERMISSION_CLASSES": ["django_asklens.access.IsAuthenticated"],
     "REQUEST_PERMISSIONS_GETTER": None,
     "AUDIT_MODE": "database",

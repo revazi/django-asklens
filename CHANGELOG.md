@@ -71,6 +71,9 @@ The project is alpha and APIs may change before a stable release.
 
 ### Removed
 
+- Removed unused `ALLOW_RAW_SQL` and `SEND_SAMPLE_ROWS_TO_LLM` settings. AskLens has no raw-SQL or sample-row provider path, so those names are not configuration.
+- Removed the QueryPlan `visualization` migration special case. Unknown plan members fail as ordinary extra keys.
+- Removed the DummyProvider `get_llm_provider` re-export. Import the factory from `django_asklens.llms`.
 - Removed obsolete alpha compatibility surface: `run_query_plan`, the rejected `base_queryset` registration parameter, the old demo MCP environment alias, and the 0.1-to-0.2 migration guide. Current code exposes one execution path and one registration shape without shims or deprecation machinery.
 - Removed the deprecated `django_asklens.api.querying` compatibility module. Import the supported shared orchestrator from `django_asklens.querying` instead; no module shim or alias remains.
 - Removed accidental orchestration-helper exports from `django_asklens.querying` and `django_asklens.api.views`. Canonical querying exports are now `AskLensQueryResponse` and `execute_asklens_query_request`; the view module exports only its five view classes. Deliberate root `django_asklens` exports remain unchanged.

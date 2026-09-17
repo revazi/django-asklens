@@ -127,7 +127,7 @@ compatibility guarantees.
 
 ## Settings
 
-Source currently defines **37 current `DJANGO_ASKLENS` keys**. They are grouped
+Source currently defines **35 current `DJANGO_ASKLENS` keys**. They are grouped
 below to make a later decision explicit rather than accidentally stabilizing the
 whole settings mapping.
 
@@ -137,7 +137,6 @@ whole settings mapping.
 | Access and request permissions | `API_PERMISSION_CLASSES`, `REQUEST_PERMISSIONS_GETTER` | Provisional host integration; trusted values stay server-owned. |
 | Audit | `AUDIT_MODE`, `AUDIT_SINK`, `AUDIT_INCLUDE_CONTENT`, `AUDIT_DATABASE_ALIAS` | Provisional security/operations configuration. Metadata-only remains the default. |
 | Provider/planning | `LLM_BACKEND`, `LLM_MODEL`, `LLM_BASE_URL`, `LLM_API_KEY`, `LLM_TIMEOUT_SECONDS`, `LLM_TEMPERATURE`, `LOG_LLM_IO`, `PROMPT_RESOURCE_SHORTLIST_LIMIT`, `DUMMY_PLANS`, `DUMMY_DEFAULT_PLAN` | Provisional provider configuration; secrets and live behavior remain host-owned. |
-| Hard-off safety flags | `ALLOW_RAW_SQL`, `SEND_SAMPLE_ROWS_TO_LLM` | Provisional configuration names whose only supported safe behavior is false; they do not reserve future unsafe modes. |
 | Frontend | `FRONTEND_PERMISSION_CHECK`, `FRONTEND_TITLE`, `FRONTEND_SUBTITLE`, `FRONTEND_STARTER_QUESTIONS` | Optional reference-frontend configuration. |
 | MCP | `MCP_ALLOW_ROW_RETURN`, `MCP_MAX_RETURNED_ROWS` | Optional adapter configuration; row return stays host-and-request gated. |
 

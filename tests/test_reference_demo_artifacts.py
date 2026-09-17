@@ -1261,7 +1261,7 @@ def test_alpha_surface_inventory_does_not_accept_a_stable_contract() -> None:
     for required in (
         "No surface is accepted as stable",
         "10 deliberate root exports",
-        "37 current `DJANGO_ASKLENS` keys",
+        "35 current `DJANGO_ASKLENS` keys",
         "`execute_plan`",
         "`redact_asklens_audit`",
         "`purge_asklens_audit`",
