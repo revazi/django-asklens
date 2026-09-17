@@ -36,7 +36,7 @@ Django AskLens was created by [Revaz Zakalashvili](https://github.com/revazi) ([
 - [Evaluation fixtures](evaluation.md)
 - [Synthetic performance baseline](performance-baseline.md)
 - [Test coverage baseline and critical-boundary map](test-coverage.md)
-- [Runnable complex test project](test-project-demo.md)
+- [Example Django AskLens integration](test-project-demo.md)
 - [Demo query ideas](demo-queries.md)
 
 ## Current scope

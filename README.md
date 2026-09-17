@@ -335,7 +335,7 @@ Review the [security checklist](docs/security-checklist.md) and [production chec
 - [Production checklist](docs/production-checklist.md)
 - [Multi-tenant security](docs/multitenancy-security.md)
 - [Evaluation fixtures](docs/evaluation.md)
-- [Runnable complex test project and PostgreSQL reference smoke](docs/test-project-demo.md)
+- [Example Django AskLens integration](docs/test-project-demo.md)
 - [Changelog](CHANGELOG.md)
 
 ## Development
