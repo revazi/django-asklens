@@ -2,7 +2,7 @@
 
 Use this checklist before enabling AskLens in a production or production-like environment.
 
-AskLens is a data access surface. Configure it as carefully as any reporting, analytics, or admin feature. Supported Python execution uses `execute_plan()` (with `run_query_plan()` temporarily retained as a deprecated safe wrapper), and every resource registration must resolve a fail-closed scope policy from an explicit resource mode or the context-only project default. Production-like evaluation must still test host scope providers and operational controls. The repository Compose/reference app is synthetic test evidence, not a production topology, credential pattern, security review, or capacity baseline.
+AskLens is a data access surface. Configure it as carefully as any reporting, analytics, or admin feature. Supported Python execution uses only `execute_plan()`, and every resource registration must resolve a fail-closed scope policy from an explicit resource mode or the context-only project default. Production-like evaluation must still test host scope providers and operational controls. The repository Compose/reference app is synthetic test evidence, not a production topology, credential pattern, security review, or capacity baseline.
 
 ## Access gates
 

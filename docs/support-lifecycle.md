@@ -178,7 +178,7 @@ policy deliberately does not decide:
   or security-certification claim.
 
 The five packaged JSON Schemas remain internal, draft, unfrozen, and
-unversioned. Current alpha migrations, changelog entries, source/wheel checks,
-and the 0.1-to-0.2 migration guide are evidence to reuse after a stable decision;
-they do not pre-approve that decision. Releases, support exceptions, and stable
-surface assertions still require explicit maintainer authorization.
+unversioned. Current alpha migrations, changelog entries, and source/wheel checks
+are evidence to reuse after a stable decision; they do not pre-approve that
+decision. Releases, support exceptions, and stable surface assertions still
+require explicit maintainer authorization.

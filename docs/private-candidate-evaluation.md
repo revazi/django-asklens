@@ -210,7 +210,7 @@ If the candidate was installed into a retained staging environment:
 python -m pip uninstall django-asklens
 ```
 
-Uninstalling the package does not reverse database migrations, application registrations, saved plans, API/MCP clients, or host audit data. Do not run `migrate asklens zero` blindly. Restore the complete tested snapshot/configuration together, following the strict [0.1-to-0.2 rollback guidance](migrating-0.1-to-0.2.md).
+Uninstalling the package does not reverse database migrations, application registrations, saved plans, API/MCP clients, or host audit data. Do not run `migrate asklens zero` blindly. Restore the complete tested database snapshot, package artifact, and host configuration together.
 
 ## 8. Report issues without leaking evaluation data
 

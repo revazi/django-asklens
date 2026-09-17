@@ -2,7 +2,7 @@
 
 Django AskLens can be used without Django REST Framework. Install the core package when you want to register semantic resources, ask a provider for catalog-validated `QueryPlan` JSON, execute read-only Django ORM queries, and serialize results from Python code.
 
-> **Alpha trust-boundary warning:** `parse_query_plan()` establishes structure only. Use `execute_plan(plan, request=request)` for execution: it treats mappings and existing `QueryPlan` objects as untrusted and repeats current catalog, permission, limit, and request-scope validation. `run_query_plan()` remains temporarily as a deprecated safe wrapper. The compiler and compiled-query executor are internal and no longer public exports. Never treat a previously validated `QueryPlan` as a reusable authorization token.
+> **Alpha trust-boundary warning:** `parse_query_plan()` establishes structure only. Use `execute_plan(plan, request=request)` for execution: it treats mappings and existing `QueryPlan` objects as untrusted and repeats current catalog, permission, limit, and request-scope validation. The compiler and compiled-query executor are internal and not public exports. Never treat a previously validated `QueryPlan` as a reusable authorization token.
 
 ```bash
 python -m pip install django-asklens
@@ -189,8 +189,6 @@ QueryPlan.
 
 `execute_plan(...)` repeats current semantic validation and then resolves the resource's fail-closed scope policy. `global` uses the registered model manager only when deliberately declared on that resource. `context_scoped` may be inherited from `DEFAULT_SCOPE_MODE`, but still requires the current request and a trusted provider returning an unevaluated `QuerySet` for the registered model. Missing or invalid scope fails with `asklens.scope.unavailable` and never broadens to the default manager.
 
-The legacy `base_queryset=` registration argument is rejected. Migrate it to a context-scoped registration with `scope_provider=...`; resources intentionally unrestricted across rows must declare `scope_mode="global"` explicitly.
-
 ### Structural budgets
 
 Before scope resolution or ORM compilation, execution bounds UTF-8 plan bytes, filters, selected fields, order terms, groups, metrics, relationship-hop depth, unique relationship edges across the complete plan, values in each `in` filter, total scalar filter values, and returned rows/groups. Repeated meaningless select/filter/group/order/`in` references are rejected rather than used to evade counting.
@@ -230,14 +228,11 @@ Ungrouped aggregates have effective limit one and always report `truncated: fals
 
 Serialized columns include canonical `type` and `nullable`. Decimal results remain strings. Runtime values that do not match the declared canonical type, nullability, enum values, or column set fail with `asklens.execute.failed` instead of being silently stringified.
 
-### Migrating low-level alpha imports
+### Execution boundary
 
-Replace `from django_asklens.compiler import compile_query_plan` and `from django_asklens.execution import execute_query` with `execute_plan()`. `CompiledQuery` is also internal. AskLens intentionally provides no public operation that executes a caller-supplied compiled or merely shape-valid plan. `run_query_plan()` remains available for one alpha cycle, emits `DeprecationWarning`, requires the current request, and revalidates its input.
+`execute_plan()` is the only public Python execution function. Compiler and prepared-plan types remain internal, and AskLens provides no public operation that executes a caller-supplied compiled or merely shape-valid plan.
 
-Do not infer truncation from `row_count == plan.limit` or the old
-`build_result_metadata(plan=..., row_count=...)` helper shape. Consume the
-trusted `result_metadata` returned directly by `QueryResult.to_dict()`, under
-the HTTP shared-orchestrator `result` child, or in the MCP response.
+Consume trusted `result_metadata` directly from `QueryResult.to_dict()`, under the HTTP shared-orchestrator `result` child, or in the MCP response.
 
 ### Stable execution errors
 

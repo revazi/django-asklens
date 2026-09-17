@@ -1263,7 +1263,6 @@ def test_alpha_surface_inventory_does_not_accept_a_stable_contract() -> None:
         "10 deliberate root exports",
         "37 current `DJANGO_ASKLENS` keys",
         "`execute_plan`",
-        "`run_query_plan`",
         "`redact_asklens_audit`",
         "`purge_asklens_audit`",
         "`GET /asklens/catalog/`",
@@ -1575,7 +1574,6 @@ def test_source_demo_and_candidate_commands_are_documented() -> None:
     demo = read_text(ROOT / "docs" / "test-project-demo.md")
     install = read_text(ROOT / "docs" / "installation.md")
     production = read_text(ROOT / "docs" / "production-checklist.md")
-    migration = read_text(ROOT / "docs" / "migrating-0.1-to-0.2.md")
 
     assert "uv run playwright install chromium" in demo
     assert "bash scripts/reference-demo-smoke.sh" in demo
@@ -1601,7 +1599,6 @@ def test_source_demo_and_candidate_commands_are_documented() -> None:
     assert "retention" in production.lower()
     assert "redaction" in production.lower()
     assert "deletion" in production.lower()
-    assert "strict replacement" in migration.lower()
 
 
 def test_performance_baseline_guide_and_index_linked() -> None:

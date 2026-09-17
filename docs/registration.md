@@ -173,42 +173,9 @@ Enum metadata is mandatory when `type="enum"` and invalid on other field types:
 }
 ```
 
-Only canonical values and explicitly listed aliases are accepted in `eq`, `neq`, and `in`. Aliases normalize to the canonical value; labels are display metadata and are not accepted unless also listed as aliases. Ambiguous aliases and duplicate canonical values fail registration. Django model `choices` are never copied or treated as aliases automatically. Projects migrating choice-backed fields must either register an explicit enum or retain open `string`/`integer` semantics deliberately.
+Only canonical values and explicitly listed aliases are accepted in `eq`, `neq`, and `in`. Aliases normalize to the canonical value; labels are display metadata and are not accepted unless also listed as aliases. Ambiguous aliases and duplicate canonical values fail registration. Django model `choices` are never copied or treated as aliases automatically; register an explicit enum or use open `string`/`integer` semantics deliberately.
 
-Defaults remain conservative for catalog exposure: sensitive fields and hidden fields are not included in normal planner catalog serialization. The legacy field-level `metric=True` flag is rejected; aggregate backing is declared only on `Metric` registrations.
-
-### Migrating 0.1 field registrations
-
-The 0.1 form used each mapping key as both public name and Django path:
-
-```python
-fields = {
-    "id": {"label": "Order ID"},
-    "customer.email": {"label": "Customer email"},
-}
-```
-
-The 0.2 form separates those responsibilities explicitly and every resource
-also adds `timezone="<IANA name>"` to its `register()` call:
-
-```python
-fields = {
-    "order_id": {
-        "binding": "id",
-        "type": "integer",
-        "nullable": False,
-        "label": "Order ID",
-    },
-    "customer.email": {
-        "binding": "customer__email",
-        "type": "string",
-        "nullable": False,
-        "label": "Customer email",
-    },
-}
-```
-
-There is no implicit key-to-binding migration fallback. Missing metadata fails registration with developer-facing guidance. Update defaults and plans only when you deliberately rename a public semantic key; changing a field binding alone does not change those references. Metric bindings are now independent trusted registration metadata rather than references to semantic fields. The former `include_internal=True` catalog option is removed because public serialization no longer exposes model labels. Permission declarations continue to enforce visibility but are no longer copied into public catalog/capability payloads.
+Defaults remain conservative for catalog exposure: sensitive fields and hidden fields are not included in normal planner catalog serialization. Aggregate backing is declared only on `Metric` registrations.
 
 ## Resource and field permissions
 
@@ -303,22 +270,6 @@ Metric(
 
 `count_rows` requires a non-null unique terminal key. `count_distinct` additionally requires a private non-null unique `distinct_key` at the same relationship grain. Numeric to-many aggregates, nested/independent fanout, implicit distinctness, and `allow_fanout` escape hatches are rejected.
 
-### Migrating 0.1 metric plans
-
-Replace client-supplied metric definitions:
-
-```json
-{"name": "revenue", "op": "sum", "field": "total"}
-```
-
-with the registered semantic reference:
-
-```json
-{"metric": "revenue"}
-```
-
-Move the operation and backing field into `Metric(binding=..., result_type=...)`. Old plan keys are rejected during structural parsing rather than compared with trusted registration.
-
 ## Fail-closed resource scope
 
 Every resource must resolve to one mode. A resource can declare it directly, or it can inherit the safe `context_scoped` project default shown above:
@@ -355,7 +306,7 @@ register(
 
 A context scope provider must return an unevaluated Django `QuerySet` for the registered model. `Model.objects.none()` is valid. Returning `None`, a list, an evaluated queryset, or a queryset for another model fails with `asklens.scope.unavailable`; missing request context and provider exceptions also fail closed. AskLens never accepts client-provided tenant IDs or scope tokens as trusted scope.
 
-The legacy `base_queryset=` argument is rejected with migration guidance. Replace it with a context-scoped registration and `scope_provider=...`. Intentionally unrestricted resources must explicitly use `scope_mode="global"`; the project default cannot be `global`, and omission never falls back to the default manager.
+Intentionally unrestricted resources must explicitly use `scope_mode="global"`; the project default cannot be `global`, and omission never falls back to the default manager.
 
 ## Deterministic ordering
 

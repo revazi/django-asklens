@@ -14,7 +14,7 @@ def build_request_from_mcp_context(context: Any) -> Any:
 
     Implement this in your host project. The returned object should expose
     ``request.user`` and any attributes used by your AskLens
-    ``REQUEST_PERMISSIONS_GETTER`` or resource ``base_queryset(request)`` hooks.
+    ``REQUEST_PERMISSIONS_GETTER`` or resource ``scope_provider(request)`` hooks.
 
     Do not trust permission strings sent as tool arguments by the MCP client.
     Derive permissions from the authenticated server-side principal/session.

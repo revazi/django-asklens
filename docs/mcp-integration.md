@@ -262,7 +262,7 @@ The MCP endpoint is:
 http://127.0.0.1:8000/mcp
 ```
 
-The endpoint is mounted only when `DJANGO_ASKLENS_MCP_ENABLED=1` is set. The earlier local alias `DJANGO_ASKLENS_DEMO_MCP=1` is also accepted for compatibility. If MCP is not enabled, use the normal Django development server described in the test-project demo guide.
+The endpoint is mounted only when `DJANGO_ASKLENS_MCP_ENABLED=1` is set. If MCP is not enabled, use the normal Django development server described in the test-project demo guide.
 
 The demo MCP user is selected server-side by `DJANGO_ASKLENS_MCP_USERNAME`. Do not expose username or permission selection as MCP tool arguments. To expose the optional AskLens-managed question tool, set:
 
