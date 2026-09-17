@@ -41,6 +41,6 @@ Django AskLens was created by [Revaz Zakalashvili](https://github.com/revazi) ([
 
 ## Current scope
 
-AskLens exposes permission-scoped catalog metadata and separate machine capabilities, accepts a natural-language question through Python helpers or the optional DRF API, asks a deterministic or configured provider for an executable `query_plan` plus optional separate `presentation`, validates the plan against the semantic catalog, compiles safe read-only Django ORM queries, executes with limits, and returns typed result JSON.
+AskLens is a read-only semantic query specification. Django AskLens is the first implementation. Callers supply an untrusted `query-plan`; the implementation resolves current identity, catalog, and row scope, compiles a read-only query, and returns typed result JSON. Optional DRF, MCP, admin, frontend, and provider adapters must use the same execution path.
 
-AskLens does not execute LLM-generated SQL, mutate data, auto-expose Django models, send sample rows to providers, or require a frontend framework.
+AskLens does not execute LLM-generated SQL, mutate data, auto-expose Django models, send sample rows to providers, or require a frontend framework. See the [AskLens specification](asklens-specification.md).

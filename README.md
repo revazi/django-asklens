@@ -26,11 +26,12 @@ Django AskLens was created by [Revaz Zakalashvili](https://github.com/revazi) ([
 
 ## What it provides
 
+- The [AskLens specification](docs/asklens-specification.md): untrusted plans over an explicit catalog, with current-request authorization and row scope.
 - Explicit semantic resource registration.
 - Permission-scoped catalog metadata plus separate machine capabilities.
 - Optional DRF catalog, capabilities, query, and run-detail endpoints.
 - Strict Pydantic `QueryPlan` validation.
-- Five packaged draft internal JSON Schemas for the current contract shape.
+- Five packaged unversioned JSON Schemas for the current spec documents.
 - A language-neutral synthetic conformance corpus replayed on SQLite and required PostgreSQL 15/18 CI jobs.
 - A source-checkout PostgreSQL 18 Compose/Playwright synthetic reference smoke.
 - ORM-only list and aggregate query execution.

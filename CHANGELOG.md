@@ -42,6 +42,7 @@ The project is alpha and APIs may change before a stable release.
 
 ### Changed
 
+- Expanded the AskLens specification to cover query plans, catalog/capabilities, trust, scope, types/operators, results, errors, budgets, and conformance. Docs now treat Django AskLens as the first implementation of that unversioned spec.
 - Django AskLens is documented as the first implementation of the AskLens specification. The spec is draft and unversioned; schema versioning and previous-shape compatibility are not used.
 - Recorded the first-release #66 clarification: `0.2.0` is the first real release target, `0.1.0a1` was a testing artifact only, and schema versions or previous-shape handling are not recorded. This does not bump the package version or make current `main` a 0.2.0 release.
 - Recorded the issue #66 document decision: the five packaged schemas stay internal, draft, unfrozen, and unversioned. Open document-versioning and extension-negotiation options are removed. This does not bump the package version, freeze a stable Python/HTTP/MCP surface, or make current `main` a 0.2.0 release.

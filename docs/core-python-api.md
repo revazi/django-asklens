@@ -1,6 +1,6 @@
 # Core Python API
 
-Django AskLens can be used without Django REST Framework. Install the core package when you want to register semantic resources, ask a provider for catalog-validated `QueryPlan` JSON, execute read-only Django ORM queries, and serialize results from Python code.
+Django AskLens is the Django implementation of the [AskLens specification](asklens-specification.md). Install the core package when you want to register semantic resources, accept an untrusted `QueryPlan`, execute it through `execute_plan`, and serialize results from Python without Django REST Framework.
 
 > **Alpha trust-boundary warning:** `parse_query_plan()` establishes structure only. Use `execute_plan(plan, request=request)` for execution: it treats mappings and existing `QueryPlan` objects as untrusted and repeats current catalog, permission, limit, and request-scope validation. The compiler and compiled-query executor are internal and not public exports. Never treat a previously validated `QueryPlan` as a reusable authorization token.
 

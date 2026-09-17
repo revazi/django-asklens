@@ -1,9 +1,10 @@
 # Draft internal conformance corpus
 
 The source distribution includes a language-neutral JSON corpus under
-`conformance/`. It exercises the one current internal catalog, capabilities,
-query-plan, result, and error shapes without making those shapes a public
-specification or compatibility promise.
+`conformance/`. It is the executable [AskLens specification](asklens-specification.md)
+corpus for the one current unversioned catalog, capabilities, query-plan, result,
+and error shape. Django AskLens is the first implementation. The corpus is not a
+second-backend proof or a frozen compatibility promise.
 
 ## Case shape
 
