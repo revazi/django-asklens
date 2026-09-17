@@ -36,6 +36,7 @@ SEMANTIC_DECISION_INDEX = ROOT / "docs" / "internal-semantic-decision-index.md"
 SURFACE_LEAKAGE_AUDIT = ROOT / "docs" / "internal-surface-leakage-audit.md"
 FAILURE_MODE_MATRIX = ROOT / "docs" / "internal-failure-mode-matrix.md"
 SUPPORT_LIFECYCLE_GUIDE = ROOT / "docs" / "support-lifecycle.md"
+ALPHA_SURFACE_INVENTORY = ROOT / "docs" / "alpha-surface-inventory.md"
 WHEEL_SMOKE = ROOT / ".github" / "scripts" / "wheel_smoke.py"
 API_SERIALIZERS = ROOT / "django_asklens" / "api" / "serializers.py"
 API_VIEWS = ROOT / "django_asklens" / "api" / "views.py"
@@ -1230,6 +1231,52 @@ def test_support_lifecycle_policy_stays_evidence_bounded() -> None:
     assert "[Support lifecycle](support-lifecycle.md)" in docs_index
     assert "[support lifecycle](support-lifecycle.md)" in installation
     assert "Added an evidence-bounded support lifecycle policy" in changelog
+    assert "recursive-include docs *.md" in manifest
+
+
+def test_alpha_surface_inventory_does_not_accept_a_stable_contract() -> None:
+    """The current surface map remains exact, navigable, and non-normative."""
+
+    assert ALPHA_SURFACE_INVENTORY.is_file()
+    inventory = read_text(ALPHA_SURFACE_INVENTORY)
+    docs_index = read_text(ROOT / "docs" / "index.md")
+    lifecycle = read_text(SUPPORT_LIFECYCLE_GUIDE)
+    changelog = read_text(ROOT / "CHANGELOG.md")
+    manifest = read_text(ROOT / "MANIFEST.in")
+
+    for heading in (
+        "# Alpha surface inventory for stable-release decisions",
+        "## Classification rules",
+        "## Python surfaces",
+        "## Settings",
+        "## Commands and database-owned surface",
+        "## Optional HTTP surface",
+        "## Optional MCP surface",
+        "## Serialized documents",
+        "## Internal and unsupported surfaces",
+        "## Decision boundary",
+    ):
+        assert heading in inventory
+
+    for required in (
+        "No surface is accepted as stable",
+        "10 deliberate root exports",
+        "37 current `DJANGO_ASKLENS` keys",
+        "`execute_plan`",
+        "`run_query_plan`",
+        "`redact_asklens_audit`",
+        "`purge_asklens_audit`",
+        "`GET /asklens/catalog/`",
+        "`POST /asklens/query/`",
+        "`asklens_execute_plan`",
+        "internal, draft, unfrozen, and unversioned",
+        "issue #66",
+    ):
+        assert required in inventory
+
+    assert "[Alpha surface inventory](alpha-surface-inventory.md)" in docs_index
+    assert "[current alpha surface inventory](alpha-surface-inventory.md)" in lifecycle
+    assert "Added a current alpha surface inventory" in changelog
     assert "recursive-include docs *.md" in manifest
 
 

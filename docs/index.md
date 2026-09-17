@@ -15,6 +15,7 @@ Django AskLens was created by [Revaz Zakalashvili](https://github.com/revazi) ([
 
 - [Installation](installation.md)
 - [Support lifecycle](support-lifecycle.md)
+- [Alpha surface inventory](alpha-surface-inventory.md)
 - [Core-only executable quickstart](quickstart-core.md)
 - [Private candidate evaluation and onboarding](private-candidate-evaluation.md)
 - [Privacy-Safe Pilot Intake Worksheet](pilot-intake-worksheet.md)

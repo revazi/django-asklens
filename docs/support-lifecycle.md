@@ -160,6 +160,10 @@ majors, or public support bounds remain separately reviewed decisions.
 
 ## Deferred stable-contract decisions
 
+The [current alpha surface inventory](alpha-surface-inventory.md) maps exposed,
+optional, internal, and unsupported areas without accepting any stable surface.
+It is decision input, not a compatibility promise.
+
 Roadmap issue #66 must explicitly select the first stable version and accepted
 stable surface before Django AskLens makes stable compatibility promises. This
 policy deliberately does not decide:
