@@ -37,8 +37,8 @@ specification, a compatibility promise, an NDC profile, or evidence of a
 backend-neutral implementation.
 
 The documents do not contain embedded AskLens contract versions, revisions, or
-negotiation fields. During the alpha, strict parsing and the changelog describe
-the one current shape; compatibility with replaced alpha shapes is not retained.
+negotiation fields. There is one current unversioned shape. Do not add schema versions.
+Do not record or handle previous document shapes.
 
 When an internal contract conflict is found, use this order:
 

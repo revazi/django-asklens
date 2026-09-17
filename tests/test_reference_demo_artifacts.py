@@ -1228,12 +1228,17 @@ def test_support_lifecycle_policy_stays_evidence_bounded() -> None:
         "internal, draft, unfrozen, and unversioned",
         "Do not add document versions",
         "not a 0.2.0 release",
+        "testing artifact only",
+        "not a supported upgrade origin",
+        "Do not record or handle schema changes",
     ):
         assert required in guide
 
     for stale_versioning_claim in (
         "whether serialized documents need versions or extension negotiation",
         "needs explicit version/extension policy first",
+        "upgrade, rollback, or data-migration guarantees",
+        "compatibility with replaced alpha shapes",
     ):
         assert stale_versioning_claim not in guide
 
@@ -1252,6 +1257,7 @@ def test_alpha_surface_inventory_does_not_accept_a_stable_contract() -> None:
     lifecycle = read_text(SUPPORT_LIFECYCLE_GUIDE)
     changelog = read_text(ROOT / "CHANGELOG.md")
     manifest = read_text(ROOT / "MANIFEST.in")
+    internal_contracts = read_text(ROOT / "docs" / "internal-contracts.md")
 
     for heading in (
         "# Alpha surface inventory for stable-release decisions",
@@ -1281,6 +1287,9 @@ def test_alpha_surface_inventory_does_not_accept_a_stable_contract() -> None:
         "issue #66",
         "do not add document versions",
         "this tree is not a 0.2.0 release",
+        "testing artifact only",
+        "not a supported upgrade origin",
+        "Do not record or handle previous-version schema changes",
     ):
         assert required in inventory
 
@@ -1288,8 +1297,14 @@ def test_alpha_surface_inventory_does_not_accept_a_stable_contract() -> None:
         "needs explicit version/extension policy first",
         "whether serialized documents need versions or extension negotiation",
         "document-version, release, or support-exception",
+        "upgrade origins, migration compatibility, and rollback/data guarantees",
+        "compatibility with replaced alpha shapes",
     ):
         assert stale_versioning_claim not in inventory
+
+    assert "Do not add schema versions" in internal_contracts
+    assert "Do not record or handle previous document shapes" in internal_contracts
+    assert "compatibility with replaced alpha shapes" not in internal_contracts
 
     assert "[Alpha surface inventory](alpha-surface-inventory.md)" in docs_index
     assert "[current alpha surface inventory](alpha-surface-inventory.md)" in lifecycle

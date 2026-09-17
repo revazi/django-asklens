@@ -164,11 +164,11 @@ Custom sinks, backups, replicas, legal retention, scheduling, external signal
 effects, and complete user/tenant workflows remain host-owned.
 
 The package owns `SemanticQueryRun`, the `AskLensQuery` admin proxy, and
-migrations `0001_initial` and `0002_add_admin_query_proxy`. Their current
-installation and forward migration are evidenced, but #66 must define supported
-upgrade origins, migration compatibility, and rollback/data guarantees. The
-packaged audit admin is an optional view-only operations surface, not a universal
-host authorization or storage boundary.
+migrations `0001_initial` and `0002_add_admin_query_proxy`. These are current
+first-install artifacts. `0.1.0a1` was a testing artifact only and is not a
+supported upgrade origin. Do not record or handle previous-version schema changes.
+The packaged audit admin is an optional view-only operations surface,
+not a universal host authorization or storage boundary.
 
 ## Optional HTTP surface
 
@@ -278,9 +278,11 @@ This inventory still accepts **no stable Python, HTTP, MCP, admin, frontend, or
 provider surface**. Issue #66 recorded these first-release answers without
 freezing that surface:
 
-- target version number is `0.2.0`, not `1.0.0`; this tree is not a 0.2.0 release;
+- target first-release version is `0.2.0`, not `1.0.0`; this tree is not a 0.2.0 release;
+- `0.1.0a1` was a testing artifact only; it is not a supported upgrade origin;
 - the five serialized documents stay internal, unversioned, and without
   extension negotiation; do not add document versions;
+- do not record or handle schema changes or previous document shapes;
 - no deprecation window; breaking changes are accepted;
 - R5 and R6 are not required gates for this target;
 - host-owned responsibilities remain outside the package guarantee; and
