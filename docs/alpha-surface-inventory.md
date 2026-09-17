@@ -235,16 +235,16 @@ The package contains five current JSON documents and Draft 2020-12 schemas:
 - `result`
 - `error`
 
-They remain **internal, draft, unfrozen, and unversioned**. Current schema,
-language-neutral fixture, SQLite, PostgreSQL, HTTP-crosswalk, and leakage-audit
-evidence does not turn them into a public specification or compatibility
-promise. A schema-valid plan remains untrusted and must enter `execute_plan()`.
+They remain **internal, draft, unfrozen, and unversioned**. Issue #66 accepted
+this: do not add document versions, revisions, or extension negotiation. Current
+schema, language-neutral fixture, SQLite, PostgreSQL, HTTP-crosswalk, and
+leakage-audit evidence does not turn them into a public specification or
+compatibility promise. A schema-valid plan remains untrusted and must enter
+`execute_plan()`.
 
 HTTP and MCP wrappers are not automatically identical to these documents. Run
 detail is an audit representation. Help, routing, presentation, row-omission,
-and audit-reference members remain adapter concerns. Issue #66 must choose
-whether any exact document becomes stable, remains internal, or needs explicit
-version/extension policy first.
+and audit-reference members remain adapter concerns.
 
 ## Internal and unsupported surfaces
 
@@ -274,21 +274,23 @@ Unsupported behavior and claims include:
 
 ## Decision boundary
 
-This inventory makes no stable-surface, SemVer, deprecation, removal, upgrade,
-rollback, data-migration, document-version, release, or support-exception
-decision. Roadmap **issue #66** must explicitly select:
+This inventory still accepts **no stable Python, HTTP, MCP, admin, frontend, or
+provider surface**. Issue #66 recorded these first-release answers without
+freezing that surface:
 
-- the first stable version;
-- exact stable imports, settings, commands, routes/envelopes, adapters, and
-  documents;
-- ordinary deprecation/removal windows and immediate security-break treatment;
-- supported fresh-install/upgrade/migration/rollback expectations;
-- required, recommended, and optional release gates; and
-- host-owned responsibilities and residual risks.
+- target version number is `0.2.0`, not `1.0.0`; this tree is not a 0.2.0 release;
+- the five serialized documents stay internal, unversioned, and without
+  extension negotiation; do not add document versions;
+- no deprecation window; breaking changes are accepted;
+- R5 and R6 are not required gates for this target;
+- host-owned responsibilities remain outside the package guarantee; and
+- raw SQL remains unsupported.
 
-Until that acceptance, every current caller-facing item above remains
-provisional or optional alpha exposure. Stable remains an empty classification.
-R5/R6, release, Drizzle, and public-specification gates are unchanged.
+Exact stable imports, settings, commands, routes/envelopes, and adapters were
+not selected. Until that acceptance, every current caller-facing item above
+remains provisional or optional alpha exposure. Stable remains an empty
+classification. Drizzle and public-specification gates are unchanged.
+Independent security review (#74) is unanswered and is not passed evidence.
 
 ## Existing evidence to reuse
 

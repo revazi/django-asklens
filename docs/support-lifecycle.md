@@ -164,21 +164,21 @@ The [current alpha surface inventory](alpha-surface-inventory.md) maps exposed,
 optional, internal, and unsupported areas without accepting any stable surface.
 It is decision input, not a compatibility promise.
 
-Roadmap issue #66 must explicitly select the first stable version and accepted
-stable surface before Django AskLens makes stable compatibility promises. This
-policy deliberately does not decide:
+Roadmap issue #66 recorded a `0.2.0` version target, no deprecation window, waived R5/R6
+required gates, accepted host-owned responsibilities, and kept the five packaged
+JSON Schemas internal, draft, unfrozen, and unversioned. It did not select an
+exact stable import, setting, command, HTTP, MCP, admin, frontend, or provider
+surface. This tree is not a 0.2.0 release.
+
+This policy still does not decide:
 
 - which Python imports, registration APIs, settings, commands, HTTP routes,
-  envelopes, MCP helpers, admin/frontend/provider behavior, or serialized
-  documents become stable;
-- stable SemVer treatment, deprecation windows, or removal periods;
-- upgrade, rollback, or data-migration guarantees for a stable release;
-- whether serialized documents need versions or extension negotiation; or
+  envelopes, MCP helpers, or admin/frontend/provider behavior become stable;
+- upgrade, rollback, or data-migration guarantees; or
 - any backend-neutral, NDC, Drizzle, public-specification, production-readiness,
   or security-certification claim.
 
-The five packaged JSON Schemas remain internal, draft, unfrozen, and
-unversioned. Current alpha migrations, changelog entries, and source/wheel checks
-are evidence to reuse after a stable decision; they do not pre-approve that
-decision. Releases, support exceptions, and stable surface assertions still
-require explicit maintainer authorization.
+Do not add document versions or extension negotiation. Current alpha migrations,
+changelog entries, and source/wheel checks are evidence of the current tree; they
+do not make this commit a release. Releases, support exceptions, and stable
+surface assertions still require explicit maintainer authorization.
