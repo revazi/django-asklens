@@ -1639,6 +1639,7 @@ def test_private_candidate_guide_is_linked_provenanced_and_privacy_bounded() -> 
     assert "(pilot-intake-worksheet.md)" in guide
     assert '"/docs/private-candidate-evaluation.md"' in workflow
     assert '"/docs/pilot-intake-worksheet.md"' in workflow
+    assert '"/docs/migrating-0.1-to-0.2.md"' not in workflow
     for required in (
         "maintainer-supplied candidate manifest",
         "ASKLENS_CANDIDATE_COMMIT",
