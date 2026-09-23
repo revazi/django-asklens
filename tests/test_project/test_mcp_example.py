@@ -193,6 +193,11 @@ def test_mcp_quickstart_docs_cover_the_bounded_safe_flow() -> None:
 
     for document in (guide, example):
         assert "${ASKLENS_CANDIDATE_WHEEL}[mcp]" in document
+        assert "django_asklens-0.2.0-py3-none-any.whl" in document
+        assert "not a shipped release" in document or "not a public release" in document
+        assert (
+            "supported upgrade" in document or "normal upgrade from 0.1.0a1" in document
+        )
         assert "server-owned" in document
         assert "asklens_capabilities" in document
         assert "resource_summaries" in document
