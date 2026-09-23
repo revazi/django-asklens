@@ -10,6 +10,85 @@ missing lines and partial branches. Coverage is a navigation aid: executing a
 line or branch does not prove that its authorization, privacy, or semantic
 invariants were asserted.
 
+## 0.2.0 technical acceptance audit
+
+Recorded on 2026-09-23 against clean `main` and `origin/main` at
+`0c80aab0bddc22ac0fd47ca2d07d965bf506827c`. No tracked files were changed by
+the audit itself.
+
+### Accepted technical paths
+
+1. Clean SQLite demo setup, migrations, and seed passed.
+2. Anonymous frontend and API denial passed.
+3. The `facility-owner` path proved North-only scope, offline aggregate
+   execution, typed result metadata, the raw response, and metadata-only audit.
+4. Authenticated catalog, capabilities/help, question, and submitted-plan API
+   paths passed, including rejection of client-controlled tenant and scope
+   input.
+5. The `no-report` path proved opaque denial and safe account recovery.
+6. Admin help remained distinct from data querying, and the audit UI remained
+   immutable.
+7. Representative-role, cross-scope, and unauthorized-resource checks passed.
+8. MCP transport and tools passed with server-owned identity, execute-time
+   revalidation, and default row omission.
+9. Live-provider validation was intentionally skipped because external provider
+   spending was not authorized. Local dummy/provider boundaries passed.
+10. The PostgreSQL 18 reference workflow passed its Playwright browser/API/MCP
+    smoke and project-scoped teardown.
+11. Schemas, draft specification, and conformance fixtures passed. The
+    specification remains draft and unversioned; one Django implementation is
+    not independent portability proof.
+12. Cleanup passed, and the final worktree was clean.
+
+### Exact audit evidence
+
+| Evidence | Result |
+| --- | --- |
+| Full SQLite suite | **1172 passed, 11 skipped** |
+| Contract/conformance subset | **77 passed, 1 skipped** |
+| Ruff lint | passed |
+| Ruff formatting | **206 files already formatted** |
+| `compileall` | passed |
+| Django system check | passed |
+| Migration drift | **no changes detected** |
+| Build | wheel and sdist passed |
+| Twine | both artifacts passed |
+| Locked dependency audit | no known vulnerabilities or adverse statuses in **104 packages** |
+| Isolated source-wheel installs | core, API, and MCP passed |
+| Published `0.1.0a1` replacement/migration-preservation smoke | passed |
+| Core exact-wheel quickstart smoke | passed |
+| Authenticated API exact-wheel quickstart smoke | passed |
+| PostgreSQL 18 reference browser/API/MCP smoke | passed |
+| Final Git state | clean `main == origin/main` at `0c80aab0bddc22ac0fd47ca2d07d965bf506827c` |
+
+The first quickstart smoke attempt failed because generated ignored
+`django_asklens.egg-info` metadata in the repository root shadowed the temporary
+virtual-environment distribution during `importlib.metadata` lookup. After
+removing only generated `build/` and egg-info artifacts and rerunning from the
+documented clean source state, both core and API quickstart smokes passed. This
+is recorded as local test-environment contamination, not a product blocker or a
+documentation/script defect.
+
+### Interpretation and release boundary
+
+The current source at the audited commit is technically ready to begin
+separately authorized `0.2.0` release mechanics. This is not release approval,
+and it does not mean that `0.2.0` has shipped. Package metadata and PyPI remain
+at `0.1.0a1`; that is expected before authorized release preparation and is not
+a runtime defect.
+
+Remaining release mechanics are version updates, release-document updates,
+final candidate validation, tag, GitHub release, and PyPI upload. Each remains
+separately gated; this audit performed none of them.
+
+R5/R6 and independent security review were previously waived as gates for this
+first `0.2.0` release. That waiver does not create evidence that was not run. No
+live-provider, external-pilot, independent-security-review,
+production-certification, second-implementation, or backend-neutral evidence
+exists. The draft, unversioned specification and one Django implementation are
+not SemVer permanence, production certification, NDC compliance, or
+multi-backend conformance.
+
 ## Reproduce the baseline
 
 From a development checkout with the locked development group installed:
