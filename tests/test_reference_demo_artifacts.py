@@ -47,6 +47,46 @@ def read_text(path: Path) -> str:
     return path.read_text(encoding="utf-8")
 
 
+def test_020_technical_acceptance_evidence_stays_exact_and_bounded() -> None:
+    """The completed audit remains distinct from release or external approval."""
+
+    evidence = read_text(ROOT / "docs" / "test-coverage.md")
+    index = read_text(ROOT / "docs" / "index.md")
+    normalized = " ".join(evidence.split())
+
+    assert "## 0.2.0 technical acceptance audit" in evidence
+    assert "0c80aab0bddc22ac0fd47ca2d07d965bf506827c" in evidence
+    assert "[Test coverage baseline and critical-boundary map](test-coverage.md)" in (
+        index
+    )
+
+    for required in (
+        "1172 passed, 11 skipped",
+        "77 passed, 1 skipped",
+        "206 files already formatted",
+        "no changes detected",
+        "104 packages",
+        "core, API, and MCP passed",
+        "Published `0.1.0a1` replacement/migration-preservation smoke",
+        "PostgreSQL 18 reference browser/API/MCP smoke",
+        "Schemas, draft specification, and conformance fixtures",
+        "Live-provider validation was intentionally skipped",
+        "generated ignored `django_asklens.egg-info` metadata",
+        "local test-environment contamination",
+        "technically ready to begin separately authorized `0.2.0` release mechanics",
+        "This is not release approval",
+        "Package metadata and PyPI remain at `0.1.0a1`",
+        "R5/R6 and independent security review were previously waived as gates",
+        "version updates, release-document updates, final candidate validation, "
+        "tag, GitHub release, and PyPI upload",
+        "No live-provider, external-pilot, independent-security-review, production-"
+        "certification, second-implementation, or backend-neutral evidence exists",
+        "not SemVer permanence, production certification, NDC compliance, or multi-"
+        "backend conformance",
+    ):
+        assert required in normalized
+
+
 def test_internal_semantic_decision_index_maps_exact_current_evidence() -> None:
     """The internal index stays complete, evidence-specific, and unfrozen."""
 
