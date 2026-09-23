@@ -5,10 +5,12 @@
 This document maps the current Django implementation of the [AskLens
 specification](asklens-specification.md). It records exposure and evidence.
 **No surface is accepted as stable** by this inventory. Breaking changes are
-allowed. This tree is not a 0.2.0 release.
+allowed. This branch prepares a `0.2.0` release candidate; this candidate
+has not shipped.
 
-PyPI `0.1.0a1` was a testing artifact only. Unreleased `main` is a different
-artifact under the [support lifecycle](support-lifecycle.md).
+PyPI `0.1.0a1` was a testing artifact only and is not a supported upgrade
+origin. Candidate source is a different artifact under the [support
+lifecycle](support-lifecycle.md).
 
 ## Classification rules
 
@@ -269,7 +271,7 @@ Unsupported behavior and claims include:
 This inventory still accepts **no stable Python, HTTP, MCP, admin, frontend, or
 provider surface**. Current first-release posture:
 
-- target first-release version is `0.2.0`, not `1.0.0`; this tree is not a 0.2.0 release;
+- `0.2.0` is the first real release target; this candidate has not shipped;
 - `0.1.0a1` was a testing artifact only; it is not a supported upgrade origin;
 - the five serialized documents stay internal, unversioned, and without
   extension negotiation; do not add document versions;

@@ -6,7 +6,7 @@ registration, fail-closed scope, `execute_plan`, optional DRF/MCP, admin, and
 the reference frontend. Data is synthetic. The default planner is
 `DummyProvider`. Live providers stay off unless you opt in.
 
-This is a source-checkout example, not the published PyPI `0.1.0a1` package and
+This is a candidate-source example, not the published PyPI `0.1.0a1` package and
 not a second example app.
 
 ## What to copy into a host project

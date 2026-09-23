@@ -55,7 +55,7 @@ the audit itself.
 | Twine | both artifacts passed |
 | Locked dependency audit | no known vulnerabilities or adverse statuses in **104 packages** |
 | Isolated source-wheel installs | core, API, and MCP passed |
-| Published `0.1.0a1` replacement/migration-preservation smoke | passed |
+| Historical published-`0.1.0a1` replacement/migration-preservation smoke | passed |
 | Core exact-wheel quickstart smoke | passed |
 | Authenticated API exact-wheel quickstart smoke | passed |
 | PostgreSQL 18 reference browser/API/MCP smoke | passed |
@@ -71,15 +71,13 @@ documentation/script defect.
 
 ### Interpretation and release boundary
 
-The current source at the audited commit is technically ready to begin
-separately authorized `0.2.0` release mechanics. This is not release approval,
-and it does not mean that `0.2.0` has shipped. Package metadata and PyPI remain
-at `0.1.0a1`; that is expected before authorized release preparation and is not
-a runtime defect.
+At the audited commit, package metadata and PyPI both reported `0.1.0a1`;
+that historical audit predates release preparation. The present branch updates
+candidate metadata to `0.2.0` without claiming publication or a supported
+upgrade from the `0.1.0a1` testing artifact.
 
-Remaining release mechanics are version updates, release-document updates,
-final candidate validation, tag, GitHub release, and PyPI upload. Each remains
-separately gated; this audit performed none of them.
+Tag, GitHub release, and PyPI upload remain separately gated; this audit
+performed none of them.
 
 R5/R6 and independent security review were previously waived as gates for this
 first `0.2.0` release. That waiver does not create evidence that was not run. No

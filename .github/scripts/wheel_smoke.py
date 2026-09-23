@@ -40,7 +40,7 @@ def smoke_core_install() -> None:
     import django_asklens.compiler as compiler_package
     import django_asklens.execution as execution_package
 
-    assert django_asklens.__version__ == "0.1.0a1"
+    assert django_asklens.__version__ == "0.2.0"
     assert django_asklens.__all__ == [
         "CONTRACT_SCHEMA_NAMES",
         "Metric",

@@ -10,21 +10,22 @@ an API or create a SemVer-stable compatibility guarantee.
 Artifact provenance remains part of every support statement:
 
 - PyPI currently publishes `django-asklens==0.1.0a1`; use its immutable tagged
-  documentation. That package was a testing artifact only.
-- `main` contains an incompatible, unreleased 0.2-era target while still
-  reporting version `0.1.0a1`.
+  documentation. That package was a testing artifact only and is not a
+  supported upgrade origin.
+- This branch prepares a `0.2.0` candidate. Candidate validation is not
+  publication, and support statements apply only to the exact artifact named.
 
 Do not combine packages, workers, clients, documentation, or persisted plans
 from those contexts. An installation requirement tells a resolver which
 versions it may install. Rule: resolver eligibility is not support evidence.
 Classifiers, documentation, and release notes must describe evidence for the
-matching artifact rather than silently promoting unreleased `main` behavior to
-the published alpha.
+matching artifact rather than silently promoting candidate behavior to the
+published testing artifact.
 
 ## Current evidence
 
-The current unreleased source tree has the following repository-operated
-evidence:
+The current candidate source tree has the following repository-operated
+evidence; exact candidate evidence must be checked against its commit and wheel:
 
 - Python 3.12 and 3.13 run the full SQLite/unit/integration CI.
 - Django 5.2, 6.0, and 6.1 each run on both tested Python lines.
@@ -164,10 +165,11 @@ See the [AskLens specification](asklens-specification.md).
 `0.1.0a1` was a testing artifact only and is not a supported upgrade origin.
 There is no deprecation window. Host-owned responsibilities are accepted. The
 five packaged JSON Schemas stay internal, draft, unfrozen, and unversioned.
-Do not add schema versions or handle previous-shape compatibility. This tree is
-not a 0.2.0 release.
+Do not add schema versions or handle previous-shape compatibility. This exact
+candidate has not shipped, and no compatibility or supported upgrade from
+`0.1.0a1` is claimed.
 
 Do not add document versions or extension negotiation. Do not record or handle schema changes.
-Current first-install migrations, changelog entries, and source/wheel checks are
-evidence of the current tree; they do not make this commit a release. A version
-bump, tag, or upload still requires explicit maintainer authorization.
+Candidate first-install migrations, changelog entries, and source/wheel checks
+are evidence for this candidate; they do not make it a shipped release. Tagging
+and upload remain separately gated.

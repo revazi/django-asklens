@@ -4,7 +4,12 @@ All notable changes to Django AskLens will be documented here.
 
 The project is alpha and APIs may change before a stable release.
 
-## Unreleased
+## 0.2.0 — release candidate
+
+This section describes the exact `0.2.0` candidate source. It is not a shipped
+release; publication remains separately gated. `0.1.0a1` was a testing artifact
+and is not a supported upgrade origin. The AskLens specification and packaged
+schemas remain draft, internal, unfrozen, and unversioned.
 
 ### Fixed
 
@@ -36,7 +41,7 @@ The project is alpha and APIs may change before a stable release.
 - Added a language-neutral synthetic conformance corpus with explicit positive, structural, member/scope/security, budget, semantic, ordering/truncation, and serialization cases plus trusted SQLite replay.
 - Added required PostgreSQL 15/18 database-sensitive and conformance CI coverage with a development-only psycopg driver.
 - Added a source-checkout PostgreSQL 18 Compose reference database and one-command Playwright/Chromium smoke over the real synthetic ASGI/API/FastMCP demo, with project-scoped teardown and live providers disabled.
-- Added isolated source-wheel core/API/MCP install and published-`0.1.0a1` replacement evidence. It leaves the repository version unchanged and performs no upload, tag, or release.
+- Added isolated source-wheel core/API/MCP install checks and SQLite migration-state preservation evidence. These checks do not establish a supported upgrade from `0.1.0a1`.
 - Added API-6 package evidence that core source/wheel imports load neither DRF nor FastMCP, API wheels resolve the supported Django 5.2/6.0/6.1 and DRF `>=3.18,<4` bounds without FastMCP, and canonical responses for all four AskLens routes match source behavior exactly.
 - Added an informational, branch-aware `django_asklens` coverage baseline and critical-boundary map using a development-only coverage dependency, with no percentage threshold.
 
@@ -46,8 +51,8 @@ The project is alpha and APIs may change before a stable release.
 - Documented `tests.test_project` as the example Django AskLens integration, with a host-copy checklist for registration, scope, `execute_plan`, and optional adapters.
 - Expanded the AskLens specification to cover query plans, catalog/capabilities, trust, scope, types/operators, results, errors, budgets, and conformance. Docs now treat Django AskLens as the first implementation of that unversioned spec.
 - Django AskLens is documented as the first implementation of the AskLens specification. The spec is draft and unversioned; schema versioning and previous-shape compatibility are not used.
-- Recorded the first-release #66 clarification: `0.2.0` is the first real release target, `0.1.0a1` was a testing artifact only, and schema versions or previous-shape handling are not recorded. This does not bump the package version or make current `main` a 0.2.0 release.
-- Recorded the issue #66 document decision: the five packaged schemas stay internal, draft, unfrozen, and unversioned. Open document-versioning and extension-negotiation options are removed. This does not bump the package version, freeze a stable Python/HTTP/MCP surface, or make current `main` a 0.2.0 release.
+- Recorded the first-release #66 clarification: `0.2.0` is the first real release target, `0.1.0a1` was a testing artifact only, and schema versions or previous-shape handling are not recorded.
+- Recorded the issue #66 document decision: the five packaged schemas stay internal, draft, unfrozen, and unversioned. Open document-versioning and extension-negotiation options are removed. This does not freeze a stable Python/HTTP/MCP surface.
 - Deliberately changed successful query/help envelopes. Query success now embeds the complete core result under `result`, including optional `empty`, instead of spreading result fields. Capability/help success keeps exact machine `capabilities` and permission-scoped `catalog` children while grouping adapter routing under `routing` and human guidance under `help`. Repository admin/frontend/MCP/demo consumers remain on the shared orchestrator; MCP preserves its separate default row-omission policy.
 - Deliberately changed the alpha HTTP error contract for the four AskLens DRF views to one `{error, run_id?}` envelope. Request/parser/media/method failures use `asklens.parse.invalid`; authentication/permission/debug denials use `asklens.authorization.denied`; opaque run lookup uses `asklens.member.unavailable`; throttling uses `asklens.budget.exceeded`; and audit-unavailable/unexpected failures use `asklens.execute.failed`. Status codes and applicable `Allow`, `WWW-Authenticate`, and `Retry-After` headers are preserved.
 - `QueryRequestSerializer` now rejects every unknown top-level key before shared orchestration, audit, or application-data SQL instead of silently discarding it. Rejections do not reflect the key, value, or serializer diagnostics.

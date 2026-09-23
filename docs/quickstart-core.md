@@ -7,16 +7,16 @@ provider call, frontend, or MCP integration.
 ## Artifact boundary
 
 > [!IMPORTANT]
-> This guide is for unreleased current source or a separately verified exact
-> candidate wheel. It is not the published PyPI `0.1.0a1`, and it is not a
-> release or upgrade claim. PyPI users must install `django-asklens==0.1.0a1`
-> and use the immutable
+> This guide is for the exact `0.2.0` candidate source or a separately verified
+> candidate wheel. It is not the published PyPI `0.1.0a1`, a shipped release,
+> or a supported upgrade claim. PyPI users must install
+> `django-asklens==0.1.0a1` and use the immutable
 > [`v0.1.0a1` documentation](https://github.com/revazi/django-asklens/blob/v0.1.0a1/README.md).
-> Do not combine those published bytes with this unreleased-main contract.
+> Do not combine those published bytes with this candidate contract.
 
 The disposable smoke at the end builds one wheel from the current local source,
 installs that exact file, and reports its digest. See
-[Installation](installation.md#unreleased-mainsource-checkout-for-contributors).
+[Installation](installation.md#0.2.0-release-candidate-source).
 
 ## 1. Install the exact core artifact
 
@@ -28,14 +28,14 @@ mkdir asklens-core-quickstart
 cd asklens-core-quickstart
 python -m venv .venv-asklens-core
 .venv-asklens-core/bin/python -m pip install --no-cache-dir \
-  /absolute/path/to/django_asklens-0.1.0a1-py3-none-any.whl
+  /absolute/path/to/django_asklens-0.2.0-py3-none-any.whl
 .venv-asklens-core/bin/django-admin startproject quickstart .
 .venv-asklens-core/bin/python manage.py startapp shop
 ```
 
-The unchanged `0.1.0a1` filename can identify either published or unreleased
-bytes, so the absolute path and separately verified SHA-256 digest matter. A
-same-version local replacement is not a resolver upgrade or public release.
+Verify the exact candidate wheel's absolute path and SHA-256 digest before
+installing it. Candidate metadata does not imply compatibility with `0.1.0a1`
+or a supported upgrade path.
 
 Add the core package and the project-owned app config to
 `quickstart/settings.py`:
@@ -245,7 +245,7 @@ with permission, membership, model, or scope diagnostics.
 
 ## 7. Run the disposable wheel smoke
 
-From the unreleased source checkout:
+From the candidate source checkout:
 
 ```bash
 bash scripts/quickstart-core-smoke.sh

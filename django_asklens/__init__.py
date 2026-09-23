@@ -14,7 +14,7 @@ from django_asklens.contracts import (
     list_contract_schemas,
 )
 
-__version__ = "0.1.0a1"
+__version__ = "0.2.0"
 
 __all__ = [
     "CONTRACT_SCHEMA_NAMES",
