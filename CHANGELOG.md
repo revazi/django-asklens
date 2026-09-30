@@ -13,6 +13,8 @@ schemas remain draft, internal, unfrozen, and unversioned.
 
 ### Fixed
 
+- Updated the development lock's indirect PyJWT from 2.13.0 to 2.15.1 after the point-in-time locked audit reported ten fixed advisories; runtime package requirements and extras are unchanged.
+- The disposable core/API quickstart smoke now verifies exact local-wheel provenance through byte-for-byte installed package comparison without requiring pip's optional `direct_url.json` metadata.
 - The packaged draft query-plan JSON Schema now requires nonempty string values for `contains` and `icontains`, matching existing runtime parse behavior. Development-only independent Draft 2020-12 validation now checks packaged schemas and conformance fixtures; runtime dependencies and accepted query behavior are unchanged.
 - Initial query permission-resolver failures now return the existing safe `asklens.authorization.denied` error through API/admin/MCP orchestration, rather than raw helper exceptions or a generic API `500`. The query API now returns `400` for these failures, matching execution-time authorization errors; route authentication/permission status codes are unchanged. Failure stops planning and help fallback, retains fresh facade revalidation, and follows the configured audit mode without storing private content by default. No settings or database migration is required.
 - Invalid audit mode types and custom audit sink import/initialization failures now use the existing safe `asklens.binding.invalid` error instead of escaping as raw exceptions. Failure to resolve auditing preserves an existing safe rejection and never selects another sink or triggers data execution.

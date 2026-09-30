@@ -783,11 +783,14 @@ def test_authenticated_api_quickstart_is_current_private_and_disposable() -> Non
         'statuses == ["failed", "success", "success"]',
         'run.question == ""',
         'set(run.plan) <= {"resource", "intent"}',
+        "Installed AskLens bytes differ from the local wheel.",
         "PASS authenticated API quickstart exact-wheel smoke",
     ):
         assert required in script
 
     for forbidden in (
+        'distribution.read_text("direct_url.json")',
+        "Exact local wheel installation has no direct_url.json.",
         "rm -rf",
         "twine upload",
         "git push",
