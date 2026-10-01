@@ -4,12 +4,15 @@ Django AskLens is the Django implementation of the [AskLens specification](askle
 
 Django AskLens was created by [Revaz Zakalashvili](https://github.com/revazi) ([revaz.zakalashvili@gmail.com](mailto:revaz.zakalashvili@gmail.com)).
 
-## Package provenance: choose documentation by artifact
+## Package provenance
 
 > [!IMPORTANT]
-> PyPI currently serves `django-asklens==0.1.0a1`, a testing artifact; install that exact version and use the immutable [documentation tagged `v0.1.0a1`](https://github.com/revazi/django-asklens/blob/v0.1.0a1/README.md). This branch prepares a `0.2.0` candidate, not a shipped release or supported upgrade from `0.1.0a1`.
+> These docs describe `django-asklens==0.2.0`. Install that exact release and use
+> the immutable [documentation tagged `v0.2.0`](https://github.com/revazi/django-asklens/blob/v0.2.0/README.md).
 >
-> Do not combine published-alpha packages with candidate instructions or mix those artifacts across workers or clients. [Choose the matching published or exact candidate instructions](installation.md) before using the guides below.
+> The historical `0.1.0a1` package was a testing artifact and is not a supported
+> upgrade origin. Do not mix its bytes or tagged docs with `0.2.0`. See
+> [Installation](installation.md) before using the guides below.
 
 ## Guides
 

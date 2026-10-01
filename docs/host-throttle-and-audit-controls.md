@@ -90,7 +90,7 @@ If a request passes host controls, AskLens executes normally and applies
 
 ## 5) Audit sink guidance
 
-For this pre-0.2 alpha-candidate scope, the current operational audit sink for
+For the current `0.2.0` alpha scope, the operational audit sink for
 custom integrations is:
 
 - `DJANGO_ASKLENS["AUDIT_MODE"] = "custom"` with `AUDIT_SINK`

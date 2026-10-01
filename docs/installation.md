@@ -1,34 +1,32 @@
 # Installation
 
-Choose instructions by artifact provenance. Published PyPI `0.1.0a1` is a testing artifact, while this branch prepares a `0.2.0` release candidate. The candidate has not shipped, and `0.1.0a1` is not a supported upgrade origin.
+Install the exact `0.2.0` release for the package surface you need. The
+historical `0.1.0a1` package was a testing artifact and is not a supported
+upgrade origin.
 
-## Published PyPI testing artifact: 0.1.0a1
-
-PyPI currently serves only the published `django-asklens==0.1.0a1` alpha. Use an exact version pin for the surface you need.
+## Published PyPI release: 0.2.0
 
 Core package:
 
 ```bash
-python -m pip install 'django-asklens==0.1.0a1'
+python -m pip install 'django-asklens==0.2.0'
 ```
 
 Optional DRF API and packaged reference frontend:
 
 ```bash
-python -m pip install 'django-asklens[api]==0.1.0a1'
+python -m pip install 'django-asklens[api]==0.2.0'
 ```
 
 Optional FastMCP bridge:
 
 ```bash
-python -m pip install 'django-asklens[mcp]==0.1.0a1'
+python -m pip install 'django-asklens[mcp]==0.2.0'
 ```
 
-Use the immutable [historical documentation tagged `v0.1.0a1`](https://github.com/revazi/django-asklens/blob/v0.1.0a1/README.md). Do not use candidate instructions with this package.
+Use the immutable [documentation tagged `v0.2.0`](https://github.com/revazi/django-asklens/blob/v0.2.0/README.md). Do not combine `0.2.0` instructions with the historical `0.1.0a1` testing artifact.
 
-## 0.2.0 release candidate source
-
-This candidate source is for contributor validation and exact local-artifact checks. It is not a shipped release, PyPI package, or supported upgrade from `0.1.0a1`.
+## Source checkout and exact local artifacts
 
 Use `uv` when developing in this repository:
 
@@ -37,25 +35,43 @@ uv sync --group dev
 uv run pytest
 ```
 
-Do not mix published-alpha artifacts with candidate artifacts across workers, clients, or environments. Candidate wheels report `0.2.0`; this distinct version does not imply compatibility or a supported upgrade path from the `0.1.0a1` testing artifact.
+A local wheel reports `0.2.0`, but its version alone does not prove provenance.
+Verify the source commit and artifact digest. No compatibility or supported
+upgrade from the `0.1.0a1` testing artifact is claimed.
 
-### Exact candidate package evidence
+### Exact release package evidence
 
-The opt-in package smoke validates the exact candidate artifact only:
+The opt-in package smoke validates an exact local `0.2.0` artifact:
 
 ```bash
 bash scripts/alpha-candidate-package-smoke.sh
 ```
 
-The command requires Python 3.12+ and `uv`. It builds the exact candidate source into a temporary wheel, checks that Docker, Playwright, and psycopg did not leak into runtime requirements or extras, and installs the core, API, and MCP wheel surfaces in separate temporary environments. A disposable SQLite project verifies candidate migrations and synthetic migration-state preservation. Every temporary environment and artifact is removed at exit.
+The command requires Python 3.12+, `uv`, Git, `tar`, and a clean source tree. It
+exports the exact `HEAD` commit into a temporary build tree, runs installed-wheel
+checks outside the repository root, and checks that Docker,
+Playwright, and psycopg did not leak
+into runtime requirements or extras, and installs the core, API, and MCP wheel
+surfaces in separate temporary environments. A disposable SQLite project
+verifies migrations and synthetic migration-state preservation. Every temporary
+environment and artifact is removed at exit.
 
-The smoke installs only the local `0.2.0` candidate wheel and does not install or replace the `0.1.0a1` testing artifact. The migration-state exercise is synthetic SQLite evidence, not a supported upgrade test. The script does not upload, tag, publish, or release anything.
+The smoke does not install or replace the `0.1.0a1` testing artifact. Its
+migration-state exercise is synthetic SQLite evidence, not a supported upgrade
+test. The script does not upload, tag, publish, or release anything.
 
-The smoke creates a disposable SQLite Django project in its temporary workdir, applies candidate migrations (`0001_initial` and `0002_add_admin_query_proxy`), and creates one synthetic `SemanticQueryRun` row. It runs `migrate --plan`, `migrate`, `showmigrations`, `check`, and `makemigrations --check --dry-run`, then verifies the row, proxy model, and AskLens table shape. This is candidate SQLite evidence only, not a supported upgrade test or PostgreSQL migration evidence.
+The smoke creates a disposable SQLite Django project in its temporary workdir,
+applies migrations (`0001_initial` and `0002_add_admin_query_proxy`), and creates
+one synthetic `SemanticQueryRun` row. It runs `migrate --plan`, `migrate`,
+`showmigrations`, `check`, and `makemigrations --check --dry-run`, then verifies
+the row, proxy model, and AskLens table shape. This is local SQLite evidence,
+not a supported upgrade test or PostgreSQL migration evidence.
 
-## Authenticated API prerequisites for exact candidate artifacts
+## Authenticated API prerequisites for exact 0.2.0 artifacts
 
-These prerequisites document the optional DRF adapter in candidate source or an exact verified wheel. They are not instructions for the published PyPI `0.1.0a1` and do not imply a supported upgrade.
+These prerequisites document the optional DRF adapter in the `0.2.0` package or
+an exact locally verified wheel. They do not imply a supported upgrade from
+`0.1.0a1`.
 
 ```bash
 python -m pip install '/verified/path/django_asklens-0.2.0-py3-none-any.whl[api]'

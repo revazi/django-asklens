@@ -5,10 +5,10 @@ usage() {
   cat <<'EOF'
 Usage: bash scripts/alpha-candidate-package-smoke.sh [--help]
 
-Build the exact 0.2.0 candidate source into a temporary wheel and exercise
-isolated core/API/MCP installs plus SQLite migration-state preservation. This
-produces candidate evidence only; it does not support upgrades from 0.1.0a1 or
-upload, tag, publish, or release anything.
+Build the exact committed 0.2.0 release source into a temporary wheel and
+exercise isolated core/API/MCP installs plus SQLite migration-state
+preservation. This produces local artifact evidence only; it does not support
+upgrades from 0.1.0a1 or upload, tag, publish, or release anything.
 EOF
 }
 
@@ -36,6 +36,22 @@ command -v uv >/dev/null 2>&1 || {
   echo "uv is required. See docs/installation.md." >&2
   exit 1
 }
+command -v git >/dev/null 2>&1 || {
+  echo "git is required to identify and export the exact source commit." >&2
+  exit 1
+}
+command -v tar >/dev/null 2>&1 || {
+  echo "tar is required to unpack the exact source commit." >&2
+  exit 1
+}
+
+source_status="$(git status --porcelain --untracked-files=all)"
+if [[ -n "$source_status" ]]; then
+  echo "Refusing to build package evidence from a dirty source tree:" >&2
+  printf '%s\n' "$source_status" >&2
+  exit 1
+fi
+source_commit="$(git rev-parse --verify HEAD)"
 
 workdir="$(mktemp -d)"
 cleanup() {
@@ -45,15 +61,12 @@ trap cleanup EXIT
 artifacts="$workdir/artifacts"
 source_tree="$workdir/source"
 mkdir -p "$artifacts" "$source_tree"
-for source_file in \
-  CHANGELOG.md CONTRIBUTING.md LICENSE MANIFEST.in README.md SECURITY.md compose.yaml pyproject.toml; do
-  cp "$source_file" "$source_tree/"
-done
-for source_directory in conformance django_asklens docs examples scripts; do
-  cp -R "$source_directory" "$source_tree/"
-done
-mkdir -p "$source_tree/tests"
-cp -R tests/e2e "$source_tree/tests/"
+git archive "$source_commit" -- \
+  CHANGELOG.md CONTRIBUTING.md LICENSE MANIFEST.in README.md SECURITY.md \
+  compose.yaml pyproject.toml conformance django_asklens docs examples scripts \
+  tests/e2e \
+  | tar -x -C "$source_tree"
+echo "Building exact source commit: $source_commit"
 evidence_python="$(uv run --no-sync python -c 'import sys; print(sys.executable)')"
 
 build_log="$workdir/build.log"
@@ -182,14 +195,17 @@ uv run --no-sync python -m venv "$upgrade_venv"
   --index-url https://pypi.org/simple \
   "Django>=5.2,<7.0" \
   "$wheel" >/dev/null
-"$upgrade_venv/bin/python" - <<'PY'
+(
+  cd "$workdir"
+  "$upgrade_venv/bin/python" - <<'PY'
 from importlib.metadata import version
 
 assert version("django-asklens") == "0.2.0"
-print("PASS exact 0.2.0 candidate wheel installed")
+print("PASS exact 0.2.0 release wheel installed")
 PY
+)
 
-# Candidate migration-state preservation is synthetic SQLite evidence only.
+# Release migration-state preservation is synthetic SQLite evidence only.
 # The 0.1.0a1 testing artifact is not a supported upgrade origin.
 probe_root="$workdir/migration-probe"
 probe_project="$probe_root/probeproj"
@@ -203,7 +219,7 @@ cat > "$probe_project/urls.py" <<'EOF'
 urlpatterns = []
 EOF
 cat > "$probe_project/settings.py" <<'EOF'
-"""Probe settings used to exercise candidate migration state in SQLite."""
+"""Probe settings used to exercise release migration state in SQLite."""
 
 import os
 
@@ -232,6 +248,7 @@ EOF
 # SQLite-only migration-state preservation; this is package evidence, not a production upgrade check.
 probe_python() {
   (
+    cd "$workdir"
     export PYTHONPATH="$probe_root"
     export DJANGO_SETTINGS_MODULE=probeproj.settings
     export ASKLENS_MIGRATION_PROBE_DB="$probe_db"
@@ -262,10 +279,10 @@ asklens_migrations = {
     if migration[0] == "asklens"
 }
 assert asklens_migrations == {("asklens", "0001_initial"), ("asklens", "0002_add_admin_query_proxy")}
-print("PASS candidate migration graph is exact: 0001_initial and 0002_add_admin_query_proxy")
+print("PASS release migration graph is exact: 0001_initial and 0002_add_admin_query_proxy")
 
 row = SemanticQueryRun.objects.create(
-    question="synthetic candidate probe",
+    question="synthetic release probe",
     plan={"resource": "synthetic_probe", "intent": "list"},
     status="success",
     row_count=1,
@@ -274,11 +291,11 @@ row = SemanticQueryRun.objects.create(
 )
 assert row.pk == 1
 assert SemanticQueryRun.objects.count() == 1
-print("PASS candidate migration state initialized with one synthetic row")
+print("PASS release migration state initialized with one synthetic row")
 PY
 
 probe_plan_output="$(probe_manage migrate --plan 2>&1)"
-printf 'PASS migrate --plan on exact 0.2.0 candidate:\n%s\n' "$probe_plan_output"
+printf 'PASS migrate --plan on exact 0.2.0 release:\n%s\n' "$probe_plan_output"
 probe_manage migrate --noinput --verbosity 1
 probe_manage showmigrations asklens
 probe_manage check
@@ -313,7 +330,7 @@ asklens_tables = [
 assert asklens_tables == ["asklens_semanticqueryrun"]
 
 row = SemanticQueryRun.objects.get()
-assert row.question == "synthetic candidate probe"
+assert row.question == "synthetic release probe"
 assert row.plan == {"resource": "synthetic_probe", "intent": "list"}
 assert row.status == "success"
 assert row.row_count == 1
@@ -321,8 +338,8 @@ assert row.duration_ms == 7
 assert AskLensQuery._meta.proxy
 assert AskLensQuery._meta.db_table == SemanticQueryRun._meta.db_table
 assert AskLensQuery.objects.count() == 1
-print("PASS candidate migration graph is exact: 0001_initial and 0002_add_admin_query_proxy")
-print("PASS synthetic SemanticQueryRun row preserved across candidate install")
+print("PASS release migration graph is exact: 0001_initial and 0002_add_admin_query_proxy")
+print("PASS synthetic SemanticQueryRun row preserved across release install")
 print("PASS AskLensQuery remains a proxy over asklens_semanticqueryrun table")
 PY
 
@@ -351,10 +368,13 @@ with zipfile.ZipFile(wheel) as archive:
         assert (installed_root / relative_path).read_bytes() == archive.read(
             f"django_asklens/{relative_path}"
         )
-print("PASS exact candidate install matches source-wheel files")
+print("PASS exact release install matches source-wheel files")
 PY
 )
-DJANGO_VERSION_PREFIX="6.1." \
-  "$upgrade_venv/bin/python" .github/scripts/wheel_smoke.py core
+(
+  cd "$workdir"
+  DJANGO_VERSION_PREFIX="6.1." \
+    "$upgrade_venv/bin/python" "$root/.github/scripts/wheel_smoke.py" core
+)
 
-echo "PASS exact 0.2.0 candidate package evidence only; no release was performed"
+echo "PASS exact 0.2.0 local package evidence only; no publication was performed"

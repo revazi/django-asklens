@@ -4,13 +4,14 @@ Django AskLens is an LLM-assisted data access package. Treat it like a reporting
 
 ## Supported versions
 
-Until the first stable release, security fixes are handled on the latest unreleased/pre-alpha code line only.
+Until the first stable release, security fixes are handled on the latest
+published alpha and the current `main` development line.
 
 | Version | Supported |
 | --- | --- |
 | `main` (unreleased alpha work) | Yes |
-| `0.1.0a1` (published alpha) | Yes |
-| `0.1.0a0` and older snapshots | No |
+| `0.2.0` | Yes |
+| `0.1.0a1` testing artifact and older snapshots | No |
 
 ## Reporting a vulnerability
 
