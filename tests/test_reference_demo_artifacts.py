@@ -74,8 +74,8 @@ def test_020_technical_acceptance_evidence_stays_exact_and_bounded() -> None:
         "generated ignored `django_asklens.egg-info` metadata",
         "local test-environment contamination",
         "At the audited commit, package metadata and PyPI both reported `0.1.0a1`",
-        "candidate metadata to `0.2.0`",
-        "Tag, GitHub release, and PyPI upload remain separately gated",
+        "The `0.2.0` release does not claim a supported upgrade",
+        "Tagging, the GitHub release, and PyPI upload were separately gated",
         "R5/R6 and independent security review were previously waived as gates",
         "No live-provider, external-pilot, independent-security-review, production-"
         "certification, second-implementation, or backend-neutral evidence exists",
@@ -504,35 +504,34 @@ def test_api4a_source_and_exact_wheel_evidence_are_strict_and_route_local() -> N
         assert required in wheel_smoke
 
 
-def test_package_provenance_separates_published_and_candidate_docs() -> None:
-    """Published PyPI 0.1.0a1 instructions cannot be confused with candidate docs."""
+def test_package_provenance_documents_exact_0_2_release() -> None:
+    """Published 0.2.0 instructions stay exact and reject artifact mixing."""
 
     readme = read_text(ROOT / "README.md")
     index = read_text(ROOT / "docs" / "index.md")
     install = read_text(ROOT / "docs" / "installation.md")
-    tagged_docs = "https://github.com/revazi/django-asklens/blob/v0.1.0a1/README.md"
+    tagged_docs = "https://github.com/revazi/django-asklens/blob/v0.2.0/README.md"
 
-    provenance_heading = "## Package provenance: published alpha versus candidate"
-    main_quickstart_heading = "## 0.2.0 candidate quickstart"
+    provenance_heading = "## Package provenance"
+    main_quickstart_heading = "## 0.2.0 quickstart"
     assert provenance_heading in readme
-    assert "PyPI currently serves `django-asklens==0.1.0a1`" in readme
-    assert "This branch prepares a `0.2.0` candidate" in readme
-    assert "that candidate has not shipped" in readme
-    assert "not a supported upgrade from `0.1.0a1`" in readme
-    assert "python -m pip install 'django-asklens==0.1.0a1'" in readme
+    assert "`django-asklens==0.2.0`" in readme
+    assert "python -m pip install 'django-asklens==0.2.0'" in readme
+    assert "first supported" in readme
+    assert "not a supported upgrade origin" in " ".join(
+        readme.replace("\n> ", " ").split()
+    )
     assert tagged_docs in readme
     assert main_quickstart_heading in readme
     assert readme.index(provenance_heading) < readme.index("## What it provides")
     assert readme.index(provenance_heading) < readme.index(main_quickstart_heading)
-    assert readme.index("0.2.0` candidate") < readme.index(main_quickstart_heading)
     assert "python -m pip install 'django-asklens[api]'" not in readme
 
-    published_heading = "## Published PyPI testing artifact: 0.1.0a1"
-    source_heading = "## 0.2.0 release candidate source"
+    published_heading = "## Published PyPI release: 0.2.0"
+    source_heading = "## Source checkout and exact local artifacts"
     for heading in (published_heading, source_heading):
         assert heading in install
     assert install.index(published_heading) < install.index(source_heading)
-    assert "## Maintainer-supplied private candidate evaluation" not in install
 
     published_section = install[
         install.index(published_heading) : install.index(source_heading)
@@ -543,26 +542,25 @@ def test_package_provenance_separates_published_and_candidate_docs() -> None:
         if line.startswith("python -m pip install")
     ]
     assert published_commands == [
-        "python -m pip install 'django-asklens==0.1.0a1'",
-        "python -m pip install 'django-asklens[api]==0.1.0a1'",
-        "python -m pip install 'django-asklens[mcp]==0.1.0a1'",
+        "python -m pip install 'django-asklens==0.2.0'",
+        "python -m pip install 'django-asklens[api]==0.2.0'",
+        "python -m pip install 'django-asklens[mcp]==0.2.0'",
     ]
     assert tagged_docs in published_section
 
     source_section = install[install.index(source_heading) :]
-    assert "not a shipped release" in source_section
-    assert "or supported upgrade from `0.1.0a1`" in source_section
-    assert "### Exact candidate package evidence" in source_section
+    assert "not a supported upgrade" in source_section
+    assert "### Exact release package evidence" in source_section
     assert "not a supported upgrade test" in source_section
     assert "private-candidate-evaluation.md" not in install
     assert "pilot-intake-worksheet.md" not in install
 
-    index_heading = "## Package provenance: choose documentation by artifact"
-    assert index_heading in index
-    assert index.index(index_heading) < index.index("## Guides")
-    assert "PyPI currently serves `django-asklens==0.1.0a1`" in index
-    assert "This branch prepares a `0.2.0` candidate" in index
-    assert "not a shipped release or supported upgrade from `0.1.0a1`" in index
+    assert index.index("## Package provenance") < index.index("## Guides")
+    assert "`django-asklens==0.2.0`" in index
+    assert "documentation tagged `v0.2.0`" in index
+    assert "not a supported upgrade origin" in " ".join(
+        index.replace("\n> ", " ").split()
+    )
     assert tagged_docs in index
     assert "[AskLens specification](asklens-specification.md)" in index
     assert ASKLENS_SPECIFICATION.is_file()
@@ -597,9 +595,9 @@ def test_core_quickstart_is_linear_executable_and_fail_closed() -> None:
 
     normalized_guide = " ".join(guide.replace("\n> ", " ").split())
     for required in (
-        "exact `0.2.0` candidate source",
-        "candidate wheel",
-        "not the published PyPI `0.1.0a1`",
+        "exact `django-asklens==0.2.0` release",
+        "locally built wheel",
+        "not a supported upgrade origin",
         'scope_mode="global"',
         'scope_mode="context_scoped"',
         "scope_provider=visible_scoped_facts",
@@ -677,11 +675,11 @@ def test_authenticated_api_quickstart_is_current_private_and_disposable() -> Non
     assert "host-created authenticated user" in readme
     assert "does not provide a login or token endpoint" in readme
 
-    install_heading = "## Authenticated API prerequisites for exact candidate artifacts"
+    install_heading = "## Authenticated API prerequisites for exact 0.2.0 artifacts"
     assert install_heading in install
     install_section = install[install.index(install_heading) :]
     for required in (
-        "exact verified wheel",
+        "exact locally verified wheel",
         "[api]",
         '"rest_framework"',
         '"django.contrib.sessions"',
@@ -710,9 +708,9 @@ def test_authenticated_api_quickstart_is_current_private_and_disposable() -> Non
     assert usage_positions == sorted(usage_positions)
     normalized_usage = " ".join(usage.replace("\n> ", " ").split())
     for required in (
-        "exact `0.2.0` candidate source",
-        "candidate wheel",
-        "not the published PyPI `0.1.0a1`",
+        "`django-asklens==0.2.0`",
+        "locally built wheel",
+        "not a supported upgrade origin",
         "normal user",
         "server-owned",
         "AppConfig.ready()",
@@ -934,6 +932,10 @@ def test_package_evidence_is_isolated_and_never_releases() -> None:
     script = read_text(PACKAGE_SCRIPT)
 
     assert "mktemp -d" in script
+    assert "git status --porcelain --untracked-files=all" in script
+    assert 'git archive "$source_commit"' in script
+    assert "Refusing to build package evidence from a dirty source tree" in script
+    assert "Refusing package evidence with generated source artifact" in script
     assert '"$wheel" >/dev/null' in script
     assert "django-asklens==0.1.0a1" not in script
     assert "--force-reinstall" not in script
@@ -959,7 +961,7 @@ def test_package_evidence_is_isolated_and_never_releases() -> None:
 
 
 def test_package_migration_probe_is_disposable_and_scoped() -> None:
-    """Package smoke validates candidate SQLite migration-state preservation."""
+    """Package smoke validates release SQLite migration-state preservation."""
 
     script = read_text(PACKAGE_SCRIPT)
 
@@ -976,15 +978,15 @@ def test_package_migration_probe_is_disposable_and_scoped() -> None:
     assert "AskLensQuery._meta.proxy" in script
     assert "AskLensQuery._meta.db_table" in script
     assert "SemanticQueryRun.objects.get()" in script
-    assert "synthetic candidate probe" in script
+    assert "synthetic release probe" in script
     assert (
-        "PASS candidate migration graph is exact: 0001_initial and"
+        "PASS release migration graph is exact: 0001_initial and"
         " 0002_add_admin_query_proxy" in script
     )
-    assert "PASS candidate migration state initialized with one synthetic row" in script
+    assert "PASS release migration state initialized with one synthetic row" in script
     assert (
         script.count(
-            "PASS candidate migration graph is exact: 0001_initial and"
+            "PASS release migration graph is exact: 0001_initial and"
             " 0002_add_admin_query_proxy"
         )
         == 2
@@ -1251,7 +1253,7 @@ def test_support_lifecycle_policy_stays_evidence_bounded() -> None:
         "AskLens specification",
         "internal, draft, unfrozen, and unversioned",
         "Do not add document versions",
-        "candidate has not shipped",
+        "first supported alpha release",
         "testing artifact only",
         "not a supported upgrade origin",
         "Do not record or handle schema changes",
@@ -1312,8 +1314,8 @@ def test_alpha_surface_inventory_does_not_accept_a_stable_contract() -> None:
         "internal, draft, unfrozen, and unversioned",
         "AskLens specification",
         "do not add document versions",
-        "This branch prepares a `0.2.0` release candidate",
-        "candidate has not shipped",
+        "Version `0.2.0` is the first supported alpha release",
+        "first supported alpha release",
         "testing artifact only",
         "not a supported upgrade origin",
         "Do not record or handle previous-version schema changes",
@@ -1670,7 +1672,7 @@ def test_source_demo_and_candidate_commands_are_documented() -> None:
     assert "backend-neutral" in demo
     assert "alpha-candidate" in demo
     assert "alpha-candidate-package-smoke.sh" in install
-    assert "Published PyPI testing artifact: 0.1.0a1" in install
+    assert "Published PyPI release: 0.2.0" in install
     assert "statement timeout" in production.lower()
     assert "request timeout" in production.lower()
     assert "rate" in production.lower()

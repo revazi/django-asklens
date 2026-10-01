@@ -9,23 +9,20 @@ an API or create a SemVer-stable compatibility guarantee.
 
 Artifact provenance remains part of every support statement:
 
-- PyPI currently publishes `django-asklens==0.1.0a1`; use its immutable tagged
-  documentation. That package was a testing artifact only and is not a
-  supported upgrade origin.
-- This branch prepares a `0.2.0` candidate. Candidate validation is not
-  publication, and support statements apply only to the exact artifact named.
+- PyPI publishes `django-asklens==0.2.0`; use its immutable tagged
+  documentation. This is the first supported alpha release.
+- `0.1.0a1` was a testing artifact only and is not a supported upgrade origin.
 
 Do not combine packages, workers, clients, documentation, or persisted plans
-from those contexts. An installation requirement tells a resolver which
+from those versions. An installation requirement tells a resolver which
 versions it may install. Rule: resolver eligibility is not support evidence.
 Classifiers, documentation, and release notes must describe evidence for the
-matching artifact rather than silently promoting candidate behavior to the
-published testing artifact.
+matching artifact.
 
 ## Current evidence
 
-The current candidate source tree has the following repository-operated
-evidence; exact candidate evidence must be checked against its commit and wheel:
+The `0.2.0` release source has the following repository-operated evidence;
+local artifact evidence must be checked against its commit and wheel:
 
 - Python 3.12 and 3.13 run the full SQLite/unit/integration CI.
 - Django 5.2, 6.0, and 6.1 each run on both tested Python lines.
@@ -165,11 +162,9 @@ See the [AskLens specification](asklens-specification.md).
 `0.1.0a1` was a testing artifact only and is not a supported upgrade origin.
 There is no deprecation window. Host-owned responsibilities are accepted. The
 five packaged JSON Schemas stay internal, draft, unfrozen, and unversioned.
-Do not add schema versions or handle previous-shape compatibility. This exact
-candidate has not shipped, and no compatibility or supported upgrade from
-`0.1.0a1` is claimed.
+Do not add schema versions or handle previous-shape compatibility. No compatibility or supported upgrade from `0.1.0a1` is claimed.
 
 Do not add document versions or extension negotiation. Do not record or handle schema changes.
-Candidate first-install migrations, changelog entries, and source/wheel checks
-are evidence for this candidate; they do not make it a shipped release. Tagging
-and upload remain separately gated.
+The first-install migrations, changelog entries, and source/wheel checks are
+repository-operated evidence for `0.2.0`; they are not production certification
+or an independent security review.

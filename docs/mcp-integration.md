@@ -4,16 +4,15 @@ Status: AskLens ships dependency-free MCP adapter helpers, an `AskLensMCPToolSet
 
 ## Bounded MCP quickstart
 
-This path is for the exact `0.2.0` candidate source, not the published PyPI `0.1.0a1` testing artifact.
-Install a local wheel in a fresh environment:
+This path is for `django-asklens==0.2.0`; the historical `0.1.0a1` testing
+artifact is not a supported upgrade origin. Install from PyPI:
 
 ```bash
-export ASKLENS_CANDIDATE_WHEEL=/verified/path/django_asklens-0.2.0-py3-none-any.whl
-python -m pip install "${ASKLENS_CANDIDATE_WHEEL}[mcp]"
+python -m pip install 'django-asklens[mcp]==0.2.0'
 ```
 
-Verify the candidate wheel's exact path and SHA-256 digest. This candidate is
-not a shipped release or a supported upgrade from the `0.1.0a1` testing artifact.
+For a locally built wheel, install it in a fresh environment only after
+verifying its source commit, exact path, and SHA-256 digest.
 
 Authenticate the MCP connection in the host, then map its trusted server-owned
 context to one Django request-like object:
@@ -114,10 +113,11 @@ Without AskLens, an MCP server that supports ad hoc analytics would still need t
 
 AskLens intentionally does not depend on a generic Django MCP package. Some generic implementations expose broad model/admin/DRF surfaces or depend on Django REST Framework, which conflicts with AskLens' optional-DRF core design and explicit semantic registration model.
 
-The dependency-free helpers live in the main `django-asklens` package. The optional FastMCP bridge is available through the `mcp` extra. For the candidate contract, install only the exact verified local artifact shown in the bounded quickstart:
+The dependency-free helpers live in the main `django-asklens` package. The optional FastMCP bridge is available through the `mcp` extra. For local release verification, install only the exact verified artifact shown in the bounded quickstart:
 
 ```bash
-python -m pip install "${ASKLENS_CANDIDATE_WHEEL}[mcp]"
+export ASKLENS_RELEASE_WHEEL=/verified/path/django_asklens-0.2.0-py3-none-any.whl
+python -m pip install "${ASKLENS_RELEASE_WHEEL}[mcp]"
 ```
 
 A separate package such as `django-asklens-mcp` may make sense later if AskLens grows a larger transport/server integration with its own dependency cadence. It is not needed for the current bridge layer.

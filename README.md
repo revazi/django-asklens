@@ -11,18 +11,21 @@ Status: **alpha**. APIs may change before a stable release.
 
 Django AskLens was created by [Revaz Zakalashvili](https://github.com/revazi) ([revaz.zakalashvili@gmail.com](mailto:revaz.zakalashvili@gmail.com)).
 
-## Package provenance: published alpha versus candidate
+## Package provenance
 
 > [!IMPORTANT]
-> PyPI currently serves `django-asklens==0.1.0a1`, a testing artifact. This branch prepares a `0.2.0` candidate; that candidate has not shipped and is not a supported upgrade from `0.1.0a1`.
->
-> To use the published alpha, install the exact version:
+> This documentation describes `django-asklens==0.2.0`, the first supported
+> release. Install the exact version and use the matching immutable
+> [documentation tagged `v0.2.0`](https://github.com/revazi/django-asklens/blob/v0.2.0/README.md):
 >
 > ```bash
-> python -m pip install 'django-asklens==0.1.0a1'
+> python -m pip install 'django-asklens==0.2.0'
 > ```
 >
-> Then use the immutable [documentation tagged `v0.1.0a1`](https://github.com/revazi/django-asklens/blob/v0.1.0a1/README.md), not the candidate quickstart below. Do not combine the published alpha with candidate artifacts across workers or clients. See [Installation](docs/installation.md) for exact artifact commands.
+> The previously published `0.1.0a1` package was a testing artifact and is not a
+> supported upgrade origin. Do not mix its package bytes or tagged documentation
+> with `0.2.0`. See [Installation](docs/installation.md) for optional extras and
+> exact artifact guidance.
 
 ## What it provides
 
@@ -41,9 +44,11 @@ Django AskLens was created by [Revaz Zakalashvili](https://github.com/revazi) ([
 - Frontend-agnostic `columns` + `data` JSON output.
 - Optional packaged browser UI for demos/reference use.
 
-## 0.2.0 candidate quickstart
+## 0.2.0 quickstart
 
-The example below describes the 0.2.0 release candidate. Use it only with this source checkout or an exact candidate wheel whose commit and SHA-256 digest you verified. It does not describe the API in the published PyPI alpha or claim that 0.2.0 has shipped.
+The example below describes the `0.2.0` release. Use it with the exact PyPI
+package, the immutable `v0.2.0` source tag, or a locally built wheel whose source
+commit and SHA-256 digest you verified.
 
 For a linear path that installs core only, wires one project-owned startup import, and executes current-request list plans, use the [Core-only executable quickstart](docs/quickstart-core.md).
 
@@ -230,7 +235,7 @@ When installed with the `api` extra, AskLens is API-first. Build your own UI wit
 
 The packaged frontend is optional and intended as a dependency-free demo/reference UI. Projects that need product-specific layout, charts, saved queries, or workflows should call the API directly. See [Building a custom AskLens UI](docs/custom-ui.md).
 
-For a concise source-checkout journey that starts with the scoped `facility-owner` identity, then separates frontend, admin query, view-only audit, safe denial, and reset steps, follow the [source demo frontend/admin first run](docs/test-project-demo.md#sqlite-frontend-and-admin-first-run-start-to-reset). It uses only synthetic data and deterministic offline help; it is not the published `0.1.0a1` package quickstart or a supported upgrade path.
+For a concise source-checkout journey that starts with the scoped `facility-owner` identity, then separates frontend, admin query, view-only audit, safe denial, and reset steps, follow the [source demo frontend/admin first run](docs/test-project-demo.md#sqlite-frontend-and-admin-first-run-start-to-reset). It uses only synthetic data and deterministic offline help; it is not a supported upgrade path from the historical `0.1.0a1` testing artifact.
 
 ## Optional packaged frontend
 

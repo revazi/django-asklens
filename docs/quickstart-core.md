@@ -7,16 +7,14 @@ provider call, frontend, or MCP integration.
 ## Artifact boundary
 
 > [!IMPORTANT]
-> This guide is for the exact `0.2.0` candidate source or a separately verified
-> candidate wheel. It is not the published PyPI `0.1.0a1`, a shipped release,
-> or a supported upgrade claim. PyPI users must install
-> `django-asklens==0.1.0a1` and use the immutable
-> [`v0.1.0a1` documentation](https://github.com/revazi/django-asklens/blob/v0.1.0a1/README.md).
-> Do not combine those published bytes with this candidate contract.
+> This guide describes the exact `django-asklens==0.2.0` release or a locally
+> built wheel whose source commit and digest you verified. The historical
+> `0.1.0a1` package was a testing artifact and is not a supported upgrade origin.
+> Do not combine its bytes or tagged docs with this release.
 
 The disposable smoke at the end builds one wheel from the current local source,
 installs that exact file, and reports its digest. See
-[Installation](installation.md#0.2.0-release-candidate-source).
+[Installation](installation.md#source-checkout-and-exact-local-artifacts).
 
 ## 1. Install the exact core artifact
 
@@ -33,9 +31,9 @@ python -m venv .venv-asklens-core
 .venv-asklens-core/bin/python manage.py startapp shop
 ```
 
-Verify the exact candidate wheel's absolute path and SHA-256 digest before
-installing it. Candidate metadata does not imply compatibility with `0.1.0a1`
-or a supported upgrade path.
+Verify a local wheel's absolute path and SHA-256 digest before installing it.
+Version metadata alone does not establish provenance, compatibility with
+`0.1.0a1`, or a supported upgrade path.
 
 Add the core package and the project-owned app config to
 `quickstart/settings.py`:
@@ -245,7 +243,7 @@ with permission, membership, model, or scope diagnostics.
 
 ## 7. Run the disposable wheel smoke
 
-From the candidate source checkout:
+From the `v0.2.0` source checkout or current development checkout:
 
 ```bash
 bash scripts/quickstart-core-smoke.sh

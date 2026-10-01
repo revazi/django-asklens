@@ -4,12 +4,11 @@ All notable changes to Django AskLens will be documented here.
 
 The project is alpha and APIs may change before a stable release.
 
-## 0.2.0 — release candidate
+## 0.2.0 — 2026-10-01
 
-This section describes the exact `0.2.0` candidate source. It is not a shipped
-release; publication remains separately gated. `0.1.0a1` was a testing artifact
-and is not a supported upgrade origin. The AskLens specification and packaged
-schemas remain draft, internal, unfrozen, and unversioned.
+This section describes the exact `0.2.0` release source. `0.1.0a1` was a testing
+artifact and is not a supported upgrade origin. The AskLens specification and
+packaged schemas remain draft, internal, unfrozen, and unversioned.
 
 ### Fixed
 

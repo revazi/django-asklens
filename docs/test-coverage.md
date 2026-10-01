@@ -72,12 +72,11 @@ documentation/script defect.
 ### Interpretation and release boundary
 
 At the audited commit, package metadata and PyPI both reported `0.1.0a1`;
-that historical audit predates release preparation. The present branch updates
-candidate metadata to `0.2.0` without claiming publication or a supported
-upgrade from the `0.1.0a1` testing artifact.
+that historical audit predates the `0.2.0` release. The `0.2.0` release does
+not claim a supported upgrade from the `0.1.0a1` testing artifact.
 
-Tag, GitHub release, and PyPI upload remain separately gated; this audit
-performed none of them.
+Tagging, the GitHub release, and PyPI upload were separately gated and were not
+performed by this historical audit.
 
 R5/R6 and independent security review were previously waived as gates for this
 first `0.2.0` release. That waiver does not create evidence that was not run. No

@@ -192,12 +192,9 @@ def test_mcp_quickstart_docs_cover_the_bounded_safe_flow() -> None:
     docs_index = (repository_root / "docs" / "index.md").read_text()
 
     for document in (guide, example):
-        assert "${ASKLENS_CANDIDATE_WHEEL}[mcp]" in document
-        assert "django_asklens-0.2.0-py3-none-any.whl" in document
-        assert "not a shipped release" in document or "not a public release" in document
-        assert (
-            "supported upgrade" in document or "normal upgrade from 0.1.0a1" in document
-        )
+        normalized_document = " ".join(document.split())
+        assert "python -m pip install 'django-asklens[mcp]==0.2.0'" in document
+        assert "not a supported upgrade" in normalized_document
         assert "server-owned" in document
         assert "asklens_capabilities" in document
         assert "resource_summaries" in document
