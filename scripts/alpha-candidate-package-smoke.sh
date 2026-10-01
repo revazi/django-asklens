@@ -51,12 +51,6 @@ if [[ -n "$source_status" ]]; then
   printf '%s\n' "$source_status" >&2
   exit 1
 fi
-for generated_path in build django_asklens.egg-info; do
-  if [[ -e "$generated_path" ]]; then
-    echo "Refusing package evidence with generated source artifact: $generated_path" >&2
-    exit 1
-  fi
-done
 source_commit="$(git rev-parse --verify HEAD)"
 
 workdir="$(mktemp -d)"
@@ -373,7 +367,10 @@ with zipfile.ZipFile(wheel) as archive:
 print("PASS exact release install matches source-wheel files")
 PY
 )
-DJANGO_VERSION_PREFIX="6.1." \
-  "$upgrade_venv/bin/python" .github/scripts/wheel_smoke.py core
+(
+  cd "$workdir"
+  DJANGO_VERSION_PREFIX="6.1." \
+    "$upgrade_venv/bin/python" "$root/.github/scripts/wheel_smoke.py" core
+)
 
 echo "PASS exact 0.2.0 local package evidence only; no publication was performed"

@@ -47,9 +47,9 @@ The opt-in package smoke validates an exact local `0.2.0` artifact:
 bash scripts/alpha-candidate-package-smoke.sh
 ```
 
-The command requires Python 3.12+, `uv`, Git, `tar`, a clean source tree, and no
-stale root `build/` or `django_asklens.egg-info/` directory. It exports the exact
-`HEAD` commit into a temporary build tree, checks that Docker,
+The command requires Python 3.12+, `uv`, Git, `tar`, and a clean source tree. It
+exports the exact `HEAD` commit into a temporary build tree, runs installed-wheel
+checks outside the repository root, and checks that Docker,
 Playwright, and psycopg did not leak
 into runtime requirements or extras, and installs the core, API, and MCP wheel
 surfaces in separate temporary environments. A disposable SQLite project

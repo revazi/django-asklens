@@ -935,7 +935,7 @@ def test_package_evidence_is_isolated_and_never_releases() -> None:
     assert "git status --porcelain --untracked-files=all" in script
     assert 'git archive "$source_commit"' in script
     assert "Refusing to build package evidence from a dirty source tree" in script
-    assert "Refusing package evidence with generated source artifact" in script
+    assert '"$root/.github/scripts/wheel_smoke.py" core' in script
     assert '"$wheel" >/dev/null' in script
     assert "django-asklens==0.1.0a1" not in script
     assert "--force-reinstall" not in script
