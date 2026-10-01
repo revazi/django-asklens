@@ -195,12 +195,15 @@ uv run --no-sync python -m venv "$upgrade_venv"
   --index-url https://pypi.org/simple \
   "Django>=5.2,<7.0" \
   "$wheel" >/dev/null
-"$upgrade_venv/bin/python" - <<'PY'
+(
+  cd "$workdir"
+  "$upgrade_venv/bin/python" - <<'PY'
 from importlib.metadata import version
 
 assert version("django-asklens") == "0.2.0"
 print("PASS exact 0.2.0 release wheel installed")
 PY
+)
 
 # Release migration-state preservation is synthetic SQLite evidence only.
 # The 0.1.0a1 testing artifact is not a supported upgrade origin.
@@ -245,6 +248,7 @@ EOF
 # SQLite-only migration-state preservation; this is package evidence, not a production upgrade check.
 probe_python() {
   (
+    cd "$workdir"
     export PYTHONPATH="$probe_root"
     export DJANGO_SETTINGS_MODULE=probeproj.settings
     export ASKLENS_MIGRATION_PROBE_DB="$probe_db"

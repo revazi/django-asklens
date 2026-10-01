@@ -113,7 +113,7 @@ Without AskLens, an MCP server that supports ad hoc analytics would still need t
 
 AskLens intentionally does not depend on a generic Django MCP package. Some generic implementations expose broad model/admin/DRF surfaces or depend on Django REST Framework, which conflicts with AskLens' optional-DRF core design and explicit semantic registration model.
 
-The dependency-free helpers live in the main `django-asklens` package. The optional FastMCP bridge is available through the `mcp` extra. For local release verification, install only the exact verified artifact shown in the bounded quickstart:
+The dependency-free helpers live in the main `django-asklens` package. The optional FastMCP bridge is available through the `mcp` extra. For local release verification, install only the exact verified wheel shown below:
 
 ```bash
 export ASKLENS_RELEASE_WHEEL=/verified/path/django_asklens-0.2.0-py3-none-any.whl

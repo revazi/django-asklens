@@ -5,10 +5,10 @@ Django AskLens is the Django implementation of the [AskLens specification](askle
 > **Alpha trust-boundary warning:** `parse_query_plan()` establishes structure only. Use `execute_plan(plan, request=request)` for execution: it treats mappings and existing `QueryPlan` objects as untrusted and repeats current catalog, permission, limit, and request-scope validation. The compiler and compiled-query executor are internal and not public exports. Never treat a previously validated `QueryPlan` as a reusable authorization token.
 
 ```bash
-python -m pip install django-asklens
+python -m pip install 'django-asklens==0.2.0'
 ```
 
-Install `django-asklens[api]` only when you want the built-in DRF routes under `django_asklens.api` or the packaged reference frontend. For a fresh project with complete registration startup wiring, explicit global and context scope, string-select list plans, and an exact-wheel smoke, follow the [core-only executable quickstart](quickstart-core.md).
+Install `django-asklens[api]==0.2.0` only when you want the built-in DRF routes under `django_asklens.api` or the packaged reference frontend. For a fresh project with complete registration startup wiring, explicit global and context scope, string-select list plans, and an exact-wheel smoke, follow the [core-only executable quickstart](quickstart-core.md).
 
 ## Core-only Django setup
 

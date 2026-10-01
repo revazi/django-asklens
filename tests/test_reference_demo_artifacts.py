@@ -510,6 +510,7 @@ def test_package_provenance_documents_exact_0_2_release() -> None:
     readme = read_text(ROOT / "README.md")
     index = read_text(ROOT / "docs" / "index.md")
     install = read_text(ROOT / "docs" / "installation.md")
+    core_api = read_text(ROOT / "docs" / "core-python-api.md")
     tagged_docs = "https://github.com/revazi/django-asklens/blob/v0.2.0/README.md"
 
     provenance_heading = "## Package provenance"
@@ -554,6 +555,10 @@ def test_package_provenance_documents_exact_0_2_release() -> None:
     assert "not a supported upgrade test" in source_section
     assert "private-candidate-evaluation.md" not in install
     assert "pilot-intake-worksheet.md" not in install
+
+    assert "python -m pip install 'django-asklens==0.2.0'" in core_api
+    assert "`django-asklens[api]==0.2.0`" in core_api
+    assert "python -m pip install django-asklens\n" not in core_api
 
     assert index.index("## Package provenance") < index.index("## Guides")
     assert "`django-asklens==0.2.0`" in index
@@ -936,6 +941,17 @@ def test_package_evidence_is_isolated_and_never_releases() -> None:
     assert 'git archive "$source_commit"' in script
     assert "Refusing to build package evidence from a dirty source tree" in script
     assert '"$root/.github/scripts/wheel_smoke.py" core' in script
+    probe_function = script[
+        script.index("probe_python() {") : script.index("probe_manage() {")
+    ]
+    assert 'cd "$workdir"' in probe_function
+    version_probe_start = '(\n  cd "$workdir"\n  "$upgrade_venv/bin/python" - <<\'PY\''
+    version_probe = script[
+        script.index(version_probe_start) : script.index(
+            "# Release migration-state preservation"
+        )
+    ]
+    assert version_probe.startswith(version_probe_start)
     assert '"$wheel" >/dev/null' in script
     assert "django-asklens==0.1.0a1" not in script
     assert "--force-reinstall" not in script
