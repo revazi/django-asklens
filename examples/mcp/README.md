@@ -6,17 +6,17 @@ evidence, not a production authentication or transport template.
 
 ## Bounded current-artifact checklist
 
-This `main`-branch example requires unreleased current source. Install an exact
-local wheel in a fresh environment:
+This `main`-branch example requires unreleased current source. Install the exact
+0.2.0 candidate wheel in a fresh environment:
 
 ```bash
-export ASKLENS_CANDIDATE_WHEEL=/verified/path/django_asklens-0.1.0a1-py3-none-any.whl
+export ASKLENS_CANDIDATE_WHEEL=/verified/path/django_asklens-0.2.0-py3-none-any.whl
 python -m pip install "${ASKLENS_CANDIDATE_WHEEL}[mcp]"
 ```
 
-Do not replace the wheel path with an unpinned package name. Current and
-published bytes share the `0.1.0a1` filename; this is same-version replacement,
-not a public release or normal upgrade.
+Do not replace the wheel path with an unpinned package name. The exact artifact
+keeps this check tied to the 0.2.0 candidate; it is not a public release or a
+normal upgrade from 0.1.0a1.
 
 ### Register the trusted context mapping
 

@@ -5,11 +5,10 @@ usage() {
   cat <<'EOF'
 Usage: bash scripts/alpha-candidate-package-smoke.sh [--help]
 
-Build the unchanged source version into a temporary wheel, exercise isolated
-core/API/MCP installs, and replace the published 0.1.0a1 install with that local
-wheel. This produces alpha-candidate proposal evidence only; it does not bump a
-version, upload, tag, publish, or release anything. Network access to PyPI is
-required for the published-version and dependency installs.
+Build the exact 0.2.0 candidate source into a temporary wheel and exercise
+isolated core/API/MCP installs plus SQLite migration-state preservation. This
+produces candidate evidence only; it does not support upgrades from 0.1.0a1 or
+upload, tag, publish, or release anything.
 EOF
 }
 
@@ -181,17 +180,17 @@ uv run --no-sync python -m venv "$upgrade_venv"
 "$upgrade_venv/bin/python" -m pip install --upgrade pip >/dev/null
 "$upgrade_venv/bin/python" -m pip install \
   --index-url https://pypi.org/simple \
-  "django-asklens==0.1.0a1" >/dev/null
+  "Django>=5.2,<7.0" \
+  "$wheel" >/dev/null
 "$upgrade_venv/bin/python" - <<'PY'
 from importlib.metadata import version
 
-assert version("django-asklens") == "0.1.0a1"
-print("PASS published 0.1.0a1 installed from PyPI")
+assert version("django-asklens") == "0.2.0"
+print("PASS exact 0.2.0 candidate wheel installed")
 PY
 
-# The repository version intentionally remains 0.1.0a1 until a separate release.
-# Force replacement is therefore required to exercise the local wheel now;
-# an authorized 0.2.0a* version bump must rerun this as a normal resolver upgrade.
+# Candidate migration-state preservation is synthetic SQLite evidence only.
+# The 0.1.0a1 testing artifact is not a supported upgrade origin.
 probe_root="$workdir/migration-probe"
 probe_project="$probe_root/probeproj"
 probe_db="$probe_root/probe.sqlite3"
@@ -204,7 +203,7 @@ cat > "$probe_project/urls.py" <<'EOF'
 urlpatterns = []
 EOF
 cat > "$probe_project/settings.py" <<'EOF'
-"""Probe settings used to exercise published/local migration state in SQLite."""
+"""Probe settings used to exercise candidate migration state in SQLite."""
 
 import os
 
@@ -263,10 +262,10 @@ asklens_migrations = {
     if migration[0] == "asklens"
 }
 assert asklens_migrations == {("asklens", "0001_initial"), ("asklens", "0002_add_admin_query_proxy")}
-print("PASS published migration graph is exact: 0001_initial and 0002_add_admin_query_proxy")
+print("PASS candidate migration graph is exact: 0001_initial and 0002_add_admin_query_proxy")
 
 row = SemanticQueryRun.objects.create(
-    question="synthetic published probe",
+    question="synthetic candidate probe",
     plan={"resource": "synthetic_probe", "intent": "list"},
     status="success",
     row_count=1,
@@ -275,13 +274,11 @@ row = SemanticQueryRun.objects.create(
 )
 assert row.pk == 1
 assert SemanticQueryRun.objects.count() == 1
-print("PASS published 0.1.0a1 migration state initialized with one synthetic row")
+print("PASS candidate migration state initialized with one synthetic row")
 PY
 
-"$upgrade_venv/bin/python" -m pip install \
-  --force-reinstall --no-deps "$wheel" >/dev/null
 probe_plan_output="$(probe_manage migrate --plan 2>&1)"
-printf 'PASS migrate --plan after local same-version replacement:\n%s\n' "$probe_plan_output"
+printf 'PASS migrate --plan on exact 0.2.0 candidate:\n%s\n' "$probe_plan_output"
 probe_manage migrate --noinput --verbosity 1
 probe_manage showmigrations asklens
 probe_manage check
@@ -316,7 +313,7 @@ asklens_tables = [
 assert asklens_tables == ["asklens_semanticqueryrun"]
 
 row = SemanticQueryRun.objects.get()
-assert row.question == "synthetic published probe"
+assert row.question == "synthetic candidate probe"
 assert row.plan == {"resource": "synthetic_probe", "intent": "list"}
 assert row.status == "success"
 assert row.row_count == 1
@@ -324,8 +321,8 @@ assert row.duration_ms == 7
 assert AskLensQuery._meta.proxy
 assert AskLensQuery._meta.db_table == SemanticQueryRun._meta.db_table
 assert AskLensQuery.objects.count() == 1
-print("PASS migration graph after local same-version replacement is exact: 0001_initial and 0002_add_admin_query_proxy")
-print("PASS synthetic SemanticQueryRun row preserved across same-version replacement")
+print("PASS candidate migration graph is exact: 0001_initial and 0002_add_admin_query_proxy")
+print("PASS synthetic SemanticQueryRun row preserved across candidate install")
 print("PASS AskLensQuery remains a proxy over asklens_semanticqueryrun table")
 PY
 
@@ -340,8 +337,8 @@ import zipfile
 import django_asklens
 
 wheel = Path(sys.argv[1]).resolve()
-assert version("django-asklens") == "0.1.0a1"
-assert django_asklens.__version__ == "0.1.0a1"
+assert version("django-asklens") == "0.2.0"
+assert django_asklens.__version__ == "0.2.0"
 assert callable(django_asklens.list_contract_schemas)
 installed_root = Path(django_asklens.__file__).resolve().parent
 critical_files = (
@@ -354,10 +351,10 @@ with zipfile.ZipFile(wheel) as archive:
         assert (installed_root / relative_path).read_bytes() == archive.read(
             f"django_asklens/{relative_path}"
         )
-print("PASS published install replaced by exact local source-wheel files")
+print("PASS exact candidate install matches source-wheel files")
 PY
 )
 DJANGO_VERSION_PREFIX="6.1." \
   "$upgrade_venv/bin/python" .github/scripts/wheel_smoke.py core
 
-echo "PASS package evidence only; no version change or release was performed"
+echo "PASS exact 0.2.0 candidate package evidence only; no release was performed"

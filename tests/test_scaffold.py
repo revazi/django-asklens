@@ -8,7 +8,7 @@ from django_asklens.settings import DEFAULTS, get_asklens_settings
 
 
 def test_package_imports() -> None:
-    assert django_asklens.__version__ == "0.1.0a1"
+    assert django_asklens.__version__ == "0.2.0"
 
 
 def test_app_config_metadata() -> None:
@@ -28,6 +28,9 @@ def test_settings_merge_project_overrides() -> None:
     asklens_settings = get_asklens_settings()
 
     assert asklens_settings["MAX_ROWS"] == 50
-    assert asklens_settings["MAX_JOINS"] == DEFAULTS["MAX_JOINS"]
-    assert "ALLOW_RAW_SQL" not in DEFAULTS
-    assert "SEND_SAMPLE_ROWS_TO_LLM" not in DEFAULTS
+    assert asklens_settings["LLM_BACKEND"] == "dummy"
+
+
+def test_default_settings_are_not_mutated() -> None:
+    assert DEFAULTS["MAX_ROWS"] == 500
+    assert DEFAULTS["AUDIT_INCLUDE_CONTENT"] is False

@@ -1,8 +1,8 @@
 # Installation
 
-Choose instructions by artifact provenance. The published PyPI `0.1.0a1` testing artifact and the unreleased `main` source tree are different contexts and are not interchangeable.
+Choose instructions by artifact provenance. Published PyPI `0.1.0a1` is a testing artifact, while this branch prepares a `0.2.0` release candidate. The candidate has not shipped, and `0.1.0a1` is not a supported upgrade origin.
 
-## Published PyPI alpha: 0.1.0a1
+## Published PyPI testing artifact: 0.1.0a1
 
 PyPI currently serves only the published `django-asklens==0.1.0a1` alpha. Use an exact version pin for the surface you need.
 
@@ -24,11 +24,11 @@ Optional FastMCP bridge:
 python -m pip install 'django-asklens[mcp]==0.1.0a1'
 ```
 
-Use the immutable [published-alpha documentation tagged `v0.1.0a1`](https://github.com/revazi/django-asklens/blob/v0.1.0a1/README.md). Do not use the current `main` README quickstart with this package: `main` documents an incompatible, unreleased 0.2 target.
+Use the immutable [historical documentation tagged `v0.1.0a1`](https://github.com/revazi/django-asklens/blob/v0.1.0a1/README.md). Do not use candidate instructions with this package.
 
-## Unreleased main/source checkout for contributors
+## 0.2.0 release candidate source
 
-The current `main` branch is contributor source for an incompatible 0.2 target. It is not a release or release candidate, not a PyPI upgrade, and not a public package installation path. No public 0.2 package is created by these instructions.
+This candidate source is for contributor validation and exact local-artifact checks. It is not a shipped release, PyPI package, or supported upgrade from `0.1.0a1`.
 
 Use `uv` when developing in this repository:
 
@@ -37,28 +37,28 @@ uv sync --group dev
 uv run pytest
 ```
 
-Do not mix the published-alpha artifact with source-built main artifacts across workers, clients, or environments. A wheel built from current source still reports `0.1.0a1`; replacing the published wheel with those different same-version bytes requires an exact local artifact and `--force-reinstall`. Call that same-version replacement evidence. It is not a normal upgrade or release.
+Do not mix published-alpha artifacts with candidate artifacts across workers, clients, or environments. Candidate wheels report `0.2.0`; this distinct version does not imply compatibility or a supported upgrade path from the `0.1.0a1` testing artifact.
 
-### Source-checkout alpha-candidate package evidence
+### Exact candidate package evidence
 
-R4 includes an opt-in package smoke for proposal evidence only:
+The opt-in package smoke validates the exact candidate artifact only:
 
 ```bash
 bash scripts/alpha-candidate-package-smoke.sh
 ```
 
-The command requires Python 3.12+, `uv`, and network access to PyPI. It builds the current source into a temporary wheel, checks that Docker, Playwright, and psycopg did not leak into runtime requirements or extras, and installs the core, API, and MCP wheel surfaces in separate temporary environments. It then installs the published 0.1.0a1 from PyPI and replaces it with the exact local source wheel before rerunning the installed-core smoke. Every temporary environment and artifact is removed at exit.
+The command requires Python 3.12+ and `uv`. It builds the exact candidate source into a temporary wheel, checks that Docker, Playwright, and psycopg did not leak into runtime requirements or extras, and installs the core, API, and MCP wheel surfaces in separate temporary environments. A disposable SQLite project verifies candidate migrations and synthetic migration-state preservation. Every temporary environment and artifact is removed at exit.
 
-The repository version intentionally remains `0.1.0a1` because no version bump or release is authorized. Consequently, the final step uses pip's same-version `--force-reinstall` only as package replacement evidence; it does not prove a resolver-selected version transition. A future separately authorized candidate would need its own exact version and evidence. The script does not upload, tag, publish, or release anything.
+The smoke installs only the local `0.2.0` candidate wheel and does not install or replace the `0.1.0a1` testing artifact. The migration-state exercise is synthetic SQLite evidence, not a supported upgrade test. The script does not upload, tag, publish, or release anything.
 
-For PR10 evidence, the script creates a disposable SQLite Django project in its temporary workdir, applies the published package migrations (`0001_initial` and `0002_add_admin_query_proxy`), and creates one synthetic `SemanticQueryRun` row. It then replaces the install with the exact local wheel, re-runs `migrate --plan`, `migrate`, `showmigrations`, `check`, and `makemigrations --check --dry-run`, and verifies that the synthetic row, proxy model, and AskLens table shape survive. This is same-version replacement and migration-state preservation evidence only, not PostgreSQL migration evidence and not release evidence.
+The smoke creates a disposable SQLite Django project in its temporary workdir, applies candidate migrations (`0001_initial` and `0002_add_admin_query_proxy`), and creates one synthetic `SemanticQueryRun` row. It runs `migrate --plan`, `migrate`, `showmigrations`, `check`, and `makemigrations --check --dry-run`, then verifies the row, proxy model, and AskLens table shape. This is candidate SQLite evidence only, not a supported upgrade test or PostgreSQL migration evidence.
 
-## Authenticated API prerequisites for exact current artifacts
+## Authenticated API prerequisites for exact candidate artifacts
 
-These prerequisites document the current optional DRF adapter in unreleased source or an exact verified wheel. They are not instructions for the published PyPI `0.1.0a1`, a release, or an upgrade.
+These prerequisites document the optional DRF adapter in candidate source or an exact verified wheel. They are not instructions for the published PyPI `0.1.0a1` and do not imply a supported upgrade.
 
 ```bash
-python -m pip install '/verified/path/django_asklens-0.1.0a1-py3-none-any.whl[api]'
+python -m pip install '/verified/path/django_asklens-0.2.0-py3-none-any.whl[api]'
 ```
 
 The `[api]` extra installs the existing DRF dependency within the bounds in `pyproject.toml`; it does not install FastMCP or make DRF a core dependency. Add the host authentication/session apps, DRF, AskLens, and the project app that owns registration:

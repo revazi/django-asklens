@@ -3,13 +3,13 @@
 ## Authenticated normal-user API quickstart
 
 > [!IMPORTANT]
-> This journey describes the optional API in unreleased current source or a separately verified exact candidate. It is not the published PyPI `0.1.0a1`, an upgrade, a release, or a frozen API contract. Use the immutable tagged documentation for the published alpha.
+> This journey describes the optional API in the exact `0.2.0` candidate source or a separately verified candidate wheel. It is not the published PyPI `0.1.0a1`, a shipped release, a supported upgrade, or a frozen API contract. Use the immutable tagged documentation for the published testing artifact.
 
 This path uses Django's existing session authentication, one normal user, a host-created Django permission, a permission-scoped catalog, deterministic `DummyProvider`, and the current metadata-only database audit. AskLens does not create a login view, authentication backend, or token endpoint and does not accept identity, permission, or scope claims from the client.
 
 ### 1. Install and mount the current optional API
 
-Install an exact current artifact with its `[api]` extra only after verifying its commit, filename, and SHA-256 digest. See [Installation](installation.md#authenticated-api-prerequisites-for-exact-current-artifacts). Add the normal host auth/session apps and middleware, `rest_framework`, AskLens, and the one host app that owns registration:
+Install an exact candidate artifact with its `[api]` extra only after verifying its commit, filename, and SHA-256 digest. See [Installation](installation.md#authenticated-api-prerequisites-for-exact-current-artifacts). Add the normal host auth/session apps and middleware, `rest_framework`, AskLens, and the one host app that owns registration:
 
 ```python
 INSTALLED_APPS = [
