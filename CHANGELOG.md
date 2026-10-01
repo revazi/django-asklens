@@ -13,6 +13,7 @@ schemas remain draft, internal, unfrozen, and unversioned.
 
 ### Fixed
 
+- Updated the development lock from Django 6.1 to 6.1.1 and indirect urllib3 2.7.0 to 2.8.0 after the post-merge point-in-time audit reported four newly published fixed advisories; supported dependency bounds and runtime package metadata are unchanged.
 - Updated the development lock's indirect PyJWT from 2.13.0 to 2.15.1 after the point-in-time locked audit reported ten fixed advisories; runtime package requirements and extras are unchanged.
 - The disposable core/API quickstart smoke now verifies exact local-wheel provenance through byte-for-byte installed package comparison without requiring pip's optional `direct_url.json` metadata.
 - The packaged draft query-plan JSON Schema now requires nonempty string values for `contains` and `icontains`, matching existing runtime parse behavior. Development-only independent Draft 2020-12 validation now checks packaged schemas and conformance fixtures; runtime dependencies and accepted query behavior are unchanged.
