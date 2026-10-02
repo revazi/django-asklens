@@ -63,11 +63,16 @@ def smoke_core_install() -> None:
     import django_asklens
     import django_asklens.compiler as compiler_package
     import django_asklens.execution as execution_package
-    import django_asklens.observability as observability_package
 
-    assert django_asklens.__version__ == os.environ.get(
-        "ASKLENS_EXPECTED_VERSION", "0.3.0"
-    )
+    expected_version = os.environ.get("ASKLENS_EXPECTED_VERSION", "0.3.0")
+    assert django_asklens.__version__ == expected_version
+    observability_spec = importlib.util.find_spec("django_asklens.observability")
+    if expected_version == "0.2.0":
+        assert observability_spec is None
+    else:
+        assert observability_spec is not None
+        observability_package = importlib.import_module("django_asklens.observability")
+        assert observability_package.__all__ == ["ObservabilityEvent"]
     assert django_asklens.__all__ == [
         "CONTRACT_SCHEMA_NAMES",
         "Metric",
@@ -99,7 +104,6 @@ def smoke_core_install() -> None:
     assert capabilities_schema["additionalProperties"] is False
     assert "resources" not in capabilities_schema["properties"]
     assert callable(execution_package.execute_plan)
-    assert observability_package.__all__ == ["ObservabilityEvent"]
     assert not hasattr(execution_package, "execute_query")
     assert not hasattr(compiler_package, "compile_query_plan")
     configure_settings(installed_apps=["django_asklens"])
@@ -144,7 +148,8 @@ def smoke_core_install() -> None:
     }
     assert get_asklens_setting("AUDIT_MODE") == "database"
     assert get_asklens_setting("AUDIT_INCLUDE_CONTENT") is False
-    assert get_asklens_setting("OBSERVABILITY_SINK") is None
+    if expected_version != "0.2.0":
+        assert get_asklens_setting("OBSERVABILITY_SINK") is None
     assert get_asklens_setting("MAX_PLAN_BYTES") == 65_536
     assert get_asklens_setting("MAX_FILTERS") == 20
     assert get_asklens_setting("MAX_SELECTED_FIELDS") == 25

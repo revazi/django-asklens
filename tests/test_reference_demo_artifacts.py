@@ -1015,6 +1015,9 @@ def test_package_evidence_is_isolated_and_never_releases() -> None:
     assert '--no-index --no-deps "$wheel"' not in script
     wheel_smoke = read_text(ROOT / ".github" / "scripts" / "wheel_smoke.py")
     assert 'os.environ.get("ASKLENS_EXPECTED_VERSION", "0.3.0")' in wheel_smoke
+    assert 'if expected_version == "0.2.0":' in wheel_smoke
+    assert "assert observability_spec is None" in wheel_smoke
+    assert 'if expected_version != "0.2.0":' in wheel_smoke
     assert "assert_installed_distribution_provenance()" in wheel_smoke
     assert "module_path.is_relative_to(Path(sys.prefix).resolve())" in wheel_smoke
 
