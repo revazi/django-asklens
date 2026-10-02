@@ -55,9 +55,10 @@ for `0.4.0` or 1.0.
 The supported origin is a supported `0.2.x` release; today that means `0.2.0`.
 `0.1.0a1` remains a testing artifact and is not an upgrade origin.
 
-1. Back up and test according to host policy, pin the exact `0.3.0` artifact when
-   it exists, and run the normal Django system check, migration-drift check, and
-   application tests for every enabled adapter.
+1. Back up and test according to host policy, pin the exact reviewed `0.3.0`
+   artifact (a verified local candidate until publication), and run the normal
+   Django system check, migration-drift check, and application tests for every
+   enabled adapter.
 2. No AskLens database migration or data transformation is introduced by this
    scope. Do not generate an empty host migration merely for observability.
 3. `OBSERVABILITY_SINK` defaults to `None`; leaving it unset preserves no-hook

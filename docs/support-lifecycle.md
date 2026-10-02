@@ -12,6 +12,9 @@ Artifact provenance remains part of every support statement:
 
 - PyPI publishes `django-asklens==0.2.0`; use its immutable tagged
   documentation. This is the first supported alpha release.
+- Current source metadata identifies an unpublished `0.3.0` candidate. Its
+  source commit and local artifact digests must be reviewed before any separate
+  tag or publication decision.
 - `0.1.0a1` was a testing artifact only and is not a supported upgrade origin.
 
 Do not combine packages, workers, clients, documentation, or persisted plans
@@ -22,8 +25,9 @@ matching artifact.
 
 ## Current evidence
 
-The `0.2.0` release source has the following repository-operated evidence;
-local artifact evidence must be checked against its commit and wheel:
+The immutable `0.2.0` release and the `0.3.0` candidate use the following
+repository-operated support matrix. Candidate claims apply only after the exact
+commit and artifacts pass the named checks:
 
 - Python 3.12 and 3.13 run the full SQLite/unit/integration CI.
 - Django 5.2, 6.0, and 6.1 each run on both tested Python lines.
@@ -161,8 +165,8 @@ provisional, optional, internal, and unsupported areas. The 0.3.x boundary is
 limited to its exact registration, trusted-execution, public-error, and
 observability rows. See the [AskLens specification](asklens-specification.md).
 
-`0.2.0` is currently the supported `0.2.x` origin for the future `0.3.0`
-artifact. The actionable path requires normal host checks but no AskLens
+`0.2.0` is currently the supported `0.2.x` origin for the unpublished `0.3.0`
+candidate. The actionable path requires normal host checks but no AskLens
 migration for this scope; every persisted plan is revalidated by the current
 facade. `0.1.0a1` remains a testing artifact and is not a supported upgrade
 origin. There is no fixed deprecation window or rollback promise. Host-owned
@@ -171,5 +175,6 @@ internal, draft, unfrozen, and unversioned. Do not add document versions, schema
 versions, extension negotiation, or previous-shape compatibility.
 
 Do not record or handle schema changes. The first-install migrations, changelog
-entries, and source/wheel checks are repository-operated evidence for `0.2.0`;
-they are not production certification or an independent security review.
+entries, exact `0.2.0` public-artifact checks, and exact `0.3.0` candidate
+source/wheel checks are repository-operated evidence; they are not production
+certification or an independent security review.

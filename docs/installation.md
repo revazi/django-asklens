@@ -1,8 +1,9 @@
 # Installation
 
-Install the exact `0.2.0` release for the package surface you need. The
-historical `0.1.0a1` package was a testing artifact and is not a supported
-upgrade origin.
+PyPI still publishes `0.2.0`; the current source documentation prepares an
+unpublished `0.3.0` release candidate. Keep each artifact paired with its exact
+source commit or immutable tagged documentation. The historical `0.1.0a1`
+package was a testing artifact and is not a supported upgrade origin.
 
 ## Published PyPI release: 0.2.0
 
@@ -47,46 +48,50 @@ uv sync --group dev
 uv run pytest
 ```
 
-A local wheel reports `0.2.0`, but its version alone does not prove provenance.
-Verify the source commit and artifact digest. No compatibility or supported
+A local candidate wheel reports `0.3.0`, but its version alone does not prove
+provenance. Verify the source commit and artifact digest. The only supported
+upgrade origin is a supported `0.2.x` release, currently published `0.2.0`; no
 upgrade from the `0.1.0a1` testing artifact is claimed.
 
-### Exact release package evidence
+### Exact release-candidate package evidence
 
-The opt-in package smoke validates an exact local `0.2.0` artifact:
+The opt-in package smoke validates an exact committed local `0.3.0` candidate:
 
 ```bash
 bash scripts/alpha-candidate-package-smoke.sh
 ```
 
 The command requires Python 3.12+, `uv`, Git, `tar`, and a clean source tree. It
-exports the exact `HEAD` commit into a temporary build tree, runs installed-wheel
-checks outside the repository root, and checks that Docker,
-Playwright, and psycopg did not leak
-into runtime requirements or extras, and installs the core, API, and MCP wheel
-surfaces in separate temporary environments. A disposable SQLite project
-verifies migrations and synthetic migration-state preservation. Every temporary
-environment and artifact is removed at exit.
+exports the exact `HEAD` commit into a temporary build tree, builds exactly one
+`0.3.0` wheel and one source distribution, runs Twine and package-content
+checks, reports their SHA-256 digests, and runs installed-wheel checks outside
+the repository root. It verifies that Docker, Playwright, and psycopg did not
+leak into runtime requirements or extras and installs the core, API, and MCP
+wheel surfaces in separate temporary environments.
 
-The smoke does not install or replace the `0.1.0a1` testing artifact. Its
-migration-state exercise is synthetic SQLite evidence, not a supported upgrade
-test. The script does not upload, tag, publish, or release anything.
+The upgrade probe installs actual `django-asklens==0.2.0` from PyPI in a
+disposable environment, applies the exact existing AskLens migrations
+(`0001_initial` and `0002_add_admin_query_proxy`), and creates one synthetic
+`SemanticQueryRun` row. It then upgrades to the local `0.3.0` wheel, runs
+`migrate --plan`, `migrate`, `showmigrations`, `check`, and
+`makemigrations --check --dry-run`, and verifies the unchanged graph, preserved
+row, proxy model, and AskLens table shape. Both release and candidate imports
+must resolve inside the disposable environment rather than the checkout.
 
-The smoke creates a disposable SQLite Django project in its temporary workdir,
-applies migrations (`0001_initial` and `0002_add_admin_query_proxy`), and creates
-one synthetic `SemanticQueryRun` row. It runs `migrate --plan`, `migrate`,
-`showmigrations`, `check`, and `makemigrations --check --dry-run`, then verifies
-the row, proxy model, and AskLens table shape. This is local SQLite evidence,
-not a supported upgrade test or PostgreSQL migration evidence.
+This is bounded SQLite package evidence for the supported `0.2.0` origin, not
+PostgreSQL or production upgrade certification. It does not test or replace the
+`0.1.0a1` testing artifact. The script removes its temporary environments and
+artifacts and does not upload, tag, publish, or release anything.
 
-## Authenticated API prerequisites for exact 0.2.0 artifacts
+## Authenticated API prerequisites for an exact 0.3.0 candidate artifact
 
-These prerequisites document the optional DRF adapter in the `0.2.0` package or
-an exact locally verified wheel. They do not imply a supported upgrade from
-`0.1.0a1`.
+These prerequisites document the optional provisional DRF adapter in an exact,
+locally verified `0.3.0` candidate wheel. Published `0.2.0` users must follow
+the immutable `v0.2.0` docs until `0.3.0` is separately authorized and
+published.
 
 ```bash
-python -m pip install '/verified/path/django_asklens-0.2.0-py3-none-any.whl[api]'
+python -m pip install '/verified/path/django_asklens-0.3.0-py3-none-any.whl[api]'
 ```
 
 The `[api]` extra installs the existing DRF dependency within the bounds in `pyproject.toml`; it does not install FastMCP or make DRF a core dependency. Add the host authentication/session apps, DRF, AskLens, and the project app that owns registration:

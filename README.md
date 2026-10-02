@@ -7,7 +7,7 @@ Django AskLens is the Django implementation of the [AskLens specification](docs/
 
 AskLens does **not** let an LLM write SQL. It asks a provider for structured JSON, validates the plan against your registered catalog and permissions, compiles a read-only Django ORM query, executes with limits, and returns table/chart-ready JSON.
 
-Status: **alpha**. The future 0.3.x line has a [narrow governed core
+Status: **alpha**. The `0.3.0` release candidate has a [narrow governed core
 boundary](docs/compatibility.md); provisional adapters, documents, and helpers
 may still change before a stable release.
 
@@ -16,8 +16,13 @@ Django AskLens was created by [Revaz Zakalashvili](https://github.com/revazi) ([
 ## Package provenance
 
 > [!IMPORTANT]
-> This documentation describes `django-asklens==0.2.0`, the first supported
-> release. Install the exact version and use the matching immutable
+> This documentation describes the unpublished `django-asklens==0.3.0` release
+> candidate. Install it only from an exact locally built wheel whose source
+> commit and SHA-256 digest you verified; `0.3.0` is not yet available from PyPI
+> and has no immutable release tag.
+>
+> The current published release remains `django-asklens==0.2.0`, the first
+> supported alpha. Install that exact version only with its matching immutable
 > [documentation tagged `v0.2.0`](https://github.com/revazi/django-asklens/blob/v0.2.0/README.md):
 >
 > ```bash
@@ -25,9 +30,10 @@ Django AskLens was created by [Revaz Zakalashvili](https://github.com/revazi) ([
 > ```
 >
 > The previously published `0.1.0a1` package was a testing artifact and is not a
-> supported upgrade origin. Do not mix its package bytes or tagged documentation
-> with `0.2.0`. See [Installation](docs/installation.md) for optional extras and
-> exact artifact guidance.
+> supported upgrade origin. Do not mix candidate, released, or historical
+> package bytes and documentation. See [Installation](docs/installation.md) for
+> optional extras, exact artifact guidance, and the bounded `0.2.0` to `0.3.0`
+> candidate upgrade statement.
 
 ## What it provides
 
@@ -46,11 +52,12 @@ Django AskLens was created by [Revaz Zakalashvili](https://github.com/revazi) ([
 - Frontend-agnostic `columns` + `data` JSON output.
 - Optional packaged browser UI for demos/reference use.
 
-## 0.2.0 quickstart
+## 0.3.0 candidate quickstart
 
-The example below describes the `0.2.0` release. Use it with the exact PyPI
-package, the immutable `v0.2.0` source tag, or a locally built wheel whose source
-commit and SHA-256 digest you verified.
+The example below describes the unpublished `0.3.0` candidate. Use it only with
+an exact locally built candidate wheel whose source commit and SHA-256 digest
+you verified. Users of published `0.2.0` must use the immutable `v0.2.0`
+documentation instead.
 
 For a linear path that installs core only, wires one project-owned startup import, and executes current-request list plans, use the [Core-only executable quickstart](docs/quickstart-core.md).
 

@@ -8,7 +8,7 @@ from django_asklens.settings import DEFAULTS, get_asklens_settings
 
 
 def test_package_imports() -> None:
-    assert django_asklens.__version__ == "0.2.0"
+    assert django_asklens.__version__ == "0.3.0"
 
 
 def test_app_config_metadata() -> None:

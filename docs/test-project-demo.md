@@ -6,8 +6,9 @@ registration, fail-closed scope, `execute_plan`, optional DRF/MCP, admin, and
 the reference frontend. Data is synthetic. The default planner is
 `DummyProvider`. Live providers stay off unless you opt in.
 
-This example matches the `0.2.0` release and current development source. It is
-not a second example app or a supported upgrade path from the historical
+This example matches the unpublished `0.3.0` candidate source. Published
+`0.2.0` users must use the immutable tagged docs. It is not a second example
+app or a supported upgrade path from the historical
 `0.1.0a1` testing artifact.
 
 ## What to copy into a host project
