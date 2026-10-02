@@ -214,6 +214,7 @@ DJANGO_ASKLENS = {
     "MAX_METRICS": 5,
     "MAX_GROUP_BY": 3,
     "PROMPT_RESOURCE_SHORTLIST_LIMIT": 0,
+    "OBSERVABILITY_SINK": None,  # optional content-free host callback
     "MCP_ALLOW_ROW_RETURN": False,
     "MCP_MAX_RETURNED_ROWS": 100,
 }
@@ -225,8 +226,9 @@ The default permission gate is `django_asklens.access.IsAuthenticated`, a lightw
 
 The [support lifecycle](support-lifecycle.md) defines how a Python, Django,
 PostgreSQL, or optional-adapter line enters or leaves the tested list. It keeps
-resolver eligibility, exact-artifact CI evidence, and future stable guarantees
-separate; no stable compatibility surface has been accepted yet.
+resolver eligibility and exact-artifact CI evidence separate from the
+[narrow governed 0.3.x core boundary](compatibility.md). That boundary is not a
+1.0 stability claim and does not govern optional adapter or document shapes.
 
 Current development target:
 

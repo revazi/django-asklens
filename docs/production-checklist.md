@@ -120,6 +120,8 @@ AskLens is a data access surface. Configure it as carefully as any reporting, an
 - [ ] Choose `AUDIT_MODE`: `database` (default), `disabled`, or `custom`; configure a callable/import-path `AUDIT_SINK` for custom mode.
 - [ ] Confirm successful and rejected data-query attempts reach the selected sink exactly once. Database rejection auditing may issue one metadata-only `INSERT`; it must not issue an application-data query.
 - [ ] Confirm disabled/custom non-database auditing adds zero SQL to rejected plans.
+- [ ] Leave `OBSERVABILITY_SINK=None` unless the host needs lifecycle metrics/tracing. If enabled, use only the typed event's bounded name/status/resolved-resource/intent/error dimensions; record duration and result count as measurements, never labels.
+- [ ] Prove the observability adapter adds no question, plan/filter/group/result, identity/tenant/permission, credential, binding, exception/diagnostic, alias/SQL, or arbitrary unknown-name content. Sink failure/reentrancy must not change execution, public responses, or authoritative audit outcomes.
 - [ ] Keep `AUDIT_INCLUDE_CONTENT=False` unless storing questions, filter values, and complete validated plans has an explicit retention, access, redaction, and deletion policy.
 - [ ] Run locked dependency-advisory evidence using:
   ```bash

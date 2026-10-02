@@ -7,7 +7,9 @@ Django AskLens is the Django implementation of the [AskLens specification](docs/
 
 AskLens does **not** let an LLM write SQL. It asks a provider for structured JSON, validates the plan against your registered catalog and permissions, compiles a read-only Django ORM query, executes with limits, and returns table/chart-ready JSON.
 
-Status: **alpha**. APIs may change before a stable release.
+Status: **alpha**. The future 0.3.x line has a [narrow governed core
+boundary](docs/compatibility.md); provisional adapters, documents, and helpers
+may still change before a stable release.
 
 Django AskLens was created by [Revaz Zakalashvili](https://github.com/revazi) ([revaz.zakalashvili@gmail.com](mailto:revaz.zakalashvili@gmail.com)).
 
@@ -307,6 +309,7 @@ Live provider tests are opt-in and skipped by default. See [Provider configurati
 - Default audit records omit questions, filter values, and complete plans unless `AUDIT_INCLUDE_CONTENT=True` is explicitly configured; run detail reapplies that current policy even to legacy rows.
 - Run detail is owner-only unless the current user has global `asklens.view_semanticqueryrun`; `is_staff` alone is insufficient, inaccessible/missing IDs share an opaque `404`, and stored free-form errors are returned only as canonical safe `{code, message}` metadata or `null`.
 - Built-in audit writes and run-detail reads may use one optional server-owned `AUDIT_DATABASE_ALIAS`; clients cannot select it and a configured alias never falls back to `default`.
+- Optional `OBSERVABILITY_SINK` lifecycle events are default-off, immutable, content-free, dependency-free, and scheduled only after the authoritative audit attempt. Enclosing transactions commit before callback delivery, raised callback errors do not propagate into AskLens control flow, and observability is not audit; trusted host callback side effects remain host-owned.
 - AskLens does not send database rows, sample values, secrets, credentials, or `.env` content to providers by default.
 - Query runs are audited; hosts own audit retention, access, redaction, deletion, backups, replicas, and any full-content policy.
 
@@ -314,7 +317,7 @@ Review the [security checklist](docs/security-checklist.md) and [production chec
 
 ## Alpha scope and safety boundaries
 
-- APIs may change before a stable release.
+- Only the exact registration, execution, public-error, and observability rows in the [0.3.x compatibility boundary](docs/compatibility.md) are governed for that line. This is not a 1.0 stability claim; provisional APIs may change.
 - This alpha is not a production-security certification. Host applications remain responsible for authentication, correct scope-provider policy, database and request timeouts, rate/concurrency limits, read-only database defense where appropriate, and application-specific security testing.
 - AskLens supports read-only list and aggregate questions over explicitly registered resources.
 - Query quality depends on clear resource, field, description, and metric registration.
@@ -329,6 +332,8 @@ Review the [security checklist](docs/security-checklist.md) and [production chec
 ## Documentation
 
 - [Installation](docs/installation.md)
+- [0.3.x compatibility boundary](docs/compatibility.md)
+- [Host observability controls](docs/host-throttle-and-audit-controls.md)
 - [Release process](docs/releasing.md)
 - [Post-0.2.0 maintenance roadmap](docs/maintenance-roadmap.md)
 - [Usage guide](docs/usage.md)

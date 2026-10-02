@@ -16,6 +16,7 @@ import pytest
 
 import django_asklens
 import django_asklens.execution as execution
+import django_asklens.observability as observability
 import django_asklens.querying as querying
 from django_asklens import Metric
 from django_asklens.catalog.registry import CatalogRegistry, default_registry
@@ -34,6 +35,7 @@ ROOT_EXPORTS = [
     "serialize_catalog",
 ]
 EXECUTION_EXPORTS = ["QueryResult", "execute_plan"]
+OBSERVABILITY_EXPORTS = ["ObservabilityEvent"]
 QUERYING_EXPORTS = [
     "AskLensQueryResponse",
     "execute_asklens_query_request",
@@ -86,6 +88,7 @@ def test_exact_supported_exports() -> None:
 
     assert django_asklens.__all__ == ROOT_EXPORTS
     assert execution.__all__ == EXECUTION_EXPORTS
+    assert observability.__all__ == OBSERVABILITY_EXPORTS
     assert querying.__all__ == QUERYING_EXPORTS
     assert views.__all__ == VIEW_EXPORTS
 

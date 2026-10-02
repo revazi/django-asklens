@@ -4,8 +4,9 @@
 
 This is the support admission and retirement policy for Django AskLens. It
 records what repository evidence is required before a Python, Django,
-PostgreSQL, or optional-adapter line is described as tested. It does not freeze
-an API or create a SemVer-stable compatibility guarantee.
+PostgreSQL, or optional-adapter line is described as tested. It does not broaden
+the separate [narrow 0.3.x compatibility boundary](compatibility.md), create a
+1.0 stability claim, or make every tested adapter governed.
 
 Artifact provenance remains part of every support statement:
 
@@ -155,16 +156,20 @@ majors, or public support bounds remain separately reviewed decisions.
 
 ## Current release posture
 
-The [current Django AskLens surface](alpha-surface-inventory.md) maps exposed,
-optional, internal, and unsupported areas without accepting any stable surface.
-See the [AskLens specification](asklens-specification.md).
+The [current Django AskLens surface](alpha-surface-inventory.md) maps governed,
+provisional, optional, internal, and unsupported areas. The 0.3.x boundary is
+limited to its exact registration, trusted-execution, public-error, and
+observability rows. See the [AskLens specification](asklens-specification.md).
 
-`0.1.0a1` was a testing artifact only and is not a supported upgrade origin.
-There is no deprecation window. Host-owned responsibilities are accepted. The
-five packaged JSON Schemas stay internal, draft, unfrozen, and unversioned.
-Do not add schema versions or handle previous-shape compatibility. No compatibility or supported upgrade from `0.1.0a1` is claimed.
+`0.2.0` is currently the supported `0.2.x` origin for the future `0.3.0`
+artifact. The actionable path requires normal host checks but no AskLens
+migration for this scope; every persisted plan is revalidated by the current
+facade. `0.1.0a1` remains a testing artifact and is not a supported upgrade
+origin. There is no fixed deprecation window or rollback promise. Host-owned
+responsibilities remain accepted. The five packaged JSON Schemas stay
+internal, draft, unfrozen, and unversioned. Do not add document versions, schema
+versions, extension negotiation, or previous-shape compatibility.
 
-Do not add document versions or extension negotiation. Do not record or handle schema changes.
-The first-install migrations, changelog entries, and source/wheel checks are
-repository-operated evidence for `0.2.0`; they are not production certification
-or an independent security review.
+Do not record or handle schema changes. The first-install migrations, changelog
+entries, and source/wheel checks are repository-operated evidence for `0.2.0`;
+they are not production certification or an independent security review.

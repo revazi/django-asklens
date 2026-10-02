@@ -33,6 +33,7 @@ DEFAULTS: dict[str, Any] = {
     "AUDIT_SINK": None,
     "AUDIT_INCLUDE_CONTENT": False,
     "AUDIT_DATABASE_ALIAS": None,
+    "OBSERVABILITY_SINK": None,
     "FRONTEND_PERMISSION_CHECK": None,
     "FRONTEND_TITLE": "AskLens",
     "FRONTEND_SUBTITLE": "Ask read-only questions over approved Django data.",

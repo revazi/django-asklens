@@ -46,6 +46,7 @@ def test_query_view_throttle_blocks_before_facade_and_audit(
         "AUDIT_MODE": "custom",
         "AUDIT_SINK": sink,
         "AUDIT_INCLUDE_CONTENT": False,
+        "OBSERVABILITY_SINK": sink,
     }
 
     facade_calls = {"executed": False}

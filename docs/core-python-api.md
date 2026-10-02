@@ -320,6 +320,18 @@ A custom sink receives a safe operational event mapping and adds no database SQL
 
 `AUDIT_DATABASE_ALIAS=None` preserves ordinary Django database routing for built-in audit writes and run-detail reads. A configured non-empty alias is server-owned and used explicitly for both operations; HTTP/query payloads cannot select it, and failure never falls back to `default`. A malformed, missing, or unavailable alias produces normal audit-sink failure behavior for writes and a fixed `asklens.execute.failed` HTTP error envelope for run-detail reads without reflecting database diagnostics. Explicit lifecycle-command `--database` selection is independent and unchanged.
 
+### Host observability
+
+`OBSERVABILITY_SINK=None` is a separate, default-off callback for the governed
+content-free `ObservabilityEvent`; it is not an audit mode or audit sink. Import
+it from `django_asklens.observability`. The trusted facade sends exact plan and
+execution lifecycle outcomes after its audit attempt, while final shared
+orchestration failures before the facade receive one opaque rejection. Sink
+configuration and callback failures are suppressed and cannot change execution
+or results. See [host observability controls](host-throttle-and-audit-controls.md)
+for exact fields, event names, ordering, privacy exclusions, cardinality,
+duration/count semantics, and a dependency-free callback example.
+
 ### Run-detail access and display policy
 
 `GET /asklens/runs/<id>/` is an audit view, not an internal result or error document. Configured API permission classes run first. After that route gate, a row is fetched only through an authorization-filtered queryset: the owner may read it, and cross-user audit review requires Django's global `asklens.view_semanticqueryrun` permission. `is_staff` alone is insufficient; active superusers follow Django's normal `has_perm()` behavior. Missing and inaccessible IDs return the same opaque `404` `asklens.member.unavailable` envelope, and reads create no audit row.

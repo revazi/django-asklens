@@ -3,9 +3,12 @@
 ## Status
 
 This document maps the current Django implementation of the [AskLens
-specification](asklens-specification.md). It records exposure and evidence.
-**No surface is accepted as stable** by this inventory. Breaking changes are
-allowed. Version `0.2.0` is the first supported alpha release.
+specification](asklens-specification.md). It records exposure and evidence. The
+[narrow 0.3.x compatibility boundary](compatibility.md) governs only the core
+rows explicitly marked governed below; every other surface remains
+provisional, optional, internal, or unsupported. This is an alpha line, not a
+1.0 stability claim. Version `0.2.0` is the first supported alpha release and
+the current published artifact.
 
 PyPI `0.1.0a1` was a testing artifact only and is not a supported upgrade
 origin. The release and current development source follow the [support
@@ -15,15 +18,16 @@ lifecycle](support-lifecycle.md).
 
 | Classification | Meaning in this inventory |
 | --- | --- |
-| **Stable** | Not claimed. This tree is a first-release Django implementation, not a frozen SemVer contract. |
-| **Provisional** | Deliberately exposed current behavior. It may still change. |
+| **Governed** | Covered only by the exact 0.3.x boundary and change rules in `compatibility.md`; this is not broad or 1.0 stability. |
+| **Provisional** | Deliberately exposed current behavior outside that boundary. It may still change. |
 | **Optional** | Exposed only when an extra, adapter, or reference surface is selected. Optional does not mean stable. |
 | **Internal** | Package implementation or evidence surface, not a supported caller contract even when Python can technically import it. |
 | **Unsupported** | Deliberately excluded behavior or claim. |
 
 `__all__`, documentation, schema packaging, source/wheel parity, and passing
-tests are evidence of current exposure. None independently accepts SemVer scope,
-a deprecation window, wire compatibility, or a stable support lifetime.
+tests are evidence of current exposure. Only the compatibility table accepts a
+0.3.x scope; none independently accepts a deprecation window, wire
+compatibility, a 1.0 claim, or a stable support lifetime.
 
 ## Python surfaces
 
@@ -44,18 +48,20 @@ register
 serialize_catalog
 ```
 
-They are provisional alpha imports. The contract-schema accessors are public
-Python accessors to internal documents; exposing an accessor does not make the
-returned schema stable or public specification material.
+The registration/resource/metric imports among them are governed for 0.3.x;
+catalog/capability and contract-schema accessors remain provisional. Exposing an
+accessor does not make the returned schema governed or public specification
+material.
 
 Other current import families are:
 
 | Import family | Exact current exposure | Classification and boundary |
 | --- | --- | --- |
-| `django_asklens.catalog` | `CatalogRegistry`, `FieldSpec`, `Metric`, `SemanticResource`, `default_registry`, `register`, `get_resource`, `serialize_catalog`, `build_capabilities` | Provisional registration/catalog surface. Public semantic keys remain separate from private Django bindings. |
-| `django_asklens.execution` | `QueryResult`, `execute_plan` | Provisional trusted execution surface. `execute_plan` is the only public execution function. |
+| `django_asklens.catalog` | `CatalogRegistry`, `FieldSpec`, `Metric`, `SemanticResource`, `default_registry`, `register`, `get_resource`, `serialize_catalog`, `build_capabilities` | `CatalogRegistry`, `Metric`, `SemanticResource`, `default_registry`, `register`, and `get_resource` are governed for 0.3.x as documented; `FieldSpec`, serialization/capability helpers, broad constructors, and private attributes remain provisional. Public semantic keys remain separate from private Django bindings. |
+| `django_asklens.execution` | `QueryResult`, `execute_plan` | Governed 0.3.x trusted execution surface within the exact documented boundary. `execute_plan` is the only public execution function; compilers, direct result construction, and private attributes are excluded. |
+| `django_asklens.observability` | `ObservabilityEvent` | Governed 0.3.x immutable, content-free event type with four exact lifecycle outcomes and eight exact fields. Delivery helpers are private. |
 | `django_asklens.querying` | `AskLensQueryResponse`, `execute_asklens_query_request` | Provisional shared question/help orchestration. Current response composition is explicitly alpha. |
-| `django_asklens.exceptions` | `PublicAskLensError`, `public_error_payload`, current namespaced error behavior | Provisional documented failure surface. Internal diagnostic exception classes and causes are not a caller compatibility promise. |
+| `django_asklens.exceptions` | `PublicAskLensError`, `public_error_payload`, ten namespaced error categories | Governed 0.3.x safe failure surface. Internal diagnostic exception classes, causes, and messages are not a caller compatibility promise. |
 | `django_asklens.access` | `IsAuthenticated`, `can_access_asklens`, and permission-gate resolution helpers | Provisional access helpers. Hosts still own authentication and principal construction. |
 | `django_asklens.permissions` | `RequestPermissionsGetter`, `default_request_permissions`, `get_request_permissions`, `resolve_request_permissions_getter` | Provisional host-integration helpers. Permission values remain server-owned. |
 | `django_asklens.contracts` | `CONTRACT_SCHEMA_NAMES`, `ContractSchemaName`, `get_contract_schema`, `list_contract_schemas` | Provisional accessors over internal, unfrozen documents. |
@@ -123,7 +129,7 @@ compatibility guarantees.
 
 ## Settings
 
-Source currently defines **35 current `DJANGO_ASKLENS` keys**. They are grouped
+Source currently defines **36 current `DJANGO_ASKLENS` keys**. They are grouped
 below to make a later decision explicit rather than accidentally stabilizing the
 whole settings mapping.
 
@@ -132,12 +138,15 @@ whole settings mapping.
 | Scope and structural budgets | `DEFAULT_SCOPE_MODE`, `MAX_ROWS`, `DEFAULT_LIMIT`, `MAX_PLAN_BYTES`, `MAX_FILTERS`, `MAX_SELECTED_FIELDS`, `MAX_ORDER_BY`, `MAX_JOINS`, `MAX_RELATIONSHIP_EDGES`, `MAX_IN_VALUES`, `MAX_FILTER_VALUES`, `MAX_METRICS`, `MAX_GROUP_BY` | Provisional core/security configuration. Enforcement is mandatory even though exact defaults are implementation settings. |
 | Access and request permissions | `API_PERMISSION_CLASSES`, `REQUEST_PERMISSIONS_GETTER` | Provisional host integration; trusted values stay server-owned. |
 | Audit | `AUDIT_MODE`, `AUDIT_SINK`, `AUDIT_INCLUDE_CONTENT`, `AUDIT_DATABASE_ALIAS` | Provisional security/operations configuration. Metadata-only remains the default. |
+| Observability | `OBSERVABILITY_SINK` | Governed default-off 0.3.x host callback. Exact events are content-free and best-effort; observability is not audit. |
 | Provider/planning | `LLM_BACKEND`, `LLM_MODEL`, `LLM_BASE_URL`, `LLM_API_KEY`, `LLM_TIMEOUT_SECONDS`, `LLM_TEMPERATURE`, `LOG_LLM_IO`, `PROMPT_RESOURCE_SHORTLIST_LIMIT`, `DUMMY_PLANS`, `DUMMY_DEFAULT_PLAN` | Provisional provider configuration; secrets and live behavior remain host-owned. |
 | Frontend | `FRONTEND_PERMISSION_CHECK`, `FRONTEND_TITLE`, `FRONTEND_SUBTITLE`, `FRONTEND_STARTER_QUESTIONS` | Optional reference-frontend configuration. |
 | MCP | `MCP_ALLOW_ROW_RETURN`, `MCP_MAX_RETURNED_ROWS` | Optional adapter configuration; row return stays host-and-request gated. |
 
 Unknown settings behavior, default-value compatibility, and import-string
-handling are current implementation details. This inventory does not freeze them.
+handling are current implementation details except for the exact documented
+`OBSERVABILITY_SINK=None` behavior. This inventory does not freeze the remaining
+settings.
 
 ## Commands and database-owned surface
 
@@ -267,17 +276,22 @@ Unsupported behavior and claims include:
 
 ## Current posture
 
-This inventory still accepts **no stable Python, HTTP, MCP, admin, frontend, or
-provider surface**. Current first-release posture:
+The exact registration, execution, public-error, and observability rows named in
+the [0.3.x compatibility boundary](compatibility.md) are governed only for that
+line. HTTP, MCP, admin, frontend, provider, document, broad helper, and adapter
+surfaces remain provisional, optional, or internal. Current posture:
 
-- `0.2.0` is the first supported alpha release;
+- this is a narrow alpha compatibility policy, not a 1.0 stability claim;
+- `0.2.0` is the first supported alpha release and supported `0.2.x` upgrade
+  origin for the future `0.3.0` artifact;
 - `0.1.0a1` was a testing artifact only; it is not a supported upgrade origin;
 - the five serialized documents stay internal, unversioned, and without
   extension negotiation; do not add document versions;
 - do not record or handle schema changes or previous document shapes;
-- no deprecation window; breaking changes are accepted;
+- persisted and previously validated plans remain untrusted and require current
+  `execute_plan()` revalidation;
+- there is no fixed deprecation window or compatibility promise beyond 0.3.x;
 - host-owned responsibilities remain outside the package guarantee; and
 - raw SQL remains unsupported.
 
-Every current caller-facing item above remains provisional or optional Django
-implementation exposure. See the [AskLens specification](asklens-specification.md).
+See the [AskLens specification](asklens-specification.md).
