@@ -329,6 +329,8 @@ Review the [security checklist](docs/security-checklist.md) and [production chec
 ## Documentation
 
 - [Installation](docs/installation.md)
+- [Release process](docs/releasing.md)
+- [Post-0.2.0 maintenance roadmap](docs/maintenance-roadmap.md)
 - [Usage guide](docs/usage.md)
 - [Core Python API](docs/core-python-api.md)
 - [Custom UI guide](docs/custom-ui.md)

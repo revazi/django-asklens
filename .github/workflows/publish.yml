@@ -1,0 +1,144 @@
+name: Publish release to PyPI
+
+on:
+  release:
+    types: [published]
+
+# Building and verification need read-only repository access. Only the protected
+# publish job below can request an OIDC identity token.
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build immutable release artifacts
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.release.outputs.version }}
+      wheel_sha256: ${{ steps.digests.outputs.wheel_sha256 }}
+      sdist_sha256: ${{ steps.digests.outputs.sdist_sha256 }}
+
+    steps:
+      - name: Check out the published release tag
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.release.tag_name }}
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+
+      - name: Install locked build and metadata tools
+        run: uv sync --locked --group dev
+
+      - name: Guard tag, version, and checked-out commit
+        id: release
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          version="$(uv run --no-sync python -c \
+            'import tomllib; print(tomllib.load(open("pyproject.toml", "rb"))["project"]["version"])')"
+          test "$RELEASE_TAG" = "v$version"
+          test "$(git rev-list -n 1 "$RELEASE_TAG")" = "$(git rev-parse HEAD)"
+          test -z "$(git status --porcelain --untracked-files=all)"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Build wheel and source distribution
+        run: uv run --no-sync python -m build
+
+      - name: Check package metadata
+        run: uv run --no-sync twine check dist/*
+
+      - name: Record exact artifact digests
+        id: digests
+        run: |
+          uv run --no-sync python - <<'PY' >> "$GITHUB_OUTPUT"
+          from hashlib import sha256
+          from pathlib import Path
+
+          wheel, = Path("dist").glob("django_asklens-*.whl")
+          sdist, = Path("dist").glob("django_asklens-*.tar.gz")
+          print(f"wheel_sha256={sha256(wheel.read_bytes()).hexdigest()}")
+          print(f"sdist_sha256={sha256(sdist.read_bytes()).hexdigest()}")
+          PY
+
+      - name: Preserve the exact distributions for the protected job
+        uses: actions/upload-artifact@v6
+        with:
+          name: release-distributions
+          path: |
+            dist/*.whl
+            dist/*.tar.gz
+          if-no-files-found: error
+          retention-days: 1
+
+  publish:
+    name: Publish with PyPI Trusted Publishing
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/project/django-asklens/${{ needs.build.outputs.version }}/
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Retrieve the exact reviewed distributions
+        uses: actions/download-artifact@v6
+        with:
+          name: release-distributions
+          path: dist
+
+      - name: Publish distributions to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: dist/
+
+  verify-published:
+    name: Verify PyPI / Python ${{ matrix.python-version }} / Django ${{ matrix.django-version }}
+    needs: [build, publish]
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.12", "3.13"]
+        django-version: ["5.2", "6.0", "6.1"]
+        include:
+          - django-version: "5.2"
+            django-package: "Django>=5.2,<5.3"
+            django-version-prefix: "5.2."
+          - django-version: "6.0"
+            django-package: "Django>=6.0,<6.1"
+            django-version-prefix: "6.0."
+          - django-version: "6.1"
+            django-package: "Django>=6.1,<6.2"
+            django-version-prefix: "6.1."
+
+    steps:
+      - name: Check out the published release tag
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.release.tag_name }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Verify downloaded PyPI wheel and source distribution
+        run: |
+          bash scripts/published-package-smoke.sh \
+            --version "${{ needs.build.outputs.version }}" \
+            --wheel-sha256 "${{ needs.build.outputs.wheel_sha256 }}" \
+            --sdist-sha256 "${{ needs.build.outputs.sdist_sha256 }}" \
+            --django-package "${{ matrix.django-package }}" \
+            --django-version-prefix "${{ matrix.django-version-prefix }}"

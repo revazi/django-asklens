@@ -162,6 +162,8 @@ jobs:
               raise SystemExit(f"Missing expected wheel files: {missing_wheel_files}")
 
           required_sdist_suffixes = {
+              "/.github/scripts/wheel-smoke.sh",
+              "/.github/scripts/wheel_smoke.py",
               "/README.md",
               "/LICENSE",
               "/compose.yaml",
@@ -177,6 +179,8 @@ jobs:
               "/docs/test-coverage.md",
               "/scripts/alpha-candidate-package-smoke.sh",
               "/scripts/coverage-baseline.sh",
+              "/scripts/download_pypi_artifacts.py",
+              "/scripts/published-package-smoke.sh",
               "/scripts/reference-demo-smoke.sh",
               "/tests/e2e/reference_demo.py",
           }

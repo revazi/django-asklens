@@ -8,6 +8,7 @@ import importlib.metadata
 import importlib.util
 import os
 import sys
+from pathlib import Path
 from types import SimpleNamespace
 
 import django
@@ -19,6 +20,7 @@ def main() -> None:
     """Run the requested wheel smoke scenario."""
 
     mode = sys.argv[1]
+    assert_installed_distribution_provenance()
     assert_supported_django_band()
     if mode == "core":
         smoke_core_install()
@@ -28,6 +30,28 @@ def main() -> None:
         smoke_api_extra_install()
     else:
         raise SystemExit(f"Unsupported wheel smoke mode: {mode}")
+
+
+def assert_installed_distribution_provenance() -> None:
+    """Reject a checkout-shadowed import before exercising package behavior."""
+
+    import django_asklens
+
+    installed_version = importlib.metadata.version("django-asklens")
+    expected_version = os.environ.get("ASKLENS_EXPECTED_VERSION", "0.2.0")
+    assert installed_version == expected_version
+    assert django_asklens.__version__ == expected_version
+
+    module_path = Path(django_asklens.__file__).resolve()
+    forbidden_root_value = os.environ.get("ASKLENS_FORBIDDEN_SOURCE_ROOT")
+    if forbidden_root_value:
+        forbidden_root = Path(forbidden_root_value).resolve()
+        assert not module_path.is_relative_to(forbidden_root), module_path
+    assert module_path.is_relative_to(Path(sys.prefix).resolve()), module_path
+    print(
+        "PASS isolated installed distribution provenance: "
+        f"django-asklens {installed_version}"
+    )
 
 
 def smoke_core_install() -> None:
@@ -40,7 +64,9 @@ def smoke_core_install() -> None:
     import django_asklens.compiler as compiler_package
     import django_asklens.execution as execution_package
 
-    assert django_asklens.__version__ == "0.2.0"
+    assert django_asklens.__version__ == os.environ.get(
+        "ASKLENS_EXPECTED_VERSION", "0.2.0"
+    )
     assert django_asklens.__all__ == [
         "CONTRACT_SCHEMA_NAMES",
         "Metric",

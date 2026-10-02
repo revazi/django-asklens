@@ -4,6 +4,14 @@ All notable changes to Django AskLens will be documented here.
 
 The project is alpha and APIs may change before a stable release.
 
+## Unreleased
+
+### Added
+
+- Added future-release PyPI Trusted Publishing automation with an environment-protected, short-lived OIDC identity; exact tag/version/artifact handoff guards; and post-publication verification across the supported Python/Django matrix. Remote PyPI publisher and GitHub environment configuration remain explicit operator actions.
+- Added an isolated published-package verifier that downloads the exact wheel and source distribution from fixed PyPI hosts, checks independently supplied SHA-256 values, rejects checkout-shadowed imports, and exercises core, API, MCP, Django-system, and migration behavior.
+- Added a release runbook and a prioritized split between compatible `0.2.1` maintenance candidates and `0.3.0` feature/contract work.
+
 ## 0.2.0 — 2026-10-01
 
 This section describes the exact `0.2.0` release source. `0.1.0a1` was a testing
