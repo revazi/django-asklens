@@ -19,6 +19,8 @@ Django AskLens was created by [Revaz Zakalashvili](https://github.com/revazi) ([
 - [AskLens specification](asklens-specification.md)
 - [Installation](installation.md)
 - [Support lifecycle](support-lifecycle.md)
+- [Release process and Trusted Publishing setup](releasing.md)
+- [Post-0.2.0 maintenance roadmap](maintenance-roadmap.md)
 - [Current Django AskLens surface](alpha-surface-inventory.md)
 - [Core-only executable quickstart](quickstart-core.md)
 - [Usage guide](usage.md)

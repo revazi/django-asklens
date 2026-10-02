@@ -36,7 +36,7 @@ local artifact evidence must be checked against its commit and wheel:
   Django 6.1.
 - Current source metadata requires Python `>=3.12`, Django `>=5.2,<7.0`, and
   Pydantic v2. The optional API extra requires DRF `>=3.18,<4`; the optional MCP
-  extra requires FastMCP `>=3.4,<4`.
+  extra requires FastMCP `>=3.4,<5`.
 
 This is not a Cartesian PostgreSQL matrix, a claim about every future Python or
 Django release accepted by broad metadata, or production-capacity evidence.

@@ -62,6 +62,7 @@ artifacts="$workdir/artifacts"
 source_tree="$workdir/source"
 mkdir -p "$artifacts" "$source_tree"
 git archive "$source_commit" -- \
+  .github/scripts/wheel-smoke.sh .github/scripts/wheel_smoke.py \
   CHANGELOG.md CONTRIBUTING.md LICENSE MANIFEST.in README.md SECURITY.md \
   compose.yaml pyproject.toml conformance django_asklens docs examples scripts \
   tests/e2e \
@@ -156,10 +157,14 @@ if "dev" in (metadata.get_all("Provides-Extra", []) or []):
 with tarfile.open(sdist, "r:gz") as archive:
     source_names = set(archive.getnames())
 required_source_suffixes = {
+    "/.github/scripts/wheel-smoke.sh",
+    "/.github/scripts/wheel_smoke.py",
     "/compose.yaml",
     "/docs/test-coverage.md",
     "/scripts/alpha-candidate-package-smoke.sh",
     "/scripts/coverage-baseline.sh",
+    "/scripts/download_pypi_artifacts.py",
+    "/scripts/published-package-smoke.sh",
     "/scripts/reference-demo-smoke.sh",
     "/tests/e2e/reference_demo.py",
 }

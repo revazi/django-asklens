@@ -2,10 +2,12 @@ include CHANGELOG.md
 include CONTRIBUTING.md
 include SECURITY.md
 include compose.yaml
+include .github/scripts/wheel-smoke.sh
+include .github/scripts/wheel_smoke.py
 recursive-include conformance *.json *.md
 recursive-include django_asklens/contracts/schemas *.json
 recursive-include django_asklens/templates *.html
 recursive-include docs *.md
 recursive-include examples *.md *.py
-recursive-include scripts *.sh
+recursive-include scripts *.py *.sh
 recursive-include tests/e2e *.py

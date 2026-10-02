@@ -39,8 +39,13 @@ fi
 "$smoke_venv/bin/python" -m pip install --quiet --upgrade pip
 "$smoke_venv/bin/python" -m pip install --quiet "$django_package"
 "$smoke_venv/bin/python" -m pip install --quiet "${wheel}${extra}"
-DJANGO_VERSION_PREFIX="$django_version_prefix" \
-  "$smoke_venv/bin/python" "$project_root/.github/scripts/wheel_smoke.py" "$mode"
+(
+  cd "$smoke_venv"
+  env -u PYTHONPATH \
+    DJANGO_VERSION_PREFIX="$django_version_prefix" \
+    ASKLENS_FORBIDDEN_SOURCE_ROOT="$project_root" \
+    "$smoke_venv/bin/python" "$project_root/.github/scripts/wheel_smoke.py" "$mode"
+)
 
 source_snapshot="${ASKLENS_SOURCE_API_SNAPSHOT:-}"
 if [[ "$mode" == "api" && -n "$source_snapshot" ]]; then

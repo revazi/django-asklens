@@ -973,7 +973,9 @@ def test_package_evidence_is_isolated_and_never_releases() -> None:
     assert "--index-url https://pypi.org/simple" in script
     assert '--no-index --no-deps "$wheel"' not in script
     wheel_smoke = read_text(ROOT / ".github" / "scripts" / "wheel_smoke.py")
-    assert 'django_asklens.__version__ == "0.2.0"' in wheel_smoke
+    assert 'os.environ.get("ASKLENS_EXPECTED_VERSION", "0.2.0")' in wheel_smoke
+    assert "assert_installed_distribution_provenance()" in wheel_smoke
+    assert "module_path.is_relative_to(Path(sys.prefix).resolve())" in wheel_smoke
 
 
 def test_package_migration_probe_is_disposable_and_scoped() -> None:

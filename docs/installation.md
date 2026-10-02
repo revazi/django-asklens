@@ -26,6 +26,18 @@ python -m pip install 'django-asklens[mcp]==0.2.0'
 
 Use the immutable [documentation tagged `v0.2.0`](https://github.com/revazi/django-asklens/blob/v0.2.0/README.md). Do not combine `0.2.0` instructions with the historical `0.1.0a1` testing artifact.
 
+The published `0.2.0` files have these independently recorded SHA-256 values:
+
+- wheel: `af0881945d5f5f227332aac8bb13df10d4cf5bd3e54a038acd6545db5640d1d8`
+- source distribution: `11af90303fd2d23123e4caa98c6e6cb660b7b8f32d6fba0c57a4554c8d39e022`
+
+Maintainers can re-download, authenticate, and exercise both public artifacts
+with `scripts/published-package-smoke.sh`; see the
+[release process](releasing.md#rechecking-a-published-release-locally). The
+probe removes checkout import shadowing and uses separate core, API, and MCP
+environments. This does not make PyPI installation an independent security or
+production certification.
+
 ## Source checkout and exact local artifacts
 
 Use `uv` when developing in this repository:
