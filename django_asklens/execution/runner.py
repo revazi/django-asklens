@@ -3,7 +3,7 @@
 from collections.abc import Mapping
 from dataclasses import dataclass, field, replace
 from datetime import datetime
-from time import perf_counter
+from time import monotonic_ns, perf_counter
 from typing import Any, Never
 
 from django.core.exceptions import FieldError
@@ -35,6 +35,14 @@ from django_asklens.execution.audit import (
     _emit_audit_event,
     _resolve_audit_policy_and_sink,
 )
+from django_asklens.observability import (
+    ObservabilityEvent,
+    _build_observability_event,
+    _context_rejection_observability_is_deferred,
+    _emit_external_plan_rejection,
+    _emit_observability_events,
+    _resolve_observability_sink,
+)
 from django_asklens.permissions import get_request_permissions
 from django_asklens.planning.schemas import QueryPlan
 from django_asklens.planning.validation import parse_and_validate_query_plan
@@ -55,6 +63,7 @@ class _ExecutionContext:
     now: datetime
     audit_policy: _AuditPolicy
     audit_sink: _AuditSink | None
+    observability_sink: Any
 
     def __reduce__(self) -> Never:
         """Prevent current request state from being serialized or reused."""
@@ -103,12 +112,26 @@ def execute_plan(
 ) -> QueryResult:
     """Revalidate and execute an untrusted plan for the current request."""
 
-    context = _build_public_execution_context(
-        request=request,
-        registry=registry,
-        now=None,
-        require_request=True,
-    )
+    started = monotonic_ns()
+    try:
+        context = _build_public_execution_context(
+            request=request,
+            registry=registry,
+            now=None,
+            require_request=True,
+        )
+    except PublicAskLensError as exc:
+        # Shared orchestration owns its external audit-before-observation order.
+        # A direct call has no usable facade audit context at this boundary, so
+        # observing the already-final rejection must not create an audit side
+        # effect or inspect the untrusted plan.
+        if not _context_rejection_observability_is_deferred():
+            _emit_external_plan_rejection(
+                error_code=exc.code,
+                duration_ms=_elapsed_ms(started),
+            )
+            exc._observability_attempted = True
+        raise
     return _execute_public_plan(plan, context=context)
 
 
@@ -170,6 +193,7 @@ def _build_execution_context(
         now=resolved_now,
         audit_policy=audit_policy,
         audit_sink=audit_sink,
+        observability_sink=_resolve_observability_sink(),
     )
 
 
@@ -181,32 +205,123 @@ def _execute_public_plan(
     """Execute and audit while exposing only safe public error metadata."""
 
     validated_plan: QueryPlan | None = None
+    events: list[ObservabilityEvent] = []
+    planning_started = monotonic_ns()
     try:
         validated_plan = _validate_untrusted_plan(plan, context=context)
+    except AskLensError as exc:
+        public_error = normalize_public_error(exc)
+        _append_observability_event(
+            events,
+            name="asklens.plan.rejected",
+            status="rejected",
+            resource=None,
+            intent=None,
+            error_code=public_error.code,
+            duration_ms=_elapsed_ms(planning_started),
+            result_count=None,
+            truncated=None,
+        )
+        audit_record = _audit_execution(
+            context=context,
+            validated_plan=None,
+            result=None,
+            error=public_error,
+        )
+        _emit_observability_events(
+            sink=context.observability_sink,
+            events=events,
+        )
+        public_error._audit_record = audit_record
+        public_error._audit_attempted = True
+        public_error._observability_attempted = True
+        raise public_error from None
+
+    _append_observability_event(
+        events,
+        name="asklens.plan.accepted",
+        status="accepted",
+        resource=validated_plan.resource,
+        intent=validated_plan.intent,
+        error_code=None,
+        duration_ms=_elapsed_ms(planning_started),
+        result_count=None,
+        truncated=None,
+    )
+    execution_started = monotonic_ns()
+    try:
         result = _execute_validated_plan(validated_plan, context=context)
     except AskLensError as exc:
         public_error = normalize_public_error(exc)
+        _append_observability_event(
+            events,
+            name="asklens.execution.failed",
+            status="failed",
+            resource=validated_plan.resource,
+            intent=validated_plan.intent,
+            error_code=public_error.code,
+            duration_ms=_elapsed_ms(execution_started),
+            result_count=None,
+            truncated=None,
+        )
         audit_record = _audit_execution(
             context=context,
             validated_plan=validated_plan,
             result=None,
             error=public_error,
         )
+        _emit_observability_events(
+            sink=context.observability_sink,
+            events=events,
+        )
         public_error._audit_record = audit_record
         public_error._audit_attempted = True
+        public_error._observability_attempted = True
         raise public_error from None
 
+    _append_observability_event(
+        events,
+        name="asklens.execution.succeeded",
+        status="succeeded",
+        resource=validated_plan.resource,
+        intent=validated_plan.intent,
+        error_code=None,
+        duration_ms=_elapsed_ms(execution_started),
+        result_count=result.row_count,
+        truncated=result.truncated,
+    )
     audit_record = _audit_execution(
         context=context,
         validated_plan=validated_plan,
         result=result,
         error=None,
     )
+    _emit_observability_events(
+        sink=context.observability_sink,
+        events=events,
+    )
     return replace(
         result,
         _validated_plan=validated_plan,
         _audit_record=audit_record,
     )
+
+
+def _append_observability_event(
+    events: list[ObservabilityEvent],
+    **values: Any,
+) -> None:
+    """Append a valid event without making instrumentation authoritative."""
+
+    event = _build_observability_event(**values)
+    if event is not None:
+        events.append(event)
+
+
+def _elapsed_ms(started_ns: int) -> int:
+    """Return rounded non-negative monotonic elapsed milliseconds."""
+
+    return max(0, round((monotonic_ns() - started_ns) / 1_000_000))
 
 
 def _validate_untrusted_plan(

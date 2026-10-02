@@ -75,15 +75,15 @@ surfaces and therefore should not be slipped into a patch.
 
 ### P0 — explicit contract decisions
 
-1. **Decide whether any Python, HTTP, MCP, or document surface becomes stable.**
-   The current schemas and AskLens specification are deliberately draft,
-   internal, unfrozen, and unversioned. Version negotiation, extension policy,
-   compatibility windows, and previous-shape handling require a design decision
-   plus conformance fixtures; they are not maintenance cleanup.
-2. **Define an upgrade/deprecation policy for future real releases.** `0.2.0` is
-   the first supported alpha and `0.1.0a1` is explicitly not an upgrade origin.
-   Any promise covering `0.2.x → 0.3.x`, migration rollback, persisted plans, or
-   client compatibility must be designed and tested before it is documented.
+1. **Accepted for 0.3.x: a narrow governed core boundary.** Registration,
+   trusted execution, public errors, and the typed observability event are named
+   exactly in [the compatibility policy](compatibility.md). HTTP, MCP, admin,
+   provider, broad helper, and document surfaces remain provisional/internal;
+   schemas stay unversioned with no negotiation or previous-shape handling.
+2. **Accepted for 0.3.0: an actionable bounded upgrade statement.** Supported
+   `0.2.x` origins use normal host checks and require no migration for this
+   scope; persisted plans always receive current-facade revalidation. There is
+   no broad rollback promise, fixed deprecation window, or 1.0 stability claim.
 
 ### P1 — new runtime capabilities
 
@@ -91,10 +91,11 @@ surfaces and therefore should not be slipped into a patch.
    facade.** It must preserve request identity, fail-closed scope, budgets,
    deterministic serialization, cancellation, and exactly-once audit semantics.
    An adapter-only bypass is unacceptable.
-4. **Design host observability hooks.** Metrics/tracing APIs must keep labels
-   low-cardinality and exclude questions, rows, filter values, credentials, and
-   tenant identifiers by default. Adding OpenTelemetry/Prometheus dependencies
-   or a public event contract is feature work.
+4. **Accepted for 0.3.0: dependency-free host observability.** The default-off
+   typed callback has exact low-cardinality lifecycle semantics, excludes
+   request/result/private content, runs after audit, and suppresses sink failure
+   and reentrancy. External telemetry transports and production dashboards stay
+   host-owned and are not package dependencies.
 5. **Evaluate scheduled audit retention and richer export/deletion workflows.**
    Today scheduling, custom sinks, backups, replicas, and complete data-subject
    handling are host-owned. Automatic mutation, retries, or cross-store

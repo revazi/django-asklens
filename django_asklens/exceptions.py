@@ -44,6 +44,7 @@ class PublicAskLensError(AskLensError):
         self.public_message = source.public_message
         self._audit_record = None
         self._audit_attempted = False
+        self._observability_attempted = False
         super().__init__(
             source.public_message, pointer=safe_json_pointer(source.pointer)
         )

@@ -88,43 +88,126 @@ Expected result:
 If a request passes host controls, AskLens executes normally and applies
 `AUDIT_MODE` as configured.
 
-## 5) Audit sink guidance
+## 5) Privacy-safe host observability callback
 
-For the current `0.2.0` alpha scope, the operational audit sink for
-custom integrations is:
+`DJANGO_ASKLENS["OBSERVABILITY_SINK"]` is `None` by default. A host may set a
+callable or dotted callable path. It receives one immutable
+`django_asklens.observability.ObservabilityEvent` at a time and requires no
+telemetry dependency:
 
-- `DJANGO_ASKLENS["AUDIT_MODE"] = "custom"` with `AUDIT_SINK`
-- `DJANGO_ASKLENS["AUDIT_INCLUDE_CONTENT"] = False` by default.
+```python
+from django_asklens.observability import ObservabilityEvent
 
-This repository does **not** define a frozen external event schema.
-Treat sink payloads as package-internal operational metadata and avoid expanding
-publicly visible fields without explicit agreement.
 
-For a host-observed metric model, keep metadata low-cardinality:
+def observe_asklens(event: ObservabilityEvent) -> None:
+    # Keep these bounded dimensions as labels.
+    labels = {
+        "name": event.name,
+        "status": event.status,
+        "resource": event.resource or "none",
+        "intent": event.intent or "none",
+        "error_code": event.error_code or "none",
+    }
+    # Record these as measurements, never labels.
+    record_metrics(
+        labels=labels,
+        duration_ms=event.duration_ms,
+        result_count=event.result_count,
+        truncated=event.truncated,
+    )
 
-- `status`;
-- `resource` (when present);
-- `intent` (when present);
-- `error_code`.
 
-Use numeric observations for:
+DJANGO_ASKLENS["OBSERVABILITY_SINK"] = observe_asklens
+```
 
-- `duration_ms`;
-- `row_count`.
+The callback contract has exactly eight fields: `name`, `status`, `resource`,
+`intent`, `error_code`, `duration_ms`, `result_count`, and `truncated`. Valid
+outcomes are:
 
-`error_code` may be a stable label; do not use free-form `error_message` in
-metric labels. Keep human-readable error messages in controlled logs where
-retention, access, and redaction are enforced.
+| `name` | `status` | Other field semantics |
+| --- | --- | --- |
+| `asklens.plan.accepted` | `accepted` | `resource` and `intent` are safe names from a currently validated plan; no error or result metadata. |
+| `asklens.plan.rejected` | `rejected` | `resource` and `intent` are always `None`, so unknown or unauthorized caller names cannot become labels; `error_code` is canonical. |
+| `asklens.execution.succeeded` | `succeeded` | Safe resolved resource/intent plus `result_count` and `truncated`; no error code. |
+| `asklens.execution.failed` | `failed` | Safe resolved resource/intent and canonical `error_code`; no partial result metadata. |
 
-Do **not** include, export, or index these request-level values by default:
+`duration_ms` is a non-negative integer measured with the process monotonic
+clock, rounded to the nearest millisecond. A facade `plan.accepted` or
+validation `plan.rejected` duration covers current plan parsing and validation.
+A direct pre-plan rejection also covers facade context resolution up to that
+rejection. A shared-orchestration pre-facade rejection instead covers the
+interval from orchestration entry through its final rejection, which can
+include permission resolution, presentation parsing, intent routing, and
+provider planning as applicable. Execution duration covers scope preparation,
+ORM compilation/evaluation, and trusted serialization; it excludes audit and
+callback delivery. These are operational observations, not SLA or billing
+clocks, and durations from different event categories are not interchangeable.
+`result_count` is the number of returned rows or groups after the AskLens limit
+and is bounded by the current trusted row/group budget; `truncated` says whether
+AskLens detected more rows/groups. Both occur only on successful execution.
 
-- question text;
-- full validated/supplied plan payload;
-- filter values or rendered SQL;
-- row contents/rows returned;
-- credentials or permission strings;
-- tenant IDs or raw user identifiers;
-- provider payloads.
+Delivery is best effort. Once the trusted facade has built its audit context,
+it completes the authoritative audit attempt before scheduling one callback
+attempt for each applicable event. Outside an initialized Django transaction,
+callback delivery is synchronous. For every initialized database connection in
+an `atomic()` block at emission time, AskLens registers the immutable lifecycle
+batch with `on_commit()` and delivers only after all of those callbacks run. A
+rollback on any one of those connections discards its callback, so the whole
+batch is dropped rather than partially delivered. A facade called inside a
+host-owned `atomic()` block can therefore return before deferred delivery.
+
+Django has no public `on_commit()` facility while autocommit is disabled through
+manual transaction management outside `atomic()`. If any initialized connection
+is in that state, AskLens conservatively drops the batch. It does not invoke the
+sink before commit or depend on backend transaction internals. These rules keep
+the sink out of every transaction active at emission time: an ordinary sink
+database error cannot mark such a caller transaction rollback-only, and a
+built-in audit row in such an `atomic()` transaction commits before delivery.
+Observability remains best effort and must not be used to infer commit or audit
+persistence.
+
+A validated execution attempts `plan.accepted` followed by one execution
+outcome; a validation rejection attempts only `plan.rejected`. If a direct
+facade call is rejected while resolving its request, permissions, or audit
+context, no facade audit context exists and one opaque `plan.rejected` is
+scheduled without creating or changing an audit outcome. The untrusted plan is
+not parsed. For the same pre-plan failure under shared orchestration,
+observation is deferred so the shared external audit attempt remains first and
+only one rejection event is scheduled. Other final provider/orchestration
+failures that occur before the facade likewise schedule one opaque
+`plan.rejected` after external audit. Capability/help responses and transport
+denials do not claim plan/execution events. Repeated facade calls are separate
+lifecycles.
+
+An invalid setting or failed dotted import disables delivery. A scheduling or
+callback exception is suppressed and stops the remaining events for that
+lifecycle. There is no retry or fallback sink. AskLens does not consult callback
+return values and its delivery path does not authorize requests, execute
+rejected plans, rerun queries, replace public errors, alter result bytes, or
+change/conceal the authoritative audit attempt. Recursive delivery triggered
+inside a sink is suppressed in that context; concurrent request contexts remain
+independent. The callback is ordinary trusted host process code, not a sandbox:
+hosts remain responsible for its latency, database/network operations, and
+other side effects.
+
+Use `name`, `status`, resolved `resource`, `intent`, and canonical `error_code`
+only as bounded dimensions. Resource cardinality is bounded by the host's
+explicit registration set. Do not use durations or counts as labels. Hosts must
+not enrich events with request content merely because an external telemetry
+SDK supports arbitrary attributes.
+
+The event cannot contain questions; complete or partial plans; field, metric,
+filter, order, or group names/values; rows/groups or result values; identity,
+user, tenant, permission, or scope data; credentials; provider/client payloads;
+private bindings; raw exceptions, diagnostics, or messages; database aliases;
+SQL; or arbitrary client-supplied unknown names. Inspecting those values in
+host closure/request state would violate the contract even though the package
+did not pass them.
+
+Observability is not audit. `AUDIT_MODE`, `AUDIT_SINK`, built-in audit storage,
+and `AUDIT_INCLUDE_CONTENT` retain their existing separate semantics. An
+observability callback must not be used as proof that an audit record was
+persisted, and an audit sink should not be repurposed as this typed event API.
 
 ## 6) Built-in database audit routing and read privacy
 
@@ -223,7 +306,8 @@ writes. Restrict command execution and every other storage path separately.
 
 ## 9) No mandatory telemetry or queueing dependencies
 
-AskLens does not require OpenTelemetry, Prometheus, background queues, a cache,
-or service mesh to satisfy this hardening slice.
-Host projects can add them later if needed for operations, but they are not
-package requirements.
+The callback adds no OpenTelemetry, Prometheus, logging, network, background
+queue, cache, or service-mesh dependency. Hosts may adapt the typed events to
+those systems under their own privacy, cardinality, availability, and retention
+policy; those transports and dashboards are not package requirements or
+production acceptance evidence.

@@ -19,6 +19,7 @@ Django AskLens was created by [Revaz Zakalashvili](https://github.com/revazi) ([
 - [AskLens specification](asklens-specification.md)
 - [Installation](installation.md)
 - [Support lifecycle](support-lifecycle.md)
+- [0.3.x compatibility boundary](compatibility.md)
 - [Release process and Trusted Publishing setup](releasing.md)
 - [Post-0.2.0 maintenance roadmap](maintenance-roadmap.md)
 - [Current Django AskLens surface](alpha-surface-inventory.md)
@@ -36,7 +37,7 @@ Django AskLens was created by [Revaz Zakalashvili](https://github.com/revazi) ([
 - [Bounded MCP quickstart and integration notes](mcp-integration.md) — exact local extra, trusted context mapping, compact discovery, and safe row defaults
 - [Security checklist](security-checklist.md)
 - [Production checklist](production-checklist.md)
-- [Host throttling and audit controls](host-throttle-and-audit-controls.md)
+- [Host throttling, audit, and observability controls](host-throttle-and-audit-controls.md)
 - [Multi-tenant security](multitenancy-security.md)
 - [Evaluation fixtures](evaluation.md)
 - [Synthetic performance baseline](performance-baseline.md)

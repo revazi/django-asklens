@@ -1294,8 +1294,8 @@ def test_support_lifecycle_policy_stays_evidence_bounded() -> None:
     assert "recursive-include docs *.md" in manifest
 
 
-def test_alpha_surface_inventory_does_not_accept_a_stable_contract() -> None:
-    """The current surface map remains exact, navigable, and non-normative."""
+def test_alpha_surface_inventory_has_a_narrow_0_3_contract() -> None:
+    """The surface map governs only the accepted 0.3.x core boundary."""
 
     assert ALPHA_SURFACE_INVENTORY.is_file()
     inventory = read_text(ALPHA_SURFACE_INVENTORY)
@@ -1320,10 +1320,12 @@ def test_alpha_surface_inventory_does_not_accept_a_stable_contract() -> None:
         assert heading in inventory
 
     for required in (
-        "No surface is accepted as stable",
+        "narrow 0.3.x compatibility boundary",
         "10 deliberate root exports",
-        "35 current `DJANGO_ASKLENS` keys",
+        "36 current `DJANGO_ASKLENS` keys",
         "`execute_plan`",
+        "`ObservabilityEvent`",
+        "`OBSERVABILITY_SINK`",
         "`redact_asklens_audit`",
         "`purge_asklens_audit`",
         "`GET /asklens/catalog/`",
@@ -1337,6 +1339,7 @@ def test_alpha_surface_inventory_does_not_accept_a_stable_contract() -> None:
         "testing artifact only",
         "not a supported upgrade origin",
         "Do not record or handle previous-version schema changes",
+        "not a 1.0 stability claim",
     ):
         assert required in inventory
 
@@ -1357,6 +1360,7 @@ def test_alpha_surface_inventory_does_not_accept_a_stable_contract() -> None:
 
     assert "[Current Django AskLens surface](alpha-surface-inventory.md)" in docs_index
     assert "[current Django AskLens surface](alpha-surface-inventory.md)" in lifecycle
+    assert "[0.3.x compatibility boundary](compatibility.md)" in docs_index
     assert "Added a current alpha surface inventory" in changelog
     assert "recursive-include docs *.md" in manifest
 
@@ -1823,15 +1827,16 @@ def test_host_throttle_and_audit_controls_guide_is_assertive() -> None:
     assert "X-Forwarded-For" in guide
     assert "Do not let spoofed proxy headers choose authenticated identity" in guide
     assert "error_code" in guide
-    assert "error_code` may be a stable label" in guide
-    assert "free-form `error_message`" in guide
-    assert "do not use free-form `error_message` in\nmetric labels" in guide
+    assert "canonical `error_code`" in guide
+    assert "raw exceptions, diagnostics, or messages" in guide
+    assert "Do not use durations or counts as labels" in guide
     assert "trusted-proxy" in guide.lower()
     assert "provider/client output as untrusted" in guide
     assert "validated by" in guide
     assert "AUDIT_MODE" in guide
-    assert 'DJANGO_ASKLENS["AUDIT_MODE"] = "custom"' in guide
-    assert "does not require OpenTelemetry" in guide
+    assert "OBSERVABILITY_SINK" in guide
+    assert "Observability is not audit" in guide
+    assert "adds no OpenTelemetry" in guide
     assert "host-owned" in guide
 
     assert "Host throttling and audit controls" in production

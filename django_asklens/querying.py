@@ -1,6 +1,7 @@
 """Framework-neutral AskLens query/help orchestration."""
 
 from dataclasses import dataclass
+from time import monotonic_ns
 from typing import Any, Literal
 
 from django.core.exceptions import PermissionDenied
@@ -21,6 +22,10 @@ from django_asklens.execution.audit import (
     _execution_audit_content,
 )
 from django_asklens.models import SemanticQueryRun
+from django_asklens.observability import (
+    _defer_context_rejection_observability,
+    _emit_external_plan_rejection,
+)
 from django_asklens.permissions import get_request_permissions
 from django_asklens.planning import (
     PresentationSpec,
@@ -79,6 +84,7 @@ def execute_asklens_query_request(
 
     _enforce_debug_permission(request, debug=debug)
     permissions: frozenset[str] | None = None
+    planning_started = monotonic_ns()
 
     try:
         try:
@@ -152,7 +158,8 @@ def execute_asklens_query_request(
                 if presentation is None:
                     presentation = planner_result.presentation
 
-            query_result = execute_plan(untrusted_plan, request=request)
+            with _defer_context_rejection_observability():
+                query_result = execute_plan(untrusted_plan, request=request)
             plan = query_result._validated_plan
             assert plan is not None
             run = _database_audit_record(query_result._audit_record)
@@ -201,12 +208,22 @@ def execute_asklens_query_request(
                 ),
             )
 
+        duration_ms = max(
+            0,
+            round((monotonic_ns() - planning_started) / 1_000_000),
+        )
         run = _database_audit_record(getattr(exc, "_audit_record", None))
         if not getattr(exc, "_audit_attempted", False):
             with _execution_audit_content(question=question):
                 run = _database_audit_record(
                     _audit_external_rejection(request=request, error=exc)
                 )
+        if not getattr(exc, "_observability_attempted", False):
+            _emit_external_plan_rejection(
+                error_code=exc.code,
+                duration_ms=duration_ms,
+            )
+            exc._observability_attempted = True
 
         error_payload = public_error_payload(exc)
         payload: dict[str, Any] = {
