@@ -6,30 +6,31 @@ The project is alpha and APIs may change before a stable release.
 
 ## Unreleased
 
-No changes have been queued after the `0.3.0` release candidate.
+No changes have been queued after the reviewed `0.3.0` release source.
 
-## 0.3.0 — 2026-10-02 (release candidate)
+## 0.3.0 — 2026-10-02
 
-This section describes the exact `0.3.0` candidate source. It has not been
-tagged, published to PyPI, or made into a GitHub Release. Publication requires a
-separate maintainer decision after candidate review. The immutable `v0.2.0`
-release remains the current published release, and `0.1.0a1` remains an
-unsupported testing artifact rather than an upgrade origin.
+This section describes the exact reviewed `0.3.0` release source. Its presence
+in a checkout does not by itself establish a Git tag, PyPI publication, or
+GitHub Release, and source review does not authorize those actions. The
+immutable `v0.2.0` release remains the prior supported `0.2.x` upgrade origin,
+and `0.1.0a1` remains an unsupported testing artifact rather than an upgrade
+origin.
 
 ### Added
 
 - Defined the narrow 0.3.x alpha compatibility boundary for registration, trusted execution, public errors, and privacy-safe observability while keeping HTTP/MCP/admin/provider adapters, broad helpers, and all five unversioned documents provisional or internal. Added an actionable `0.2.x` to `0.3.0` path with no migration for this scope, mandatory current-facade revalidation of persisted plans, and explicit rollback limits; this is not a 1.0 stability claim.
 - Added default-off `OBSERVABILITY_SINK` and the immutable eight-field `ObservabilityEvent`. The trusted facade emits only four validated, content-free lifecycle outcomes after its audit attempt; shared orchestration covers final pre-facade rejection without adapter-owned events. Delivery is deferred until enclosing Django transactions commit so an ordinary sink database exception cannot poison the caller transaction or roll back its audit row. Invalid configuration, raised callback errors, and recursive delivery do not enter AskLens authorization/execution control flow, add default-off query cost, or change successful result bytes; trusted host callback side effects remain host-owned. No telemetry dependency or migration was added.
-- Added PyPI Trusted Publishing automation with an environment-protected, short-lived OIDC identity; exact tag/version/artifact handoff guards; and post-publication verification across the supported Python/Django matrix. Remote PyPI publisher and GitHub environment configuration remain explicit operator actions and are not changed by this candidate.
+- Added PyPI Trusted Publishing automation with an environment-protected, short-lived OIDC identity; exact tag/version/artifact handoff guards; and post-publication verification across the supported Python/Django matrix. Remote PyPI publisher and GitHub environment configuration remain explicit operator actions outside this source change.
 - Added an isolated published-package verifier that downloads an exact wheel and source distribution from fixed PyPI hosts, checks independently supplied SHA-256 values, rejects checkout-shadowed imports, and exercises core, API, MCP, Django-system, and migration behavior.
 - Added a release runbook and a prioritized split between compatible `0.2.1` maintenance candidates and `0.3.0` feature/contract work.
 
-### Candidate limitations
+### Release limitations
 
 - The governed boundary is only the registration/resource, `execute_plan()` / `QueryResult`, namespaced public-error, and `ObservabilityEvent` / default-off callback surface named in `docs/compatibility.md`. It does not govern broad HTTP, MCP, admin, frontend, provider, helper, schema, or serialized-document shapes.
 - Authentication, authorization assignment, scope-provider correctness, rate and concurrency limits, statement/request timeouts, telemetry transport and callback side effects, backups/replicas, live-provider quality, and production capacity remain host-owned and require deployment-specific evidence.
-- This candidate is not a 1.0 stability promise, production certification, external security certification, public multi-implementation standard, or evidence for async/streaming, routing/failover, scheduled audit automation, or a saved-query product.
-- Upgrade support starts at published `0.2.x` (currently `0.2.0`), introduces no AskLens migration in this scope, and requires current-facade revalidation of every persisted plan. This is not a general rollback or mixed-version guarantee.
+- This release is not a 1.0 stability promise, production certification, external security certification, public multi-implementation standard, or evidence for async/streaming, routing/failover, scheduled audit automation, or a saved-query product.
+- Upgrade support starts at published `0.2.x` (`0.2.0` for this release), introduces no AskLens migration in this scope, and requires current-facade revalidation of every persisted plan. This is not a general rollback or mixed-version guarantee.
 
 ## 0.2.0 — 2026-10-01
 

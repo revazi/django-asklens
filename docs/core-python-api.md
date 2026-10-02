@@ -4,8 +4,9 @@ Django AskLens is the Django implementation of the [AskLens specification](askle
 
 > **Alpha trust-boundary warning:** `parse_query_plan()` establishes structure only. Use `execute_plan(plan, request=request)` for execution: it treats mappings and existing `QueryPlan` objects as untrusted and repeats current catalog, permission, limit, and request-scope validation. The compiler and compiled-query executor are internal and not public exports. Never treat a previously validated `QueryPlan` as a reusable authorization token.
 
-For this unpublished candidate, install only the exact locally built artifact
-after verifying its source commit and SHA-256 digest:
+For this `0.3.0` release source, install only an exact artifact after verifying
+its provenance and SHA-256 digest. For a local build, verify its source commit
+as well:
 
 ```bash
 python -m pip install /verified/path/django_asklens-0.3.0-py3-none-any.whl

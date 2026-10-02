@@ -4,10 +4,10 @@ Status: AskLens ships dependency-free MCP adapter helpers, an `AskLensMCPToolSet
 
 ## Bounded MCP quickstart
 
-This path is for an exact locally built `django-asklens==0.3.0` candidate; the
-historical `0.1.0a1` testing artifact is not a supported upgrade origin.
-`0.3.0` is not published to PyPI. Install the candidate in a fresh environment
-only after verifying its source commit, exact path, and SHA-256 digest:
+This path describes the reviewed `django-asklens==0.3.0` release source; the
+historical `0.1.0a1` testing artifact is not a supported upgrade origin. Install
+an exact artifact in a fresh environment only after verifying its provenance,
+path, and SHA-256 digest; for a local build, verify its source commit as well:
 
 ```bash
 python -m pip install '/verified/path/django_asklens-0.3.0-py3-none-any.whl[mcp]'
@@ -233,7 +233,7 @@ See [`examples/mcp/`](../examples/mcp/) for a generic registration sketch. The r
 
 The runnable test project can expose a real FastMCP Streamable HTTP endpoint for local testing with clients such as pi-codemcp. This ASGI/Uvicorn setup is a local one-port demo convenience: `/mcp` is served by FastMCP and normal Django routes, including admin, are mounted beside it.
 
-For the committed PostgreSQL 18 and Playwright HTTP evidence, use `bash scripts/reference-demo-smoke.sh` from a source checkout after the setup in [the runnable demo guide](test-project-demo.md). That smoke starts with a server-owned `facility-owner` identity, keeps `DJANGO_ASKLENS_MCP_ALLOW_ROWS=0`, proves the tool schema has no client identity/permission/scope arguments, requests rows and observes safe denial, and tears down its isolated Compose project. It is synthetic internal alpha-candidate evidence, not production authentication or transport-security guidance.
+For the committed PostgreSQL 18 and Playwright HTTP evidence, use `bash scripts/reference-demo-smoke.sh` from a source checkout after the setup in [the runnable demo guide](test-project-demo.md). That smoke starts with a server-owned `facility-owner` identity, keeps `DJANGO_ASKLENS_MCP_ALLOW_ROWS=0`, proves the tool schema has no client identity/permission/scope arguments, requests rows and observes safe denial, and tears down its isolated Compose project. It is synthetic internal alpha release-source evidence, not production authentication or transport-security guidance.
 
 AskLens core does not require ASGI, Uvicorn, or FastMCP. Host projects may run their normal Django app/admin through `runserver`, WSGI, or their existing ASGI stack and expose MCP from a separate process or port. In this repository, FastMCP and Uvicorn are development dependencies installed by `uv sync --group dev`.
 

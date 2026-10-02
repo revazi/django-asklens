@@ -4,14 +4,14 @@ This process applies to releases after `0.2.0`. The existing `v0.2.0` tag,
 GitHub Release, and PyPI files are immutable and must not be recreated or
 replaced.
 
-## 0.3.0 candidate status
+## 0.3.0 release source status
 
-Current source metadata prepares `0.3.0`, but it is an unpublished release
-candidate. Candidate validation does not authorize a tag, GitHub Release, PyPI
-upload, deployment, protected-environment approval, or remote Trusted Publisher
-change. Record the exact candidate commit, wheel and source-distribution
-SHA-256 values, and check results in the candidate pull request; do not present
-those local files as immutable published artifacts.
+Current source metadata identifies the reviewed `0.3.0` release source. Its
+presence neither authorizes nor by itself establishes a tag, GitHub Release,
+PyPI upload, deployment, protected-environment approval, or remote Trusted
+Publisher change. Release review records the exact final commit, wheel and
+source-distribution SHA-256 values, and check results; local files must not be
+presented as immutable public artifacts.
 
 The repository workflow and local checks can verify the intended publisher
 identity and artifact handoff, but they cannot independently confirm the
@@ -42,7 +42,7 @@ The workflow:
 
 Pre-publication CI remains the release gate. Post-publication verification is a
 separate check that the immutable public bytes resolve and behave as expected;
-it cannot make a bad upload safe or replace candidate review.
+it cannot make a bad upload safe or replace source review.
 
 ## One-time operator configuration
 
@@ -93,8 +93,8 @@ and cannot mutate them.
    ```
 
 3. Review all required CI jobs, package contents, dependency advisories, and the
-   changelog on the exact candidate commit. Live-provider, production, external
-   adoption, and independent-security evidence must be described as absent
+   changelog on the exact proposed release commit. Live-provider, production,
+   external adoption, and independent-security evidence must be described as absent
    unless they were separately authorized and actually run.
 4. Create an immutable `v<project.version>` tag on the reviewed commit and a
    GitHub Release for that exact tag. Publishing the GitHub Release starts the

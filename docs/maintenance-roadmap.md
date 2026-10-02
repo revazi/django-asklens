@@ -68,7 +68,7 @@ still needs its own focused review.
    live providers, production capacity, independent security review, and the
    unsupported `0.1.0a1` testing artifact.
 
-## `0.3.0` candidates: feature or contract work
+## `0.3.0` release work: feature or contract changes
 
 These can alter supported behavior, policy, dependencies, or serialized/public
 surfaces and therefore should not be slipped into a patch.

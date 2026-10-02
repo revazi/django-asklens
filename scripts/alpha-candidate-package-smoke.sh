@@ -5,11 +5,11 @@ usage() {
   cat <<'EOF'
 Usage: bash scripts/alpha-candidate-package-smoke.sh [--help]
 
-Build the exact committed 0.3.0 candidate source into a temporary wheel and
-source distribution, exercise isolated core/API/MCP installs, and upgrade an
-actual PyPI 0.2.0 installation while preserving SQLite migration state. This
-produces local candidate evidence only; it does not support upgrades from
-0.1.0a1 or upload, tag, publish, or release anything.
+Build the exact committed 0.3.0 release source into a temporary wheel and source
+distribution, exercise isolated core/API/MCP installs, and upgrade an actual
+PyPI 0.2.0 installation while preserving SQLite migration state. This produces
+local package evidence only; it does not support upgrades from 0.1.0a1 or
+upload, tag, publish, or release anything.
 EOF
 }
 
@@ -82,17 +82,17 @@ wheels=("$artifacts"/django_asklens-*.whl)
 sdists=("$artifacts"/django_asklens-*.tar.gz)
 shopt -u nullglob
 if [[ ${#wheels[@]} -ne 1 || ${#sdists[@]} -ne 1 ]]; then
-  echo "Expected exactly one candidate wheel and one source distribution." >&2
+  echo "Expected exactly one wheel and one source distribution." >&2
   exit 1
 fi
 wheel="${wheels[0]}"
 sdist="${sdists[0]}"
 [[ "$(basename "$wheel")" == "django_asklens-0.3.0-py3-none-any.whl" ]] || {
-  echo "Unexpected candidate wheel filename: $(basename "$wheel")" >&2
+  echo "Unexpected wheel filename: $(basename "$wheel")" >&2
   exit 1
 }
 [[ "$(basename "$sdist")" == "django_asklens-0.3.0.tar.gz" ]] || {
-  echo "Unexpected candidate source distribution filename: $(basename "$sdist")" >&2
+  echo "Unexpected source distribution filename: $(basename "$sdist")" >&2
   exit 1
 }
 uv run --no-sync twine check "$wheel" "$sdist"
@@ -119,7 +119,7 @@ with zipfile.ZipFile(wheel) as archive:
         raise SystemExit("Expected one wheel METADATA file.")
     metadata = Parser().parsestr(archive.read(metadata_names[0]).decode("utf-8"))
     if metadata["Name"] != "django-asklens" or metadata["Version"] != "0.3.0":
-        raise SystemExit("Candidate wheel metadata must identify django-asklens 0.3.0.")
+        raise SystemExit("Wheel metadata must identify django-asklens 0.3.0.")
     query_schema = json.loads(
         archive.read(
             "django_asklens/contracts/schemas/query-plan.schema.json"
@@ -197,7 +197,7 @@ print(
 )
 print("PASS source wheel query schema enforces containment value constraints")
 print("PASS source distribution contains the documented opt-in evidence artifacts")
-print("PASS candidate wheel metadata identifies django-asklens 0.3.0")
+print("PASS wheel metadata identifies django-asklens 0.3.0")
 PY
 
 uv run --no-sync python - "$wheel" "$sdist" <<'PY'
@@ -207,7 +207,7 @@ import sys
 
 for artifact_name in sys.argv[1:]:
     artifact = Path(artifact_name)
-    print(f"CANDIDATE_SHA256 {artifact.name} {sha256(artifact.read_bytes()).hexdigest()}")
+    print(f"ARTIFACT_SHA256 {artifact.name} {sha256(artifact.read_bytes()).hexdigest()}")
 PY
 
 # Reuse the installed-wheel checks used by CI, once per supported package surface.
@@ -372,12 +372,12 @@ with zipfile.ZipFile(wheel) as archive:
         assert (module_path.parent / relative_path).read_bytes() == archive.read(
             f"django_asklens/{relative_path}"
         )
-print("PASS local 0.3.0 candidate wheel upgraded PyPI 0.2.0 without source shadowing")
+print("PASS local 0.3.0 wheel upgraded PyPI 0.2.0 without source shadowing")
 PY
 )
 
 probe_plan_output="$(probe_manage migrate --plan 2>&1)"
-printf 'PASS migrate --plan after 0.2.0 to 0.3.0 candidate upgrade:\n%s\n' "$probe_plan_output"
+printf 'PASS migrate --plan after 0.2.0 to local 0.3.0 upgrade:\n%s\n' "$probe_plan_output"
 probe_manage migrate --noinput --verbosity 1
 probe_manage showmigrations asklens
 probe_manage check
@@ -450,7 +450,7 @@ with zipfile.ZipFile(wheel) as archive:
         assert (installed_root / relative_path).read_bytes() == archive.read(
             f"django_asklens/{relative_path}"
         )
-print("PASS exact 0.3.0 candidate install matches source-wheel files")
+print("PASS exact local 0.3.0 install matches source-wheel files")
 PY
 )
 (
@@ -459,4 +459,4 @@ PY
     "$upgrade_venv/bin/python" "$root/.github/scripts/wheel_smoke.py" core
 )
 
-echo "PASS exact 0.3.0 candidate and PyPI 0.2.0 upgrade evidence only; no publication was performed"
+echo "PASS exact local 0.3.0 and PyPI 0.2.0 upgrade evidence only; no publication was performed"

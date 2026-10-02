@@ -7,7 +7,7 @@ Django AskLens is the Django implementation of the [AskLens specification](docs/
 
 AskLens does **not** let an LLM write SQL. It asks a provider for structured JSON, validates the plan against your registered catalog and permissions, compiles a read-only Django ORM query, executes with limits, and returns table/chart-ready JSON.
 
-Status: **alpha**. The `0.3.0` release candidate has a [narrow governed core
+Status: **alpha**. The `0.3.x` line has a [narrow governed core
 boundary](docs/compatibility.md); provisional adapters, documents, and helpers
 may still change before a stable release.
 
@@ -16,24 +16,25 @@ Django AskLens was created by [Revaz Zakalashvili](https://github.com/revazi) ([
 ## Package provenance
 
 > [!IMPORTANT]
-> This documentation describes the unpublished `django-asklens==0.3.0` release
-> candidate. Install it only from an exact locally built wheel whose source
-> commit and SHA-256 digest you verified; `0.3.0` is not yet available from PyPI
-> and has no immutable release tag.
+> This documentation describes the reviewed `django-asklens==0.3.0` release
+> source. A checkout or version string does not by itself establish a Git tag,
+> PyPI publication, or artifact provenance. Use only an exact artifact whose
+> source and SHA-256 digest you verified; local builds are local evidence, while
+> public files must match an immutable release record.
 >
-> The current published release remains `django-asklens==0.2.0`, the first
-> supported alpha. Install that exact version only with its matching immutable
-> [documentation tagged `v0.2.0`](https://github.com/revazi/django-asklens/blob/v0.2.0/README.md):
+> The immutable `django-asklens==0.2.0` release is the first supported alpha and
+> the prior supported `0.2.x` upgrade origin. Install that exact version only
+> with its matching immutable [documentation tagged `v0.2.0`](https://github.com/revazi/django-asklens/blob/v0.2.0/README.md):
 >
 > ```bash
 > python -m pip install 'django-asklens==0.2.0'
 > ```
 >
 > The previously published `0.1.0a1` package was a testing artifact and is not a
-> supported upgrade origin. Do not mix candidate, released, or historical
-> package bytes and documentation. See [Installation](docs/installation.md) for
-> optional extras, exact artifact guidance, and the bounded `0.2.0` to `0.3.0`
-> candidate upgrade statement.
+> supported upgrade origin. Do not mix local, released, or historical package
+> bytes and documentation. See [Installation](docs/installation.md) for optional
+> extras, exact artifact guidance, and the bounded `0.2.0` to `0.3.0` upgrade
+> statement.
 
 ## What it provides
 
@@ -52,12 +53,12 @@ Django AskLens was created by [Revaz Zakalashvili](https://github.com/revazi) ([
 - Frontend-agnostic `columns` + `data` JSON output.
 - Optional packaged browser UI for demos/reference use.
 
-## 0.3.0 candidate quickstart
+## 0.3.0 alpha quickstart
 
-The example below describes the unpublished `0.3.0` candidate. Use it only with
-an exact locally built candidate wheel whose source commit and SHA-256 digest
-you verified. Users of published `0.2.0` must use the immutable `v0.2.0`
-documentation instead.
+The example below describes the reviewed `0.3.0` release source. Use it only
+with an exact `0.3.0` artifact whose provenance and SHA-256 digest you verified;
+for a local build, verify its source commit as well. Users remaining on `0.2.0`
+must use the immutable `v0.2.0` documentation instead.
 
 For a linear path that installs core only, wires one project-owned startup import, and executes current-request list plans, use the [Core-only executable quickstart](docs/quickstart-core.md).
 
@@ -375,4 +376,4 @@ uv run playwright install chromium
 bash scripts/reference-demo-smoke.sh
 ```
 
-It uses only synthetic data, disables live providers, and is internal draft alpha-candidate evidence—not production/security certification, external validation, or backend-neutral proof. The package remains standards-based and setuptools-backed; `uv`, Docker, PostgreSQL drivers, and Playwright are contributor/evidence tools, not mandatory runtime dependencies.
+It uses only synthetic data, disables live providers, and is internal alpha release-source evidence—not production/security certification, external validation, or backend-neutral proof. The package remains standards-based and setuptools-backed; `uv`, Docker, PostgreSQL drivers, and Playwright are contributor/evidence tools, not mandatory runtime dependencies.
