@@ -5,10 +5,11 @@ usage() {
   cat <<'EOF'
 Usage: bash scripts/alpha-candidate-package-smoke.sh [--help]
 
-Build the exact committed 0.2.0 release source into a temporary wheel and
-exercise isolated core/API/MCP installs plus SQLite migration-state
-preservation. This produces local artifact evidence only; it does not support
-upgrades from 0.1.0a1 or upload, tag, publish, or release anything.
+Build the exact committed 0.3.0 candidate source into a temporary wheel and
+source distribution, exercise isolated core/API/MCP installs, and upgrade an
+actual PyPI 0.2.0 installation while preserving SQLite migration state. This
+produces local candidate evidence only; it does not support upgrades from
+0.1.0a1 or upload, tag, publish, or release anything.
 EOF
 }
 
@@ -76,12 +77,25 @@ if ! (cd "$source_tree" && "$evidence_python" -m build --outdir "$artifacts") \
   cat "$build_log" >&2
   exit 1
 fi
-wheel="$(find "$artifacts" -maxdepth 1 -type f -name 'django_asklens-*.whl')"
-sdist="$(find "$artifacts" -maxdepth 1 -type f -name 'django_asklens-*.tar.gz')"
-[[ -f "$wheel" && -f "$sdist" ]] || {
-  echo "Expected exactly one source wheel and source distribution." >&2
+shopt -s nullglob
+wheels=("$artifacts"/django_asklens-*.whl)
+sdists=("$artifacts"/django_asklens-*.tar.gz)
+shopt -u nullglob
+if [[ ${#wheels[@]} -ne 1 || ${#sdists[@]} -ne 1 ]]; then
+  echo "Expected exactly one candidate wheel and one source distribution." >&2
+  exit 1
+fi
+wheel="${wheels[0]}"
+sdist="${sdists[0]}"
+[[ "$(basename "$wheel")" == "django_asklens-0.3.0-py3-none-any.whl" ]] || {
+  echo "Unexpected candidate wheel filename: $(basename "$wheel")" >&2
   exit 1
 }
+[[ "$(basename "$sdist")" == "django_asklens-0.3.0.tar.gz" ]] || {
+  echo "Unexpected candidate source distribution filename: $(basename "$sdist")" >&2
+  exit 1
+}
+uv run --no-sync twine check "$wheel" "$sdist"
 
 uv run --no-sync python - "$wheel" "$sdist" <<'PY'
 from email.parser import Parser
@@ -104,6 +118,8 @@ with zipfile.ZipFile(wheel) as archive:
     if len(metadata_names) != 1:
         raise SystemExit("Expected one wheel METADATA file.")
     metadata = Parser().parsestr(archive.read(metadata_names[0]).decode("utf-8"))
+    if metadata["Name"] != "django-asklens" or metadata["Version"] != "0.3.0":
+        raise SystemExit("Candidate wheel metadata must identify django-asklens 0.3.0.")
     query_schema = json.loads(
         archive.read(
             "django_asklens/contracts/schemas/query-plan.schema.json"
@@ -181,6 +197,17 @@ print(
 )
 print("PASS source wheel query schema enforces containment value constraints")
 print("PASS source distribution contains the documented opt-in evidence artifacts")
+print("PASS candidate wheel metadata identifies django-asklens 0.3.0")
+PY
+
+uv run --no-sync python - "$wheel" "$sdist" <<'PY'
+from hashlib import sha256
+from pathlib import Path
+import sys
+
+for artifact_name in sys.argv[1:]:
+    artifact = Path(artifact_name)
+    print(f"CANDIDATE_SHA256 {artifact.name} {sha256(artifact.read_bytes()).hexdigest()}")
 PY
 
 # Reuse the installed-wheel checks used by CI, once per supported package surface.
@@ -199,19 +226,32 @@ uv run --no-sync python -m venv "$upgrade_venv"
 "$upgrade_venv/bin/python" -m pip install \
   --index-url https://pypi.org/simple \
   "Django>=5.2,<7.0" \
-  "$wheel" >/dev/null
+  "django-asklens==0.2.0" >/dev/null
 (
   cd "$workdir"
-  "$upgrade_venv/bin/python" - <<'PY'
+  env -u PYTHONPATH \
+    ASKLENS_FORBIDDEN_SOURCE_ROOT="$root" \
+    "$upgrade_venv/bin/python" - <<'PY'
 from importlib.metadata import version
+from pathlib import Path
+import os
+import sys
+
+import django_asklens
 
 assert version("django-asklens") == "0.2.0"
-print("PASS exact 0.2.0 release wheel installed")
+assert django_asklens.__version__ == "0.2.0"
+module_path = Path(django_asklens.__file__).resolve()
+assert module_path.is_relative_to(Path(sys.prefix).resolve()), module_path
+assert not module_path.is_relative_to(
+    Path(os.environ["ASKLENS_FORBIDDEN_SOURCE_ROOT"]).resolve()
+), module_path
+print("PASS actual PyPI django-asklens 0.2.0 installed without source shadowing")
 PY
 )
 
-# Release migration-state preservation is synthetic SQLite evidence only.
-# The 0.1.0a1 testing artifact is not a supported upgrade origin.
+# Supported 0.2.0 -> 0.3.0 migration-state preservation is synthetic SQLite
+# evidence only. The 0.1.0a1 testing artifact is not an upgrade origin.
 probe_root="$workdir/migration-probe"
 probe_project="$probe_root/probeproj"
 probe_db="$probe_root/probe.sqlite3"
@@ -296,11 +336,48 @@ row = SemanticQueryRun.objects.create(
 )
 assert row.pk == 1
 assert SemanticQueryRun.objects.count() == 1
-print("PASS release migration state initialized with one synthetic row")
+print("PASS published 0.2.0 migration state initialized with one synthetic row")
 PY
 
+"$upgrade_venv/bin/python" -m pip install --upgrade "$wheel" >/dev/null
+(
+  cd "$workdir"
+  env -u PYTHONPATH \
+    ASKLENS_FORBIDDEN_SOURCE_ROOT="$root" \
+    "$upgrade_venv/bin/python" - "$wheel" <<'PY'
+from importlib.metadata import version
+from pathlib import Path
+import os
+import sys
+import zipfile
+
+import django_asklens
+
+wheel = Path(sys.argv[1]).resolve()
+assert version("django-asklens") == "0.3.0"
+assert django_asklens.__version__ == "0.3.0"
+module_path = Path(django_asklens.__file__).resolve()
+assert module_path.is_relative_to(Path(sys.prefix).resolve()), module_path
+assert not module_path.is_relative_to(
+    Path(os.environ["ASKLENS_FORBIDDEN_SOURCE_ROOT"]).resolve()
+), module_path
+critical_files = (
+    "__init__.py",
+    "execution/runner.py",
+    "observability.py",
+    "contracts/schemas/capabilities.schema.json",
+)
+with zipfile.ZipFile(wheel) as archive:
+    for relative_path in critical_files:
+        assert (module_path.parent / relative_path).read_bytes() == archive.read(
+            f"django_asklens/{relative_path}"
+        )
+print("PASS local 0.3.0 candidate wheel upgraded PyPI 0.2.0 without source shadowing")
+PY
+)
+
 probe_plan_output="$(probe_manage migrate --plan 2>&1)"
-printf 'PASS migrate --plan on exact 0.2.0 release:\n%s\n' "$probe_plan_output"
+printf 'PASS migrate --plan after 0.2.0 to 0.3.0 candidate upgrade:\n%s\n' "$probe_plan_output"
 probe_manage migrate --noinput --verbosity 1
 probe_manage showmigrations asklens
 probe_manage check
@@ -344,7 +421,7 @@ assert AskLensQuery._meta.proxy
 assert AskLensQuery._meta.db_table == SemanticQueryRun._meta.db_table
 assert AskLensQuery.objects.count() == 1
 print("PASS release migration graph is exact: 0001_initial and 0002_add_admin_query_proxy")
-print("PASS synthetic SemanticQueryRun row preserved across release install")
+print("PASS synthetic SemanticQueryRun row preserved across 0.2.0 to 0.3.0 upgrade")
 print("PASS AskLensQuery remains a proxy over asklens_semanticqueryrun table")
 PY
 
@@ -359,8 +436,8 @@ import zipfile
 import django_asklens
 
 wheel = Path(sys.argv[1]).resolve()
-assert version("django-asklens") == "0.2.0"
-assert django_asklens.__version__ == "0.2.0"
+assert version("django-asklens") == "0.3.0"
+assert django_asklens.__version__ == "0.3.0"
 assert callable(django_asklens.list_contract_schemas)
 installed_root = Path(django_asklens.__file__).resolve().parent
 critical_files = (
@@ -373,7 +450,7 @@ with zipfile.ZipFile(wheel) as archive:
         assert (installed_root / relative_path).read_bytes() == archive.read(
             f"django_asklens/{relative_path}"
         )
-print("PASS exact release install matches source-wheel files")
+print("PASS exact 0.3.0 candidate install matches source-wheel files")
 PY
 )
 (
@@ -382,4 +459,4 @@ PY
     "$upgrade_venv/bin/python" "$root/.github/scripts/wheel_smoke.py" core
 )
 
-echo "PASS exact 0.2.0 local package evidence only; no publication was performed"
+echo "PASS exact 0.3.0 candidate and PyPI 0.2.0 upgrade evidence only; no publication was performed"

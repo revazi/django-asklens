@@ -4,15 +4,14 @@ Status: AskLens ships dependency-free MCP adapter helpers, an `AskLensMCPToolSet
 
 ## Bounded MCP quickstart
 
-This path is for `django-asklens==0.2.0`; the historical `0.1.0a1` testing
-artifact is not a supported upgrade origin. Install from PyPI:
+This path is for an exact locally built `django-asklens==0.3.0` candidate; the
+historical `0.1.0a1` testing artifact is not a supported upgrade origin.
+`0.3.0` is not published to PyPI. Install the candidate in a fresh environment
+only after verifying its source commit, exact path, and SHA-256 digest:
 
 ```bash
-python -m pip install 'django-asklens[mcp]==0.2.0'
+python -m pip install '/verified/path/django_asklens-0.3.0-py3-none-any.whl[mcp]'
 ```
-
-For a locally built wheel, install it in a fresh environment only after
-verifying its source commit, exact path, and SHA-256 digest.
 
 Authenticate the MCP connection in the host, then map its trusted server-owned
 context to one Django request-like object:
@@ -116,7 +115,7 @@ AskLens intentionally does not depend on a generic Django MCP package. Some gene
 The dependency-free helpers live in the main `django-asklens` package. The optional FastMCP bridge is available through the `mcp` extra. For local release verification, install only the exact verified wheel shown below:
 
 ```bash
-export ASKLENS_RELEASE_WHEEL=/verified/path/django_asklens-0.2.0-py3-none-any.whl
+export ASKLENS_RELEASE_WHEEL=/verified/path/django_asklens-0.3.0-py3-none-any.whl
 python -m pip install "${ASKLENS_RELEASE_WHEEL}[mcp]"
 ```
 

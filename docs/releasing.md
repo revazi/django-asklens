@@ -4,6 +4,21 @@ This process applies to releases after `0.2.0`. The existing `v0.2.0` tag,
 GitHub Release, and PyPI files are immutable and must not be recreated or
 replaced.
 
+## 0.3.0 candidate status
+
+Current source metadata prepares `0.3.0`, but it is an unpublished release
+candidate. Candidate validation does not authorize a tag, GitHub Release, PyPI
+upload, deployment, protected-environment approval, or remote Trusted Publisher
+change. Record the exact candidate commit, wheel and source-distribution
+SHA-256 values, and check results in the candidate pull request; do not present
+those local files as immutable published artifacts.
+
+The repository workflow and local checks can verify the intended publisher
+identity and artifact handoff, but they cannot independently confirm the
+current browser-side PyPI Trusted Publisher configuration. An authorized
+operator must confirm that remote setting and the protected GitHub `pypi`
+environment before any later publication decision.
+
 ## Trust model
 
 `.github/workflows/publish.yml` uses PyPI Trusted Publishing. The protected

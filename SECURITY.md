@@ -9,8 +9,9 @@ published alpha and the current `main` development line.
 
 | Version | Supported |
 | --- | --- |
+| `0.3.0` candidate source (unpublished) | Yes |
 | `main` (unreleased alpha work) | Yes |
-| `0.2.0` | Yes |
+| `0.2.0` published alpha | Yes |
 | `0.1.0a1` testing artifact and older snapshots | No |
 
 ## Reporting a vulnerability

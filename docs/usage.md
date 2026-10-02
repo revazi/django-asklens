@@ -3,16 +3,16 @@
 ## Authenticated normal-user API quickstart
 
 > [!IMPORTANT]
-> This journey describes the optional API in `django-asklens==0.2.0` or a
-> locally built wheel whose source commit and digest you verified. The API remains
-> alpha and unfrozen. The historical `0.1.0a1` testing artifact is not a
-> supported upgrade origin.
+> This journey describes the optional provisional API in an exact locally built
+> `django-asklens==0.3.0` candidate wheel whose source commit and digest you
+> verified. The API remains alpha and outside the governed 0.3.x boundary. The
+> historical `0.1.0a1` testing artifact is not a supported upgrade origin.
 
 This path uses Django's existing session authentication, one normal user, a host-created Django permission, a permission-scoped catalog, deterministic `DummyProvider`, and the current metadata-only database audit. AskLens does not create a login view, authentication backend, or token endpoint and does not accept identity, permission, or scope claims from the client.
 
 ### 1. Install and mount the current optional API
 
-Install `django-asklens[api]==0.2.0`, or install an exact local artifact only after verifying its commit, filename, and SHA-256 digest. See [Installation](installation.md#authenticated-api-prerequisites-for-exact-020-artifacts). Add the normal host auth/session apps and middleware, `rest_framework`, AskLens, and the one host app that owns registration:
+Install `/verified/path/django_asklens-0.3.0-py3-none-any.whl[api]` only after verifying its commit, filename, and SHA-256 digest. See [Installation](installation.md#authenticated-api-prerequisites-for-an-exact-030-candidate-artifact). Add the normal host auth/session apps and middleware, `rest_framework`, AskLens, and the one host app that owns registration:
 
 ```python
 INSTALLED_APPS = [
