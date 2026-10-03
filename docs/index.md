@@ -7,14 +7,16 @@ Django AskLens was created by [Revaz Zakalashvili](https://github.com/revazi) ([
 ## Package provenance
 
 > [!IMPORTANT]
-> These docs describe the unpublished `django-asklens==0.3.0` candidate. Use
-> them only with a verified local candidate artifact. The current PyPI release
-> remains `django-asklens==0.2.0`; use its immutable
+> These docs describe the reviewed `django-asklens==0.3.0` release source. Their
+> presence does not by itself establish a Git tag, PyPI publication, or artifact
+> provenance. Use an exact artifact whose source and SHA-256 digest you verified.
+> The immutable `django-asklens==0.2.0` release is the prior supported `0.2.x`
+> upgrade origin; use its
 > [documentation tagged `v0.2.0`](https://github.com/revazi/django-asklens/blob/v0.2.0/README.md).
 >
 > The historical `0.1.0a1` package was a testing artifact and is not a supported
-> upgrade origin. Do not mix candidate, released, or historical bytes and docs.
-> See [Installation](installation.md) before using the guides below.
+> upgrade origin. Do not mix local, released, or historical bytes and docs. See
+> [Installation](installation.md) before using the guides below.
 
 ## Guides
 

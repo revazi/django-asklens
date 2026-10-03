@@ -10,11 +10,13 @@ the separate [narrow 0.3.x compatibility boundary](compatibility.md), create a
 
 Artifact provenance remains part of every support statement:
 
-- PyPI publishes `django-asklens==0.2.0`; use its immutable tagged
-  documentation. This is the first supported alpha release.
-- Current source metadata identifies an unpublished `0.3.0` candidate. Its
-  source commit and local artifact digests must be reviewed before any separate
-  tag or publication decision.
+- The immutable `django-asklens==0.2.0` PyPI release is the first supported
+  alpha release and the supported `0.2.x` upgrade origin; use its tagged
+  documentation.
+- Current source metadata identifies the reviewed `0.3.0` release source. Its
+  presence does not by itself establish publication; source commits and local
+  artifact digests remain local evidence, while public files require immutable
+  release provenance.
 - `0.1.0a1` was a testing artifact only and is not a supported upgrade origin.
 
 Do not combine packages, workers, clients, documentation, or persisted plans
@@ -25,9 +27,9 @@ matching artifact.
 
 ## Current evidence
 
-The immutable `0.2.0` release and the `0.3.0` candidate use the following
-repository-operated support matrix. Candidate claims apply only after the exact
-commit and artifacts pass the named checks:
+The immutable `0.2.0` release and reviewed `0.3.0` release source use the
+following repository-operated support matrix. Claims apply only to the exact
+commit and artifacts that passed the named checks:
 
 - Python 3.12 and 3.13 run the full SQLite/unit/integration CI.
 - Django 5.2, 6.0, and 6.1 each run on both tested Python lines.
@@ -50,8 +52,8 @@ representative database-sensitive evidence for the named tuples. Optional
 adapter evidence applies only when the corresponding extra is installed.
 
 The tested list belongs to the exact source commit or released artifact named by
-the evidence. It must be rechecked for each candidate. Repository tests and
-maintainer-operated CI are not external adoption, an independent security
+the evidence. It must be rechecked for each proposed release. Repository tests
+and maintainer-operated CI are not external adoption, an independent security
 review, or production certification.
 
 ## Admission policy
@@ -165,16 +167,15 @@ provisional, optional, internal, and unsupported areas. The 0.3.x boundary is
 limited to its exact registration, trusted-execution, public-error, and
 observability rows. See the [AskLens specification](asklens-specification.md).
 
-`0.2.0` is currently the supported `0.2.x` origin for the unpublished `0.3.0`
-candidate. The actionable path requires normal host checks but no AskLens
-migration for this scope; every persisted plan is revalidated by the current
-facade. `0.1.0a1` remains a testing artifact and is not a supported upgrade
-origin. There is no fixed deprecation window or rollback promise. Host-owned
+`0.2.0` is the supported `0.2.x` origin for the reviewed `0.3.0` release
+source. The actionable path requires normal host checks but no AskLens migration
+for this scope; every persisted plan is revalidated by the current facade.
+`0.1.0a1` remains a testing artifact and is not a supported upgrade origin. There is no fixed deprecation window or rollback promise. Host-owned
 responsibilities remain accepted. The five packaged JSON Schemas stay
 internal, draft, unfrozen, and unversioned. Do not add document versions, schema
 versions, extension negotiation, or previous-shape compatibility.
 
 Do not record or handle schema changes. The first-install migrations, changelog
-entries, exact `0.2.0` public-artifact checks, and exact `0.3.0` candidate
-source/wheel checks are repository-operated evidence; they are not production
+entries, exact `0.2.0` public-artifact checks, and exact `0.3.0` release-source
+and wheel checks are repository-operated evidence; they are not production
 certification or an independent security review.

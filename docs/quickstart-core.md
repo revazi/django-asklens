@@ -7,11 +7,11 @@ provider call, frontend, or MCP integration.
 ## Artifact boundary
 
 > [!IMPORTANT]
-> This guide describes an exact locally built `django-asklens==0.3.0` candidate
-> wheel whose source commit and digest you verified. `0.3.0` is not published or
-> tagged. Published `0.2.0` users must use the immutable `v0.2.0` docs. The
-> historical `0.1.0a1` package was a testing artifact and is not a supported
-> upgrade origin.
+> This guide describes the reviewed `django-asklens==0.3.0` release source. Use
+> an exact wheel whose provenance and digest you verified; for a local build,
+> verify its source commit as well. Users remaining on `0.2.0` must use the
+> immutable `v0.2.0` docs. The historical `0.1.0a1` package was a testing
+> artifact and is not a supported upgrade origin.
 
 The disposable smoke at the end builds one wheel from the current local source,
 installs that exact file, and reports its digest. See
@@ -244,7 +244,7 @@ with permission, membership, model, or scope diagnostics.
 
 ## 7. Run the disposable wheel smoke
 
-From the exact reviewed `0.3.0` candidate checkout:
+From the exact reviewed `0.3.0` source checkout:
 
 ```bash
 bash scripts/quickstart-core-smoke.sh

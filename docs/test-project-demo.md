@@ -6,10 +6,9 @@ registration, fail-closed scope, `execute_plan`, optional DRF/MCP, admin, and
 the reference frontend. Data is synthetic. The default planner is
 `DummyProvider`. Live providers stay off unless you opt in.
 
-This example matches the unpublished `0.3.0` candidate source. Published
-`0.2.0` users must use the immutable tagged docs. It is not a second example
-app or a supported upgrade path from the historical
-`0.1.0a1` testing artifact.
+This example matches the reviewed `0.3.0` release source. Users remaining on
+`0.2.0` must use the immutable tagged docs. It is not a second example app or a
+supported upgrade path from the historical `0.1.0a1` testing artifact.
 
 ## What to copy into a host project
 
@@ -165,7 +164,7 @@ audit guarantee. API envelopes and trusted execution payloads are unchanged.
 
 ## PostgreSQL 18 reference workflow
 
-This synthetic reference app provides internal, draft alpha-candidate evidence only. It is not production or security certification, external pilot evidence, a public specification, or backend-neutral proof. Live providers stay disabled throughout the committed smoke.
+This synthetic reference app provides internal alpha release-source evidence only. It is not production or security certification, external pilot evidence, a public specification, or backend-neutral proof. Live providers stay disabled throughout the committed smoke.
 
 Prerequisites:
 

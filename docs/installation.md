@@ -1,11 +1,13 @@
 # Installation
 
-PyPI still publishes `0.2.0`; the current source documentation prepares an
-unpublished `0.3.0` release candidate. Keep each artifact paired with its exact
-source commit or immutable tagged documentation. The historical `0.1.0a1`
-package was a testing artifact and is not a supported upgrade origin.
+This documentation describes the reviewed `0.3.0` release source. Its presence
+does not by itself establish a Git tag, PyPI publication, or artifact
+provenance. Keep each artifact paired with its exact source commit or immutable
+release record. The immutable `0.2.0` release is the supported `0.2.x` upgrade
+origin; the historical `0.1.0a1` package was a testing artifact and is not a
+supported upgrade origin.
 
-## Published PyPI release: 0.2.0
+## Prior PyPI release and upgrade origin: 0.2.0
 
 Core package:
 
@@ -48,14 +50,14 @@ uv sync --group dev
 uv run pytest
 ```
 
-A local candidate wheel reports `0.3.0`, but its version alone does not prove
+A locally built wheel reports `0.3.0`, but its version alone does not prove
 provenance. Verify the source commit and artifact digest. The only supported
-upgrade origin is a supported `0.2.x` release, currently published `0.2.0`; no
-upgrade from the `0.1.0a1` testing artifact is claimed.
+upgrade origin for this release is `0.2.0`; no upgrade from the `0.1.0a1`
+testing artifact is claimed.
 
-### Exact release-candidate package evidence
+### Exact local release-source package evidence
 
-The opt-in package smoke validates an exact committed local `0.3.0` candidate:
+The opt-in package smoke validates an exact committed local `0.3.0` source:
 
 ```bash
 bash scripts/alpha-candidate-package-smoke.sh
@@ -75,20 +77,20 @@ disposable environment, applies the exact existing AskLens migrations
 `SemanticQueryRun` row. It then upgrades to the local `0.3.0` wheel, runs
 `migrate --plan`, `migrate`, `showmigrations`, `check`, and
 `makemigrations --check --dry-run`, and verifies the unchanged graph, preserved
-row, proxy model, and AskLens table shape. Both release and candidate imports
-must resolve inside the disposable environment rather than the checkout.
+row, proxy model, and AskLens table shape. Both prior-release and local-source
+imports must resolve inside the disposable environment rather than the checkout.
 
 This is bounded SQLite package evidence for the supported `0.2.0` origin, not
 PostgreSQL or production upgrade certification. It does not test or replace the
 `0.1.0a1` testing artifact. The script removes its temporary environments and
 artifacts and does not upload, tag, publish, or release anything.
 
-## Authenticated API prerequisites for an exact 0.3.0 candidate artifact
+## Authenticated API prerequisites for an exact 0.3.0 source artifact
 
 These prerequisites document the optional provisional DRF adapter in an exact,
-locally verified `0.3.0` candidate wheel. Published `0.2.0` users must follow
-the immutable `v0.2.0` docs until `0.3.0` is separately authorized and
-published.
+locally verified `0.3.0` wheel. Users remaining on `0.2.0` must follow the
+immutable `v0.2.0` docs until they upgrade to an exact reviewed `0.3.0`
+artifact.
 
 ```bash
 python -m pip install '/verified/path/django_asklens-0.3.0-py3-none-any.whl[api]'
