@@ -71,7 +71,12 @@ def test_publish_workflow_limits_oidc_to_protected_publish_job():
     assert "release:\n    types: [published]" in workflow
     assert "environment:\n      name: pypi" in workflow
     assert workflow.count("id-token: write") == 1
-    assert "pypa/gh-action-pypi-publish@release/v1" in workflow
+    publish_action = (
+        "pypa/gh-action-pypi-publish@"
+        "dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # release/v1"
+    )
+    assert publish_action in workflow
+    assert "pypa/gh-action-pypi-publish@release/v1" not in workflow
     assert "password:" not in workflow
     assert "user:" not in workflow
     assert "skip-existing:" not in workflow
