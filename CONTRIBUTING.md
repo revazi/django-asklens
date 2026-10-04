@@ -68,7 +68,7 @@ Useful starting points:
 - [README](README.md)
 - [Installation](docs/installation.md)
 - [Release process](docs/releasing.md)
-- [Post-0.2.0 maintenance roadmap](docs/maintenance-roadmap.md)
+- [0.3.x maintenance roadmap](docs/maintenance-roadmap.md)
 - [Usage guide](docs/usage.md)
 - [Registration API](docs/registration.md)
 - [Provider configuration](docs/providers.md)

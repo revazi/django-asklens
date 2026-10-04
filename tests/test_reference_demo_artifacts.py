@@ -505,53 +505,96 @@ def test_api4a_source_and_exact_wheel_evidence_are_strict_and_route_local() -> N
         assert required in wheel_smoke
 
 
-def test_package_provenance_distinguishes_release_source_and_prior_release() -> None:
-    """The 0.3.0 source, prior 0.2.0 release, and artifacts stay distinct."""
+def test_package_provenance_distinguishes_public_030_and_local_artifacts() -> None:
+    """Published 0.3.0, prior 0.2.0, and local builds stay distinct."""
 
     readme = read_text(ROOT / "README.md")
     index = read_text(ROOT / "docs" / "index.md")
     install = read_text(ROOT / "docs" / "installation.md")
     core_api = read_text(ROOT / "docs" / "core-python-api.md")
-    tagged_docs = "https://github.com/revazi/django-asklens/blob/v0.2.0/README.md"
+    required_docs = (readme, index, install)
+    tagged_030_docs = "https://github.com/revazi/django-asklens/blob/v0.3.0/README.md"
+    release_030 = "https://github.com/revazi/django-asklens/releases/tag/v0.3.0"
+    tagged_020_docs = "https://github.com/revazi/django-asklens/blob/v0.2.0/README.md"
+    commit = "36570eb702c7e3a885ff6aca65a07200e8fedcf9"
+    tree = "35a525ea1d969833dc1a5b1abce14f6631e34f57"
+    wheel = "django_asklens-0.3.0-py3-none-any.whl"
+    wheel_sha256 = "d7f7159cfdbb3d9755d9b3542f9cda4280f0e72939f81aca4d3a2cd8d8921e8b"
+    sdist = "django_asklens-0.3.0.tar.gz"
+    sdist_sha256 = "a7717736c07b93d66e1326dc43a438aa0918c17b4512ddb2391257de5887c5c9"
+    commands = (
+        "python -m pip install 'django-asklens==0.3.0'",
+        "python -m pip install 'django-asklens[api]==0.3.0'",
+        "python -m pip install 'django-asklens[mcp]==0.3.0'",
+    )
+
+    for document in required_docs:
+        normalized = " ".join(document.replace("\n> ", " ").split())
+        assert "current published alpha" in normalized
+        assert "production-certified" in normalized
+        assert tagged_030_docs in document
+        assert release_030 in document
+        assert commit in document
+        assert tree in document
+        assert wheel in document and wheel_sha256 in document
+        assert sdist in document and sdist_sha256 in document
+        for command in commands:
+            assert command in document
+        assert "local" in normalized
+        assert "separate" in normalized
+        assert "prior supported `0.2.x` upgrade origin" in normalized
+        assert "unsupported testing artifact" in normalized
 
     provenance_heading = "## Package provenance"
     main_quickstart_heading = "## 0.3.0 alpha quickstart"
-    normalized_readme = " ".join(readme.replace("\n> ", " ").split())
-    assert provenance_heading in readme
-    assert "reviewed `django-asklens==0.3.0` release source" in normalized_readme
-    assert "does not by itself establish a Git tag" in normalized_readme
-    assert "python -m pip install 'django-asklens==0.2.0'" in readme
-    assert "first supported alpha" in normalized_readme
-    assert "not a supported upgrade origin" in normalized_readme
-    assert tagged_docs in readme
-    assert main_quickstart_heading in readme
     assert readme.index(provenance_heading) < readme.index("## What it provides")
     assert readme.index(provenance_heading) < readme.index(main_quickstart_heading)
-    assert "python -m pip install 'django-asklens[api]'" not in readme
+    assert index.index(provenance_heading) < index.index("## Guides")
 
-    published_heading = "## Prior PyPI release and upgrade origin: 0.2.0"
+    current_heading = "## Current published alpha: 0.3.0"
+    prior_heading = "## Prior PyPI release and upgrade origin: 0.2.0"
     source_heading = "## Source checkout and exact local artifacts"
-    for heading in (published_heading, source_heading):
-        assert heading in install
-    assert install.index(published_heading) < install.index(source_heading)
-
-    published_section = install[
-        install.index(published_heading) : install.index(source_heading)
+    positions = [
+        install.index(current_heading),
+        install.index(prior_heading),
+        install.index(source_heading),
     ]
-    published_commands = [
+    assert positions == sorted(positions)
+    current_section = install[positions[0] : positions[1]]
+    normalized_current_section = " ".join(current_section.split())
+    current_commands = [
         line
-        for line in published_section.splitlines()
+        for line in current_section.splitlines()
         if line.startswith("python -m pip install")
     ]
-    assert published_commands == [
+    assert current_commands == list(commands)
+    for required in (
+        "bash scripts/published-package-smoke.sh",
+        "--version 0.3.0",
+        f"--wheel-sha256 {wheel_sha256}",
+        f"--sdist-sha256 {sdist_sha256}",
+        "fixed PyPI hosts",
+        "one non-yanked wheel",
+        "production, live-provider, deployment, adoption, or",
+        "independent-security evidence",
+    ):
+        assert required in normalized_current_section
+
+    prior_section = install[positions[1] : positions[2]]
+    prior_commands = [
+        line
+        for line in prior_section.splitlines()
+        if line.startswith("python -m pip install")
+    ]
+    assert prior_commands == [
         "python -m pip install 'django-asklens==0.2.0'",
         "python -m pip install 'django-asklens[api]==0.2.0'",
         "python -m pip install 'django-asklens[mcp]==0.2.0'",
     ]
-    assert tagged_docs in published_section
+    assert tagged_020_docs in prior_section
 
-    source_section = install[install.index(source_heading) :]
-    assert "reviewed `0.3.0` release source" in install
+    source_section = install[positions[2] :]
+    assert "not the immutable public wheel" in source_section
     assert "### Exact local release-source package evidence" in source_section
     assert "actual `django-asklens==0.2.0` from PyPI" in source_section
     assert "not PostgreSQL or production upgrade certification" in " ".join(
@@ -560,18 +603,9 @@ def test_package_provenance_distinguishes_release_source_and_prior_release() -> 
     assert "private-candidate-evaluation.md" not in install
     assert "pilot-intake-worksheet.md" not in install
 
-    assert "django_asklens-0.3.0-py3-none-any.whl" in core_api
+    assert wheel in core_api
     assert "built-in provisional DRF routes" in core_api
     assert "python -m pip install django-asklens\n" not in core_api
-
-    normalized_index = " ".join(index.replace("\n> ", " ").split())
-    assert index.index("## Package provenance") < index.index("## Guides")
-    assert "reviewed `django-asklens==0.3.0` release source" in normalized_index
-    assert "does not by itself establish a Git tag" in normalized_index
-    assert "`django-asklens==0.2.0`" in index
-    assert "documentation tagged `v0.2.0`" in index
-    assert "not a supported upgrade origin" in normalized_index
-    assert tagged_docs in index
     assert "[AskLens specification](asklens-specification.md)" in index
     assert ASKLENS_SPECIFICATION.is_file()
 
@@ -735,13 +769,13 @@ def test_authenticated_api_quickstart_is_current_private_and_disposable() -> Non
     assert "host-created authenticated user" in readme
     assert "does not provide a login or token endpoint" in readme
 
-    install_heading = (
-        "## Authenticated API prerequisites for an exact 0.3.0 source artifact"
-    )
+    install_heading = "## Authenticated API prerequisites for an exact 0.3.0 artifact"
     assert install_heading in install
     install_section = install[install.index(install_heading) :]
+    normalized_install_section = " ".join(install_section.split())
     for required in (
-        "locally verified `0.3.0` wheel",
+        "authenticated public `0.3.0` wheel",
+        "separately verified local `0.3.0` wheel",
         "[api]",
         '"rest_framework"',
         '"django.contrib.sessions"',
@@ -753,7 +787,7 @@ def test_authenticated_api_quickstart_is_current_private_and_disposable() -> Non
         "does not add an authentication backend or token endpoint",
         "bash scripts/quickstart-core-smoke.sh --api",
     ):
-        assert required in install_section
+        assert required in normalized_install_section
 
     usage_heading = "## Authenticated normal-user API quickstart"
     ordered_usage_headings = (

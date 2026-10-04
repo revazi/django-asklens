@@ -6,7 +6,19 @@ The project is alpha and APIs may change before a stable release.
 
 ## Unreleased
 
-No changes have been queued after the reviewed `0.3.0` release source.
+### Changed
+
+- Hardened the Trusted Publisher incident runbook with no-upload and immutable-artifact gates for same-run failed-job-only recovery after `invalid-publisher`; token fallback, manual upload, `skip-existing`, tag movement/recreation, artifact replacement, and concealed attempts remain prohibited.
+- Rebaselined maintenance planning around compatible, migration-free `0.3.1` hardening versus separately reviewed future-minor work, without expanding the narrow 0.3.x governed boundary or promising a future version/date.
+- Documented authenticated public `0.3.0` core, API, and MCP installation with the immutable tag, release, commit, tree, filenames, and independently recorded SHA-256 values while keeping local builds distinct.
+- Recorded the successful `2026-10-04T09:31:52Z` locked dependency audit. It found no known vulnerabilities or adverse project statuses, so no dependency or runtime-bound change was justified.
+- Configured and default Django permission sources now fail closed unless every iterable member is an exact built-in string; non-string conversion and behavior-overriding string subclasses cannot synthesize authorization.
+
+### Tests
+
+- Added configured-getter and default-backend invalid-element coverage proving that non-string objects and behavior-overriding string subclasses cannot synthesize a protected permission, with the existing opaque denial and zero application-data execution behavior.
+- Added cross-adapter scope-provider exception and invalid-return coverage for core, API, admin, and MCP, asserting opaque errors, zero application-data SQL, one authoritative metadata-only audit record, and content-free observability outcomes.
+- Added documentation regressions for Trusted Publisher recovery, maintenance/future-minor separation, audit evidence, and exact public `0.3.0` provenance.
 
 ## 0.3.0 — 2026-10-02
 

@@ -16,25 +16,36 @@ Django AskLens was created by [Revaz Zakalashvili](https://github.com/revazi) ([
 ## Package provenance
 
 > [!IMPORTANT]
-> This documentation describes the reviewed `django-asklens==0.3.0` release
-> source. A checkout or version string does not by itself establish a Git tag,
-> PyPI publication, or artifact provenance. Use only an exact artifact whose
-> source and SHA-256 digest you verified; local builds are local evidence, while
-> public files must match an immutable release record.
+> `django-asklens==0.3.0` is the current published alpha, not a stable or
+> production-certified release. Use its immutable
+> [`v0.3.0` documentation](https://github.com/revazi/django-asklens/blob/v0.3.0/README.md)
+> and [GitHub Release](https://github.com/revazi/django-asklens/releases/tag/v0.3.0).
+> The release source is commit
+> `36570eb702c7e3a885ff6aca65a07200e8fedcf9` and tree
+> `35a525ea1d969833dc1a5b1abce14f6631e34f57`.
 >
-> The immutable `django-asklens==0.2.0` release is the first supported alpha and
-> the prior supported `0.2.x` upgrade origin. Install that exact version only
-> with its matching immutable [documentation tagged `v0.2.0`](https://github.com/revazi/django-asklens/blob/v0.2.0/README.md):
+> Install the exact public core, provisional API, or provisional MCP surface:
 >
 > ```bash
-> python -m pip install 'django-asklens==0.2.0'
+> python -m pip install 'django-asklens==0.3.0'
+> python -m pip install 'django-asklens[api]==0.3.0'
+> python -m pip install 'django-asklens[mcp]==0.3.0'
 > ```
 >
-> The previously published `0.1.0a1` package was a testing artifact and is not a
-> supported upgrade origin. Do not mix local, released, or historical package
-> bytes and documentation. See [Installation](docs/installation.md) for optional
-> extras, exact artifact guidance, and the bounded `0.2.0` to `0.3.0` upgrade
-> statement.
+> Authenticate `django_asklens-0.3.0-py3-none-any.whl` with SHA-256
+> `d7f7159cfdbb3d9755d9b3542f9cda4280f0e72939f81aca4d3a2cd8d8921e8b`
+> or `django_asklens-0.3.0.tar.gz` with SHA-256
+> `a7717736c07b93d66e1326dc43a438aa0918c17b4512ddb2391257de5887c5c9`.
+> A same-version local build is separate local evidence and must not be
+> represented by these public identities.
+>
+> The immutable `django-asklens==0.2.0` release remains the prior supported
+> `0.2.x` upgrade origin; use its matching immutable
+> [documentation tagged `v0.2.0`](https://github.com/revazi/django-asklens/blob/v0.2.0/README.md).
+> The previously published `0.1.0a1` package was an unsupported testing artifact
+> and is not an upgrade origin. See [Installation](docs/installation.md) for
+> public-artifact authentication, local development, and the bounded `0.2.0` to
+> `0.3.0` upgrade statement.
 
 ## What it provides
 
@@ -55,10 +66,10 @@ Django AskLens was created by [Revaz Zakalashvili](https://github.com/revazi) ([
 
 ## 0.3.0 alpha quickstart
 
-The example below describes the reviewed `0.3.0` release source. Use it only
-with an exact `0.3.0` artifact whose provenance and SHA-256 digest you verified;
-for a local build, verify its source commit as well. Users remaining on `0.2.0`
-must use the immutable `v0.2.0` documentation instead.
+The example below applies to the published `0.3.0` alpha. Use it only with an
+exact public artifact authenticated against the immutable identities above or a
+separately identified local build. Users remaining on `0.2.0` must use the
+immutable `v0.2.0` documentation instead.
 
 For a linear path that installs core only, wires one project-owned startup import, and executes current-request list plans, use the [Core-only executable quickstart](docs/quickstart-core.md).
 
@@ -343,7 +354,7 @@ Review the [security checklist](docs/security-checklist.md) and [production chec
 - [0.3.x compatibility boundary](docs/compatibility.md)
 - [Host observability controls](docs/host-throttle-and-audit-controls.md)
 - [Release process](docs/releasing.md)
-- [Post-0.2.0 maintenance roadmap](docs/maintenance-roadmap.md)
+- [0.3.x maintenance roadmap](docs/maintenance-roadmap.md)
 - [Usage guide](docs/usage.md)
 - [Core Python API](docs/core-python-api.md)
 - [Custom UI guide](docs/custom-ui.md)
