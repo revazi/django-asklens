@@ -6,10 +6,12 @@ registration, fail-closed scope, `execute_plan`, optional DRF/MCP, admin, and
 the reference frontend. Data is synthetic. The default planner is
 `DummyProvider`. Live providers stay off unless you opt in.
 
-This example matches the reviewed `0.3.1` release source. Users of the current
-public `0.3.0` release or supported older `0.2.0` origin must use the matching
-immutable tagged docs. It is not a second example app or a
-supported upgrade path from the historical `0.1.0a1` testing artifact.
+This source-checkout example reflects immutable public `0.3.1`, the current
+alpha release. Its locally built artifacts remain separate evidence and are not
+the public wheel or source distribution. Public `0.3.0` is the immediate prior
+supported upgrade origin, and `0.2.0` remains the supported older `0.2.x`
+origin. This is not a second example app or a supported upgrade path from the
+historical `0.1.0a1` testing artifact.
 
 ## What to copy into a host project
 

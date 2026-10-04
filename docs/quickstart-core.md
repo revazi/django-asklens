@@ -7,35 +7,36 @@ provider call, frontend, or MCP integration.
 ## Artifact boundary
 
 > [!IMPORTANT]
-> This guide describes the reviewed `django-asklens==0.3.1` release source. Use
-> an exact local wheel whose source commit and digest you verified; this does
-> not establish publication or a final public artifact identity. Users of the
-> current public `0.3.0` release or supported older `0.2.0` origin must use the
-> matching immutable tagged docs. The historical `0.1.0a1` package was a
-> testing artifact and is not a supported upgrade origin.
+> This guide describes immutable public `django-asklens==0.3.1`, the current
+> alpha release. Authenticate the selected public artifact against
+> [Installation](installation.md#current-published-alpha-031). Public `0.3.0`
+> is the immediate prior supported upgrade origin, `0.2.0` is the supported
+> older `0.2.x` origin, and the historical `0.1.0a1` package is not a supported
+> upgrade origin.
 
-The disposable smoke at the end builds one wheel from the current local source,
-installs that exact file, and reports its digest. See
+The disposable smoke at the end instead builds one wheel from the current local
+source, installs that exact file, and reports its digest. That local rebuild is
+separate evidence and is not the immutable public wheel. See
 [Installation](installation.md#source-checkout-and-exact-local-artifacts).
 
 ## 1. Install the exact core artifact
 
-Create an isolated environment and install the verified wheel by path, without
-an optional extra:
+Create an isolated environment and install the exact public version without an
+optional extra:
 
 ```bash
 mkdir asklens-core-quickstart
 cd asklens-core-quickstart
 python -m venv .venv-asklens-core
 .venv-asklens-core/bin/python -m pip install --no-cache-dir \
-  /absolute/path/to/django_asklens-0.3.1-py3-none-any.whl
+  'django-asklens==0.3.1'
 .venv-asklens-core/bin/django-admin startproject quickstart .
 .venv-asklens-core/bin/python manage.py startapp shop
 ```
 
-Verify a local wheel's absolute path and SHA-256 digest before installing it.
-Version metadata alone does not establish provenance, compatibility with
-`0.1.0a1`, or a supported upgrade path.
+Authenticate the public wheel or source distribution against the filename and
+SHA-256 in the installation guide. A version string alone does not establish
+provenance, compatibility with `0.1.0a1`, or a supported upgrade path.
 
 Add the core package and the project-owned app config to
 `quickstart/settings.py`:
@@ -245,7 +246,7 @@ with permission, membership, model, or scope diagnostics.
 
 ## 7. Run the disposable wheel smoke
 
-From the exact reviewed `0.3.1` source checkout:
+From a clean `0.3.1` source checkout:
 
 ```bash
 bash scripts/quickstart-core-smoke.sh
