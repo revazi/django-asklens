@@ -38,7 +38,7 @@ def assert_installed_distribution_provenance() -> None:
     import django_asklens
 
     installed_version = importlib.metadata.version("django-asklens")
-    expected_version = os.environ.get("ASKLENS_EXPECTED_VERSION", "0.3.0")
+    expected_version = os.environ.get("ASKLENS_EXPECTED_VERSION", "0.3.1")
     assert installed_version == expected_version
     assert django_asklens.__version__ == expected_version
 
@@ -64,7 +64,7 @@ def smoke_core_install() -> None:
     import django_asklens.compiler as compiler_package
     import django_asklens.execution as execution_package
 
-    expected_version = os.environ.get("ASKLENS_EXPECTED_VERSION", "0.3.0")
+    expected_version = os.environ.get("ASKLENS_EXPECTED_VERSION", "0.3.1")
     assert django_asklens.__version__ == expected_version
     observability_spec = importlib.util.find_spec("django_asklens.observability")
     if expected_version == "0.2.0":

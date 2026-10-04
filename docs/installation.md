@@ -4,9 +4,12 @@
 stable, production-certified, independently security-certified, or suitable for
 a particular deployment. Authenticate public artifacts against the immutable
 release identities below; a matching version string alone is not provenance.
-The immutable `0.2.0` release remains the prior supported `0.2.x` upgrade origin.
-The historical `0.1.0a1` package was an unsupported testing artifact and is not
-an upgrade origin.
+Current source metadata identifies the reviewed `0.3.1` release source, but
+that version and local artifacts do not establish publication or final public
+identities. Public `0.3.0` remains the immediate supported upgrade origin until
+a separate publication succeeds. The immutable `0.2.0` release remains the
+supported older `0.2.x` origin. The historical `0.1.0a1` package was an
+unsupported testing artifact and is not an upgrade origin.
 
 ## Current published alpha: 0.3.0
 
@@ -110,15 +113,16 @@ uv sync --group dev
 uv run pytest
 ```
 
-A locally built wheel reports `0.3.0`, but it is not the immutable public wheel
-listed above even if its filename and version match. Record the local source
-commit and locally produced digest as separate evidence. The only supported
-upgrade origin for this release is `0.2.0`; no upgrade from the `0.1.0a1`
-testing artifact is claimed.
+A locally built wheel reports `0.3.1`, but it is not a public or final artifact.
+Record the local source commit and locally produced digest as separate candidate
+evidence; never attach the immutable public `0.3.0` identities above to it. The
+immediate supported origin for this maintenance source is authenticated public
+`0.3.0`; published `0.2.0` remains a separately checked older supported
+`0.2.x` origin. No upgrade from the `0.1.0a1` testing artifact is claimed.
 
 ### Exact local release-source package evidence
 
-The opt-in package smoke validates an exact committed local `0.3.0` source:
+The opt-in package smoke validates an exact committed local `0.3.1` source:
 
 ```bash
 bash scripts/alpha-candidate-package-smoke.sh
@@ -126,36 +130,40 @@ bash scripts/alpha-candidate-package-smoke.sh
 
 The command requires Python 3.12+, `uv`, Git, `tar`, and a clean source tree. It
 exports the exact `HEAD` commit into a temporary build tree, builds exactly one
-`0.3.0` wheel and one source distribution, runs Twine and package-content
-checks, reports their SHA-256 digests, and runs installed-wheel checks outside
-the repository root. It verifies that Docker, Playwright, and psycopg did not
-leak into runtime requirements or extras and installs the core, API, and MCP
-wheel surfaces in separate temporary environments.
+`0.3.1` wheel and one source distribution, runs Twine and package-content
+checks, reports their local-only SHA-256 digests, and runs installed-wheel
+checks outside the repository root. It verifies that release notes remain
+excluded and that development tools did not leak into runtime requirements or
+extras, then installs the core, API, and MCP wheel surfaces in separate
+temporary environments.
 
-The upgrade probe installs actual `django-asklens==0.2.0` from PyPI in a
-disposable environment, applies the exact existing AskLens migrations
+The primary upgrade probe authenticates the exact public `0.3.0` wheel and
+source distribution against the immutable SHA-256 values above, installs the
+wheel in a disposable environment, applies the existing AskLens migrations
 (`0001_initial` and `0002_add_admin_query_proxy`), and creates one synthetic
-`SemanticQueryRun` row. It then upgrades to the local `0.3.0` wheel, runs
+`SemanticQueryRun` row. It then upgrades to the local `0.3.1` wheel, runs
 `migrate --plan`, `migrate`, `showmigrations`, `check`, and
 `makemigrations --check --dry-run`, and verifies the unchanged graph, preserved
-row, proxy model, and AskLens table shape. Both prior-release and local-source
-imports must resolve inside the disposable environment rather than the checkout.
+row, proxy model, table shape, and absence of checkout source shadowing.
 
-This is bounded SQLite package evidence for the supported `0.2.0` origin, not
-PostgreSQL or production upgrade certification. It does not test or replace the
-`0.1.0a1` testing artifact. The script removes its temporary environments and
+A separate probe authenticates published `0.2.0` and repeats the same bounded
+checks because it remains the supported older `0.2.x` origin; it is not
+substituted for the immediate public `0.3.0` maintenance hop. This is bounded
+SQLite package evidence, not PostgreSQL or production upgrade certification. It
+does not test or replace the `0.1.0a1` testing artifact. The script removes its temporary environments and
 artifacts and does not upload, tag, publish, or release anything.
 
-## Authenticated API prerequisites for an exact 0.3.0 artifact
+## Authenticated API prerequisites for an exact 0.3.1 source artifact
 
-These prerequisites document the optional provisional DRF adapter in either the
-authenticated public `0.3.0` wheel above or a separately verified local `0.3.0`
-wheel. Users remaining on `0.2.0` must follow the immutable `v0.2.0` docs until
-they upgrade to an exact reviewed `0.3.0` artifact. For a local artifact, keep
-its source identity and digest separate from the public release identity:
+These prerequisites document the optional provisional DRF adapter in a
+separately verified local `0.3.1` wheel. Public users must continue to use the
+authenticated `0.3.0` wheel and immutable `v0.3.0` docs above until a separate
+`0.3.1` publication succeeds; users remaining on `0.2.0` must use the immutable
+`v0.2.0` docs. Keep every local source identity and digest separate from public
+release identities:
 
 ```bash
-python -m pip install '/verified/local/path/django_asklens-0.3.0-py3-none-any.whl[api]'
+python -m pip install '/verified/local/path/django_asklens-0.3.1-py3-none-any.whl[api]'
 ```
 
 The `[api]` extra installs the existing DRF dependency within the bounds in `pyproject.toml`; it does not install FastMCP or make DRF a core dependency. Add the host authentication/session apps, DRF, AskLens, and the project app that owns registration:

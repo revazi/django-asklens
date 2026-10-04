@@ -6,6 +6,18 @@ The project is alpha and APIs may change before a stable release.
 
 ## Unreleased
 
+No changes are currently recorded.
+
+## 0.3.1 — 2026-10-04
+
+This section describes the exact reviewed `0.3.1` release source. Its presence
+in a checkout does not by itself establish a Git tag, PyPI publication, or
+GitHub Release, and source review does not authorize those actions. The
+immutable `v0.3.0` release remains the current public alpha and immediate
+supported upgrade origin until a separate publication succeeds. The immutable
+`v0.2.0` release remains the supported older `0.2.x` origin, and `0.1.0a1`
+remains an unsupported testing artifact rather than an upgrade origin.
+
 ### Changed
 
 - Hardened the Trusted Publisher incident runbook with no-upload and immutable-artifact gates for same-run failed-job-only recovery after `invalid-publisher`; token fallback, manual upload, `skip-existing`, tag movement/recreation, artifact replacement, and concealed attempts remain prohibited.

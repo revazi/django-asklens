@@ -8,8 +8,9 @@ specification](asklens-specification.md). It records exposure and evidence. The
 rows explicitly marked governed below; every other surface remains
 provisional, optional, internal, or unsupported. This is an alpha line, not a
 1.0 stability claim. Version `0.2.0` is the first supported alpha release and
-the immutable prior `0.2.x` upgrade origin; current source metadata identifies
-the reviewed `0.3.0` release source.
+the immutable supported older `0.2.x` upgrade origin. The immutable public
+`0.3.0` release is the immediate upgrade origin for current source metadata,
+which identifies the reviewed `0.3.1` release source.
 
 PyPI `0.1.0a1` was a testing artifact only and is not a supported upgrade
 origin. Both release sources follow the [support
@@ -283,8 +284,9 @@ line. HTTP, MCP, admin, frontend, provider, document, broad helper, and adapter
 surfaces remain provisional, optional, or internal. Current posture:
 
 - this is a narrow alpha compatibility policy, not a 1.0 stability claim;
-- `0.2.0` is the first supported alpha release and supported `0.2.x` upgrade
-  origin for the reviewed `0.3.0` release source;
+- public `0.3.0` is the immediate supported upgrade origin for the reviewed
+  `0.3.1` release source, while `0.2.0` remains the first supported alpha and
+  supported older `0.2.x` origin;
 - `0.1.0a1` was a testing artifact only; it is not a supported upgrade origin;
 - the five serialized documents stay internal, unversioned, and without
   extension negotiation; do not add document versions;

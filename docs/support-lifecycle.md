@@ -13,10 +13,11 @@ Artifact provenance remains part of every support statement:
 - The immutable `django-asklens==0.2.0` PyPI release is the first supported
   alpha release and the supported `0.2.x` upgrade origin; use its tagged
   documentation.
-- Current source metadata identifies the reviewed `0.3.0` release source. Its
+- Current source metadata identifies the reviewed `0.3.1` release source. Its
   presence does not by itself establish publication; source commits and local
   artifact digests remain local evidence, while public files require immutable
-  release provenance.
+  release provenance. Immutable public `0.3.0` remains the current release and
+  immediate supported upgrade origin until a separate publication succeeds.
 - `0.1.0a1` was a testing artifact only and is not a supported upgrade origin.
 
 Do not combine packages, workers, clients, documentation, or persisted plans
@@ -27,9 +28,9 @@ matching artifact.
 
 ## Current evidence
 
-The immutable `0.2.0` release and reviewed `0.3.0` release source use the
-following repository-operated support matrix. Claims apply only to the exact
-commit and artifacts that passed the named checks:
+The immutable `0.2.0` and `0.3.0` releases and reviewed `0.3.1` release source
+use the following repository-operated support matrix. Claims apply only to the
+exact commit and artifacts that passed the named checks:
 
 - Python 3.12 and 3.13 run the full SQLite/unit/integration CI.
 - Django 5.2, 6.0, and 6.1 each run on both tested Python lines.
@@ -167,15 +168,16 @@ provisional, optional, internal, and unsupported areas. The 0.3.x boundary is
 limited to its exact registration, trusted-execution, public-error, and
 observability rows. See the [AskLens specification](asklens-specification.md).
 
-`0.2.0` is the supported `0.2.x` origin for the reviewed `0.3.0` release
-source. The actionable path requires normal host checks but no AskLens migration
-for this scope; every persisted plan is revalidated by the current facade.
+Immutable public `0.3.0` is the immediate supported origin for the reviewed
+`0.3.1` release source. `0.2.0` remains the supported older `0.2.x` origin. Both
+actionable paths require normal host checks but no AskLens migration for this
+scope; every persisted plan is revalidated by the current facade.
 `0.1.0a1` remains a testing artifact and is not a supported upgrade origin. There is no fixed deprecation window or rollback promise. Host-owned
 responsibilities remain accepted. The five packaged JSON Schemas stay
 internal, draft, unfrozen, and unversioned. Do not add document versions, schema
 versions, extension negotiation, or previous-shape compatibility.
 
 Do not record or handle schema changes. The first-install migrations, changelog
-entries, exact `0.2.0` public-artifact checks, and exact `0.3.0` release-source
-and wheel checks are repository-operated evidence; they are not production
-certification or an independent security review.
+entries, exact `0.2.0` and `0.3.0` public-artifact checks, and exact `0.3.1`
+release-source and wheel checks are repository-operated evidence; they are not
+production certification or an independent security review.

@@ -37,15 +37,19 @@ Django AskLens was created by [Revaz Zakalashvili](https://github.com/revazi) ([
 > or `django_asklens-0.3.0.tar.gz` with SHA-256
 > `a7717736c07b93d66e1326dc43a438aa0918c17b4512ddb2391257de5887c5c9`.
 > A same-version local build is separate local evidence and must not be
-> represented by these public identities.
+> represented by these public identities. Current source metadata identifies
+> the reviewed `0.3.1` release source; that identity and any local `0.3.1`
+> artifact or digest are candidate review evidence only, not proof of
+> publication or a final public artifact identity. Public `0.3.0` remains the
+> immediate supported upgrade origin until a separate publication succeeds.
 >
-> The immutable `django-asklens==0.2.0` release remains the prior supported
-> `0.2.x` upgrade origin; use its matching immutable
+> The immutable `django-asklens==0.2.0` release remains the supported older
+> `0.2.x` origin; use its matching immutable
 > [documentation tagged `v0.2.0`](https://github.com/revazi/django-asklens/blob/v0.2.0/README.md).
 > The previously published `0.1.0a1` package was an unsupported testing artifact
 > and is not an upgrade origin. See [Installation](docs/installation.md) for
-> public-artifact authentication, local development, and the bounded `0.2.0` to
-> `0.3.0` upgrade statement.
+> public-artifact authentication, local development, and bounded `0.3.x`
+> upgrade guidance.
 
 ## What it provides
 
@@ -64,12 +68,13 @@ Django AskLens was created by [Revaz Zakalashvili](https://github.com/revazi) ([
 - Frontend-agnostic `columns` + `data` JSON output.
 - Optional packaged browser UI for demos/reference use.
 
-## 0.3.0 alpha quickstart
+## 0.3.1 alpha release-source quickstart
 
-The example below applies to the published `0.3.0` alpha. Use it only with an
-exact public artifact authenticated against the immutable identities above or a
-separately identified local build. Users remaining on `0.2.0` must use the
-immutable `v0.2.0` documentation instead.
+The example below applies to the reviewed `0.3.1` release source. Use it only
+with an exact local artifact whose source commit and digest were separately
+verified; source metadata does not establish publication. Users of the current
+public `0.3.0` alpha or supported older `0.2.0` origin must use their matching
+immutable tagged documentation.
 
 For a linear path that installs core only, wires one project-owned startup import, and executes current-request list plans, use the [Core-only executable quickstart](docs/quickstart-core.md).
 

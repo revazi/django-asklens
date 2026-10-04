@@ -50,30 +50,34 @@ and requires explicit release notes and actionable migration guidance. This
 policy provides no fixed deprecation period and makes no compatibility promise
 for `0.4.0` or 1.0.
 
-## Upgrade from 0.2.x to 0.3.0
+## Upgrade to the 0.3.1 release source
 
-The supported origin is a supported `0.2.x` release; today that means `0.2.0`.
-`0.1.0a1` remains a testing artifact and is not an upgrade origin.
+The immediate supported origin is immutable public `0.3.0`. Published `0.2.0`
+remains the supported older `0.2.x` origin and is checked separately rather than
+being treated as the immediate maintenance hop. `0.1.0a1` remains a testing
+artifact and is not an upgrade origin. Until a separate publication succeeds,
+local `0.3.1` artifacts are release-review evidence only and must not be
+represented as public or final artifact identities.
 
-1. Back up and test according to host policy, pin the exact reviewed `0.3.0`
-   artifact (locally built and digest-verified, or authenticated against an
-   immutable publication record), and run the normal Django system check,
-   migration-drift check, and application tests for every enabled adapter.
+1. Back up and test according to host policy, pin an exact reviewed `0.3.1`
+   artifact built from the reviewed source and digest-verified locally, and run
+   the normal Django system check, migration-drift check, and application tests
+   for every enabled adapter. After publication, authenticate public artifacts
+   against their separate immutable publication record.
 2. No AskLens database migration or data transformation is introduced by this
-   scope. Do not generate an empty host migration merely for observability.
-3. `OBSERVABILITY_SINK` defaults to `None`; leaving it unset preserves no-hook
-   behavior. If enabled, use the exact content-free callback contract and treat
-   sink delivery as best-effort metrics/tracing, not audit.
+   maintenance scope. Do not generate an empty host migration.
+3. `OBSERVABILITY_SINK` remains default-off and content-free. If enabled, use
+   the exact callback contract and treat best-effort delivery as metrics or
+   tracing, never authoritative audit.
 4. Re-test registrations, scope providers, permissions, structural budgets,
-   public error handling, and any provisional HTTP/MCP/admin/provider consumer.
-   Those adapter and document shapes are not covered by this compatibility
-   boundary.
+   public error handling, and every provisional HTTP/MCP/admin/provider
+   consumer. Those adapter and document shapes are not covered by this
+   compatibility boundary.
 5. Treat every stored, cached, provider-produced, or previously validated plan
    as untrusted. Submit it to the current `execute_plan()` facade so current
    catalog, permissions, scope, and budgets are revalidated.
 
 Because this scope adds no migration, reverting package code does not require a
-reverse AskLens migration. That is not a general rollback guarantee: hosts must
-remove 0.3-only callback imports/configuration before reverting, and no promise
-is made that provisional documents, adapters, provider behavior, or
-host-persisted payloads can be mixed across versions.
+reverse AskLens migration. That is not a general rollback or mixed-version
+guarantee: no promise is made that provisional documents, adapters, provider
+behavior, or host-persisted payloads can be mixed across versions.
