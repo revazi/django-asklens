@@ -7,11 +7,12 @@ provider call, frontend, or MCP integration.
 ## Artifact boundary
 
 > [!IMPORTANT]
-> This guide describes the reviewed `django-asklens==0.3.0` release source. Use
-> an exact wheel whose provenance and digest you verified; for a local build,
-> verify its source commit as well. Users remaining on `0.2.0` must use the
-> immutable `v0.2.0` docs. The historical `0.1.0a1` package was a testing
-> artifact and is not a supported upgrade origin.
+> This guide describes the reviewed `django-asklens==0.3.1` release source. Use
+> an exact local wheel whose source commit and digest you verified; this does
+> not establish publication or a final public artifact identity. Users of the
+> current public `0.3.0` release or supported older `0.2.0` origin must use the
+> matching immutable tagged docs. The historical `0.1.0a1` package was a
+> testing artifact and is not a supported upgrade origin.
 
 The disposable smoke at the end builds one wheel from the current local source,
 installs that exact file, and reports its digest. See
@@ -27,7 +28,7 @@ mkdir asklens-core-quickstart
 cd asklens-core-quickstart
 python -m venv .venv-asklens-core
 .venv-asklens-core/bin/python -m pip install --no-cache-dir \
-  /absolute/path/to/django_asklens-0.3.0-py3-none-any.whl
+  /absolute/path/to/django_asklens-0.3.1-py3-none-any.whl
 .venv-asklens-core/bin/django-admin startproject quickstart .
 .venv-asklens-core/bin/python manage.py startapp shop
 ```
@@ -244,7 +245,7 @@ with permission, membership, model, or scope diagnostics.
 
 ## 7. Run the disposable wheel smoke
 
-From the exact reviewed `0.3.0` source checkout:
+From the exact reviewed `0.3.1` source checkout:
 
 ```bash
 bash scripts/quickstart-core-smoke.sh

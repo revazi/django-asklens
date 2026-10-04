@@ -17,6 +17,14 @@ and source distribution `django_asklens-0.3.0.tar.gz` with SHA-256
 `a7717736c07b93d66e1326dc43a438aa0918c17b4512ddb2391257de5887c5c9`.
 A same-version local build is not one of those public immutable artifacts.
 
+Current source metadata identifies the reviewed `0.3.1` release source. That
+source identity and any local `0.3.1` artifacts or digests are candidate review
+evidence only: they do not establish publication or final public artifact
+identities. Until a separate publication succeeds, public `0.3.0` remains the
+current immutable release and immediate supported upgrade origin. Published
+`0.2.0` remains the supported older `0.2.x` origin, while `0.1.0a1` remains an
+unsupported testing artifact.
+
 The repository workflow and local checks verify the intended publisher identity
 and artifact handoff, but cannot independently confirm the current browser-side
 PyPI Trusted Publisher configuration. An authorized operator must confirm that

@@ -22,10 +22,14 @@ Django AskLens was created by [Revaz Zakalashvili](https://github.com/revazi) ([
 > `d7f7159cfdbb3d9755d9b3542f9cda4280f0e72939f81aca4d3a2cd8d8921e8b`,
 > and source distribution `django_asklens-0.3.0.tar.gz` with SHA-256
 > `a7717736c07b93d66e1326dc43a438aa0918c17b4512ddb2391257de5887c5c9`.
-> Same-version local builds remain separate local evidence.
+> Same-version local builds remain separate local evidence. Current source
+> metadata identifies the reviewed `0.3.1` release source; that version and any
+> local candidate commit, artifact, or digest neither establish publication nor
+> define a final public identity. Public `0.3.0` remains the immediate supported
+> upgrade origin until a separate publication succeeds.
 >
-> The immutable `django-asklens==0.2.0` release remains the prior supported
-> `0.2.x` upgrade origin; use its
+> The immutable `django-asklens==0.2.0` release remains the supported older
+> `0.2.x` origin; use its
 > [documentation tagged `v0.2.0`](https://github.com/revazi/django-asklens/blob/v0.2.0/README.md).
 > The historical `0.1.0a1` package was an unsupported testing artifact and is not
 > an upgrade origin. See [Installation](installation.md) for authentication and

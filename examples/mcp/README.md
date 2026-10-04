@@ -4,18 +4,17 @@ These examples show how to register AskLens' dependency-free MCP tool wrappers
 with a host project's MCP server implementation. They are synthetic integration
 evidence, not a production authentication or transport template.
 
-## Bounded 0.3.0 release-source checklist
+## Bounded 0.3.1 release-source checklist
 
-Install an exact `0.3.0` wheel with the MCP extra in a fresh environment only
-after verifying its provenance, path, and SHA-256 digest; for a local build,
-verify its source commit as well:
+Install an exact local `0.3.1` wheel with the MCP extra in a fresh environment
+only after verifying its source commit, path, and SHA-256 digest:
 
 ```bash
-python -m pip install '/verified/path/django_asklens-0.3.0-py3-none-any.whl[mcp]'
+python -m pip install '/verified/path/django_asklens-0.3.1-py3-none-any.whl[mcp]'
 ```
 
-The source and version string do not by themselves establish publication or a
-Git tag. `0.1.0a1` was a testing artifact and is not a supported upgrade origin.
+The source, local digest, and version string do not by themselves establish
+publication, a final public artifact identity, or a Git tag. `0.1.0a1` was a testing artifact and is not a supported upgrade origin.
 
 ### Register the trusted context mapping
 

@@ -38,6 +38,7 @@ SUPPORT_LIFECYCLE_GUIDE = ROOT / "docs" / "support-lifecycle.md"
 ALPHA_SURFACE_INVENTORY = ROOT / "docs" / "alpha-surface-inventory.md"
 WHEEL_SMOKE = ROOT / ".github" / "scripts" / "wheel_smoke.py"
 RELEASE_NOTES_030 = ROOT / ".github" / "release-notes" / "0.3.0.md"
+RELEASE_NOTES_031 = ROOT / ".github" / "release-notes" / "0.3.1.md"
 API_SERIALIZERS = ROOT / "django_asklens" / "api" / "serializers.py"
 API_VIEWS = ROOT / "django_asklens" / "api" / "views.py"
 
@@ -505,8 +506,8 @@ def test_api4a_source_and_exact_wheel_evidence_are_strict_and_route_local() -> N
         assert required in wheel_smoke
 
 
-def test_package_provenance_distinguishes_public_030_and_local_artifacts() -> None:
-    """Published 0.3.0, prior 0.2.0, and local builds stay distinct."""
+def test_package_provenance_distinguishes_public_030_and_local_031() -> None:
+    """Published 0.3.0, prior 0.2.0, and local 0.3.1 stay distinct."""
 
     readme = read_text(ROOT / "README.md")
     index = read_text(ROOT / "docs" / "index.md")
@@ -542,11 +543,14 @@ def test_package_provenance_distinguishes_public_030_and_local_artifacts() -> No
             assert command in document
         assert "local" in normalized
         assert "separate" in normalized
-        assert "prior supported `0.2.x` upgrade origin" in normalized
+        assert "supported older `0.2.x` origin" in normalized
         assert "unsupported testing artifact" in normalized
+        assert "reviewed `0.3.1` release source" in normalized
+        assert "0.3.0` remains the immediate supported upgrade origin" in normalized
+        assert "final public" in normalized
 
     provenance_heading = "## Package provenance"
-    main_quickstart_heading = "## 0.3.0 alpha quickstart"
+    main_quickstart_heading = "## 0.3.1 alpha release-source quickstart"
     assert readme.index(provenance_heading) < readme.index("## What it provides")
     assert readme.index(provenance_heading) < readme.index(main_quickstart_heading)
     assert index.index(provenance_heading) < index.index("## Guides")
@@ -594,16 +598,25 @@ def test_package_provenance_distinguishes_public_030_and_local_artifacts() -> No
     assert tagged_020_docs in prior_section
 
     source_section = install[positions[2] :]
-    assert "not the immutable public wheel" in source_section
+    normalized_source_section = " ".join(source_section.split())
+    assert "locally built wheel reports `0.3.1`" in normalized_source_section
+    assert "not a public or final artifact" in normalized_source_section
     assert "### Exact local release-source package evidence" in source_section
-    assert "actual `django-asklens==0.2.0` from PyPI" in source_section
-    assert "not PostgreSQL or production upgrade certification" in " ".join(
-        source_section.split()
+    assert "authenticates the exact public `0.3.0`" in normalized_source_section
+    assert "separate probe authenticates published `0.2.0`" in normalized_source_section
+    assert (
+        "not PostgreSQL or production upgrade certification"
+        in normalized_source_section
     )
     assert "private-candidate-evaluation.md" not in install
     assert "pilot-intake-worksheet.md" not in install
 
-    assert wheel in core_api
+    assert "django_asklens-0.3.1-py3-none-any.whl" in core_api
+    normalized_core_api = " ".join(core_api.split())
+    assert (
+        "does not establish publication or a final public artifact identity"
+        in normalized_core_api
+    )
     assert "built-in provisional DRF routes" in core_api
     assert "python -m pip install django-asklens\n" not in core_api
     assert "[AskLens specification](asklens-specification.md)" in index
@@ -660,6 +673,43 @@ def test_030_release_notes_are_bounded_neutral_and_not_packaged() -> None:
     assert ".github/release-notes" not in manifest
 
 
+def test_031_release_notes_are_bounded_neutral_and_not_packaged() -> None:
+    """Maintenance notes preserve public provenance and the alpha boundary."""
+
+    notes = read_text(RELEASE_NOTES_031)
+    changelog = read_text(ROOT / "CHANGELOG.md")
+    manifest = read_text(ROOT / "MANIFEST.in")
+    normalized = " ".join(notes.split())
+
+    for required in (
+        "reviewed release source",
+        "neither authorize nor by themselves establish a Git tag",
+        "local evidence and is not a final or public artifact identity",
+        "`django-asklens==0.3.0` remains the immutable current public alpha",
+        "`v0.2.0` remains the immutable supported older `0.2.x` origin",
+        "`0.1.0a1` remains an unsupported testing artifact",
+        "narrow 0.3.x governed boundary",
+        "trusted `execute_plan()` / `QueryResult`",
+        "permission sources fail closed",
+        "Trusted Publisher incident recovery",
+        "immediate upgrade origin",
+        "adds no AskLens migration or data transformation",
+        "authenticated public `0.3.0` to local `0.3.1` SQLite upgrade probe",
+        "2026-10-04T11:56:53Z",
+        "no known vulnerabilities or adverse project statuses",
+        "HTTP/DRF, MCP, admin, frontend, provider orchestration and internals",
+        "default-off, dependency-free, content-free, best-effort, reentrancy-safe",
+        "schema/document version negotiation",
+        "does not claim 1.0 stability",
+    ):
+        assert required in normalized
+
+    assert "## Unreleased\n\nNo changes are currently recorded." in changelog
+    assert "## 0.3.1 — 2026-10-04" in changelog
+    assert "exact reviewed `0.3.1` release source" in " ".join(changelog.split())
+    assert ".github/release-notes" not in manifest
+
+
 def test_core_quickstart_is_linear_executable_and_fail_closed() -> None:
     """The unreleased core golden path stays complete, explicit, and disposable."""
 
@@ -689,8 +739,8 @@ def test_core_quickstart_is_linear_executable_and_fail_closed() -> None:
 
     normalized_guide = " ".join(guide.replace("\n> ", " ").split())
     for required in (
-        "reviewed `django-asklens==0.3.0` release source",
-        "exact wheel whose provenance and digest you verified",
+        "reviewed `django-asklens==0.3.1` release source",
+        "exact local wheel whose source commit and digest you verified",
         "not a supported upgrade origin",
         'scope_mode="global"',
         'scope_mode="context_scoped"',
@@ -769,13 +819,15 @@ def test_authenticated_api_quickstart_is_current_private_and_disposable() -> Non
     assert "host-created authenticated user" in readme
     assert "does not provide a login or token endpoint" in readme
 
-    install_heading = "## Authenticated API prerequisites for an exact 0.3.0 artifact"
+    install_heading = (
+        "## Authenticated API prerequisites for an exact 0.3.1 source artifact"
+    )
     assert install_heading in install
     install_section = install[install.index(install_heading) :]
     normalized_install_section = " ".join(install_section.split())
     for required in (
-        "authenticated public `0.3.0` wheel",
-        "separately verified local `0.3.0` wheel",
+        "separately verified local `0.3.1` wheel",
+        "Public users must continue to use the authenticated `0.3.0` wheel",
         "[api]",
         '"rest_framework"',
         '"django.contrib.sessions"',
@@ -804,7 +856,7 @@ def test_authenticated_api_quickstart_is_current_private_and_disposable() -> Non
     assert usage_positions == sorted(usage_positions)
     normalized_usage = " ".join(usage.replace("\n> ", " ").split())
     for required in (
-        "`django-asklens==0.3.0` release source",
+        "`django-asklens==0.3.1` release source",
         "provisional API",
         "not a supported upgrade origin",
         "normal user",
@@ -1022,8 +1074,8 @@ def test_playwright_test_uses_browser_and_network_surfaces() -> None:
     assert "Client(" not in test_source
 
 
-def test_package_evidence_is_isolated_and_never_releases() -> None:
-    """Package checks build/install/upgrade locally without publication."""
+def test_package_evidence_is_isolated_authenticated_and_never_releases() -> None:
+    """Package checks authenticate origins and build locally without publication."""
 
     script = read_text(PACKAGE_SCRIPT)
 
@@ -1036,22 +1088,25 @@ def test_package_evidence_is_isolated_and_never_releases() -> None:
         script.index("probe_python() {") : script.index("probe_manage() {")
     ]
     assert 'cd "$workdir"' in probe_function
-    version_probe_start = '(\n  cd "$workdir"\n  env -u PYTHONPATH \\'
-    version_probe = script[
-        script.index(version_probe_start) : script.index(
-            "# Supported 0.2.0 -> 0.3.0 migration-state preservation"
-        )
-    ]
-    assert version_probe.startswith(version_probe_start)
+    assert "run_upgrade_probe" in script
+    assert script.count("run_upgrade_probe \\") == 2
     assert '"$wheel" >/dev/null' in script
     assert "django-asklens==0.1.0a1" not in script
     assert "--force-reinstall" not in script
-    assert 'version("django-asklens") == "0.2.0"' in script
-    assert 'version("django-asklens") == "0.3.0"' in script
-    assert '"django-asklens==0.2.0"' in script
-    assert "actual PyPI django-asklens 0.2.0" in script
+    assert 'assert version("django-asklens") == expected' in script
+    assert 'version("django-asklens") == "0.3.1"' in script
+    assert "download_pypi_artifacts.py" in script
+    assert "--version 0.3.0" in script
+    assert "d7f7159cfdbb3d9755d9b3542f9cda4280f0e72939f81aca4d3a2cd8d8921e8b" in script
+    assert "a7717736c07b93d66e1326dc43a438aa0918c17b4512ddb2391257de5887c5c9" in script
+    assert "--version 0.2.0" in script
+    assert "af0881945d5f5f227332aac8bb13df10d4cf5bd3e54a038acd6545db5640d1d8" in script
+    assert "11af90303fd2d23123e4caa98c6e6cb660b7b8f32d6fba0c57a4554c8d39e022" in script
+    assert "immediate maintenance origin" in script
+    assert "separate older 0.2.x compatibility assertion" in script
     assert "twine check" in script
     assert "ARTIFACT_SHA256" in script
+    assert "release-review notes are excluded from package artifacts" in script
     assert "wheel-smoke.sh" in script
     assert "core api mcp" in script
     assert "coverage" in script
@@ -1065,11 +1120,9 @@ def test_package_evidence_is_isolated_and_never_releases() -> None:
     assert "twine upload" not in script
     assert "git tag" not in script
     assert "git push" not in script
-    assert 'version = "0.3.0"' in read_text(ROOT / "pyproject.toml")
-    assert "--index-url https://pypi.org/simple" in script
-    assert '--no-index --no-deps "$wheel"' not in script
+    assert 'version = "0.3.1"' in read_text(ROOT / "pyproject.toml")
     wheel_smoke = read_text(ROOT / ".github" / "scripts" / "wheel_smoke.py")
-    assert 'os.environ.get("ASKLENS_EXPECTED_VERSION", "0.3.0")' in wheel_smoke
+    assert 'os.environ.get("ASKLENS_EXPECTED_VERSION", "0.3.1")' in wheel_smoke
     assert 'if expected_version == "0.2.0":' in wheel_smoke
     assert "assert observability_spec is None" in wheel_smoke
     assert 'if expected_version != "0.2.0":' in wheel_smoke
@@ -1078,11 +1131,11 @@ def test_package_evidence_is_isolated_and_never_releases() -> None:
 
 
 def test_package_migration_probe_is_disposable_and_scoped() -> None:
-    """Package smoke validates release SQLite migration-state preservation."""
+    """Both supported-origin probes preserve exact migration state and data."""
 
     script = read_text(PACKAGE_SCRIPT)
 
-    assert "migration-probe" in script
+    assert "migration-probe-$origin_version" in script
     assert "ASKLENS_MIGRATION_PROBE_DB" in script
     assert "ASKLENS_MIGRATION_PROBE_SECRET" in script
     assert "probe.sqlite3" in script
@@ -1095,15 +1148,10 @@ def test_package_migration_probe_is_disposable_and_scoped() -> None:
     assert "AskLensQuery._meta.proxy" in script
     assert "AskLensQuery._meta.db_table" in script
     assert "SemanticQueryRun.objects.get()" in script
-    assert "synthetic release probe" in script
-    assert (
-        "PASS release migration graph is exact: 0001_initial and"
-        " 0002_add_admin_query_proxy" in script
-    )
-    assert (
-        "PASS published 0.2.0 migration state initialized with one synthetic row"
-        in script
-    )
+    assert "synthetic release probe from {origin}" in script
+    assert "published {origin} migration state initialized" in script
+    assert "SemanticQueryRun row preserved across {origin} to 0.3.1" in script
+    assert "public %s to local 0.3.1 upgrade" in script
     assert (
         script.count(
             "PASS release migration graph is exact: 0001_initial and"
@@ -1111,14 +1159,7 @@ def test_package_migration_probe_is_disposable_and_scoped() -> None:
         )
         == 2
     )
-    assert (
-        script.count(
-            "asklens_migrations == {"
-            '("asklens", "0001_initial"), '
-            '("asklens", "0002_add_admin_query_proxy")}'
-        )
-        == 2
-    )
+    assert script.count("asklens_migrations == {") == 2
     assert "cursor.execute(" not in script
     assert "sqlite3.connect" not in script
     assert "raw SQL" not in script.lower()
@@ -1179,14 +1220,14 @@ def test_dev_tools_do_not_leak_into_runtime_metadata() -> None:
     ):
         assert forbidden not in runtime
         assert forbidden not in extras
-    assert metadata["project"]["version"] == "0.3.0"
+    assert metadata["project"]["version"] == "0.3.1"
     package_module = read_text(ROOT / "django_asklens" / "__init__.py")
-    assert package_module.count('__version__ = "0.3.0"') == 1
+    assert package_module.count('__version__ = "0.3.1"') == 1
     lock = tomllib.loads(read_text(ROOT / "uv.lock"))
     asklens = next(
         package for package in lock["package"] if package["name"] == "django-asklens"
     )
-    assert asklens["version"] == "0.3.0"
+    assert asklens["version"] == "0.3.1"
 
 
 def test_reference_shell_entrypoints_have_safe_argument_boundaries() -> None:
@@ -1437,7 +1478,7 @@ def test_alpha_surface_inventory_has_a_narrow_0_3_contract() -> None:
         "AskLens specification",
         "do not add document versions",
         "Version `0.2.0` is the first supported alpha release",
-        "reviewed `0.3.0` release source",
+        "reviewed `0.3.1` release source",
         "first supported alpha release",
         "testing artifact only",
         "not a supported upgrade origin",
