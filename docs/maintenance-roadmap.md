@@ -1,133 +1,135 @@
-# Post-0.2.0 maintenance roadmap
+# 0.3.x maintenance roadmap
 
 This is a prioritized engineering split, not a release promise or a substitute
-for tracked review. It was prepared from the release workflow, support matrix,
-coverage boundary map, production checklist, synthetic performance tooling, and
-current documentation after publishing `0.2.0`. No open-source TODO/FIXME markers
-were found in the Python, shell, workflow, or Markdown surfaces; the substantive
-gaps are evidence and product-policy gaps described below.
+for tracked review. The immutable `v0.2.0` and `v0.3.0` tags, releases, and
+public artifacts remain historical records and must not be moved, recreated, or
+overwritten. The historical `0.1.0a1` package remains an unsupported testing
+artifact, not an upgrade origin.
 
-## `0.2.1` candidates: compatible maintenance
+No future version or delivery date is promised here. Each change still requires
+its own tracked review and exact-head evidence.
 
-These items should preserve the `0.2.x` public behavior and database shape. Each
-still needs its own focused review.
+## `0.3.1` maintenance scope
+
+`0.3.1` is the current maintenance milestone: compatible, migration-free work
+that hardens release operations and closes focused evidence gaps without
+expanding package contracts. It remains an alpha maintenance line.
 
 ### P0 — release integrity and security upkeep
 
-1. **Land and rehearse the future release workflow without publishing.** Review
-   `.github/workflows/publish.yml`, configure the `pypi` GitHub environment and
-   the exact PyPI Trusted Publisher described in [Release process](releasing.md),
-   and validate build/artifact handoff on a synthetic non-publishing workflow
-   path. The first real use must remain environment-approved. Evidence: `0.2.0`
-   required manual post-publication verification and the repository previously
-   had CI but no publishing workflow.
-2. **Keep dependency-advisory remediation current.** Run the locked `uv audit`
-   job and update only affected locked dependencies when compatible; do not
-   widen runtime majors merely to clear tooling output. Evidence: `0.2.0`
-   already needed point-in-time PyJWT/urllib3 lock refreshes, and the production
-   checklist says a failed advisory lookup is failed evidence rather than a
-   silent pass.
-3. **Add negative tests around release input and artifact handoff when the
-   workflow changes.** Preserve exact tag/version equality, one wheel/one sdist,
-   digest continuity, non-yanked PyPI selection, fixed download host, and OIDC
-   isolation to the environment-protected job. Do not add `skip-existing` or a
-   token fallback.
+1. **Keep Trusted Publishing recovery fail closed.** Use the protected `pypi`
+   environment and its operator approval boundary. Diagnose publisher identity
+   mismatches rather than bypassing them, and reuse preserved artifacts only
+   under the bounded failed-job recovery procedure in the
+   [release runbook](releasing.md#trusted-publisher-incident-and-recovery).
+   Never use a token fallback, manual upload, `skip-existing`, tag replacement,
+   or concealed retries.
+2. **Keep dependency-advisory evidence current.** Run the locked `uv audit`
+   command and report lookup failure as failed evidence. Update only an affected
+   compatible lock entry when a concrete advisory justifies it; do not widen a
+   runtime bound or dependency major for freshness.
+3. **Preserve release handoff invariants.** Focused tests should retain exact
+   tag/version equality, exactly one wheel and one source distribution, digest
+   continuity from build through public verification, fixed PyPI hosts,
+   non-yanked selection, and OIDC isolation to the environment-protected job.
 
 ### P1 — confidence without contract changes
 
-4. **Close focused missing-branch assertions in critical boundaries.** Start
-   with permission-resolver invalid returns/exceptions, cross-adapter scope
-   failure composition, and audit sink failure branches identified in
-   [the coverage map](test-coverage.md). Review assertions, not an aggregate
-   percentage; the project deliberately has no coverage threshold.
-5. **Add a second operating-system smoke for packaging and path isolation.** CI
-   currently demonstrates Linux behavior. A Windows or macOS core-wheel smoke
-   would test path/temp/venv assumptions without changing the OS-independent
-   package claim. PostgreSQL/Playwright can remain on Linux unless evidence
-   justifies expansion.
-6. **Refresh onboarding commands as executable documentation checks.** Keep the
-   core and authenticated API quickstarts aligned with installation docs, ensure
-   every probe runs outside the checkout, and assert copied commands remain
-   secret-free and offline by default. Evidence: earlier package evidence was
-   susceptible to repository metadata shadowing even though runtime bytes were
-   correct.
-7. **Reduce the typing baseline incrementally.** Type one trust boundary at a
-   time and add focused mypy configuration only when that boundary is clean.
-   Do not make mypy a global gate by suppressing the existing Django/DRF debt;
-   `CONTRIBUTING.md` currently records that the full baseline is not clean.
+4. **Close named trust-boundary composition gaps.** Prefer assertions for safe
+   public outcomes, zero unauthorized application-data execution, metadata-only
+   audit, and best-effort observability over aggregate coverage. There is no
+   percentage threshold. Permission-resolution, cross-adapter scope, audit, and
+   observability failures remain high-value review areas.
+5. **Keep executable installation and provenance guidance current.** The current
+   public `0.3.0` wheel and source distribution must stay tied to independently
+   recorded digests and immutable documentation. Local builds remain separate
+   evidence. `0.2.0` remains the prior supported `0.2.x` upgrade origin.
+6. **Maintain synthetic operational evidence.** Re-run package, Django,
+   migration, PostgreSQL, and reference-browser checks when their affected paths
+   change. Synthetic checks are not live-provider, production-capacity,
+   deployment, adoption, or independent-security evidence.
 
-### P2 — operational evidence maintenance
+### Point-in-time locked dependency audit
 
-8. **Record comparable synthetic performance observations for changed query
-   paths.** Use identical dataset/query profiles and review query count and
-   wall-time directionally. Do not add unstable timing thresholds or call the
-   result an SLA; the existing baseline is local synthetic evidence only.
-9. **Keep release-specific evidence current.** On a patch candidate, update
-   version assertions, package-content expectations, support statements, and
-   immutable documentation links together. Retain explicit limitations for
-   live providers, production capacity, independent security review, and the
-   unsupported `0.1.0a1` testing artifact.
+At `2026-10-04T09:31:52Z`, the following exact command completed successfully
+against the unchanged `uv.lock`:
 
-## `0.3.0` release work: feature or contract changes
+```bash
+uv audit --locked --preview-features audit-command
+```
 
-These can alter supported behavior, policy, dependencies, or serialized/public
-surfaces and therefore should not be slipped into a patch.
+It resolved 109 locked packages and reported no known vulnerabilities and no
+adverse project statuses in the 108 audited packages. No advisory remediation,
+dependency update, runtime-bound change, or major-version widening was justified,
+so the lock remains unchanged. This is a point-in-time advisory lookup, not
+production or independent security certification; a future lookup failure must
+be reported as failed evidence rather than treated as a pass.
 
-### P0 — explicit contract decisions
+### Second-operating-system package-smoke decision
 
-1. **Accepted for 0.3.x: a narrow governed core boundary.** Registration,
-   trusted execution, public errors, and the typed observability event are named
-   exactly in [the compatibility policy](compatibility.md). HTTP, MCP, admin,
-   provider, broad helper, and document surfaces remain provisional/internal;
-   schemas stay unversioned with no negotiation or previous-shape handling.
-2. **Accepted for 0.3.0: an actionable bounded upgrade statement.** Supported
-   `0.2.x` origins use normal host checks and require no migration for this
-   scope; persisted plans always receive current-facade revalidation. There is
-   no broad rollback promise, fixed deprecation window, or 1.0 stability claim.
+A bounded macOS or Windows core-wheel isolation job was evaluated for this
+maintenance slice and is **deferred**, not silently assumed. The exact-head CI
+matrix already builds and installs the wheel outside the checkout on Linux for
+core, API, and MCP across supported Python/Django combinations, and the candidate
+package job adds isolated source-wheel and upgrade evidence. No OS-specific path,
+temporary-directory, or virtual-environment defect motivated another runner.
 
-### P1 — new runtime capabilities
+A macOS core-only job would duplicate a smaller subset while adding hosted-runner
+and package-resolution maintenance; a Windows job would first require a separate
+review of the Bash-based smoke harness rather than weakening it. Reconsider a
+second OS when an OS-specific defect, a portable bounded harness, or a support
+policy change supplies a concrete invariant. Existing Linux/PostgreSQL and
+Playwright coverage must not be reduced to fund it.
 
-3. **Evaluate first-class async execution or streaming only through the trusted
-   facade.** It must preserve request identity, fail-closed scope, budgets,
-   deterministic serialization, cancellation, and exactly-once audit semantics.
-   An adapter-only bypass is unacceptable.
-4. **Accepted for 0.3.0: dependency-free host observability.** The default-off
-   typed callback has exact low-cardinality lifecycle semantics, excludes
-   request/result/private content, runs after audit, and suppresses sink failure
-   and reentrancy. External telemetry transports and production dashboards stay
-   host-owned and are not package dependencies.
-5. **Evaluate scheduled audit retention and richer export/deletion workflows.**
-   Today scheduling, custom sinks, backups, replicas, and complete data-subject
-   handling are host-owned. Automatic mutation, retries, or cross-store
-   guarantees need explicit authorization, concurrency semantics, migrations,
-   and operator documentation.
-6. **Evaluate server-owned replica/routing policy helpers.** Current scope
-   querysets may select a trusted alias, but AskLens intentionally does not parse
-   aliases, monitor health, or fail over. A package-owned routing abstraction
-   changes operational and consistency contracts.
+## Separately reviewed future-minor work
 
-### P2 — support expansion and external evidence
+The following categories are not `0.3.1` maintenance. They require tracked design
+and compatibility review in a future minor line; this roadmap assigns neither a
+version nor a delivery date.
 
-7. **Admit new Python, Django, PostgreSQL, DRF, or FastMCP lines only through the
-   [support lifecycle](support-lifecycle.md).** Resolver success is insufficient;
-   matrix, installed-artifact, PostgreSQL, reference-browser, metadata, and docs
-   evidence must land together. Dropping a currently tested line requires the
-   retirement process and notice where safe.
-8. **Plan authorized live-provider and external evaluation.** Default CI must
-   remain offline and secret-free. Representative-role live validation,
-   independent security review, and external adoption evidence should be scoped
-   and funded explicitly; synthetic fixtures must never be presented as those
-   forms of evidence.
-9. **Treat product features such as saved queries, custom production UI, and
-   provider-specific adapters as host/product design.** Persisted plans must be
-   revalidated through `execute_plan()`, and no feature may accept client-owned
-   identity, permissions, tenant, bindings, or scope policy.
+### Contract and capability design
 
-## Release assignment rule
+- Async execution, streaming, and cancellation semantics through the trusted
+  facade, including current identity, fail-closed scope, budgets, deterministic
+  serialization, and exactly-once authoritative audit behavior.
+- Package-owned replica selection, routing, health checking, or failover.
+- Saved queries or other product workflow that persists plans or client-facing
+  policy. Stored plans would still require current-facade revalidation.
+- Document/schema versioning, negotiation, or previous-shape handling for the
+  five current AskLens documents.
+- New public helpers, adapter contracts, event fields/names, or other governed
+  surface changes.
 
-A change belongs in `0.2.1` only when it is compatible, migration-free unless it
-fixes an unavoidable defect, and does not widen accepted input or public policy.
-Security fixes may fail closed immediately. New capabilities, public contracts,
-support-line additions/removals, dependency-major changes, schema/versioning
-policy, and operational automation belong in `0.3.0` unless a separately
-reviewed security necessity requires earlier action.
+### Operational and support-policy design
+
+- Scheduled audit retention, automatic mutation/retries, richer export/deletion
+  workflows, or cross-store guarantees.
+- External telemetry transports, SDKs, dashboards, or dependencies. Current
+  observability remains default-off, dependency-free, content-free,
+  best-effort, reentrancy-safe, and distinct from authoritative audit.
+- Python, Django, PostgreSQL, DRF, or FastMCP support-line additions/removals, or
+  dependency-major policy changes, under the
+  [support lifecycle](support-lifecycle.md).
+- Authorized live-provider, external-adoption, production-capacity, or
+  independent-security evaluation. Offline synthetic fixtures cannot stand in
+  for those forms of evidence.
+
+## Preserved 0.3.x boundary
+
+The narrow governed boundary remains exactly the documented registration and
+resource APIs, trusted `execute_plan()` / `QueryResult`, namespaced public
+errors, and privacy-safe host observability described in the
+[compatibility policy](compatibility.md). This is not a 1.0 stability claim.
+
+HTTP/DRF, MCP, admin, frontend, provider orchestration and internals, broad
+helpers, settings outside the governed observability behavior, and operational
+audit storage remain provisional or internal where currently documented. The
+five `catalog`, `query-plan`, `capabilities`, `result`, and `error` documents and
+their schemas remain draft, internal, unversioned, and without negotiation.
+
+A compatible `0.3.1` change must add no migration, must not widen accepted policy
+or weaken fail-closed behavior, and must not alter an immutable historical
+artifact. Security or privacy defects may still require a separately reviewed,
+immediate fail-closed correction. New capabilities, contract changes,
+support-line changes, dependency-major changes, schema/version policy, and
+operational automation remain future-minor work.

@@ -1,23 +1,27 @@
 # Release process
 
-This process applies to releases after `0.2.0`. The existing `v0.2.0` tag,
-GitHub Release, and PyPI files are immutable and must not be recreated or
-replaced.
+This process applies to releases after `0.2.0`. The existing `v0.2.0` and
+`v0.3.0` tags, GitHub Releases, and PyPI files are immutable and must not be
+moved, recreated, overwritten, or replaced.
 
-## 0.3.0 release source status
+## Immutable 0.3.0 release status
 
-Current source metadata identifies the reviewed `0.3.0` release source. Its
-presence neither authorizes nor by itself establishes a tag, GitHub Release,
-PyPI upload, deployment, protected-environment approval, or remote Trusted
-Publisher change. Release review records the exact final commit, wheel and
-source-distribution SHA-256 values, and check results; local files must not be
-presented as immutable public artifacts.
+`django-asklens==0.3.0` is the current published alpha. Its immutable
+[`v0.3.0` documentation](https://github.com/revazi/django-asklens/blob/v0.3.0/README.md)
+and [GitHub Release](https://github.com/revazi/django-asklens/releases/tag/v0.3.0)
+identify commit `36570eb702c7e3a885ff6aca65a07200e8fedcf9`, tree
+`35a525ea1d969833dc1a5b1abce14f6631e34f57`, wheel
+`django_asklens-0.3.0-py3-none-any.whl` with SHA-256
+`d7f7159cfdbb3d9755d9b3542f9cda4280f0e72939f81aca4d3a2cd8d8921e8b`,
+and source distribution `django_asklens-0.3.0.tar.gz` with SHA-256
+`a7717736c07b93d66e1326dc43a438aa0918c17b4512ddb2391257de5887c5c9`.
+A same-version local build is not one of those public immutable artifacts.
 
-The repository workflow and local checks can verify the intended publisher
-identity and artifact handoff, but they cannot independently confirm the
-current browser-side PyPI Trusted Publisher configuration. An authorized
-operator must confirm that remote setting and the protected GitHub `pypi`
-environment before any later publication decision.
+The repository workflow and local checks verify the intended publisher identity
+and artifact handoff, but cannot independently confirm the current browser-side
+PyPI Trusted Publisher configuration. An authorized operator must confirm that
+remote setting and the protected GitHub `pypi` environment before any future
+publication decision.
 
 ## Trust model
 
@@ -73,6 +77,63 @@ The PyPI publisher configuration and the GitHub environment are trust controls.
 Changes to either require an explicit maintainer review; this workflow does not
 and cannot mutate them.
 
+## Trusted Publisher incident and recovery
+
+The first protected `0.3.0` publish attempt and one controlled retry received
+PyPI `invalid-publisher` after GitHub had issued a valid OIDC token, before any
+release file was uploaded. The immutable build artifacts were preserved. After
+an authorized operator corrected the **production PyPI** existing-project
+publisher mapping, a **failed-jobs-only rerun of the same workflow run** reused
+those artifacts, crossed the protected-environment approval boundary again, and
+completed. Preserve the failed attempts as part of the incident record.
+
+A valid OIDC token plus `invalid-publisher` is a publisher-configuration or
+service incident. It is not authorization to bypass Trusted Publishing. In
+particular, production PyPI (`pypi.org`) is distinct from TestPyPI, and an
+existing-project publisher for `django-asklens` is distinct from a pending
+publisher used before a project exists. A mapping or successful rehearsal on
+one service does not establish the mapping on the other.
+
+Use this bounded triage procedure without printing, copying, decoding, or
+otherwise inspecting the token itself:
+
+1. Stop retries and record the workflow run and failed job. From the safe OIDC
+   diagnostic fields and workflow context, compare the actual claims with the
+   intended owner `revazi`, repository `django-asklens`, workflow filename
+   `publish.yml`, and environment `pypi`. The workflow-name field is the filename,
+   not `.github/workflows/publish.yml`.
+2. Confirm which service rejected the publisher. For this workflow it must be
+   the existing `django-asklens` project on production PyPI, not TestPyPI and not
+   a pending publisher. An authorized owner may correct that remote mapping only
+   after explicit maintainer review; repository automation must not change it.
+3. **Before any retry, independently confirm that no release file was uploaded.**
+   Check the production project/version record and its file list. If any wheel
+   or source distribution exists, if the result is ambiguous, or if a partial
+   upload may have occurred, stop and treat it as an immutable release incident;
+   do not retry publication.
+4. Confirm that the original tag and GitHub Release are unchanged, the preserved
+   `release-distributions` workflow artifact is still available, and it contains
+   exactly the same one wheel and one source distribution. Match the filenames
+   and both SHA-256 values to the successful build outputs. Do not rebuild or
+   substitute files during recovery.
+5. Only when all preceding gates pass, use GitHub's **re-run failed jobs** action
+   on that same workflow run. Do not start a new workflow run. The protected
+   `pypi` job must request a fresh short-lived OIDC identity and receive its
+   normal operator-only environment approval; recovery does not pre-approve the
+   deployment.
+6. Require the complete post-publication matrix to authenticate the public files
+   against the preserved build digests. Record both failed attempts and the
+   recovery result. Failed history is evidence and must not be hidden.
+
+Recovery must preserve the immutable tag, GitHub Release, artifact filenames,
+and workflow-recorded digests. Never move or recreate the tag, edit/recreate the
+GitHub Release to trigger a different build, upload manually, add a PyPI token or
+password fallback, use `skip-existing`, overwrite or replace a file, or conceal
+a failed attempt. If the preserved artifact expired, any identity/digest differs,
+or the no-upload gate cannot be proved, failed-job-only recovery is unavailable;
+stop and conduct a separately reviewed release decision rather than improvising
+a bypass.
+
 ## Preparing a future release
 
 1. Choose the version under the support and compatibility policy. Update
@@ -120,9 +181,9 @@ being authenticated:
 
 ```bash
 bash scripts/published-package-smoke.sh \
-  --version 0.2.0 \
-  --wheel-sha256 af0881945d5f5f227332aac8bb13df10d4cf5bd3e54a038acd6545db5640d1d8 \
-  --sdist-sha256 11af90303fd2d23123e4caa98c6e6cb660b7b8f32d6fba0c57a4554c8d39e022 \
+  --version 0.3.0 \
+  --wheel-sha256 d7f7159cfdbb3d9755d9b3542f9cda4280f0e72939f81aca4d3a2cd8d8921e8b \
+  --sdist-sha256 a7717736c07b93d66e1326dc43a438aa0918c17b4512ddb2391257de5887c5c9 \
   --django-package 'Django>=6.1,<6.2' \
   --django-version-prefix '6.1.'
 ```

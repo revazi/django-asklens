@@ -34,6 +34,37 @@ def failing_permissions(_request):
     raise RuntimeError(PRIVATE_DIAGNOSTIC)
 
 
+class PermissionImpersonator:
+    """Non-string value that can compare, hash, and convert as authority."""
+
+    def __hash__(self) -> int:
+        return hash("shop.view_orders")
+
+    def __eq__(self, other) -> bool:
+        return other == "shop.view_orders"
+
+    def __str__(self) -> str:
+        return "shop.view_orders"
+
+
+class PermissionImpersonatingString(str):
+    """String subclass that compares and hashes as a protected permission."""
+
+    def __hash__(self) -> int:
+        return hash("shop.view_orders")
+
+    def __eq__(self, other) -> bool:
+        return other == "shop.view_orders"
+
+
+def impersonated_permissions(_request):
+    return [PermissionImpersonator()]
+
+
+def subclassed_permissions(_request):
+    return [PermissionImpersonatingString("unrelated.permission")]
+
+
 @pytest.fixture(autouse=True)
 def prevent_execution(monkeypatch):
     """Guard preparation even when a public adapter catches a trap exception."""
@@ -185,10 +216,20 @@ def test_initial_permission_failure_never_plans_or_falls_back_to_help(
         failing_permissions,
         lambda _request: "shop.view_orders",
         lambda _request: 42,
+        impersonated_permissions,
+        subclassed_permissions,
         "private_permission_backend_82.missing_getter",
         42,
     ],
-    ids=["raises", "string-result", "non-iterable", "missing-import", "not-callable"],
+    ids=[
+        "raises",
+        "string-result",
+        "non-iterable",
+        "non-string-element",
+        "string-subclass-element",
+        "missing-import",
+        "not-callable",
+    ],
 )
 def test_permission_configuration_failures_use_existing_safe_code(
     surface: str, getter, settings, django_assert_num_queries
@@ -215,6 +256,48 @@ def test_permission_configuration_failures_use_existing_safe_code(
             )
             assert outcome.status_code == 400 and outcome.run is None
             error = outcome.payload["error"]
+    assert error == ERROR
+
+
+@pytest.mark.parametrize("surface", ["facade", "orchestration"])
+@pytest.mark.parametrize(
+    "permission",
+    [
+        PermissionImpersonator(),
+        PermissionImpersonatingString("unrelated.permission"),
+    ],
+    ids=["non-string-element", "string-subclass-element"],
+)
+def test_default_permission_backend_rejects_unsafe_elements(
+    surface: str, permission, settings, django_assert_num_queries
+) -> None:
+    """Malformed Django backend values cannot synthesize current authority."""
+
+    assert type(permission) is not str
+    assert "shop.view_orders" in frozenset({permission})
+    request = SimpleNamespace(
+        user=SimpleNamespace(
+            is_authenticated=True,
+            get_all_permissions=lambda: [permission],
+        ),
+        visible_status="paid",
+    )
+    settings.DJANGO_ASKLENS = {"AUDIT_MODE": "disabled"}
+
+    with django_assert_num_queries(0):
+        if surface == "facade":
+            with pytest.raises(PublicAskLensError) as caught:
+                execute_plan(status_plan(), request=request, registry=build_registry())
+            error = public_error_payload(caught.value)
+        else:
+            outcome = execute_asklens_query_request(
+                request,
+                question="Show orders",
+                provided_plan=status_plan().model_dump(mode="json"),
+            )
+            assert outcome.status_code == 400 and outcome.run is None
+            error = outcome.payload["error"]
+
     assert error == ERROR
 
 

@@ -7,16 +7,29 @@ Django AskLens was created by [Revaz Zakalashvili](https://github.com/revazi) ([
 ## Package provenance
 
 > [!IMPORTANT]
-> These docs describe the reviewed `django-asklens==0.3.0` release source. Their
-> presence does not by itself establish a Git tag, PyPI publication, or artifact
-> provenance. Use an exact artifact whose source and SHA-256 digest you verified.
-> The immutable `django-asklens==0.2.0` release is the prior supported `0.2.x`
-> upgrade origin; use its
-> [documentation tagged `v0.2.0`](https://github.com/revazi/django-asklens/blob/v0.2.0/README.md).
+> `django-asklens==0.3.0` is the current published alpha, not a stable or
+> production-certified release. Install its exact public surfaces with
+> `python -m pip install 'django-asklens==0.3.0'`,
+> `python -m pip install 'django-asklens[api]==0.3.0'`, or
+> `python -m pip install 'django-asklens[mcp]==0.3.0'`.
 >
-> The historical `0.1.0a1` package was a testing artifact and is not a supported
-> upgrade origin. Do not mix local, released, or historical bytes and docs. See
-> [Installation](installation.md) before using the guides below.
+> Use the immutable
+> [`v0.3.0` documentation](https://github.com/revazi/django-asklens/blob/v0.3.0/README.md)
+> and [GitHub Release](https://github.com/revazi/django-asklens/releases/tag/v0.3.0).
+> They identify commit `36570eb702c7e3a885ff6aca65a07200e8fedcf9`, tree
+> `35a525ea1d969833dc1a5b1abce14f6631e34f57`, wheel
+> `django_asklens-0.3.0-py3-none-any.whl` with SHA-256
+> `d7f7159cfdbb3d9755d9b3542f9cda4280f0e72939f81aca4d3a2cd8d8921e8b`,
+> and source distribution `django_asklens-0.3.0.tar.gz` with SHA-256
+> `a7717736c07b93d66e1326dc43a438aa0918c17b4512ddb2391257de5887c5c9`.
+> Same-version local builds remain separate local evidence.
+>
+> The immutable `django-asklens==0.2.0` release remains the prior supported
+> `0.2.x` upgrade origin; use its
+> [documentation tagged `v0.2.0`](https://github.com/revazi/django-asklens/blob/v0.2.0/README.md).
+> The historical `0.1.0a1` package was an unsupported testing artifact and is not
+> an upgrade origin. See [Installation](installation.md) for authentication and
+> evidence limits before using the guides below.
 
 ## Guides
 
@@ -25,7 +38,7 @@ Django AskLens was created by [Revaz Zakalashvili](https://github.com/revazi) ([
 - [Support lifecycle](support-lifecycle.md)
 - [0.3.x compatibility boundary](compatibility.md)
 - [Release process and Trusted Publishing setup](releasing.md)
-- [Post-0.2.0 maintenance roadmap](maintenance-roadmap.md)
+- [0.3.x maintenance roadmap](maintenance-roadmap.md)
 - [Current Django AskLens surface](alpha-surface-inventory.md)
 - [Core-only executable quickstart](quickstart-core.md)
 - [Usage guide](usage.md)

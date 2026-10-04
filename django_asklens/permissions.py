@@ -17,6 +17,24 @@ __all__ = [
 ]
 
 
+def _validated_permission_set(permissions: Any, *, source: str) -> frozenset[str]:
+    """Return only exact built-in strings from a server permission source."""
+
+    requirement = f"{source} must return an iterable of strings"
+    msg = f"{requirement}."
+    if isinstance(permissions, str):
+        raise TypeError(f"{requirement}, not a string.")
+    try:
+        resolved_permissions = tuple(permissions)
+    except TypeError as exc:
+        raise TypeError(msg) from exc
+    if any(type(permission) is not str for permission in resolved_permissions):
+        # Do not retain subclasses with object-defined hashing or comparison at
+        # this authorization boundary.
+        raise TypeError(msg)
+    return frozenset(resolved_permissions)
+
+
 def get_request_permissions(request: Any) -> frozenset[str]:
     """Return permission strings used for AskLens catalog and plan validation."""
 
@@ -28,17 +46,10 @@ def get_request_permissions(request: Any) -> frozenset[str]:
     permissions = getter(request)
     if permissions is None:
         return frozenset()
-    if isinstance(permissions, str):
-        msg = (
-            "AskLens request permission getter must return an iterable of "
-            "strings, not a string."
-        )
-        raise TypeError(msg)
-    try:
-        return frozenset(str(permission) for permission in permissions)
-    except TypeError as exc:
-        msg = "AskLens request permission getter must return an iterable of strings."
-        raise TypeError(msg) from exc
+    return _validated_permission_set(
+        permissions,
+        source="AskLens request permission getter",
+    )
 
 
 def default_request_permissions(request: Any) -> frozenset[str]:
@@ -47,7 +58,10 @@ def default_request_permissions(request: Any) -> frozenset[str]:
     user = getattr(request, "user", None)
     if user is None or not getattr(user, "is_authenticated", False):
         return frozenset()
-    return frozenset(user.get_all_permissions())
+    return _validated_permission_set(
+        user.get_all_permissions(),
+        source="Django permission backend",
+    )
 
 
 def resolve_request_permissions_getter(

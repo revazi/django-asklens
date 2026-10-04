@@ -8,6 +8,8 @@ import pytest
 ROOT = Path(__file__).resolve().parents[1]
 DOWNLOAD_HELPER = ROOT / "scripts/download_pypi_artifacts.py"
 PUBLISH_WORKFLOW = ROOT / ".github/workflows/publish.yml"
+RELEASE_RUNBOOK = ROOT / "docs/releasing.md"
+MAINTENANCE_ROADMAP = ROOT / "docs/maintenance-roadmap.md"
 
 
 def load_download_helper():
@@ -93,3 +95,87 @@ def test_post_publication_verification_uses_build_digests_and_supported_matrix()
     assert "needs.build.outputs.sdist_sha256" in workflow
     assert 'python-version: ["3.12", "3.13"]' in workflow
     assert 'django-version: ["5.2", "6.0", "6.1"]' in workflow
+
+
+def test_trusted_publisher_recovery_is_failed_job_only_and_fail_closed():
+    runbook = RELEASE_RUNBOOK.read_text()
+    normalized = " ".join(runbook.split())
+
+    for required in (
+        "## Trusted Publisher incident and recovery",
+        "valid OIDC token plus `invalid-publisher`",
+        "publisher-configuration or service incident",
+        "production PyPI (`pypi.org`) is distinct from TestPyPI",
+        "existing-project publisher",
+        "distinct from a pending publisher",
+        "owner `revazi`",
+        "repository `django-asklens`",
+        "workflow filename `publish.yml`",
+        "environment `pypi`",
+        "independently confirm that no release file was uploaded",
+        "exactly the same one wheel and one source distribution",
+        "use GitHub's **re-run failed jobs** action on that same workflow run",
+        "operator-only environment approval",
+        "preserve the immutable tag, GitHub Release, artifact filenames",
+        "workflow-recorded digests",
+        "Preserve the failed attempts as part of the incident record",
+    ):
+        assert required in normalized
+
+    for prohibition in (
+        "move or recreate the tag",
+        "upload manually",
+        "PyPI token or password fallback",
+        "`skip-existing`",
+        "overwrite or replace a file",
+        "conceal a failed attempt",
+    ):
+        assert prohibition in normalized
+
+    assert (
+        "printing, copying, decoding, or otherwise inspecting the token" in normalized
+    )
+    assert "repository automation must not change it" in normalized
+
+
+def test_maintenance_roadmap_separates_patch_and_future_minor_scope():
+    roadmap = MAINTENANCE_ROADMAP.read_text()
+    normalized = " ".join(roadmap.split())
+
+    for required in (
+        "`0.3.1` is the current maintenance milestone",
+        "compatible, migration-free",
+        "No future version or delivery date is promised",
+        "registration and resource APIs",
+        "trusted `execute_plan()` / `QueryResult`",
+        "namespaced public errors",
+        "privacy-safe host observability",
+        "HTTP/DRF, MCP, admin, frontend, provider orchestration and internals",
+        "`catalog`, `query-plan`, `capabilities`, `result`, and `error`",
+        "draft, internal, unversioned, and without negotiation",
+        "Async execution, streaming",
+        "routing, health checking, or failover",
+        "Saved queries",
+        "Scheduled audit retention",
+        "External telemetry transports",
+        "dependency-major policy changes",
+        "`v0.2.0` and `v0.3.0`",
+        "`0.1.0a1` package remains an unsupported testing artifact",
+    ):
+        assert required in normalized
+
+    for audit_record in (
+        "2026-10-04T09:31:52Z",
+        "uv audit --locked --preview-features audit-command",
+        "resolved 109 locked packages",
+        "no known vulnerabilities",
+        "no adverse project statuses in the 108 audited packages",
+        "the lock remains unchanged",
+        "future lookup failure must be reported as failed evidence",
+        "Second-operating-system package-smoke decision",
+        "is **deferred**",
+    ):
+        assert audit_record in normalized
+
+    assert "## `0.2.1` candidates" not in roadmap
+    assert "## `0.3.0` release work" not in roadmap
