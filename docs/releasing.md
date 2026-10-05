@@ -1,29 +1,32 @@
 # Release process
 
-This process applies to releases after `0.2.0`. The existing `v0.2.0` and
-`v0.3.0` tags, GitHub Releases, and PyPI files are immutable and must not be
-moved, recreated, overwritten, or replaced.
+This process applies to releases after `0.2.0`. The existing `v0.2.0`,
+`v0.3.0`, and `v0.3.1` tags, GitHub Releases, and PyPI files are immutable and
+must not be moved, recreated, overwritten, or replaced.
 
-## Immutable 0.3.0 release status
+## Immutable 0.3.1 release status
 
-`django-asklens==0.3.0` is the current published alpha. Its immutable
-[`v0.3.0` documentation](https://github.com/revazi/django-asklens/blob/v0.3.0/README.md)
-and [GitHub Release](https://github.com/revazi/django-asklens/releases/tag/v0.3.0)
-identify commit `36570eb702c7e3a885ff6aca65a07200e8fedcf9`, tree
-`35a525ea1d969833dc1a5b1abce14f6631e34f57`, wheel
-`django_asklens-0.3.0-py3-none-any.whl` with SHA-256
-`d7f7159cfdbb3d9755d9b3542f9cda4280f0e72939f81aca4d3a2cd8d8921e8b`,
-and source distribution `django_asklens-0.3.0.tar.gz` with SHA-256
-`a7717736c07b93d66e1326dc43a438aa0918c17b4512ddb2391257de5887c5c9`.
-A same-version local build is not one of those public immutable artifacts.
+`django-asklens==0.3.1` is the current published alpha. Its immutable
+[`v0.3.1` source snapshot](https://github.com/revazi/django-asklens/blob/v0.3.1/README.md)
+and [GitHub Release](https://github.com/revazi/django-asklens/releases/tag/v0.3.1)
+retain their pre-publication wording as historical release evidence. This
+main-branch status records that annotated tag object
+`34f123230c2ea09622f0f2906eeaf775619f78bb` resolves to commit
+`1b19ba8dea81117d9ff79d64bd28e3136cd93e6e` and tree
+`5a914eb84b697d0d7c030b311d68c305df9a9ed5`. The public wheel
+`django_asklens-0.3.1-py3-none-any.whl` has SHA-256
+`4332c62aad6e7b27f553af3f8796ed6090e6207ddad6a30a1c4665e9a1085887`;
+the public source distribution `django_asklens-0.3.1.tar.gz` has SHA-256
+`5e011f2272a7fe6f53df5bae757d045042d39e31cfba40eb51766d703eb38dde`.
+A same-version local rebuild is separate local evidence, not either immutable
+public artifact.
 
-Current source metadata identifies the reviewed `0.3.1` release source. That
-source identity and any local `0.3.1` artifacts or digests are candidate review
-evidence only: they do not establish publication or final public artifact
-identities. Until a separate publication succeeds, public `0.3.0` remains the
-current immutable release and immediate supported upgrade origin. Published
-`0.2.0` remains the supported older `0.2.x` origin, while `0.1.0a1` remains an
-unsupported testing artifact.
+Package metadata requires Python `>=3.12` and Django `>=5.2,<7.0`; the public
+release verification matrix covers Python 3.12/3.13 and Django 5.2/6.0/6.1.
+This remains alpha evidence, not production certification or an independent
+security review. Public `0.3.0` is the immediate prior supported upgrade origin.
+Published `0.2.0` remains the supported older `0.2.x` origin, while `0.1.0a1`
+remains an unsupported testing artifact.
 
 The repository workflow and local checks verify the intended publisher identity
 and artifact handoff, but cannot independently confirm the current browser-side
@@ -189,9 +192,9 @@ being authenticated:
 
 ```bash
 bash scripts/published-package-smoke.sh \
-  --version 0.3.0 \
-  --wheel-sha256 d7f7159cfdbb3d9755d9b3542f9cda4280f0e72939f81aca4d3a2cd8d8921e8b \
-  --sdist-sha256 a7717736c07b93d66e1326dc43a438aa0918c17b4512ddb2391257de5887c5c9 \
+  --version 0.3.1 \
+  --wheel-sha256 4332c62aad6e7b27f553af3f8796ed6090e6207ddad6a30a1c4665e9a1085887 \
+  --sdist-sha256 5e011f2272a7fe6f53df5bae757d045042d39e31cfba40eb51766d703eb38dde \
   --django-package 'Django>=6.1,<6.2' \
   --django-version-prefix '6.1.'
 ```

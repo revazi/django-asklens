@@ -16,39 +16,40 @@ Django AskLens was created by [Revaz Zakalashvili](https://github.com/revazi) ([
 ## Package provenance
 
 > [!IMPORTANT]
-> `django-asklens==0.3.0` is the current published alpha, not a stable or
+> `django-asklens==0.3.1` is the current published alpha, not a stable or
 > production-certified release. Use its immutable
-> [`v0.3.0` documentation](https://github.com/revazi/django-asklens/blob/v0.3.0/README.md)
-> and [GitHub Release](https://github.com/revazi/django-asklens/releases/tag/v0.3.0).
-> The release source is commit
-> `36570eb702c7e3a885ff6aca65a07200e8fedcf9` and tree
-> `35a525ea1d969833dc1a5b1abce14f6631e34f57`.
+> [`v0.3.1` source snapshot](https://github.com/revazi/django-asklens/blob/v0.3.1/README.md)
+> and [GitHub Release](https://github.com/revazi/django-asklens/releases/tag/v0.3.1).
+> Their pre-publication wording is preserved as historical release evidence;
+> this main-branch notice records the post-publication status. The annotated tag
+> object is
+> `34f123230c2ea09622f0f2906eeaf775619f78bb`; its release source is commit
+> `1b19ba8dea81117d9ff79d64bd28e3136cd93e6e` and tree
+> `5a914eb84b697d0d7c030b311d68c305df9a9ed5`.
 >
 > Install the exact public core, provisional API, or provisional MCP surface:
 >
 > ```bash
-> python -m pip install 'django-asklens==0.3.0'
-> python -m pip install 'django-asklens[api]==0.3.0'
-> python -m pip install 'django-asklens[mcp]==0.3.0'
+> python -m pip install 'django-asklens==0.3.1'
+> python -m pip install 'django-asklens[api]==0.3.1'
+> python -m pip install 'django-asklens[mcp]==0.3.1'
 > ```
 >
-> Authenticate `django_asklens-0.3.0-py3-none-any.whl` with SHA-256
-> `d7f7159cfdbb3d9755d9b3542f9cda4280f0e72939f81aca4d3a2cd8d8921e8b`
-> or `django_asklens-0.3.0.tar.gz` with SHA-256
-> `a7717736c07b93d66e1326dc43a438aa0918c17b4512ddb2391257de5887c5c9`.
-> A same-version local build is separate local evidence and must not be
-> represented by these public identities. Current source metadata identifies
-> the reviewed `0.3.1` release source; that identity and any local `0.3.1`
-> artifact or digest are candidate review evidence only, not proof of
-> publication or a final public artifact identity. Public `0.3.0` remains the
-> immediate supported upgrade origin until a separate publication succeeds.
+> Authenticate `django_asklens-0.3.1-py3-none-any.whl` with SHA-256
+> `4332c62aad6e7b27f553af3f8796ed6090e6207ddad6a30a1c4665e9a1085887`
+> or `django_asklens-0.3.1.tar.gz` with SHA-256
+> `5e011f2272a7fe6f53df5bae757d045042d39e31cfba40eb51766d703eb38dde`.
+> A same-version local rebuild is separate local evidence and must not be
+> represented as either immutable public artifact. Package metadata requires
+> Python `>=3.12` and Django `>=5.2,<7.0`; release checks cover Python 3.12/3.13
+> and Django 5.2/6.0/6.1.
 >
-> The immutable `django-asklens==0.2.0` release remains the supported older
-> `0.2.x` origin; use its matching immutable
-> [documentation tagged `v0.2.0`](https://github.com/revazi/django-asklens/blob/v0.2.0/README.md).
-> The previously published `0.1.0a1` package was an unsupported testing artifact
-> and is not an upgrade origin. See [Installation](docs/installation.md) for
-> public-artifact authentication, local development, and bounded `0.3.x`
+> Immutable public `0.3.0` is the immediate prior supported upgrade origin. The
+> immutable `django-asklens==0.2.0` release remains the supported older `0.2.x`
+> origin; use each version's matching immutable tagged documentation. The
+> previously published `0.1.0a1` package was an unsupported testing artifact and
+> is not an upgrade origin. See [Installation](docs/installation.md) for
+> public-artifact authentication, local rebuild evidence, and bounded `0.3.x`
 > upgrade guidance.
 
 ## What it provides
@@ -68,13 +69,13 @@ Django AskLens was created by [Revaz Zakalashvili](https://github.com/revazi) ([
 - Frontend-agnostic `columns` + `data` JSON output.
 - Optional packaged browser UI for demos/reference use.
 
-## 0.3.1 alpha release-source quickstart
+## 0.3.1 alpha quickstart
 
-The example below applies to the reviewed `0.3.1` release source. Use it only
-with an exact local artifact whose source commit and digest were separately
-verified; source metadata does not establish publication. Users of the current
-public `0.3.0` alpha or supported older `0.2.0` origin must use their matching
-immutable tagged documentation.
+The example below applies to the immutable public `0.3.1` alpha. Install the
+exact version and authenticate its public artifact as described above. Users
+upgrading from the immediate prior `0.3.0` release or the supported older
+`0.2.0` origin should follow the bounded guidance in
+[Installation](docs/installation.md).
 
 For a linear path that installs core only, wires one project-owned startup import, and executes current-request list plans, use the [Core-only executable quickstart](docs/quickstart-core.md).
 

@@ -6,17 +6,19 @@ The project is alpha and APIs may change before a stable release.
 
 ## Unreleased
 
-No changes are currently recorded.
+### Documentation
+
+- Corrected current-release guidance after publication of immutable public `0.3.1`, while keeping same-version local rebuilds distinct from the public artifacts and retaining `0.3.0` as the immediate prior supported upgrade origin.
 
 ## 0.3.1 — 2026-10-04
 
-This section describes the exact reviewed `0.3.1` release source. Its presence
-in a checkout does not by itself establish a Git tag, PyPI publication, or
-GitHub Release, and source review does not authorize those actions. The
-immutable `v0.3.0` release remains the current public alpha and immediate
-supported upgrade origin until a separate publication succeeds. The immutable
-`v0.2.0` release remains the supported older `0.2.x` origin, and `0.1.0a1`
-remains an unsupported testing artifact rather than an upgrade origin.
+This section describes immutable public `0.3.1`, the current published alpha.
+Its annotated `v0.3.1` tag, GitHub Release, and PyPI files are the authoritative
+release records; same-version local rebuilds are separate local evidence. The
+immutable `v0.3.0` release is the immediate prior supported upgrade origin. The
+immutable `v0.2.0` release remains the supported older `0.2.x` origin, and
+`0.1.0a1` remains an unsupported testing artifact rather than an upgrade
+origin.
 
 ### Changed
 

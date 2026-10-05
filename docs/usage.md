@@ -3,18 +3,22 @@
 ## Authenticated normal-user API quickstart
 
 > [!IMPORTANT]
-> This journey describes the optional provisional API in the reviewed
-> `django-asklens==0.3.1` release source. Use an exact local wheel whose source
-> commit and digest you verified; this does not establish publication or a final
-> public artifact identity. The API remains alpha and outside the governed 0.3.x
-> boundary. The historical
-> `0.1.0a1` testing artifact is not a supported upgrade origin.
+> This journey describes the optional provisional API in immutable public
+> `django-asklens==0.3.1`, the current alpha release. Authenticate the selected
+> public artifact against [Installation](installation.md). The API remains alpha
+> and outside the governed 0.3.x boundary. A same-version local rebuild is
+> separate local evidence, not the public artifact. The historical `0.1.0a1`
+> testing artifact is not a supported upgrade origin.
 
 This path uses Django's existing session authentication, one normal user, a host-created Django permission, a permission-scoped catalog, deterministic `DummyProvider`, and the current metadata-only database audit. AskLens does not create a login view, authentication backend, or token endpoint and does not accept identity, permission, or scope claims from the client.
 
 ### 1. Install and mount the current optional API
 
-Install `/verified/path/django_asklens-0.3.1-py3-none-any.whl[api]` only after verifying its commit, filename, and SHA-256 digest. See [Installation](installation.md#authenticated-api-prerequisites-for-an-exact-031-source-artifact). Add the normal host auth/session apps and middleware, `rest_framework`, AskLens, and the one host app that owns registration:
+Install `django-asklens[api]==0.3.1` only after authenticating the public
+artifact. See
+[Installation](installation.md#authenticated-api-prerequisites-for-public-031).
+Add the normal host auth/session apps and middleware, `rest_framework`, AskLens,
+and the one host app that owns registration:
 
 ```python
 INSTALLED_APPS = [
