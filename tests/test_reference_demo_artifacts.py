@@ -515,7 +515,7 @@ def test_package_provenance_identifies_public_031_and_separate_local_rebuilds() 
     releasing = read_text(ROOT / "docs" / "releasing.md")
     core_api = read_text(ROOT / "docs" / "core-python-api.md")
     contributing = read_text(ROOT / "CONTRIBUTING.md")
-    provenance_docs = (readme, index, install)
+    provenance_docs = (index, install)
     tagged_031_docs = "https://github.com/revazi/django-asklens/blob/v0.3.1/README.md"
     release_031 = "https://github.com/revazi/django-asklens/releases/tag/v0.3.1"
     tagged_020_docs = "https://github.com/revazi/django-asklens/blob/v0.2.0/README.md"
@@ -573,9 +573,12 @@ def test_package_provenance_identifies_public_031_and_separate_local_rebuilds() 
     assert "immediate prior supported upgrade origin" in normalized_releasing
 
     provenance_heading = "## Package provenance"
-    main_quickstart_heading = "## 0.3.1 alpha quickstart"
-    assert readme.index(provenance_heading) < readme.index("## What it provides")
-    assert readme.index(provenance_heading) < readme.index(main_quickstart_heading)
+    assert "## Package provenance" not in readme
+    assert wheel_sha256 not in readme
+    assert tag_object not in readme
+    assert "current published alpha" in readme
+    assert "production-certified" in readme
+    assert "[Installation](docs/installation.md)" in readme
     assert index.index(provenance_heading) < index.index("## Guides")
 
     current_heading = "## Current published alpha: 0.3.1"
