@@ -92,11 +92,29 @@ jobs:
       id-token: write
 
     steps:
+      - name: Check out the published release tag without credentials
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.release.tag_name }}
+          persist-credentials: false
+
       - name: Retrieve the exact reviewed distributions
         uses: actions/download-artifact@v6
         with:
           name: release-distributions
           path: dist
+
+      - name: Authenticate the artifact handoff
+        env:
+          RELEASE_VERSION: ${{ needs.build.outputs.version }}
+          WHEEL_SHA256: ${{ needs.build.outputs.wheel_sha256 }}
+          SDIST_SHA256: ${{ needs.build.outputs.sdist_sha256 }}
+        run: |
+          python3 scripts/verify_artifact_handoff.py \
+            --artifact-dir dist \
+            --version "$RELEASE_VERSION" \
+            --wheel-sha256 "$WHEEL_SHA256" \
+            --sdist-sha256 "$SDIST_SHA256"
 
       - name: Publish distributions to PyPI
         uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # release/v1

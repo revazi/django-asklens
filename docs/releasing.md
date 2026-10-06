@@ -49,7 +49,10 @@ The workflow:
    checked-out commit;
 3. builds one wheel and one source distribution from that checkout;
 4. runs package metadata checks and records both SHA-256 values;
-5. passes those exact files to the environment-protected publish job;
+5. passes those files to the environment-protected publish job, where a
+   repository-owned guard requires the exact top-level wheel and sdist names,
+   regular non-symlink file types, no additional entries, and both recorded
+   SHA-256 values;
 6. publishes with `pypa/gh-action-pypi-publish`; and
 7. downloads the files back from PyPI, authenticates them against the build
    digests, and runs isolated core, API, MCP, Django-system, and migration checks
