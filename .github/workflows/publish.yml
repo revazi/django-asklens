@@ -71,7 +71,7 @@ jobs:
           PY
 
       - name: Preserve the exact distributions for the protected job
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: release-distributions
           path: |
@@ -99,7 +99,7 @@ jobs:
           persist-credentials: false
 
       - name: Retrieve the exact reviewed distributions
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v8
         with:
           name: release-distributions
           path: dist
