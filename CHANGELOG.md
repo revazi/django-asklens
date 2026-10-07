@@ -10,6 +10,7 @@ The project is alpha and APIs may change before a stable release.
 
 - Corrected current-release guidance after publication of immutable public `0.3.1`, while keeping same-version local rebuilds distinct from the public artifacts and retaining `0.3.0` as the immediate prior supported upgrade origin.
 - Rewrote the README as a product page. Public artifact hashes and upgrade origins stay in the installation guide and docs index.
+- Added a Django Packages badge to the README.
 
 ## 0.3.1 — 2026-10-04
 

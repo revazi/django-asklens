@@ -11,6 +11,7 @@
 [![Pydantic v2](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/pydantic/pydantic/main/docs/badge/v2.json)](https://docs.pydantic.dev)
 [![License](https://img.shields.io/badge/license-BSD--3--Clause-blue.svg)](https://github.com/revazi/django-asklens/blob/main/LICENSE)
 [![Documentation](https://img.shields.io/badge/docs-github-blue.svg)](https://github.com/revazi/django-asklens/tree/main/docs)
+[![Django Packages](https://img.shields.io/badge/Django%20Packages-django--asklens-8c3c26.svg)](https://djangopackages.org/packages/p/django-asklens/)
 
 Safe natural-language querying over explicitly registered Django models. AskLens does **not** let an LLM write SQL. It asks a provider for structured JSON, validates that plan against your catalog and the current request's permissions, compiles a read-only Django ORM query, and returns table-ready JSON.
 
