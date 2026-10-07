@@ -9,10 +9,10 @@ alpha lines and the current `main` development line.
 
 | Version | Supported |
 | --- | --- |
-| `0.3.1` reviewed alpha source | Yes |
-| `0.3.0` current published alpha | Yes |
+| `0.3.1` current published alpha | Yes |
+| `0.3.0` immediate prior published alpha | Yes |
 | `main` (alpha work) | Yes |
-| `0.2.0` prior published alpha | Yes |
+| `0.2.0` older supported `0.2.x` alpha | Yes |
 | `0.1.0a1` testing artifact and older snapshots | No |
 
 ## Reporting a vulnerability

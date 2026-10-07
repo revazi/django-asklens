@@ -1,19 +1,20 @@
 # 0.3.x maintenance roadmap
 
 This is a prioritized engineering split, not a release promise or a substitute
-for tracked review. The immutable `v0.2.0` and `v0.3.0` tags, releases, and
-public artifacts remain historical records and must not be moved, recreated, or
-overwritten. The historical `0.1.0a1` package remains an unsupported testing
-artifact, not an upgrade origin.
+for tracked review. The immutable `v0.2.0`, `v0.3.0`, and `v0.3.1` tags,
+releases, and public artifacts remain historical records and must not be moved,
+recreated, or overwritten. The historical `0.1.0a1` package remains an
+unsupported testing artifact, not an upgrade origin.
 
 No future version or delivery date is promised here. Each change still requires
 its own tracked review and exact-head evidence.
 
-## `0.3.1` maintenance scope
+## Published `0.3.1` maintenance scope
 
-`0.3.1` is the current maintenance milestone: compatible, migration-free work
-that hardens release operations and closes focused evidence gaps without
-expanding package contracts. It remains an alpha maintenance line.
+`0.3.1` is the current published maintenance release: compatible,
+migration-free work that hardens release operations and closes focused evidence
+gaps without expanding package contracts. It remains an alpha maintenance
+release.
 
 ### P0 — release integrity and security upkeep
 
@@ -40,10 +41,11 @@ expanding package contracts. It remains an alpha maintenance line.
    audit, and best-effort observability over aggregate coverage. There is no
    percentage threshold. Permission-resolution, cross-adapter scope, audit, and
    observability failures remain high-value review areas.
-5. **Keep executable installation and provenance guidance current.** The current
-   public `0.3.0` wheel and source distribution must stay tied to independently
-   recorded digests and immutable documentation. Local builds remain separate
-   evidence. `0.2.0` remains the prior supported `0.2.x` upgrade origin.
+5. **Keep executable installation and provenance guidance current.** The
+   current public `0.3.1` wheel and source distribution must stay tied to
+   independently recorded digests and immutable documentation. Local rebuilds
+   remain separate evidence. Public `0.3.0` is the immediate prior supported
+   upgrade origin, and `0.2.0` remains the older supported `0.2.x` origin.
 6. **Maintain synthetic operational evidence.** Re-run package, Django,
    migration, PostgreSQL, and reference-browser checks when their affected paths
    change. Synthetic checks are not live-provider, production-capacity,
