@@ -19,6 +19,12 @@ source, installs that exact file, and reports its digest. That local rebuild is
 separate evidence and is not the immutable public wheel. See
 [Installation](installation.md#source-checkout-and-exact-local-artifacts).
 
+For a browser-first, no-API-key evaluation using the repository's existing
+synthetic app and exact offline questions, use the
+[current source-demo journey](test-project-demo.md#sqlite-frontend-and-admin-first-run-start-to-reset).
+That source path can contain unshipped onboarding polish and is not a description
+of additional behavior in the immutable public `0.3.1` artifact.
+
 ## 1. Install the exact core artifact
 
 Create an isolated environment and install the exact public version without an

@@ -645,6 +645,16 @@
       font-size: 0.9rem;
     }
 
+    .empty-result {
+      display: grid;
+      gap: 0.3rem;
+      margin: 0;
+      padding: 1rem;
+    }
+
+    .empty-result h3,
+    .empty-result p { margin: 0; }
+
     /* shadcn-inspired restyle: neutral, compact primitives without new deps. */
     :root {
       --bg: #fafafa;
@@ -1090,6 +1100,7 @@
     data-catalog-url="{{ catalog_url }}"
     data-capabilities-url="{{ capabilities_url }}"
     data-query-url="{{ query_url }}"
+    data-llm-backend="{{ llm_backend }}"
   >
     <div class="app-grid">
       <aside class="side" aria-label="AskLens context">
@@ -1106,7 +1117,7 @@
           {% if scope_labels %}
           <section class="card scope-context" aria-label="{{ scope_title }}">
             <h2>{{ scope_title }}</h2>
-            <p class="small">This context is supplied by the server. Current authorization and row scope are rechecked for every execution; these labels do not grant access.</p>
+            <p class="small">These labels describe the host-selected row boundary for the current signed-in user; they do not compare or expose other tenants. This context is supplied by the server. Current authorization and row scope are rechecked for every execution; these labels do not grant access.</p>
             {{ scope_labels|json_script:"asklens-scope-labels" }}
             <ul class="resource-list" id="scope-list"></ul>
           </section>
@@ -1188,12 +1199,21 @@
         <section class="thread" id="thread" aria-live="polite">
           <article class="message assistant">
             <div class="bubble welcome">
+              {% if llm_backend == "dummy" %}
+              <h2>Try an exact offline question.</h2>
+              <p>
+                Offline mode accepts only exact questions configured by the host.
+                Choose a starter question if shown; the deterministic dummy planner
+                makes no network call and does not interpret arbitrary wording.
+              </p>
+              {% else %}
               <h2>Ask a question.</h2>
               <p>
                 Ask for records, counts, totals, trends, or examples.
                 AskLens validates each plan before it runs.
               </p>
-              <p class="small">Saved suggestions can be reused.</p>
+              {% endif %}
+              <p class="small">Every plan is revalidated before execution. Saved suggestions can be reused.</p>
             </div>
           </article>
         </section>
@@ -1218,6 +1238,7 @@
     const app = document.getElementById("asklens-app");
     const catalogUrl = app.dataset.catalogUrl;
     const queryUrl = app.dataset.queryUrl;
+    const isDummyBackend = app.dataset.llmBackend === "dummy";
     const csrfToken = document.querySelector("[name=csrfmiddlewaretoken]").value;
     const starterQuestions = JSON.parse(document.getElementById("asklens-starter-questions").textContent);
     const scopeLabelsElement = document.getElementById("asklens-scope-labels");
@@ -1269,14 +1290,19 @@
 
     async function fetchJson(url, options = {}) {
       const { headers = {}, ...fetchOptions } = options;
-      const response = await fetch(url, {
-        credentials: "same-origin",
-        ...fetchOptions,
-        headers: {
-          Accept: "application/json",
-          ...headers,
-        },
-      });
+      let response;
+      try {
+        response = await fetch(url, {
+          credentials: "same-origin",
+          ...fetchOptions,
+          headers: {
+            Accept: "application/json",
+            ...headers,
+          },
+        });
+      } catch (_error) {
+        throw new Error("The AskLens service could not be reached.");
+      }
       const text = await response.text();
       let payload = null;
       if (text) {
@@ -1287,7 +1313,7 @@
         }
       }
       if (!response.ok) {
-        const message = payload?.error?.message || response.statusText;
+        const message = payload?.error?.message || "The AskLens request was not accepted.";
         throw new Error(message);
       }
       return payload;
@@ -1389,7 +1415,7 @@
       } catch (error) {
         responseBubble.removeAttribute("aria-busy");
         responseBubble.replaceChildren(renderError(error.message));
-        setComposerStatus(error.message, "error");
+        setComposerStatus("Request not completed. See the response below.", "error");
       } finally {
         setBusy(false);
         scrollThread();
@@ -1487,7 +1513,7 @@
       const answer = document.createElement("div");
       answer.className = "card";
       const title = document.createElement("h3");
-      title.textContent = queryHelp?.answer || "What can I query?";
+      title.textContent = "Query help — no data query ran";
       const summary = document.createElement("p");
       summary.className = "small";
       summary.textContent = queryHelp?.answer || payload.explanation || "AskLens query help is available.";
@@ -1514,12 +1540,24 @@
     function renderError(message) {
       const wrapper = document.createElement("div");
       wrapper.className = "result-card";
+      wrapper.setAttribute("role", "alert");
       const title = document.createElement("h3");
       title.textContent = "AskLens could not complete that request.";
       const detail = document.createElement("p");
       detail.className = "small";
       detail.textContent = message;
-      wrapper.append(title, detail);
+      const recovery = document.createElement("p");
+      recovery.className = "small";
+      recovery.textContent = isDummyBackend
+        ? (
+          "Choose an exact starter question and try again. If the problem continues, " +
+          "ask the host administrator to review the server configuration and logs."
+        )
+        : (
+          "Try again. If the problem continues, ask the host administrator to review " +
+          "the server configuration and logs."
+        );
+      wrapper.append(title, detail, recovery);
       return wrapper;
     }
 
@@ -1773,9 +1811,17 @@
       const wrapper = document.createElement("div");
       wrapper.className = "table-wrap";
       if (!rows.length) {
-        const empty = document.createElement("p");
-        empty.className = "empty";
-        empty.textContent = "No rows returned.";
+        const empty = document.createElement("section");
+        empty.className = "empty empty-result";
+        empty.setAttribute("aria-label", "Empty query result");
+        const title = document.createElement("h3");
+        title.textContent = "No matching rows";
+        const detail = document.createElement("p");
+        detail.textContent = (
+          "This successful query found no rows in your current authorized scope. " +
+          "Try another starter question or adjust only approved filters."
+        );
+        empty.append(title, detail);
         wrapper.appendChild(empty);
         return wrapper;
       }

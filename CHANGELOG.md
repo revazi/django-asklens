@@ -8,9 +8,18 @@ The project is alpha and APIs may change before a stable release.
 
 ### Documentation
 
+- Added a prominent no-API-key local path with expected results, troubleshooting, bounded cleanup, and a transition from synthetic fixtures to host-owned model registration while distinguishing current source from immutable public `0.3.1` artifacts.
 - Corrected current-release guidance after publication of immutable public `0.3.1`, while keeping same-version local rebuilds distinct from the public artifacts and retaining `0.3.0` as the immediate prior supported upgrade origin.
 - Rewrote the README as a product page. Public artifact hashes and upgrade origins stay in the installation guide and docs index.
 - Added a Django Packages badge to the README.
+
+### Changed
+
+- Polished the existing synthetic source demo with an explicit exact-question offline journey, a successful scoped empty-result fixture, and clearer help, empty, error, and current-user scope states without changing API contracts or trusted execution.
+
+### Tests
+
+- Extended deterministic source and Playwright coverage across suggested-query success, scoped empty results, safe unmatched-question errors, opaque denial, and metadata-only audit outcomes.
 
 ## 0.3.1 — 2026-10-04
 

@@ -29,7 +29,12 @@ DJANGO_ASKLENS = {
 }
 ```
 
-`DummyProvider` makes no network calls and requires no API keys. Tests and evaluation fixtures should use it by default.
+`DummyProvider` makes no network calls and requires no API keys. It matches the
+question string exactly; unless `DUMMY_DEFAULT_PLAN` is explicitly configured,
+arbitrary rewordings fail safely rather than being interpreted as natural
+language. Tests and evaluation fixtures should use it by default. To try the
+existing synthetic source demo with reviewed success, empty, denial, and error
+paths, follow [Example Django AskLens integration](test-project-demo.md#sqlite-frontend-and-admin-first-run-start-to-reset).
 
 ## OpenAI-compatible backend
 

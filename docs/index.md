@@ -38,6 +38,7 @@ Django AskLens was created by [Revaz Zakalashvili](https://github.com/revazi) ([
 
 ## Guides
 
+- [Try the current synthetic source demo locally—no API key](test-project-demo.md#sqlite-frontend-and-admin-first-run-start-to-reset)
 - [AskLens specification](asklens-specification.md)
 - [Installation](installation.md)
 - [Support lifecycle](support-lifecycle.md)

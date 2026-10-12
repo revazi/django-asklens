@@ -27,6 +27,11 @@ def test_demo_asklens_settings_default_to_dummy_backend() -> None:
 
     assert settings["LLM_BACKEND"] == "dummy"
     assert settings["DUMMY_PLANS"]
+    assert "Show paid billing revenue by product" in settings["DUMMY_PLANS"]
+    assert (
+        "Show paid billing revenue for the no-sales demo product"
+        in settings["DUMMY_PLANS"]
+    )
     assert settings["MCP_ALLOW_ROW_RETURN"] is False
     assert "LLM_API_KEY" not in settings
 

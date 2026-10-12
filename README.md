@@ -21,6 +21,37 @@ Django AskLens was created by [Revaz Zakalashvili](https://github.com/revazi).
 
 ---
 
+## Try AskLens locally — no API key
+
+From a source checkout, run the existing synthetic Django demo with the offline,
+deterministic `DummyProvider`:
+
+```bash
+uv sync --locked --group dev
+DJANGO_SETTINGS_MODULE=tests.test_project.demo_settings \
+  uv run python -m django migrate --run-syncdb
+DJANGO_SETTINGS_MODULE=tests.test_project.demo_settings \
+  uv run python -m django seed_complex_test_project --size small
+DJANGO_ASKLENS_DEMO_LIVE_LLM=0 \
+  DJANGO_SETTINGS_MODULE=tests.test_project.demo_settings \
+  uv run python -m django runserver 127.0.0.1:8000
+```
+
+Open <http://127.0.0.1:8000/>, sign in as `facility-owner` with password
+`12admin34`, and click the exact starter question **Show paid billing revenue by
+product**. The result should contain North-scoped products such as `North
+membership`, never South rows. No provider credentials or network provider call
+are involved. Offline mode matches only the displayed exact questions; it does
+not support arbitrary natural-language wording. **Show paid billing revenue for
+the no-sales demo product** is the intentional successful empty-result example.
+
+This is current source-demo evidence, not behavior newly claimed for the
+immutable public `0.3.1` wheel, production certification, or external usability
+evidence. See the [complete start, expected-result, troubleshooting, security,
+host-transition, and cleanup guide](docs/test-project-demo.md#sqlite-frontend-and-admin-first-run-start-to-reset).
+
+---
+
 ## Features
 
 - **No generated SQL** — the model proposes a `QueryPlan`; AskLens validates it and compiles Django ORM only

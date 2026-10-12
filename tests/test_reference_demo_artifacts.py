@@ -1720,6 +1720,10 @@ def test_short_source_demo_is_scoped_offline_and_resettable() -> None:
         "username: `facility-owner`",
         "North Studio only",
         "Show paid billing revenue by product",
+        "Show paid billing revenue for the no-sales demo product",
+        "No matching rows",
+        "requires no API key",
+        "matches only the exact questions",
         "Offline dummy plans",
         "Raw response",
         "result.result_metadata",
@@ -1874,7 +1878,10 @@ def test_u6_frontend_explanations_and_demo_recovery_stay_bounded() -> None:
         '"Truncated: yes"',
         'name="Access unavailable"',
         'name="Sign out and switch account"',
-        "expected_audit_rows=2",
+        "name=question, exact=True",
+        '"No matching rows"',
+        '"Request not completed. See the response below."',
+        "expected_audit_rows=4",
     ):
         assert required in playwright
 

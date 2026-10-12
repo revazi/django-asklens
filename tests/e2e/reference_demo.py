@@ -198,9 +198,10 @@ def verify_browser_and_api(playwright: Playwright, base_url: str) -> None:
         assert_no_private_metadata(capabilities)
         print("PASS browser login, registration catalog, and machine capabilities")
 
-        # Exercise the real frontend form, not only HTTP helpers.
+        # Exercise the real suggested-question journey, not only HTTP helpers.
         question = "Show paid billing revenue by product"
-        page.locator("#question-input").fill(question)
+        page.get_by_role("button", name=question, exact=True).click()
+        expect(page.locator("#question-input")).to_have_value(question)
         page.locator("#send-button").click()
         expect(page.locator("#composer-status")).to_have_text("Done.", timeout=20_000)
         result_card = page.locator(".result-card").last
@@ -248,7 +249,50 @@ def verify_browser_and_api(playwright: Playwright, base_url: str) -> None:
         }
         assert aggregate_audit["row_count"] == aggregate["result"]["row_count"]
         assert "product_name" not in aggregate_audit["plan"]
-        print("PASS browser aggregate query and metadata-only audit")
+        print("PASS first suggested browser query and metadata-only audit")
+
+        empty_question = "Show paid billing revenue for the no-sales demo product"
+        page.get_by_role("button", name=empty_question, exact=True).click()
+        page.locator("#send-button").click()
+        expect(page.locator("#composer-status")).to_have_text("Done.", timeout=20_000)
+        empty_result_card = page.locator(".result-card").last
+        expect(
+            empty_result_card.get_by_text("No matching rows", exact=True)
+        ).to_be_visible()
+        expect(empty_result_card).to_contain_text(
+            "no rows in your current authorized scope"
+        )
+        empty_result_card.locator("details summary", has_text="Raw response").click()
+        empty_result = json.loads(empty_result_card.locator("details pre").inner_text())
+        assert empty_result["result"]["data"] == []
+        assert empty_result["result"]["row_count"] == 0
+        assert empty_result["result"]["empty"] is True
+        assert empty_result["result"]["result_metadata"] == {
+            "limit": 10,
+            "limit_scope": "groups",
+            "truncated": False,
+        }
+        empty_audit = response_json(
+            context.request.get(f"{base_url}/asklens/runs/{empty_result['run_id']}/")
+        )
+        assert empty_audit["question"] == ""
+        assert empty_audit["status"] == "success"
+        assert empty_audit["row_count"] == 0
+        print("PASS successful scoped empty-result browser state")
+
+        page.locator("#question-input").fill("Summarize anything I type")
+        page.locator("#send-button").click()
+        expect(page.locator("#composer-status")).to_have_text(
+            "Request not completed. See the response below.", timeout=20_000
+        )
+        error_card = page.locator(".result-card").last
+        expect(error_card).to_have_attribute("role", "alert")
+        expect(error_card).to_contain_text("AskLens could not complete that request.")
+        expect(error_card).to_contain_text(
+            "The query provider could not produce a usable response."
+        )
+        expect(error_card).to_contain_text("Choose an exact starter question")
+        print("PASS safe unmatched-offline-question browser error state")
 
         list_plan = {
             "resource": "members",
@@ -382,7 +426,7 @@ def verify_browser_and_api(playwright: Playwright, base_url: str) -> None:
         verify_admin_help_and_audit(
             browser,
             base_url,
-            expected_audit_rows=2,
+            expected_audit_rows=4,
         )
         print("PASS fail-closed no-report browser/API access and recovery")
     finally:

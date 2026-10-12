@@ -305,7 +305,15 @@ def test_demo_frontend_renders_for_reporting_user() -> None:
     assert 'data-catalog-url="/asklens/catalog/"' in content
     assert 'data-capabilities-url="/asklens/capabilities/"' in content
     assert 'data-query-url="/asklens/query/"' in content
+    assert 'data-llm-backend="dummy"' in content
     assert "Read-only answers from approved data." in content
+    assert "Try an exact offline question." in content
+    assert (
+        "Offline mode accepts only exact questions configured by the host." in content
+    )
+    assert "Choose a starter question if shown" in content
+    assert "does not interpret arbitrary wording" in content
+    assert "Every plan is revalidated before execution." in content
     assert "Saved queries" in content
     assert "Saved in this browser" in content
     assert "No saved queries yet" in content
@@ -326,6 +334,7 @@ def test_demo_frontend_renders_for_reporting_user() -> None:
     assert "Offline dummy plans" in content
     assert "dummy" in content
     assert "Show paid billing revenue by product" in content
+    assert "Show paid billing revenue for the no-sales demo product" in content
     assert "Count member subscriptions by plan and status" not in content
     assert "Show scheduled capacity by session type" not in content
     assert "LLM help" in content
@@ -334,6 +343,10 @@ def test_demo_frontend_renders_for_reporting_user() -> None:
     assert "Tenant row scope" in content
     assert "North Studio" in content
     assert "South Studio" not in content
+    assert (
+        "These labels describe the host-selected row boundary for the current "
+        "signed-in user; they do not compare or expose other tenants." in content
+    )
     assert (
         "This context is supplied by the server. Current authorization and row "
         "scope are rechecked for every execution; these labels do not grant access."
@@ -359,7 +372,15 @@ def test_demo_frontend_renders_for_reporting_user() -> None:
     assert 'class="tag-strip" aria-label="Session summary"' not in content
     assert 'id="capabilities-status"' not in content
     assert "capabilities.summary" not in content
-    assert "payload?.error?.message || response.statusText" in content
+    assert (
+        'payload?.error?.message || "The AskLens request was not accepted."' in content
+    )
+    assert "response.statusText" not in content
+    assert "The AskLens service could not be reached." in content
+    assert "Request not completed. See the response below." in content
+    assert "No matching rows" in content
+    assert "no rows in your current authorized scope" in content
+    assert "Query help — no data query ran" in content
     assert "payload?.detail" not in content
     assert "payload = { detail: text }" not in content
     assert content.index("Tenant row scope") < content.index("Session")
