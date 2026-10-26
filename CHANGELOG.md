@@ -6,6 +6,20 @@ The project is alpha and APIs may change before a stable release.
 
 ## Unreleased
 
+No additional changes beyond the proposed candidate below.
+
+## 0.3.2 — Unpublished candidate
+
+This is proposed release source, not a published version or artifact identity.
+Public `0.3.1` remains current until a separately authorized publication succeeds.
+No AskLens migration, governed API change, or support-line expansion is introduced.
+
+### Security and release integrity
+
+- Updated the development lock to certifi `2026.10.19`, Django REST Framework `3.18.2`, FastMCP/fastmcp-slim `4.1.2`, and OpenTelemetry API `1.45.1` to address the advisories found during preparation. Resolver-required FastMCP dependencies are included; runtime dependency bounds are unchanged, so hosts must still audit their resolved environments.
+- Added fail-closed artifact-handoff verification between build and protected PyPI upload, including exact filenames, regular-file checks, and both build-recorded digests.
+- Prepared `0.3.2` package metadata and isolated upgrade probes from authenticated public `0.3.1`, `0.3.0`, and `0.2.0`, without publishing or changing immutable release records.
+
 ### Documentation
 
 - Added a prominent no-API-key local path with expected results, troubleshooting, bounded cleanup, and a transition from synthetic fixtures to host-owned model registration while distinguishing current source from immutable public `0.3.1` artifacts.

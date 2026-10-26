@@ -136,17 +136,20 @@ uv sync --group dev
 uv run pytest
 ```
 
-A locally built wheel reports `0.3.1`, but it is not either immutable public
-`0.3.1` artifact. Record its source commit and locally produced digest as
-separate local evidence; never attach the public wheel or source-distribution
-hash above to locally rebuilt bytes. Public `0.3.0` is the immediate prior
-supported upgrade origin; published `0.2.0` remains a separately checked older
-supported `0.2.x` origin. No upgrade from the `0.1.0a1` testing artifact is
-claimed.
+A locally built wheel reports `0.3.2`: this is an **unpublished candidate**,
+not either immutable public `0.3.1` artifact. Do not install `0.3.2` from PyPI
+until a separately authorized publication and public verification succeed.
+Record the exact source snapshot and locally produced digest as separate local
+evidence; never attach a public artifact hash to locally rebuilt bytes. For
+this candidate, public `0.3.1` is the immediate upgrade origin; public `0.3.0`
+and `0.2.0` remain separately checked older origins. Public `0.2.0` remains the
+supported older `0.2.x` origin. No upgrade from the `0.1.0a1` testing artifact
+is claimed. See the
+[candidate preparation record](release-preparation-0.3.2.md).
 
 ### Exact local release-source package evidence
 
-The opt-in package smoke validates an exact committed local `0.3.1` source:
+The opt-in package smoke validates exact committed unpublished `0.3.2` source:
 
 ```bash
 bash scripts/alpha-candidate-package-smoke.sh
@@ -154,25 +157,26 @@ bash scripts/alpha-candidate-package-smoke.sh
 
 The command requires Python 3.12+, `uv`, Git, `tar`, and a clean source tree. It
 exports the exact `HEAD` commit into a temporary build tree, builds exactly one
-`0.3.1` wheel and one source distribution, runs Twine and package-content
+`0.3.2` wheel and one source distribution, runs Twine and package-content
 checks, reports their local-only SHA-256 digests, and runs installed-wheel
 checks outside the repository root. It verifies that release notes remain
 excluded and that development tools did not leak into runtime requirements or
 extras, then installs the core, API, and MCP wheel surfaces in separate
 temporary environments.
 
-The primary upgrade probe authenticates the exact public `0.3.0` wheel and
+The primary upgrade probe authenticates the exact public `0.3.1` wheel and
 source distribution against the immutable SHA-256 values above, installs the
 wheel in a disposable environment, applies the existing AskLens migrations
 (`0001_initial` and `0002_add_admin_query_proxy`), and creates one synthetic
-`SemanticQueryRun` row. It then upgrades to the local `0.3.1` wheel, runs
+`SemanticQueryRun` row. It then upgrades to the local `0.3.2` wheel, runs
 `migrate --plan`, `migrate`, `showmigrations`, `check`, and
 `makemigrations --check --dry-run`, and verifies the unchanged graph, preserved
 row, proxy model, table shape, and absence of checkout source shadowing.
 
-A separate probe authenticates published `0.2.0` and repeats the same bounded
-checks because it remains the supported older `0.2.x` origin; it is not
-substituted for the immediate public `0.3.0` maintenance hop. This is bounded
+A separate probe authenticates the exact public `0.3.0` wheel and source
+distribution. Another separate probe authenticates published `0.2.0`; both
+repeat the bounded checks rather than substituting for the immediate public
+`0.3.1` maintenance hop. This is bounded
 SQLite package evidence, not PostgreSQL or production upgrade certification. It
 does not test or replace the `0.1.0a1` testing artifact. The script removes its temporary environments and
 artifacts and does not upload, tag, publish, or release anything.

@@ -252,7 +252,9 @@ with permission, membership, model, or scope diagnostics.
 
 ## 7. Run the disposable wheel smoke
 
-From a clean `0.3.1` source checkout:
+For public-release evidence, use a clean immutable `v0.3.1` source checkout.
+Running this command from the current candidate checkout instead builds
+unpublished `0.3.2` and is only local candidate evidence:
 
 ```bash
 bash scripts/quickstart-core-smoke.sh
