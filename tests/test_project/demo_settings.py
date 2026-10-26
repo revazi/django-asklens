@@ -122,6 +122,25 @@ DUMMY_PLANS = {
         },
         "presentation": {"kind": "bar", "x": "product_name", "y": "gross_revenue"},
     },
+    "Show paid billing revenue for the no-sales demo product": {
+        "query_plan": {
+            "resource": "billing_lines",
+            "intent": "aggregate",
+            "filters": [
+                {"field": "billing_document.status", "op": "eq", "value": "PAID"},
+                {
+                    "field": "product_name",
+                    "op": "eq",
+                    "value": "No-sales demo product",
+                },
+            ],
+            "group_by": [{"field": "product_name"}],
+            "metrics": [{"metric": "gross_revenue"}],
+            "order_by": [{"metric": "gross_revenue", "direction": "desc"}],
+            "limit": 10,
+        },
+        "presentation": {"kind": "bar", "x": "product_name", "y": "gross_revenue"},
+    },
     "Show payment totals by status": {
         "query_plan": {
             "resource": "payment_attempts",

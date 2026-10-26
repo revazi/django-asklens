@@ -1,0 +1,52 @@
+name: Documentation build
+
+on:
+  pull_request:
+    paths:
+      - "docs/**"
+      - "scripts/verify-docs-site.py"
+      - "mkdocs.yml"
+      - "pyproject.toml"
+      - "uv.lock"
+      - ".github/workflows/docs.yml"
+  push:
+    branches: [main]
+    paths:
+      - "docs/**"
+      - "scripts/verify-docs-site.py"
+      - "mkdocs.yml"
+      - "pyproject.toml"
+      - "uv.lock"
+      - ".github/workflows/docs.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build and validate (no deployment)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+
+      - name: Install isolated docs dependencies
+        run: uv sync --locked --group docs
+
+      - name: Build documentation
+        run: uv run --no-sync mkdocs build --strict --clean
+
+      - name: Validate rendered site
+        run: uv run --no-sync python scripts/verify-docs-site.py site

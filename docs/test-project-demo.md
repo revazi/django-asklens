@@ -6,9 +6,11 @@ registration, fail-closed scope, `execute_plan`, optional DRF/MCP, admin, and
 the reference frontend. Data is synthetic. The default planner is
 `DummyProvider`. Live providers stay off unless you opt in.
 
-This source-checkout example reflects immutable public `0.3.1`, the current
-alpha release. Its locally built artifacts remain separate evidence and are not
-the public wheel or source distribution. Public `0.3.0` is the immediate prior
+This guide describes the current source-checkout example, which can include
+unreleased onboarding polish beyond immutable public `0.3.1`, the current alpha
+release. A locally built artifact remains separate evidence and is not the
+public wheel or source distribution. Use the immutable `v0.3.1` documentation
+when evaluating that public artifact. Public `0.3.0` is the immediate prior
 supported upgrade origin, and `0.2.0` remains the supported older `0.2.x`
 origin. This is not a second example app or a supported upgrade path from the
 historical `0.1.0a1` testing artifact.
@@ -37,7 +39,9 @@ For a minimal core-only path without this full demo, use the
 
 This is the shortest browser journey through the synthetic source demo. It uses
 the deterministic offline `DummyProvider`, keeps live providers disabled, and
-is technical repository evidence only—not production, external usability, or a
+requires no API key. The dummy planner matches only the exact questions shown in
+the page; it does not interpret arbitrary natural-language wording. This is
+technical repository evidence only—not production, external usability, or a
 security certification.
 
 ### 1. Start the small synthetic app
@@ -64,7 +68,7 @@ uv run python -m django runserver 127.0.0.1:8000
 Open <http://127.0.0.1:8000/>. The generic Django admin login is the expected
 first page; the demo does not add another authentication system.
 
-### 2. Prove row scope first with `facility-owner`
+### 2. Run the first suggested query and verify its scope
 
 Sign in before using the superuser:
 
@@ -74,12 +78,17 @@ password: `12admin34`
 ```
 
 The tenant row scope is immediately visible as North Studio only. It must not
-show South Studio. The separate session panel says `Offline dummy plans`. Submit
-the exact offline question `Show paid billing revenue by product`; the
-deterministic result contains only North-scoped products. Its visible result
-boundary shows the effective groups limit and `Truncated: no`. **Raw response**
-remains available for the complete unchanged payload, including
-`result.result_metadata` (`limit`, `limit_scope`, and `truncated`).
+show South Studio. The label explains the host-selected boundary for the current
+signed-in user; it is not an authority, a comparison with other tenants, or a
+way to reveal rows outside that scope. The separate session panel says `Offline
+dummy plans`.
+
+Click the exact starter question `Show paid billing revenue by product`, then
+send it. The expected result contains `North membership` and other North-scoped
+products, with no South product or row. Its visible result boundary shows
+`Limit: 10 groups` and `Truncated: no`. **Raw response** remains available for
+the complete unchanged payload, including `result.result_metadata` (`limit`,
+`limit_scope`, and `truncated`).
 
 A successful data question creates a metadata-only audit row. Because the
 current demo actually uses database audit with `AUDIT_INCLUDE_CONTENT=False`,
@@ -88,7 +97,16 @@ the question, complete plan, and result rows are omitted. The stored metadata
 includes safe operational fields such as resource, intent, status, row count,
 and duration.
 
-### 3. Explore frontend, admin query, and audit roles separately
+For the intentional empty state, click the second exact billing question,
+`Show paid billing revenue for the no-sales demo product`. This is a reviewed
+fixture whose synthetic product has no seeded sales. It succeeds with zero rows
+and the page says **No matching rows** in the current authorized scope; it is not
+a denial and does not imply anything about another tenant. Entering wording
+that is not one of the exact offline fixtures instead shows a safe error and a
+prompt to choose a starter question. That expected dummy limitation is not
+arbitrary natural-language support.
+
+### 3. Explore frontend, help, admin query, and audit roles separately
 
 Log out, then use the synthetic superuser for a separately labeled admin
 exploration path:
@@ -130,7 +148,27 @@ to return to the existing Django admin login. Diagnose this local synthetic
 account from trusted host setup; API denial envelopes remain opaque and route-
 level denials still create no AskLens audit row.
 
-### 5. Stop and reset only the synthetic SQLite demo
+### 5. Troubleshoot the local journey
+
+- **Login page repeats:** confirm that seeding completed, then use the exact
+  synthetic `facility-owner` credentials above. The demo intentionally reuses
+  Django admin authentication rather than adding another login system.
+- **Safe provider error:** in offline mode, select or copy an exact displayed
+  starter question, including capitalization and spacing. Arbitrary wording has
+  no dummy fixture. Do not enable a live provider just to complete this path.
+- **Empty result:** first retry `Show paid billing revenue by product`. The
+  separate `no-sales demo product` question is intentionally empty. Other empty
+  results remain bounded to the current authorized scope.
+- **Missing tables or users:** stop the server, run the migration and small seed
+  commands again, then restart it. They operate on the ignored synthetic SQLite
+  database selected by `tests.test_project.demo_settings`.
+- **Port already used:** stop the process using `127.0.0.1:8000` or pass another
+  loopback port to `runserver`; do not expose the development server publicly.
+- **Denied account:** use the neutral, CSRF-protected sign-out action. Diagnose
+  grants and membership from trusted host setup or server-side logs, never by
+  making the denial page or API envelope reveal policy details.
+
+### 6. Stop and reset only the synthetic SQLite demo
 
 Press Ctrl-C in the development-server terminal. From the repository root,
 remove only this ignored synthetic SQLite file to clear seeded users, domain
@@ -142,6 +180,24 @@ rm -f .asklens-test-project.sqlite3
 
 Do not reuse the demo credentials or this reset command for a real project. The
 command does not remove other databases, virtual environments, or source files.
+
+### 7. Move the proven path into a host application
+
+Keep the execution boundary demonstrated here; replace only the synthetic host
+parts. Register host-owned models and semantic fields from one
+`AppConfig.ready()` import, assign an explicit `global` or `context_scoped`
+policy to every resource, and implement trusted request-derived scope providers.
+Then submit every provider, saved, or client plan through
+`execute_plan(plan, request=request)` or the adapters that call it. Do not copy
+the demo credentials, models, fixture questions, or tenant labels.
+
+Start with [Registration API](registration.md) and the
+[core-only executable quickstart](quickstart-core.md). Add the authenticated API
+and [custom UI](custom-ui.md) only if the host needs them; configure a
+[live provider](providers.md) only after the offline registered-model path and
+its permission scopes pass. Preserve the [security checklist](security-checklist.md)
+and [production checklist](production-checklist.md); this source demo does not
+replace either review.
 
 ## What the reference frontend explains
 

@@ -515,7 +515,7 @@ def test_package_provenance_identifies_public_031_and_separate_local_rebuilds() 
     releasing = read_text(ROOT / "docs" / "releasing.md")
     core_api = read_text(ROOT / "docs" / "core-python-api.md")
     contributing = read_text(ROOT / "CONTRIBUTING.md")
-    provenance_docs = (index, install)
+    provenance_docs = (install,)
     tagged_031_docs = "https://github.com/revazi/django-asklens/blob/v0.3.1/README.md"
     release_031 = "https://github.com/revazi/django-asklens/releases/tag/v0.3.1"
     tagged_020_docs = "https://github.com/revazi/django-asklens/blob/v0.2.0/README.md"
@@ -579,6 +579,18 @@ def test_package_provenance_identifies_public_031_and_separate_local_rebuilds() 
     assert "current published alpha" in readme
     assert "production-certified" in readme
     assert "[Installation](docs/installation.md)" in readme
+    index_positions = [
+        index.index("## See it"),
+        index.index("## Run it"),
+        index.index("## Integrate it"),
+        index.index(provenance_heading),
+    ]
+    assert index_positions == sorted(index_positions)
+    assert wheel_sha256 not in index
+    assert tag_object not in index
+    assert "current published alpha" in index
+    assert "production-certified" in index
+    assert "[Installation](installation.md)" in index
     assert index.index(provenance_heading) < index.index("## Guides")
 
     current_heading = "## Current published alpha: 0.3.1"
@@ -1720,6 +1732,10 @@ def test_short_source_demo_is_scoped_offline_and_resettable() -> None:
         "username: `facility-owner`",
         "North Studio only",
         "Show paid billing revenue by product",
+        "Show paid billing revenue for the no-sales demo product",
+        "No matching rows",
+        "requires no API key",
+        "matches only the exact questions",
         "Offline dummy plans",
         "Raw response",
         "result.result_metadata",
@@ -1874,7 +1890,10 @@ def test_u6_frontend_explanations_and_demo_recovery_stay_bounded() -> None:
         '"Truncated: yes"',
         'name="Access unavailable"',
         'name="Sign out and switch account"',
-        "expected_audit_rows=2",
+        "name=question, exact=True",
+        '"No matching rows"',
+        '"Request not completed. See the response below."',
+        "expected_audit_rows=4",
     ):
         assert required in playwright
 

@@ -19,6 +19,10 @@ DEMO_QUESTIONS = (
         StaffGrant.BILLING_REPORTS_VIEW,
     ),
     (
+        "Show paid billing revenue for the no-sales demo product",
+        StaffGrant.BILLING_REPORTS_VIEW,
+    ),
+    (
         "Show payment totals by status",
         StaffGrant.PAYMENT_REPORTS_VIEW,
     ),

@@ -2,6 +2,8 @@
 
 AskLens does not require the packaged browser UI. Treat the packaged page as a demo shell around the public API. Production projects can build their own React, Vue, HTMX, Django-template, mobile, Slack, or internal dashboard UI and render AskLens results however they want.
 
+Before replacing that shell, the [synthetic source-demo journey](test-project-demo.md#sqlite-frontend-and-admin-first-run-start-to-reset) provides a no-API-key reference for login, an exact suggested success, scoped empty results, safe errors, opaque denial, and cleanup. It reflects current source and does not claim those onboarding details are already shipped in the immutable public `0.3.1` wheel.
+
 ## Endpoints to call
 
 Mount the API routes:
@@ -138,6 +140,9 @@ Use each column's canonical `type` and `nullable` metadata rather than inferring
 types from the first row. Decimal values are strings to preserve precision.
 Empty ungrouped aggregates contain one row (`count=0`, other aggregate values
 `null`); empty grouped aggregates contain no rows and add `result.empty: true`.
+Present that as a successful scoped result (for example, “No matching rows in
+your current authorized scope”), not as an authorization failure or a statement
+about rows outside the current user's scope.
 
 Render tables by iterating `result.columns` for headers and `result.data` for row
 values:

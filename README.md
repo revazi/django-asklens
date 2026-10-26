@@ -21,6 +21,65 @@ Django AskLens was created by [Revaz Zakalashvili](https://github.com/revazi).
 
 ---
 
+## Try AskLens locally — no API key
+
+Prerequisites are Python 3.12 or newer, [uv](https://docs.astral.sh/uv/), and
+a source checkout; Docker and provider credentials are not needed. If you do
+not already have the repository locally:
+
+```bash
+git clone https://github.com/revazi/django-asklens.git
+cd django-asklens
+uv sync --locked --group dev
+DJANGO_SETTINGS_MODULE=tests.test_project.demo_settings \
+  uv run python -m django migrate --run-syncdb
+DJANGO_SETTINGS_MODULE=tests.test_project.demo_settings \
+  uv run python -m django seed_complex_test_project --size small
+DJANGO_ASKLENS_DEMO_LIVE_LLM=0 \
+  DJANGO_SETTINGS_MODULE=tests.test_project.demo_settings \
+  uv run python -m django runserver 127.0.0.1:8000
+```
+
+Open <http://127.0.0.1:8000/>, sign in as `facility-owner` with password
+`12admin34`, and click the exact starter question **Show paid billing revenue by
+product**. The result should contain North-scoped products such as `North
+membership`, never South rows. No provider credentials or network provider call
+are involved. Offline mode matches only the displayed exact questions; it does
+not support arbitrary natural-language wording. **Show paid billing revenue for
+the no-sales demo product** is the intentional successful empty-result example.
+
+This is current source-demo evidence, not behavior newly claimed for the
+immutable public `0.3.1` wheel, production certification, or external usability
+evidence. See the [complete start, expected-result, troubleshooting, security,
+host-transition, and cleanup guide](docs/test-project-demo.md#sqlite-frontend-and-admin-first-run-start-to-reset).
+
+### Synthetic browser showcase
+
+[![The AskLens source demo showing the exact “Show paid billing revenue by product” question, North Studio current-user scope, and a grouped North membership result.](https://raw.githubusercontent.com/revazi/django-asklens/main/docs/assets/showcase/scoped-revenue.png)](docs/showcase.md)
+
+*`facility-owner` runs the exact configured question **Show paid billing revenue
+by product** against seeded synthetic data. The host-selected scope is North
+Studio; the offline deterministic planner makes no network call and does not
+support arbitrary wording.*
+
+<a href="docs/showcase.md#opaque-denial"><img src="https://raw.githubusercontent.com/revazi/django-asklens/main/docs/assets/showcase/neutral-denial.png" width="560" alt="The AskLens synthetic demo showing a neutral Access unavailable page with a sign-out action and no permission, resource, or tenant details."></a>
+
+*The smaller denial capture shows the seeded `no-report` account receiving an
+opaque host response; it does not disclose the policy or another tenant's
+existence.*
+
+[Watch the 36-second browser recording (WebM)](https://raw.githubusercontent.com/revazi/django-asklens/main/docs/assets/showcase/offline-demo.webm)
+— Django login, current-user scope, the grouped result above, and the exact
+successful empty fixture **Show paid billing revenue for the no-sales demo
+product**. The [showcase page](docs/showcase.md) also includes captions, a
+text walkthrough, the neutral denial capture, and reproducible no-Docker
+capture instructions. All shown credentials and rows are synthetic and
+local-only; authentication, CSRF,
+explicit catalog, current-request permissions, row scope, and query limits
+remain active.
+
+---
+
 ## Features
 
 - **No generated SQL** — the model proposes a `QueryPlan`; AskLens validates it and compiles Django ORM only
@@ -272,6 +331,7 @@ Release checks cover Python 3.12 and 3.13.
 - [MCP integration](docs/mcp-integration.md)
 - [Security checklist](docs/security-checklist.md)
 - [source demo frontend/admin first run](docs/test-project-demo.md#sqlite-frontend-and-admin-first-run-start-to-reset)
+- [Synthetic browser showcase and reproducible capture](docs/showcase.md)
 - [Changelog](CHANGELOG.md)
 - [Contributing](CONTRIBUTING.md)
 - [Security policy](SECURITY.md)

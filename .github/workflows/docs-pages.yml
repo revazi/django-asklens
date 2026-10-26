@@ -1,0 +1,40 @@
+name: Prepare documentation for Pages (no deployment)
+
+on:
+  workflow_dispatch:
+
+# This readiness check intentionally cannot upload or deploy a Pages artifact.
+# Enabling Pages requires a separately authorized and reviewed workflow change.
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build and validate default-branch docs
+    if: >-
+      github.ref_type == 'branch' &&
+      github.ref_name == github.event.repository.default_branch
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+
+      - name: Install isolated docs dependencies
+        run: uv sync --locked --group docs
+
+      - name: Build documentation
+        run: uv run --no-sync mkdocs build --strict --clean
+
+      - name: Validate rendered links, navigation, and assets
+        run: uv run --no-sync python scripts/verify-docs-site.py site

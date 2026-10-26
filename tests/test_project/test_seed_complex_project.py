@@ -9,6 +9,7 @@ from django.core.management import call_command
 from rest_framework.test import APIClient
 
 from django_asklens.catalog.registry import default_registry, serialize_catalog
+from django_asklens.models import SemanticQueryRun
 from tests.test_project.asklens_registry import (
     permitted_facility_ids,
     register_complex_resources,
@@ -36,6 +37,7 @@ from tests.test_project.permissions import (
 pytestmark = pytest.mark.django_db
 
 QUESTION_REVENUE_BY_PRODUCT = "Show paid billing revenue by product"
+QUESTION_EMPTY_REVENUE = "Show paid billing revenue for the no-sales demo product"
 QUESTION_FACILITY_OWNER_NAMES = (
     "List facilities, facility name titles and facility owner full name as a table."
 )
@@ -56,6 +58,16 @@ def revenue_by_product_plan() -> dict[str, Any]:
         "order_by": [{"metric": "gross_revenue", "direction": "desc"}],
         "limit": 10,
     }
+
+
+def empty_revenue_plan() -> dict[str, Any]:
+    """Return the exact demo plan that intentionally has no seeded matches."""
+
+    plan = revenue_by_product_plan()
+    plan["filters"].append(
+        {"field": "product_name", "op": "eq", "value": "No-sales demo product"}
+    )
+    return plan
 
 
 @pytest.fixture(autouse=True)
@@ -92,6 +104,14 @@ def configure_complex_query_settings(settings) -> None:
         "DUMMY_PLANS": {
             QUESTION_REVENUE_BY_PRODUCT: {
                 "query_plan": revenue_by_product_plan(),
+                "presentation": {
+                    "kind": "bar",
+                    "x": "product_name",
+                    "y": "gross_revenue",
+                },
+            },
+            QUESTION_EMPTY_REVENUE: {
+                "query_plan": empty_revenue_plan(),
                 "presentation": {
                     "kind": "bar",
                     "x": "product_name",
@@ -533,6 +553,40 @@ def test_facility_owner_can_query_facility_owner_name(settings) -> None:
         }
     ]
     assert "South Studio" not in str(response.data)
+
+
+def test_facility_owner_empty_query_is_successful_scoped_and_metadata_only(
+    settings,
+) -> None:
+    """The exact empty fixture remains a successful, scoped, metadata-only run."""
+
+    configure_complex_query_settings(settings)
+    register_complex_resources()
+    call_command("seed_complex_test_project", verbosity=0)
+    owner = get_user_model().objects.get(username="facility-owner")
+    client = APIClient()
+    client.force_authenticate(user=owner)
+
+    response = client.post(
+        "/asklens/query/",
+        {"question": QUESTION_EMPTY_REVENUE},
+        format="json",
+    )
+
+    assert response.status_code == 200, response.data
+    assert response.data["result"]["data"] == []
+    assert response.data["result"]["row_count"] == 0
+    assert response.data["result"]["empty"] is True
+    assert response.data["result"]["result_metadata"] == {
+        "limit": 10,
+        "limit_scope": "groups",
+        "truncated": False,
+    }
+    run = SemanticQueryRun.objects.get(pk=response.data["run_id"])
+    assert run.status == SemanticQueryRun.Status.SUCCESS
+    assert run.row_count == 0
+    assert run.question == ""
+    assert run.plan == {"resource": "billing_lines", "intent": "aggregate"}
 
 
 def test_facility_owner_query_returns_only_owned_facility(settings) -> None:

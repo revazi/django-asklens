@@ -4,68 +4,80 @@ Django AskLens is the Django implementation of the [AskLens specification](askle
 
 Django AskLens was created by [Revaz Zakalashvili](https://github.com/revazi) ([revaz.zakalashvili@gmail.com](mailto:revaz.zakalashvili@gmail.com)).
 
+## See it
+
+[![The synthetic AskLens source demo showing the exact paid-revenue question, North Studio current-user scope, and grouped North-only output.](https://raw.githubusercontent.com/revazi/django-asklens/main/docs/assets/showcase/scoped-revenue.png)](showcase.md)
+
+See the [36-second browser showcase](showcase.md) for the exact offline question,
+scoped grouped result, successful empty result, and neutral denial. The capture
+uses seeded synthetic data and the deterministic `DummyProvider`; it is not
+live-LLM, arbitrary-language, customer-data, or production evidence.
+
+## Run it
+
+- [Try the current synthetic source demo locally—no API key](test-project-demo.md#sqlite-frontend-and-admin-first-run-start-to-reset)
+- [Install an authenticated public artifact](installation.md)
+- [Core-only executable quickstart](quickstart-core.md)
+
+The source demo keeps Django authentication, CSRF, the explicit catalog,
+current-request permissions, trusted row scope, and query limits active. Its
+configured offline questions match exact text only.
+
+## Integrate it
+
+- [Register host-owned models](registration.md)
+- [Configure providers](providers.md)
+- [Use the authenticated API](usage.md)
+- [Build a custom UI](custom-ui.md)
+- [Bounded MCP quickstart and integration notes](mcp-integration.md) — public `0.3.1` `[mcp]` extra, trusted context mapping, compact discovery, and safe row defaults
+
 ## Package provenance
 
 > [!IMPORTANT]
 > `django-asklens==0.3.1` is the current published alpha, not a stable or
-> production-certified release. Install its exact public surfaces with
-> `python -m pip install 'django-asklens==0.3.1'`,
-> `python -m pip install 'django-asklens[api]==0.3.1'`, or
-> `python -m pip install 'django-asklens[mcp]==0.3.1'`.
->
-> Use the immutable
+> production-certified release. Current source documentation and the synthetic
+> source demo may be newer than the immutable public wheel. Authenticate the
+> artifact you install and review the exact public hashes, tag/commit/tree,
+> Python/Django ranges, historical release evidence, and supported upgrade
+> origins in [Installation](installation.md). The immutable
 > [`v0.3.1` source snapshot](https://github.com/revazi/django-asklens/blob/v0.3.1/README.md)
-> and [GitHub Release](https://github.com/revazi/django-asklens/releases/tag/v0.3.1).
-> Their pre-publication wording is preserved as historical release evidence;
-> this main-branch notice records the post-publication status. The annotated tag
-> object `34f123230c2ea09622f0f2906eeaf775619f78bb` resolves to commit
-> `1b19ba8dea81117d9ff79d64bd28e3136cd93e6e` and tree
-> `5a914eb84b697d0d7c030b311d68c305df9a9ed5`. The public wheel is
-> `django_asklens-0.3.1-py3-none-any.whl` with SHA-256
-> `4332c62aad6e7b27f553af3f8796ed6090e6207ddad6a30a1c4665e9a1085887`;
-> the public source distribution is `django_asklens-0.3.1.tar.gz` with SHA-256
-> `5e011f2272a7fe6f53df5bae757d045042d39e31cfba40eb51766d703eb38dde`.
-> Same-version local rebuilds remain separate local evidence and are not the
-> public files. Package metadata requires Python `>=3.12` and Django
-> `>=5.2,<7.0`; release checks cover Python 3.12/3.13 and Django 5.2/6.0/6.1.
->
-> Immutable public `0.3.0` is the immediate prior supported upgrade origin. The
-> immutable `django-asklens==0.2.0` release remains the supported older `0.2.x`
-> origin. The historical `0.1.0a1` package was an unsupported testing artifact
-> and is not an upgrade origin. See [Installation](installation.md) for
-> authentication, upgrade guidance, and evidence limits before using the guides
-> below.
+> and [GitHub Release](https://github.com/revazi/django-asklens/releases/tag/v0.3.1)
+> remain the public `0.3.1` references; same-version local rebuilds are separate
+> local evidence.
 
-## Guides
+## Security and operations
 
-- [AskLens specification](asklens-specification.md)
-- [Installation](installation.md)
+- [Security checklist](security-checklist.md)
+- [Multi-tenant security](multitenancy-security.md)
+- [Production checklist](production-checklist.md)
+- [Host throttling, audit, and observability controls](host-throttle-and-audit-controls.md)
 - [Support lifecycle](support-lifecycle.md)
 - [0.3.x compatibility boundary](compatibility.md)
-- [Release process and Trusted Publishing setup](releasing.md)
-- [0.3.x maintenance roadmap](maintenance-roadmap.md)
-- [Current Django AskLens surface](alpha-surface-inventory.md)
-- [Core-only executable quickstart](quickstart-core.md)
-- [Usage guide](usage.md)
+
+## Guides and reference
+
+- [AskLens specification](asklens-specification.md)
 - [Core Python API](core-python-api.md)
+- [Draft internal conformance corpus](conformance.md)
+- [Evaluation fixtures](evaluation.md)
+- [Demo query ideas](demo-queries.md)
+- [Example Django AskLens integration](test-project-demo.md)
+- [Synthetic performance baseline](performance-baseline.md)
+
+## Maintainer evidence
+
+These internal and release-process records are useful for review, but are
+secondary to the runnable integration and safety guides above.
+
+- [Current Django AskLens surface](alpha-surface-inventory.md)
+- [0.3.x maintenance roadmap](maintenance-roadmap.md)
+- [Test coverage baseline and critical-boundary map](test-coverage.md)
 - [Draft internal contract schemas](internal-contracts.md)
 - [Internal semantic decision index](internal-semantic-decision-index.md)
 - [Internal metadata, result, and error leakage audit](internal-surface-leakage-audit.md)
 - [Issue #84 failure-mode and host-control matrix](internal-failure-mode-matrix.md)
-- [Draft internal conformance corpus](conformance.md)
-- [Custom UI guide](custom-ui.md)
-- [Registration API](registration.md)
-- [Provider configuration](providers.md)
-- [Bounded MCP quickstart and integration notes](mcp-integration.md) — public `0.3.1` `[mcp]` extra, trusted context mapping, compact discovery, and safe row defaults
-- [Security checklist](security-checklist.md)
-- [Production checklist](production-checklist.md)
-- [Host throttling, audit, and observability controls](host-throttle-and-audit-controls.md)
-- [Multi-tenant security](multitenancy-security.md)
-- [Evaluation fixtures](evaluation.md)
-- [Synthetic performance baseline](performance-baseline.md)
-- [Test coverage baseline and critical-boundary map](test-coverage.md)
-- [Example Django AskLens integration](test-project-demo.md)
-- [Demo query ideas](demo-queries.md)
+- [Release process and Trusted Publishing setup](releasing.md)
+- [Static docs build and operator-only Pages activation](pages-deployment.md)
 
 ## Current scope
 
