@@ -5,11 +5,11 @@ usage() {
   cat <<'EOF'
 Usage: bash scripts/alpha-candidate-package-smoke.sh [--help]
 
-Build the exact committed 0.3.1 release source into a temporary wheel and source
-distribution, exercise isolated core/API/MCP installs, and upgrade authenticated
-public PyPI 0.3.0 and 0.2.0 installations while preserving synthetic SQLite
-migration state and data. Public 0.3.0 is the immediate maintenance origin;
-0.2.0 remains a separate older supported-origin assertion. This produces local
+Build the exact committed unpublished 0.3.2 candidate into a temporary wheel and
+source distribution, exercise isolated core/API/MCP installs, and upgrade
+authenticated public PyPI 0.3.1, 0.3.0 and 0.2.0 installations while preserving
+synthetic SQLite migration state and data. Public 0.3.1 is the immediate
+maintenance origin; 0.3.0 and 0.2.0 remain separate older supported-origin assertions. This produces local
 candidate evidence only; it does not support upgrades from 0.1.0a1 or upload,
 tag, publish, or release anything.
 EOF
@@ -89,11 +89,11 @@ if [[ ${#wheels[@]} -ne 1 || ${#sdists[@]} -ne 1 ]]; then
 fi
 wheel="${wheels[0]}"
 sdist="${sdists[0]}"
-[[ "$(basename "$wheel")" == "django_asklens-0.3.1-py3-none-any.whl" ]] || {
+[[ "$(basename "$wheel")" == "django_asklens-0.3.2-py3-none-any.whl" ]] || {
   echo "Unexpected wheel filename: $(basename "$wheel")" >&2
   exit 1
 }
-[[ "$(basename "$sdist")" == "django_asklens-0.3.1.tar.gz" ]] || {
+[[ "$(basename "$sdist")" == "django_asklens-0.3.2.tar.gz" ]] || {
   echo "Unexpected source distribution filename: $(basename "$sdist")" >&2
   exit 1
 }
@@ -121,8 +121,8 @@ with zipfile.ZipFile(wheel) as archive:
     if len(metadata_names) != 1:
         raise SystemExit("Expected one wheel METADATA file.")
     metadata = Parser().parsestr(archive.read(metadata_names[0]).decode("utf-8"))
-    if metadata["Name"] != "django-asklens" or metadata["Version"] != "0.3.1":
-        raise SystemExit("Wheel metadata must identify django-asklens 0.3.1.")
+    if metadata["Name"] != "django-asklens" or metadata["Version"] != "0.3.2":
+        raise SystemExit("Wheel metadata must identify django-asklens 0.3.2.")
     query_schema = json.loads(
         archive.read(
             "django_asklens/contracts/schemas/query-plan.schema.json"
@@ -210,7 +210,7 @@ print(
 print("PASS source wheel query schema enforces containment value constraints")
 print("PASS source distribution contains the documented opt-in evidence artifacts")
 print("PASS release-review notes are excluded from package artifacts")
-print("PASS wheel metadata identifies django-asklens 0.3.1")
+print("PASS wheel metadata identifies django-asklens 0.3.2")
 PY
 
 uv run --no-sync python - "$wheel" "$sdist" <<'PY'
@@ -226,7 +226,7 @@ PY
 # Reuse the installed-wheel checks used by CI, once per supported package surface.
 for mode in core api mcp; do
   PATH="$(dirname "$evidence_python"):$PATH" \
-    ASKLENS_EXPECTED_VERSION=0.3.1 bash .github/scripts/wheel-smoke.sh \
+    ASKLENS_EXPECTED_VERSION=0.3.2 bash .github/scripts/wheel-smoke.sh \
     "$mode" \
     "Django>=6.1,<6.2" \
     "6.1." \
@@ -234,12 +234,19 @@ for mode in core api mcp; do
   echo "PASS isolated $mode source-wheel install"
 done
 
-# Authenticate both supported published origins against immutable, independently
-# recorded hashes. Public 0.3.0 is the immediate maintenance origin. Public
-# 0.2.0 remains a separate older 0.2.x compatibility assertion.
+# Authenticate all supported published origins against immutable, independently
+# recorded hashes. Public 0.3.1 is the immediate maintenance origin. Public
+# 0.3.0 remains an older 0.3.x check; 0.2.0 is a separate older 0.2.x compatibility assertion.
+public_031_dir="$workdir/public-0.3.1"
 public_030_dir="$workdir/public-0.3.0"
 public_020_dir="$workdir/public-0.2.0"
-mkdir "$public_030_dir" "$public_020_dir"
+mkdir "$public_031_dir" "$public_030_dir" "$public_020_dir"
+env -u PYTHONPATH "$evidence_python" \
+  "$source_tree/scripts/download_pypi_artifacts.py" \
+  --version 0.3.1 \
+  --wheel-sha256 4332c62aad6e7b27f553af3f8796ed6090e6207ddad6a30a1c4665e9a1085887 \
+  --sdist-sha256 5e011f2272a7fe6f53df5bae757d045042d39e31cfba40eb51766d703eb38dde \
+  --output-dir "$public_031_dir"
 env -u PYTHONPATH "$evidence_python" \
   "$source_tree/scripts/download_pypi_artifacts.py" \
   --version 0.3.0 \
@@ -402,8 +409,8 @@ import django_asklens
 
 wheel = Path(sys.argv[1]).resolve()
 origin = sys.argv[2]
-assert version("django-asklens") == "0.3.1"
-assert django_asklens.__version__ == "0.3.1"
+assert version("django-asklens") == "0.3.2"
+assert django_asklens.__version__ == "0.3.2"
 module_path = Path(django_asklens.__file__).resolve()
 assert module_path.is_relative_to(Path(sys.prefix).resolve()), module_path
 assert not module_path.is_relative_to(
@@ -421,14 +428,14 @@ with zipfile.ZipFile(wheel) as archive:
             f"django_asklens/{relative_path}"
         )
 print(
-    f"PASS local 0.3.1 wheel upgraded authenticated public PyPI {origin} "
+    f"PASS local 0.3.2 wheel upgraded authenticated public PyPI {origin} "
     "without source shadowing"
 )
 PY
   )
 
   probe_plan_output="$(probe_manage migrate --plan 2>&1)"
-  printf 'PASS migrate --plan after public %s to local 0.3.1 upgrade:\n%s\n' \
+  printf 'PASS migrate --plan after public %s to local 0.3.2 upgrade:\n%s\n' \
     "$origin_version" "$probe_plan_output"
   probe_manage migrate --noinput --verbosity 1
   probe_manage showmigrations asklens
@@ -478,14 +485,14 @@ assert AskLensQuery._meta.proxy
 assert AskLensQuery._meta.db_table == SemanticQueryRun._meta.db_table
 assert AskLensQuery.objects.count() == 1
 print("PASS release migration graph is exact: 0001_initial and 0002_add_admin_query_proxy")
-print(f"PASS synthetic SemanticQueryRun row preserved across {origin} to 0.3.1 upgrade")
+print(f"PASS synthetic SemanticQueryRun row preserved across {origin} to 0.3.2 upgrade")
 print("PASS AskLensQuery remains a proxy over asklens_semanticqueryrun table")
 PY
 
   (
     cd "$workdir"
     env -u PYTHONPATH \
-      ASKLENS_EXPECTED_VERSION=0.3.1 \
+      ASKLENS_EXPECTED_VERSION=0.3.2 \
       ASKLENS_FORBIDDEN_SOURCE_ROOT="$root" \
       DJANGO_VERSION_PREFIX="6.1." \
       "$upgrade_venv/bin/python" "$root/.github/scripts/wheel_smoke.py" core
@@ -493,8 +500,10 @@ PY
 }
 
 run_upgrade_probe \
+  0.3.1 "$public_031_dir/django_asklens-0.3.1-py3-none-any.whl"
+run_upgrade_probe \
   0.3.0 "$public_030_dir/django_asklens-0.3.0-py3-none-any.whl"
 run_upgrade_probe \
   0.2.0 "$public_020_dir/django_asklens-0.2.0-py3-none-any.whl"
 
-echo "PASS exact local 0.3.1 candidate, authenticated public 0.3.0 immediate-upgrade evidence, and separate authenticated public 0.2.0 compatibility evidence only; no publication was performed"
+echo "PASS exact local unpublished 0.3.2 candidate, authenticated public 0.3.1 immediate-upgrade evidence, and separate authenticated public 0.3.0/0.2.0 compatibility evidence only; no publication was performed"

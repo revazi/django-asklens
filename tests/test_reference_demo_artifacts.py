@@ -650,11 +650,12 @@ def test_package_provenance_identifies_public_031_and_separate_local_rebuilds() 
 
     source_section = install[positions[3] :]
     normalized_source_section = " ".join(source_section.split())
-    assert "locally built wheel reports `0.3.1`" in normalized_source_section
+    assert "locally built wheel reports `0.3.2`" in normalized_source_section
     assert "not either immutable public `0.3.1` artifact" in normalized_source_section
     assert "### Exact local release-source package evidence" in source_section
     assert "authenticates the exact public `0.3.0`" in normalized_source_section
     assert "separate probe authenticates published `0.2.0`" in normalized_source_section
+    assert "authenticates the exact public `0.3.1`" in normalized_source_section
     assert (
         "not PostgreSQL or production upgrade certification"
         in normalized_source_section
@@ -776,7 +777,9 @@ def test_031_release_notes_are_bounded_neutral_and_not_packaged() -> None:
     ):
         assert required in normalized
 
-    assert "## Unreleased\n\n### Documentation" in changelog
+    assert "## Unreleased" in changelog
+    assert "## 0.3.2 — Unpublished candidate" in changelog
+    assert changelog.index("## 0.3.2") < changelog.index("## 0.3.1")
     assert "## 0.3.1 — 2026-10-04" in changelog
     assert "immutable public `0.3.1`, the current published alpha" in " ".join(
         changelog.split()
@@ -1163,12 +1166,15 @@ def test_package_evidence_is_isolated_authenticated_and_never_releases() -> None
     ]
     assert 'cd "$workdir"' in probe_function
     assert "run_upgrade_probe" in script
-    assert script.count("run_upgrade_probe \\") == 2
+    assert script.count("run_upgrade_probe \\") == 3
     assert '"$wheel" >/dev/null' in script
     assert "django-asklens==0.1.0a1" not in script
     assert "--force-reinstall" not in script
     assert 'assert version("django-asklens") == expected' in script
-    assert 'version("django-asklens") == "0.3.1"' in script
+    assert 'version("django-asklens") == "0.3.2"' in script
+    assert "--version 0.3.1" in script
+    assert "4332c62aad6e7b27f553af3f8796ed6090e6207ddad6a30a1c4665e9a1085887" in script
+    assert "5e011f2272a7fe6f53df5bae757d045042d39e31cfba40eb51766d703eb38dde" in script
     assert "download_pypi_artifacts.py" in script
     assert "--version 0.3.0" in script
     assert "d7f7159cfdbb3d9755d9b3542f9cda4280f0e72939f81aca4d3a2cd8d8921e8b" in script
@@ -1194,9 +1200,9 @@ def test_package_evidence_is_isolated_authenticated_and_never_releases() -> None
     assert "twine upload" not in script
     assert "git tag" not in script
     assert "git push" not in script
-    assert 'version = "0.3.1"' in read_text(ROOT / "pyproject.toml")
+    assert 'version = "0.3.2"' in read_text(ROOT / "pyproject.toml")
     wheel_smoke = read_text(ROOT / ".github" / "scripts" / "wheel_smoke.py")
-    assert 'os.environ.get("ASKLENS_EXPECTED_VERSION", "0.3.1")' in wheel_smoke
+    assert 'os.environ.get("ASKLENS_EXPECTED_VERSION", "0.3.2")' in wheel_smoke
     assert 'if expected_version == "0.2.0":' in wheel_smoke
     assert "assert observability_spec is None" in wheel_smoke
     assert 'if expected_version != "0.2.0":' in wheel_smoke
@@ -1224,8 +1230,8 @@ def test_package_migration_probe_is_disposable_and_scoped() -> None:
     assert "SemanticQueryRun.objects.get()" in script
     assert "synthetic release probe from {origin}" in script
     assert "published {origin} migration state initialized" in script
-    assert "SemanticQueryRun row preserved across {origin} to 0.3.1" in script
-    assert "public %s to local 0.3.1 upgrade" in script
+    assert "SemanticQueryRun row preserved across {origin} to 0.3.2" in script
+    assert "public %s to local 0.3.2 upgrade" in script
     assert (
         script.count(
             "PASS release migration graph is exact: 0001_initial and"
@@ -1294,14 +1300,14 @@ def test_dev_tools_do_not_leak_into_runtime_metadata() -> None:
     ):
         assert forbidden not in runtime
         assert forbidden not in extras
-    assert metadata["project"]["version"] == "0.3.1"
+    assert metadata["project"]["version"] == "0.3.2"
     package_module = read_text(ROOT / "django_asklens" / "__init__.py")
-    assert package_module.count('__version__ = "0.3.1"') == 1
+    assert package_module.count('__version__ = "0.3.2"') == 1
     lock = tomllib.loads(read_text(ROOT / "uv.lock"))
     asklens = next(
         package for package in lock["package"] if package["name"] == "django-asklens"
     )
-    assert asklens["version"] == "0.3.1"
+    assert asklens["version"] == "0.3.2"
 
 
 def test_reference_shell_entrypoints_have_safe_argument_boundaries() -> None:

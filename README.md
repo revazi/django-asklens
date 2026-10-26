@@ -15,7 +15,7 @@
 
 Safe natural-language querying over explicitly registered Django models. AskLens does **not** let an LLM write SQL. It asks a provider for structured JSON, validates that plan against your catalog and the current request's permissions, compiles a read-only Django ORM query, and returns table-ready JSON.
 
-`django-asklens==0.3.1` is the current published alpha, not a stable or production-certified release. Adapters may still change. Authenticate the public artifact before use; hashes and upgrade origins are in [Installation](docs/installation.md).
+`django-asklens==0.3.1` is the current published alpha, not a stable or production-certified release. This source checkout prepares **unpublished `0.3.2`**; do not try to install that version from PyPI yet. Adapters may still change. Authenticate public artifacts before use; hashes and upgrade origins are in [Installation](docs/installation.md), and the [0.3.2 preparation record](docs/release-preparation-0.3.2.md) explains candidate scope and remaining gates.
 
 Django AskLens was created by [Revaz Zakalashvili](https://github.com/revazi).
 

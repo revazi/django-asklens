@@ -4,6 +4,10 @@ Django AskLens is the Django implementation of the [AskLens specification](askle
 
 Django AskLens was created by [Revaz Zakalashvili](https://github.com/revazi) ([revaz.zakalashvili@gmail.com](mailto:revaz.zakalashvili@gmail.com)).
 
+This checkout prepares **unpublished `0.3.2`**. Public `0.3.1` remains the
+current alpha; see the [candidate preparation record](release-preparation-0.3.2.md)
+for scope, compatibility, and outstanding publication gates.
+
 ## See it
 
 [![The synthetic AskLens source demo showing the exact paid-revenue question, North Studio current-user scope, and grouped North-only output.](https://raw.githubusercontent.com/revazi/django-asklens/main/docs/assets/showcase/scoped-revenue.png)](showcase.md)

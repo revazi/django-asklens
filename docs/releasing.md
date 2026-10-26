@@ -4,6 +4,16 @@ This process applies to releases after `0.2.0`. The existing `v0.2.0`,
 `v0.3.0`, and `v0.3.1` tags, GitHub Releases, and PyPI files are immutable and
 must not be moved, recreated, overwritten, or replaced.
 
+## Proposed 0.3.2 preparation
+
+This checkout prepares unpublished `0.3.2`; public `0.3.1` remains current.
+See the [candidate preparation record](release-preparation-0.3.2.md) and
+repository-only `.github/release-notes/0.3.2.md`. Candidate version metadata,
+local package checks, and local digests do not establish a public release.
+No tag, GitHub Release, PyPI upload, Pages deployment, or environment approval
+is authorized by preparation. Publication requires a separately reviewed exact
+commit, green hosted checks, and operator confirmation of publisher controls.
+
 ## Immutable 0.3.1 release status
 
 `django-asklens==0.3.1` is the current published alpha. Its immutable
