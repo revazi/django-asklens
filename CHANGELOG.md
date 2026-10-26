@@ -26,7 +26,7 @@ No AskLens migration, governed API change, or support-line expansion is introduc
 - Corrected current-release guidance after publication of immutable public `0.3.1`, while keeping same-version local rebuilds distinct from the public artifacts and retaining `0.3.0` as the immediate prior supported upgrade origin.
 - Rewrote the README as a product page. Public artifact hashes and upgrade origins stay in the installation guide and docs index.
 - Added a Django Packages badge to the README.
-- Added reproducible browser-captured synthetic demo screenshots and a captioned 36-second recording, an isolated MkDocs build with validated navigation/assets/exclusions, read-only build CI, a manual build-only Pages readiness workflow, and operator activation instructions.
+- Added reproducible browser-captured synthetic demo screenshots and a captioned 36-second recording, an isolated MkDocs build with validated navigation/assets/exclusions, read-only build CI, and a manual default-branch Pages deployment workflow with separate operator settings, dispatch, approval, and verification gates.
 - Added clearly labeled Django Forum, Django News, Django Packages, and Awesome Django operator drafts/packets with refreshed point-in-time public metadata, affiliation and AI disclosures, explicit submission-readiness limits, and exclusion from the rendered site/package artifacts.
 
 ### Changed
