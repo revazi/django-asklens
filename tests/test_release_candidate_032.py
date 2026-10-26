@@ -35,11 +35,17 @@ def test_candidate_docs_do_not_claim_a_public_release() -> None:
         "README.md",
         "docs/index.md",
         "docs/release-preparation-0.3.2.md",
-        ".github/release-notes/0.3.2.md",
     ):
         text = (ROOT / name).read_text()
         assert "unpublished" in text.lower(), name
         assert "0.3.1" in text and "0.3.2" in text, name
+    release_notes = " ".join(
+        (ROOT / ".github/release-notes/0.3.2.md").read_text().split()
+    )
+    assert "not publication authorization or proof of publication" in release_notes
+    assert "Before a successful Trusted Publishing run" in release_notes
+    assert "After publication" in release_notes
+    assert "immutable `v0.3.2` GitHub Release" in release_notes
     changelog = (ROOT / "CHANGELOG.md").read_text()
     candidate = changelog.split("## 0.3.2 — Unpublished candidate", 1)[1].split(
         "## 0.3.1", 1

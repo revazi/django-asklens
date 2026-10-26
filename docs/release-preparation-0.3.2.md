@@ -28,8 +28,9 @@ expansion, live-provider certification, or production certification is claimed.
 - A README/PyPI description with synthetic screenshots and a short recording,
   captions, and a text walkthrough. Media links target repository `main`;
   source showcase tooling/media are intentionally excluded from distributions.
-- Navigable local docs and build-only verification. The documentation URL stays
-  on GitHub: a configured site URL is not evidence of a deployed Pages site.
+- Navigable local docs, build-only CI, and a separately operator-triggered
+  Pages deployment workflow. The documentation URL stays on GitHub: prepared
+  deployment source and a configured site URL are not evidence of a live site.
 - More defensive release artifact handoff before protected publication.
 
 The source demo remains a full-checkout evaluation path, not a second packaged

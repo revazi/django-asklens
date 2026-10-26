@@ -1,12 +1,15 @@
-name: Prepare documentation for Pages (no deployment)
+name: Deploy documentation to Pages
 
 on:
   workflow_dispatch:
 
-# This readiness check intentionally cannot upload or deploy a Pages artifact.
-# Enabling Pages requires a separately authorized and reviewed workflow change.
-permissions:
-  contents: read
+# Deployment is manual and restricted to the default branch. Package publishing
+# uses a separate workflow, environment, and permission boundary.
+permissions: {}
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
 
 jobs:
   build:
@@ -15,6 +18,8 @@ jobs:
       github.ref_type == 'branch' &&
       github.ref_name == github.event.repository.default_branch
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - name: Check out repository
         uses: actions/checkout@v7
@@ -38,3 +43,23 @@ jobs:
 
       - name: Validate rendered links, navigation, and assets
         run: uv run --no-sync python scripts/verify-docs-site.py site
+
+      - name: Upload the validated Pages artifact
+        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: site
+
+  deploy:
+    name: Deploy default-branch docs
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1

@@ -79,8 +79,8 @@ def test_showcase_has_reproducible_offline_capture_and_accessible_context() -> N
     assert "Refusing to replace existing synthetic demo database" in wrapper
 
 
-def test_docs_tooling_is_isolated_and_pages_workflows_are_build_only() -> None:
-    """Docs dependencies stay out of runtime and workflows cannot deploy."""
+def test_docs_tooling_is_isolated_and_pages_deployment_is_separated() -> None:
+    """Docs dependencies stay out of runtime and deployment stays isolated."""
 
     metadata = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
     assert metadata["dependency-groups"]["docs"] == ["mkdocs==1.6.1"]
@@ -119,26 +119,39 @@ def test_docs_tooling_is_isolated_and_pages_workflows_are_build_only() -> None:
     assert "workflow_dispatch:" in workflow
     assert "push:" not in workflow
     assert "github.ref_name == github.event.repository.default_branch" in workflow
-    assert "Prepare documentation for Pages (no deployment)" in workflow
+    assert "Deploy documentation to Pages" in workflow
+    assert "permissions: {}" in workflow
+    assert "contents: read" in workflow
+    assert "pages: write" in workflow
+    assert "id-token: write" in workflow
+    assert (
+        "actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9"
+        in workflow
+    )
+    assert "actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346" in workflow
+    assert "path: site" in workflow
+    assert "name: github-pages" in workflow
+    assert "cancel-in-progress: false" in workflow
+    assert "pypi" not in workflow.lower()
 
     build_only = (ROOT / ".github" / "workflows" / "docs.yml").read_text(
         encoding="utf-8"
     )
     assert "pull_request:" in build_only
     assert "Build and validate (no deployment)" in build_only
+    assert "contents: read" in build_only
+    assert "pages: write" not in build_only
+    assert "id-token: write" not in build_only
+    assert "upload-pages-artifact" not in build_only
+    assert "deploy-pages" not in build_only
+    assert "environment:" not in build_only
+    assert "pypi" not in build_only.lower()
 
-    for candidate in (workflow, build_only):
-        assert "contents: read" in candidate
-        assert "pages: write" not in candidate
-        assert "id-token: write" not in candidate
-        assert "upload-pages-artifact" not in candidate
-        assert "deploy-pages" not in candidate
-        assert "environment:" not in candidate
-        assert "pypi" not in candidate.lower()
-
-    activation = (ROOT / "docs" / "pages-deployment.md").read_text(encoding="utf-8")
-    assert "No workflow in this documentation slice can deploy the site" in activation
-    assert "separate, authorized pull" in activation
+    activation = " ".join(
+        (ROOT / "docs" / "pages-deployment.md").read_text(encoding="utf-8").split()
+    )
+    assert "Preparing the workflow locally performs none of them" in activation
+    assert "continue to point to GitHub" in activation
 
 
 def test_docs_hook_rewrites_build_only_markup_behaviorally() -> None:
