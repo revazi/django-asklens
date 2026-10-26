@@ -95,6 +95,9 @@ dev = [
     "twine>=5",
     "uvicorn>=0.35,<1",
 ]
+docs = [
+    "mkdocs==1.6.1",
+]
 
 [tool.setuptools.packages.find]
 include = ["django_asklens*"]

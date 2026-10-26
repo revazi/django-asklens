@@ -63,7 +63,16 @@ Provider output is always untrusted. It must parse as structured JSON and pass A
 
 ## Documentation
 
-Useful starting points:
+Build and validate the static documentation with its isolated dependency group:
+
+```bash
+uv sync --locked --group docs
+uv run --no-sync mkdocs build --strict --clean
+uv run --no-sync python scripts/verify-docs-site.py site
+```
+
+GitHub Pages remains a manual operator action; see
+[docs site activation](docs/pages-deployment.md). Useful starting points:
 
 - [README](README.md)
 - [Installation](docs/installation.md)

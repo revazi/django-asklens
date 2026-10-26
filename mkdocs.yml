@@ -1,0 +1,67 @@
+site_name: Django AskLens
+site_description: Safe natural-language querying over explicitly registered Django models.
+site_url: https://revazi.github.io/django-asklens/
+repo_url: https://github.com/revazi/django-asklens
+repo_name: revazi/django-asklens
+edit_uri: edit/main/docs/
+docs_dir: docs
+site_dir: site
+strict: true
+exclude_docs: |
+  outreach/
+  mkdocs_hooks.py
+  __pycache__/
+
+theme:
+  name: readthedocs
+  highlightjs: true
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - tables
+  - toc:
+      permalink: true
+
+hooks:
+  - docs/mkdocs_hooks.py
+
+nav:
+  - Home: index.md
+  - Try the demo:
+      - Local source demo: test-project-demo.md
+      - Browser showcase: showcase.md
+  - Get started:
+      - Installation: installation.md
+      - Core quickstart: quickstart-core.md
+      - Register host models: registration.md
+      - Usage and authenticated API: usage.md
+  - Integrate:
+      - Providers: providers.md
+      - Build a custom UI: custom-ui.md
+      - MCP integration: mcp-integration.md
+      - Core Python API: core-python-api.md
+  - Operate safely:
+      - Security checklist: security-checklist.md
+      - Multi-tenant security: multitenancy-security.md
+      - Production checklist: production-checklist.md
+      - Throttling, audit, and observability: host-throttle-and-audit-controls.md
+  - Reference:
+      - AskLens specification: asklens-specification.md
+      - Compatibility boundary: compatibility.md
+      - Support lifecycle: support-lifecycle.md
+      - Evaluation fixtures: evaluation.md
+      - Demo query ideas: demo-queries.md
+      - Conformance: conformance.md
+      - Performance baseline: performance-baseline.md
+  - Maintainer evidence:
+      - Current alpha surface: alpha-surface-inventory.md
+      - Maintenance roadmap: maintenance-roadmap.md
+      - Test coverage: test-coverage.md
+      - Internal contracts: internal-contracts.md
+      - Internal semantic decisions: internal-semantic-decision-index.md
+      - Internal surface audit: internal-surface-leakage-audit.md
+      - Internal failure modes: internal-failure-mode-matrix.md
+      - HTTP/internal crosswalk: http-internal-envelope-crosswalk.md
+      - Release process: releasing.md
+      - Docs build and Pages activation: pages-deployment.md

@@ -1,0 +1,16 @@
+WEBVTT
+
+00:00.000 --> 00:05.000
+The synthetic local Django login form is filled with the facility-owner demo account.
+
+00:05.000 --> 00:10.000
+AskLens opens with North Studio shown as the host-selected current-user row scope.
+
+00:10.000 --> 00:19.000
+The exact configured paid-revenue question runs and returns three North-scoped grouped rows as a chart and table.
+
+00:19.000 --> 00:28.000
+The exact no-sales demo-product question runs successfully and returns the No matching rows state.
+
+00:28.000 --> 00:35.800
+The successful empty state remains visible. The offline dummy planner made no provider network call.

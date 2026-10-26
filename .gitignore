@@ -29,6 +29,7 @@ dist/
 *.egg-info/
 .coverage
 htmlcov/
+site/
 *.sqlite3
 *.sqlite3-*
 .asklens-test-project.sqlite3
