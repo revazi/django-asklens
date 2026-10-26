@@ -576,7 +576,8 @@ def test_package_provenance_identifies_public_031_and_separate_local_rebuilds() 
     assert "## Package provenance" not in readme
     assert wheel_sha256 not in readme
     assert tag_object not in readme
-    assert "current published alpha" in readme
+    assert "prepared alpha release line" in readme
+    assert "`0.3.1` remains current" in readme
     assert "production-certified" in readme
     assert "[Installation](docs/installation.md)" in readme
     index_positions = [
