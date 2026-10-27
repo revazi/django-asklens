@@ -10,12 +10,12 @@
 [![uv](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/uv/main/assets/badge/v0.json)](https://github.com/astral-sh/uv)
 [![Pydantic v2](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/pydantic/pydantic/main/docs/badge/v2.json)](https://docs.pydantic.dev)
 [![License](https://img.shields.io/badge/license-BSD--3--Clause-blue.svg)](https://github.com/revazi/django-asklens/blob/main/LICENSE)
-[![Documentation](https://img.shields.io/badge/docs-github-blue.svg)](https://github.com/revazi/django-asklens/tree/main/docs)
+[![Documentation](https://img.shields.io/badge/docs-live-blue.svg)](https://revazi.github.io/django-asklens/)
 [![Django Packages](https://img.shields.io/badge/Django%20Packages-django--asklens-8c3c26.svg)](https://djangopackages.org/packages/p/django-asklens/)
 
 Safe natural-language querying over explicitly registered Django models. AskLens does **not** let an LLM write SQL. It asks a provider for structured JSON, validates that plan against your catalog and the current request's permissions, compiles a read-only Django ORM query, and returns table-ready JSON.
 
-`django-asklens==0.3.1` is the current published alpha, not a stable or production-certified release. This source checkout prepares **unpublished `0.3.2`**; do not try to install that version from PyPI yet. Adapters may still change. Authenticate public artifacts before use; hashes and upgrade origins are in [Installation](docs/installation.md), and the [0.3.2 preparation record](docs/release-preparation-0.3.2.md) explains candidate scope and remaining gates.
+`django-asklens==0.3.2` is the prepared alpha release line, not a stable or production-certified release. Its public availability and immutable artifact identity are established only by the [`v0.3.2` GitHub Release](https://github.com/revazi/django-asklens/releases/tag/v0.3.2) and [PyPI version record](https://pypi.org/project/django-asklens/0.3.2/); until those exist and public verification succeeds, `0.3.1` remains current. Adapters may still change. Authenticate public artifacts before use; hashes and upgrade origins are in [Installation](docs/installation.md), and the [0.3.2 preparation record](docs/release-preparation-0.3.2.md) preserves candidate scope and evidence.
 
 Django AskLens was created by [Revaz Zakalashvili](https://github.com/revazi).
 
@@ -48,9 +48,10 @@ are involved. Offline mode matches only the displayed exact questions; it does
 not support arbitrary natural-language wording. **Show paid billing revenue for
 the no-sales demo product** is the intentional successful empty-result example.
 
-This is current source-demo evidence, not behavior newly claimed for the
-immutable public `0.3.1` wheel, production certification, or external usability
-evidence. See the [complete start, expected-result, troubleshooting, security,
+This is `0.3.2` release-source demo evidence when viewed at the immutable
+`v0.3.2` tag; mutable `main` may be newer. It is not production certification
+or external usability evidence. See the [complete start, expected-result,
+troubleshooting, security,
 host-transition, and cleanup guide](docs/test-project-demo.md#sqlite-frontend-and-admin-first-run-start-to-reset).
 
 ### Synthetic browser showcase
@@ -98,10 +99,13 @@ remain active.
 
 ## Installation
 
+After confirming that the `0.3.2` PyPI record exists and authenticating the
+release artifacts:
+
 ```bash
-python -m pip install 'django-asklens==0.3.1'
-python -m pip install 'django-asklens[api]==0.3.1'   # optional DRF API and reference UI
-python -m pip install 'django-asklens[mcp]==0.3.1'   # optional MCP adapter
+python -m pip install 'django-asklens==0.3.2'
+python -m pip install 'django-asklens[api]==0.3.2'   # optional DRF API and reference UI
+python -m pip install 'django-asklens[mcp]==0.3.2'   # optional MCP adapter
 ```
 
 Core dependencies are Django and Pydantic. DRF and the MCP stack are extras, not required to register resources or call `execute_plan()`.
@@ -322,6 +326,7 @@ Release checks cover Python 3.12 and 3.13.
 
 ## Documentation
 
+- [Live documentation and showcase](https://revazi.github.io/django-asklens/)
 - [Installation](docs/installation.md)
 - [Core-only executable quickstart](docs/quickstart-core.md)
 - [Authenticated normal-user API quickstart](docs/usage.md#authenticated-normal-user-api-quickstart)

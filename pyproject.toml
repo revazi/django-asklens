@@ -72,7 +72,7 @@ mcp = [
 [project.urls]
 Homepage = "https://github.com/revazi/django-asklens"
 PyPI = "https://pypi.org/project/django-asklens/"
-Documentation = "https://github.com/revazi/django-asklens/tree/main/docs"
+Documentation = "https://revazi.github.io/django-asklens/"
 Repository = "https://github.com/revazi/django-asklens"
 Issues = "https://github.com/revazi/django-asklens/issues"
 Changelog = "https://github.com/revazi/django-asklens/blob/main/CHANGELOG.md"

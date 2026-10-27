@@ -26,19 +26,24 @@ def test_candidate_version_agrees_across_source_metadata_and_lock() -> None:
     locked = next(p for p in lock["package"] if p["name"] == "django-asklens")
     assert metadata["project"]["version"] == exported == locked["version"] == "0.3.2"
     assert metadata["project"]["urls"]["Documentation"] == (
-        "https://github.com/revazi/django-asklens/tree/main/docs"
+        "https://revazi.github.io/django-asklens/"
     )
 
 
 def test_candidate_docs_do_not_claim_a_public_release() -> None:
     for name in (
-        "README.md",
         "docs/index.md",
         "docs/release-preparation-0.3.2.md",
     ):
         text = (ROOT / name).read_text()
         assert "unpublished" in text.lower(), name
         assert "0.3.1" in text and "0.3.2" in text, name
+    readme = " ".join((ROOT / "README.md").read_text().split())
+    assert "prepared alpha release line" in readme
+    assert "until those exist and public verification succeeds" in readme
+    assert "`0.3.1` remains current" in readme
+    assert "python -m pip install 'django-asklens==0.3.2'" in readme
+    assert "https://revazi.github.io/django-asklens/" in readme
     release_notes = " ".join(
         (ROOT / ".github/release-notes/0.3.2.md").read_text().split()
     )
