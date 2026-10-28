@@ -7,10 +7,10 @@ specification](asklens-specification.md). It records exposure and evidence. The
 [narrow 0.3.x compatibility boundary](compatibility.md) governs only the core
 rows explicitly marked governed below; every other surface remains
 provisional, optional, internal, or unsupported. This is an alpha line, not a
-1.0 stability claim. Immutable public `0.3.1` is the current release. Public
-`0.3.0` is its immediate prior supported upgrade origin. Version `0.2.0` is the
-first supported alpha release and the immutable supported older `0.2.x` upgrade
-origin.
+1.0 stability claim. Immutable public `0.3.2` is the current release. Public
+`0.3.1` is its immediate prior supported upgrade origin, `0.3.0` is an older
+checked origin, and version `0.2.0` is the immutable supported older `0.2.x`
+upgrade origin.
 
 PyPI `0.1.0a1` was a testing artifact only and is not a supported upgrade
 origin. These releases follow the [support lifecycle](support-lifecycle.md).
@@ -283,7 +283,7 @@ line. HTTP, MCP, admin, frontend, provider, document, broad helper, and adapter
 surfaces remain provisional, optional, or internal. Current posture:
 
 - this is a narrow alpha compatibility policy, not a 1.0 stability claim;
-- immutable public `0.3.1` is the current alpha, public `0.3.0` is its
+- immutable public `0.3.2` is the current alpha, public `0.3.1` is its
   immediate prior supported upgrade origin, and `0.2.0` remains the first
   supported alpha and supported older `0.2.x` origin;
 - `0.1.0a1` was a testing artifact only; it is not a supported upgrade origin;

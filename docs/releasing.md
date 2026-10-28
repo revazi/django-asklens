@@ -1,42 +1,34 @@
 # Release process
 
 This process applies to releases after `0.2.0`. The existing `v0.2.0`,
-`v0.3.0`, and `v0.3.1` tags, GitHub Releases, and PyPI files are immutable and
-must not be moved, recreated, overwritten, or replaced.
+`v0.3.0`, `v0.3.1`, and `v0.3.2` tags, GitHub Releases, and PyPI files are
+immutable and must not be moved, recreated, overwritten, or replaced.
 
-## Proposed 0.3.2 preparation
+## Immutable 0.3.2 release status
 
-This checkout prepares unpublished `0.3.2`; public `0.3.1` remains current.
-See the [candidate preparation record](release-preparation-0.3.2.md) and
-repository-only `.github/release-notes/0.3.2.md`. Candidate version metadata,
-local package checks, and local digests do not establish a public release.
-No tag, GitHub Release, PyPI upload, Pages deployment, or environment approval
-is authorized by preparation. Publication requires a separately reviewed exact
-commit, green hosted checks, and operator confirmation of publisher controls.
+`django-asklens==0.3.2` is the current published alpha. Its immutable
+[`v0.3.2` source snapshot](https://github.com/revazi/django-asklens/blob/v0.3.2/README.md),
+[GitHub Release](https://github.com/revazi/django-asklens/releases/tag/v0.3.2),
+and [PyPI record](https://pypi.org/project/django-asklens/0.3.2/) establish the
+release. The annotated tag object
+`5ab7e9e76f6a39a59894ae2fce600e4c707077c3` resolves to commit
+`b3cb5a5b84fdeb35f1b4ce972a0abd33b6934982` and tree
+`9fba0b64b5f4efc5ae15cc9790374d3528acc1af`. The public wheel
+`django_asklens-0.3.2-py3-none-any.whl` has SHA-256
+`739d5411cd0b0ab63ac8dae9e9a0a4f2cf396cb2e0f0ef5bbfac9a2c4607b050`;
+the public source distribution `django_asklens-0.3.2.tar.gz` has SHA-256
+`e522055e3b34eac434cabff6db8bb4c278e210591bcd95027956f2449daee177`.
+A same-version local rebuild is separate local evidence.
 
-## Immutable 0.3.1 release status
-
-`django-asklens==0.3.1` is the current published alpha. Its immutable
-[`v0.3.1` source snapshot](https://github.com/revazi/django-asklens/blob/v0.3.1/README.md)
-and [GitHub Release](https://github.com/revazi/django-asklens/releases/tag/v0.3.1)
-retain their pre-publication wording as historical release evidence. This
-main-branch status records that annotated tag object
-`34f123230c2ea09622f0f2906eeaf775619f78bb` resolves to commit
-`1b19ba8dea81117d9ff79d64bd28e3136cd93e6e` and tree
-`5a914eb84b697d0d7c030b311d68c305df9a9ed5`. The public wheel
-`django_asklens-0.3.1-py3-none-any.whl` has SHA-256
-`4332c62aad6e7b27f553af3f8796ed6090e6207ddad6a30a1c4665e9a1085887`;
-the public source distribution `django_asklens-0.3.1.tar.gz` has SHA-256
-`5e011f2272a7fe6f53df5bae757d045042d39e31cfba40eb51766d703eb38dde`.
-A same-version local rebuild is separate local evidence, not either immutable
-public artifact.
-
-Package metadata requires Python `>=3.12` and Django `>=5.2,<7.0`; the public
-release verification matrix covers Python 3.12/3.13 and Django 5.2/6.0/6.1.
-This remains alpha evidence, not production certification or an independent
-security review. Public `0.3.0` is the immediate prior supported upgrade origin.
-Published `0.2.0` remains the supported older `0.2.x` origin, while `0.1.0a1`
-remains an unsupported testing artifact.
+The [0.3.2 preparation record](release-preparation-0.3.2.md) and repository-only
+`.github/release-notes/0.3.2.md` preserve pre-publication context; they do not
+supersede the immutable records above. Package metadata requires Python
+`>=3.12` and Django `>=5.2,<7.0`; the public verification matrix covers Python
+3.12/3.13 and Django 5.2/6.0/6.1. This remains alpha evidence, not production
+certification or an independent security review. Public `0.3.1` is the
+immediate prior supported upgrade origin, `0.3.0` is an older checked origin,
+and `0.2.0` remains the supported older `0.2.x` origin. `0.1.0a1` remains an
+unsupported testing artifact.
 
 The repository workflow and local checks verify the intended publisher identity
 and artifact handoff, but cannot independently confirm the current browser-side
@@ -205,9 +197,9 @@ being authenticated:
 
 ```bash
 bash scripts/published-package-smoke.sh \
-  --version 0.3.1 \
-  --wheel-sha256 4332c62aad6e7b27f553af3f8796ed6090e6207ddad6a30a1c4665e9a1085887 \
-  --sdist-sha256 5e011f2272a7fe6f53df5bae757d045042d39e31cfba40eb51766d703eb38dde \
+  --version 0.3.2 \
+  --wheel-sha256 739d5411cd0b0ab63ac8dae9e9a0a4f2cf396cb2e0f0ef5bbfac9a2c4607b050 \
+  --sdist-sha256 e522055e3b34eac434cabff6db8bb4c278e210591bcd95027956f2449daee177 \
   --django-package 'Django>=6.1,<6.2' \
   --django-version-prefix '6.1.'
 ```

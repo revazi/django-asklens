@@ -4,7 +4,8 @@ These assets were captured from the existing `tests.test_project` source demo
 with its small seeded synthetic dataset and offline deterministic
 `DummyProvider`. They contain no customer data, provider credentials, or live
 LLM calls. The current source demo is alpha evidence, not a production
-certification or a claim about the immutable public `0.3.1` wheel.
+certification. At the immutable `v0.3.2` tag, they are release-source demo
+evidence; mutable `main` may become newer than the public artifacts.
 
 ## Scoped grouped result
 

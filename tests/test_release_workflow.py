@@ -376,7 +376,7 @@ def test_maintenance_roadmap_separates_patch_and_future_minor_scope():
     normalized = " ".join(roadmap.split())
 
     for required in (
-        "`0.3.1` is the current published maintenance release",
+        "`0.3.2` is the current published maintenance release",
         "compatible, migration-free",
         "No future version or delivery date is promised",
         "registration and resource APIs",
@@ -392,7 +392,7 @@ def test_maintenance_roadmap_separates_patch_and_future_minor_scope():
         "Scheduled audit retention",
         "External telemetry transports",
         "dependency-major policy changes",
-        "`v0.2.0`, `v0.3.0`, and `v0.3.1`",
+        "`v0.2.0`, `v0.3.0`, `v0.3.1`, and `v0.3.2`",
         "`0.1.0a1` package remains an unsupported testing artifact",
     ):
         assert required in normalized

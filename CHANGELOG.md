@@ -6,23 +6,24 @@ The project is alpha and APIs may change before a stable release.
 
 ## Unreleased
 
-No additional changes beyond the proposed candidate below.
+No additional changes since `0.3.2`.
 
-## 0.3.2 — Unpublished candidate
+## 0.3.2 — 2026-10-27
 
-This is proposed release source, not a published version or artifact identity.
-Public `0.3.1` remains current until a separately authorized publication succeeds.
-No AskLens migration, governed API change, or support-line expansion is introduced.
+This is the current published alpha. Its immutable `v0.3.2` GitHub Release and
+PyPI file records establish the release identity; same-version local rebuilds
+remain separate evidence. No AskLens migration, governed API change, or
+support-line expansion is introduced.
 
 ### Security and release integrity
 
 - Updated the development lock to certifi `2026.10.19`, Django REST Framework `3.18.2`, FastMCP/fastmcp-slim `4.1.2`, and OpenTelemetry API `1.45.1` to address the advisories found during preparation. Resolver-required FastMCP dependencies are included; runtime dependency bounds are unchanged, so hosts must still audit their resolved environments.
 - Added fail-closed artifact-handoff verification between build and protected PyPI upload, including exact filenames, regular-file checks, and both build-recorded digests.
-- Prepared `0.3.2` package metadata and isolated upgrade probes from authenticated public `0.3.1`, `0.3.0`, and `0.2.0`, without publishing or changing immutable release records.
+- Published `0.3.2` through the environment-protected Trusted Publishing workflow after isolated upgrade probes from authenticated public `0.3.1`, `0.3.0`, and `0.2.0`; the immutable tag, GitHub Release, and PyPI files remain the authoritative records.
 
 ### Documentation
 
-- Added a prominent no-API-key local path with expected results, troubleshooting, bounded cleanup, and a transition from synthetic fixtures to host-owned model registration while distinguishing current source from immutable public `0.3.1` artifacts.
+- Added a prominent no-API-key local path with expected results, troubleshooting, bounded cleanup, and a transition from synthetic fixtures to host-owned model registration while distinguishing mutable current source from immutable public artifacts.
 - Corrected current-release guidance after publication of immutable public `0.3.1`, while keeping same-version local rebuilds distinct from the public artifacts and retaining `0.3.0` as the immediate prior supported upgrade origin.
 - Rewrote the README as a product page. Public artifact hashes and upgrade origins stay in the installation guide and docs index.
 - Added a Django Packages badge to the README.
@@ -39,7 +40,7 @@ No AskLens migration, governed API change, or support-line expansion is introduc
 
 ## 0.3.1 — 2026-10-04
 
-This section describes immutable public `0.3.1`, the current published alpha.
+This section describes immutable public `0.3.1`, the immediate prior published alpha.
 Its annotated `v0.3.1` tag, GitHub Release, and PyPI files are the authoritative
 release records; same-version local rebuilds are separate local evidence. The
 immutable `v0.3.0` release is the immediate prior supported upgrade origin. The

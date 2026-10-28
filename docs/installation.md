@@ -1,68 +1,53 @@
 # Installation
 
-`django-asklens==0.3.1` is the current published alpha. Alpha does not mean
+`django-asklens==0.3.2` is the current published alpha. Alpha does not mean
 stable, production-certified, independently security-certified, or suitable for
 a particular deployment. Authenticate public artifacts against the immutable
 release identities below; a matching version string alone is not provenance.
-Immutable public `0.3.0` is the immediate prior supported upgrade origin, and
-immutable public `0.2.0` remains the older supported `0.2.x` origin. The
-historical `0.1.0a1` package was an unsupported testing artifact and is not an
-upgrade origin.
+Immutable public `0.3.1` is the immediate prior supported upgrade origin,
+`0.3.0` remains an older checked origin, and immutable public `0.2.0` remains
+the supported older `0.2.x` origin. The historical `0.1.0a1` package was an
+unsupported testing artifact and is not an upgrade origin.
 
 Package metadata requires Python `>=3.12` and Django `>=5.2,<7.0`. Release
 checks cover Python 3.12 and 3.13, with Django 5.2, 6.0, and 6.1 on both Python
 lines. These are alpha support claims, not production certification.
 
-## Current published alpha: 0.3.1
+## Current published alpha: 0.3.2
 
-Install the exact public core package:
-
-```bash
-python -m pip install 'django-asklens==0.3.1'
-```
-
-Install the optional provisional DRF API and packaged reference frontend:
+Install the exact public package surface you need:
 
 ```bash
-python -m pip install 'django-asklens[api]==0.3.1'
+python -m pip install 'django-asklens==0.3.2'
+python -m pip install 'django-asklens[api]==0.3.2'
+python -m pip install 'django-asklens[mcp]==0.3.2'
 ```
 
-Install the optional provisional FastMCP bridge:
+The immutable
+[`v0.3.2` source snapshot](https://github.com/revazi/django-asklens/blob/v0.3.2/README.md),
+[`v0.3.2` GitHub Release](https://github.com/revazi/django-asklens/releases/tag/v0.3.2),
+and [PyPI version record](https://pypi.org/project/django-asklens/0.3.2/)
+establish the release. Their authoritative source identity is:
 
-```bash
-python -m pip install 'django-asklens[mcp]==0.3.1'
-```
-
-Retain the immutable
-[`v0.3.1` README](https://github.com/revazi/django-asklens/blob/v0.3.1/README.md)
-and
-[`v0.3.1` installation guide](https://github.com/revazi/django-asklens/blob/v0.3.1/docs/installation.md)
-as tagged release-source snapshots, and retain the
-[`v0.3.1` GitHub Release](https://github.com/revazi/django-asklens/releases/tag/v0.3.1)
-as the release record. Their pre-publication wording is preserved as historical
-release evidence; this main-branch section records the post-publication status
-and public artifact identities. The authoritative source identity is:
-
-- annotated tag object: `34f123230c2ea09622f0f2906eeaf775619f78bb`
-- commit: `1b19ba8dea81117d9ff79d64bd28e3136cd93e6e`
-- tree: `5a914eb84b697d0d7c030b311d68c305df9a9ed5`
+- annotated tag object: `5ab7e9e76f6a39a59894ae2fce600e4c707077c3`
+- commit: `b3cb5a5b84fdeb35f1b4ce972a0abd33b6934982`
+- tree: `9fba0b64b5f4efc5ae15cc9790374d3528acc1af`
 
 The authenticated public distributions are exactly:
 
-- wheel `django_asklens-0.3.1-py3-none-any.whl`: SHA-256
-  `4332c62aad6e7b27f553af3f8796ed6090e6207ddad6a30a1c4665e9a1085887`
-- source distribution `django_asklens-0.3.1.tar.gz`: SHA-256
-  `5e011f2272a7fe6f53df5bae757d045042d39e31cfba40eb51766d703eb38dde`
+- wheel `django_asklens-0.3.2-py3-none-any.whl`: SHA-256
+  `739d5411cd0b0ab63ac8dae9e9a0a4f2cf396cb2e0f0ef5bbfac9a2c4607b050`
+- source distribution `django_asklens-0.3.2.tar.gz`: SHA-256
+  `e522055e3b34eac434cabff6db8bb4c278e210591bcd95027956f2449daee177`
 
-Maintainers can independently re-download and authenticate those public bytes,
-then exercise each artifact's core, API, and MCP installations outside the
-checkout:
+Maintainers can independently re-download, authenticate, and exercise those
+public bytes outside the checkout:
 
 ```bash
 bash scripts/published-package-smoke.sh \
-  --version 0.3.1 \
-  --wheel-sha256 4332c62aad6e7b27f553af3f8796ed6090e6207ddad6a30a1c4665e9a1085887 \
-  --sdist-sha256 5e011f2272a7fe6f53df5bae757d045042d39e31cfba40eb51766d703eb38dde \
+  --version 0.3.2 \
+  --wheel-sha256 739d5411cd0b0ab63ac8dae9e9a0a4f2cf396cb2e0f0ef5bbfac9a2c4607b050 \
+  --sdist-sha256 e522055e3b34eac434cabff6db8bb4c278e210591bcd95027956f2449daee177 \
   --django-package 'Django>=6.1,<6.2' \
   --django-version-prefix '6.1.'
 ```
@@ -70,16 +55,30 @@ bash scripts/published-package-smoke.sh \
 Supply digests from this independent immutable release record, not values copied
 from the same PyPI response being authenticated. The verifier requires fixed
 PyPI hosts, exact filenames, one non-yanked wheel and one non-yanked source
-distribution, matching metadata/download digests, isolated installs, and Django
-migration checks. This proves only the bounded public package properties it
-checks. It is not production, live-provider, deployment, adoption, or
-independent-security evidence.
+distribution, matching metadata/download digests, isolated core/API/MCP
+installs, and Django migration checks. This is bounded public package evidence,
+not production, live-provider, deployment, adoption, or independent-security
+evidence. A same-version local rebuild is separate local evidence even when its
+source commit and version match.
 
-A same-version local rebuild is separate local evidence: its bytes and digest
-are not either immutable public artifact above, even when its version, source
-commit, or tree matches.
+## Immediate prior release and upgrade origin: 0.3.1
 
-## Immediate prior release and upgrade origin: 0.3.0
+The immutable [`v0.3.1` source snapshot](https://github.com/revazi/django-asklens/blob/v0.3.1/README.md)
+and [GitHub Release](https://github.com/revazi/django-asklens/releases/tag/v0.3.1)
+remain the immediate prior release records. The annotated tag object
+`34f123230c2ea09622f0f2906eeaf775619f78bb` resolves to commit
+`1b19ba8dea81117d9ff79d64bd28e3136cd93e6e` and tree
+`5a914eb84b697d0d7c030b311d68c305df9a9ed5`.
+
+- wheel `django_asklens-0.3.1-py3-none-any.whl`: SHA-256
+  `4332c62aad6e7b27f553af3f8796ed6090e6207ddad6a30a1c4665e9a1085887`
+- source distribution `django_asklens-0.3.1.tar.gz`: SHA-256
+  `5e011f2272a7fe6f53df5bae757d045042d39e31cfba40eb51766d703eb38dde`
+
+`0.3.1` is the primary authenticated upgrade origin for `0.3.2`; the release
+adds no AskLens migration or data transformation.
+
+## Older checked release: 0.3.0
 
 Use the immutable
 [`v0.3.0` documentation](https://github.com/revazi/django-asklens/blob/v0.3.0/README.md)
@@ -90,8 +89,8 @@ and tree `35a525ea1d969833dc1a5b1abce14f6631e34f57`. Its public wheel
 `d7f7159cfdbb3d9755d9b3542f9cda4280f0e72939f81aca4d3a2cd8d8921e8b`;
 its public source distribution `django_asklens-0.3.0.tar.gz` has SHA-256
 `a7717736c07b93d66e1326dc43a438aa0918c17b4512ddb2391257de5887c5c9`.
-Use these identities only to authenticate the immediate prior public release,
-including the bounded `0.3.0` to `0.3.1` upgrade check.
+Use these identities to authenticate the older public release and its separate
+bounded upgrade-origin check; `0.3.1` remains the immediate `0.3.2` origin.
 
 ## Older supported 0.2.x upgrade origin: 0.2.0
 
@@ -136,20 +135,17 @@ uv sync --group dev
 uv run pytest
 ```
 
-A locally built wheel reports `0.3.2`: this is an **unpublished candidate**,
-not either immutable public `0.3.1` artifact. Do not install `0.3.2` from PyPI
-until a separately authorized publication and public verification succeed.
-Record the exact source snapshot and locally produced digest as separate local
-evidence; never attach a public artifact hash to locally rebuilt bytes. For
-this candidate, public `0.3.1` is the immediate upgrade origin; public `0.3.0`
-and `0.2.0` remain separately checked older origins. Public `0.2.0` remains the
-supported older `0.2.x` origin. No upgrade from the `0.1.0a1` testing artifact
-is claimed. See the
-[candidate preparation record](release-preparation-0.3.2.md).
+A wheel built from mutable `main` may report `0.3.2`, but it is not either
+immutable public `0.3.2` artifact. Record the exact source snapshot and locally
+produced digest as separate local evidence; never attach a public artifact hash
+to locally rebuilt bytes. Public `0.3.1` is the immediate upgrade origin;
+public `0.3.0` and `0.2.0` remain separately checked older origins. No upgrade
+from the `0.1.0a1` testing artifact is claimed. See the historical
+[0.3.2 preparation record](release-preparation-0.3.2.md).
 
-### Exact local release-source package evidence
+### Exact local source-package evidence
 
-The opt-in package smoke validates exact committed unpublished `0.3.2` source:
+The opt-in package smoke validates exact committed local source:
 
 ```bash
 bash scripts/alpha-candidate-package-smoke.sh
@@ -181,17 +177,17 @@ SQLite package evidence, not PostgreSQL or production upgrade certification. It
 does not test or replace the `0.1.0a1` testing artifact. The script removes its temporary environments and
 artifacts and does not upload, tag, publish, or release anything.
 
-## Authenticated API prerequisites for public 0.3.1
+## Authenticated API prerequisites for public 0.3.2
 
 These prerequisites document the optional provisional DRF adapter in the
-immutable public `0.3.1` alpha. Install the exact current version after
+immutable public `0.3.2` alpha. Install the exact current version after
 checking the public identity above:
 
 ```bash
-python -m pip install 'django-asklens[api]==0.3.1'
+python -m pip install 'django-asklens[api]==0.3.2'
 ```
 
-A local `0.3.1` rebuild may be used for repository-operated verification only
+A local `0.3.2` rebuild may be used for repository-operated verification only
 after its own source commit and digest are checked; it is not the public wheel
 and must not be represented by the public wheel's SHA-256.
 

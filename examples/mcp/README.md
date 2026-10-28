@@ -11,7 +11,7 @@ Authenticate immutable public `0.3.1` as described in the
 surface in a fresh environment:
 
 ```bash
-python -m pip install 'django-asklens[mcp]==0.3.1'
+python -m pip install 'django-asklens[mcp]==0.3.2'
 ```
 
 A same-version local rebuild and its digest are separate local evidence, not the

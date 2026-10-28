@@ -67,7 +67,7 @@ def test_showcase_has_reproducible_offline_capture_and_accessible_context() -> N
         assert "North Studio" in text
         assert "offline" in text.lower()
         assert "arbitrary" in text.lower()
-        assert "0.3.1" in text
+        assert "0.3.2" in text
     assert "![" in showcase
     assert 'kind="captions"' in showcase
     assert 'aria-describedby="offline-walkthrough"' in showcase
@@ -234,10 +234,25 @@ def test_outreach_packets_are_drafts_with_observed_limits() -> None:
         assert "author" in draft.lower()
         assert "feedback" in draft.lower()
         assert "alpha" in draft.lower()
+        assert "0.3.2" in draft
+        assert re.search(
+            r"No (?:post or )?submission has been made", " ".join(draft.split())
+        )
+        assert "Maintainer review" in draft
+        assert "not ready" in draft.lower()
+        assert "documentation closeout" in draft
+        assert "exact" in draft.lower()
+        assert "synthetic" in draft.lower()
     assert "without logging in" in packages
     assert re.search(r"\*\*Observed:\*\* 20\d{2}-\d{2}-\d{2} UTC", packages)
-    assert "pages 1 and 2" in packages
+    assert "9 of 23 packages" in packages
+    assert "20 distinct package links on page 1 and 3 on page 2" in packages
+    assert "Pages 1 and 2" in packages
     assert "Neither returned page contained" in packages
+    assert "versions/?page=1" in packages
+    assert "still displayed\n`0.3.1`" in packages
+    assert "already-public PyPI `0.3.2`" in packages
+    assert "No login," in packages
     assert "not ready to submit" in awesome.lower()
     assert "under 100 stars" in awesome
     assert "- [x] Yes" in awesome

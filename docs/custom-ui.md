@@ -2,7 +2,7 @@
 
 AskLens does not require the packaged browser UI. Treat the packaged page as a demo shell around the public API. Production projects can build their own React, Vue, HTMX, Django-template, mobile, Slack, or internal dashboard UI and render AskLens results however they want.
 
-Before replacing that shell, the [synthetic source-demo journey](test-project-demo.md#sqlite-frontend-and-admin-first-run-start-to-reset) provides a no-API-key reference for login, an exact suggested success, scoped empty results, safe errors, opaque denial, and cleanup. It reflects current source and does not claim those onboarding details are already shipped in the immutable public `0.3.1` wheel.
+Before replacing that shell, the [synthetic source-demo journey](test-project-demo.md#sqlite-frontend-and-admin-first-run-start-to-reset) provides a no-API-key reference for login, an exact suggested success, scoped empty results, safe errors, opaque denial, and cleanup. At the immutable `v0.3.2` tag it reflects release-source behavior; mutable `main` may become newer than the public wheel.
 
 ## Endpoints to call
 

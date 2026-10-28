@@ -4,9 +4,12 @@ Django AskLens is the Django implementation of the [AskLens specification](askle
 
 Django AskLens was created by [Revaz Zakalashvili](https://github.com/revazi) ([revaz.zakalashvili@gmail.com](mailto:revaz.zakalashvili@gmail.com)).
 
-This checkout prepares **unpublished `0.3.2`**. Public `0.3.1` remains the
-current alpha; see the [candidate preparation record](release-preparation-0.3.2.md)
-for scope, compatibility, and outstanding publication gates.
+**`django-asklens==0.3.2` is the current published alpha.** See the
+[immutable GitHub Release](https://github.com/revazi/django-asklens/releases/tag/v0.3.2),
+[PyPI version record](https://pypi.org/project/django-asklens/0.3.2/), and
+[Installation](installation.md) for exact public artifact identities. The
+[candidate preparation record](release-preparation-0.3.2.md) is retained as
+historical pre-publication evidence.
 
 ## See it
 
@@ -33,21 +36,21 @@ configured offline questions match exact text only.
 - [Configure providers](providers.md)
 - [Use the authenticated API](usage.md)
 - [Build a custom UI](custom-ui.md)
-- [Bounded MCP quickstart and integration notes](mcp-integration.md) — public `0.3.1` `[mcp]` extra, trusted context mapping, compact discovery, and safe row defaults
+- [Bounded MCP quickstart and integration notes](mcp-integration.md) — public `0.3.2` `[mcp]` extra, trusted context mapping, compact discovery, and safe row defaults
 
 ## Package provenance
 
 > [!IMPORTANT]
-> `django-asklens==0.3.1` is the current published alpha, not a stable or
-> production-certified release. Current source documentation and the synthetic
-> source demo may be newer than the immutable public wheel. Authenticate the
+> `django-asklens==0.3.2` is the current published alpha, not a stable or
+> production-certified release. Mutable source documentation and the synthetic
+> source demo may become newer than the immutable public wheel. Authenticate the
 > artifact you install and review the exact public hashes, tag/commit/tree,
 > Python/Django ranges, historical release evidence, and supported upgrade
 > origins in [Installation](installation.md). The immutable
-> [`v0.3.1` source snapshot](https://github.com/revazi/django-asklens/blob/v0.3.1/README.md)
-> and [GitHub Release](https://github.com/revazi/django-asklens/releases/tag/v0.3.1)
-> remain the public `0.3.1` references; same-version local rebuilds are separate
-> local evidence.
+> [`v0.3.2` source snapshot](https://github.com/revazi/django-asklens/blob/v0.3.2/README.md),
+> [GitHub Release](https://github.com/revazi/django-asklens/releases/tag/v0.3.2),
+> and [PyPI record](https://pypi.org/project/django-asklens/0.3.2/) establish the
+> public release; same-version local rebuilds are separate local evidence.
 
 ## Security and operations
 

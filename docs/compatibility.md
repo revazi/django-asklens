@@ -50,17 +50,17 @@ and requires explicit release notes and actionable migration guidance. This
 policy provides no fixed deprecation period and makes no compatibility promise
 for `0.4.0` or 1.0.
 
-## Upgrade to public 0.3.1
+## Upgrade to public 0.3.2
 
-The immediate prior supported origin is immutable public `0.3.0`. Published
-`0.2.0` remains the supported older `0.2.x` origin and is checked separately
-rather than being treated as the immediate maintenance hop. `0.1.0a1` remains a
-testing artifact and is not an upgrade origin. The public `0.3.1` wheel and
-source distribution must be authenticated against their immutable publication
-record. A same-version local rebuild and its digest remain separate local
-evidence even when the source commit matches.
+The immediate prior supported origin is immutable public `0.3.1`. Published
+`0.3.0` is an older separately checked origin, and `0.2.0` remains the
+supported older `0.2.x` origin. `0.1.0a1` remains a testing artifact and is not
+an upgrade origin. The public `0.3.2` wheel and source distribution must be
+authenticated against their immutable publication record. A same-version local
+rebuild and its digest remain separate local evidence even when the source
+commit matches.
 
-1. Back up and test according to host policy, pin exact public `0.3.1`,
+1. Back up and test according to host policy, pin exact public `0.3.2`,
    authenticate the selected public artifact as described in
    [Installation](installation.md), and run the normal Django system check,
    migration-drift check, and application tests for every enabled adapter.

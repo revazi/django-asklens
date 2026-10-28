@@ -1,4 +1,4 @@
-"""Keep unpublished 0.3.2 preparation distinct from immutable public 0.3.1."""
+"""Keep public 0.3.2 status and historical preparation evidence distinct."""
 
 from __future__ import annotations
 
@@ -10,7 +10,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def test_candidate_version_agrees_across_source_metadata_and_lock() -> None:
+def test_release_version_agrees_across_source_metadata_and_lock() -> None:
     metadata = tomllib.loads((ROOT / "pyproject.toml").read_text())
     module = ast.parse((ROOT / "django_asklens/__init__.py").read_text())
     exported = next(
@@ -30,20 +30,23 @@ def test_candidate_version_agrees_across_source_metadata_and_lock() -> None:
     )
 
 
-def test_candidate_docs_do_not_claim_a_public_release() -> None:
-    for name in (
-        "docs/index.md",
-        "docs/release-preparation-0.3.2.md",
-    ):
-        text = (ROOT / name).read_text()
-        assert "unpublished" in text.lower(), name
-        assert "0.3.1" in text and "0.3.2" in text, name
+def test_release_closeout_records_public_identity_and_preserves_history() -> None:
     readme = " ".join((ROOT / "README.md").read_text().split())
-    assert "prepared alpha release line" in readme
-    assert "until those exist and public verification succeeds" in readme
-    assert "`0.3.1` remains current" in readme
+    assert "`django-asklens==0.3.2` is the current published alpha" in readme
+    assert "`0.3.1` remains current" not in readme
     assert "python -m pip install 'django-asklens==0.3.2'" in readme
     assert "https://revazi.github.io/django-asklens/" in readme
+
+    index = " ".join((ROOT / "docs/index.md").read_text().split())
+    assert "`django-asklens==0.3.2` is the current published alpha" in index
+    assert "PyPI version record" in index
+
+    preparation = " ".join(
+        (ROOT / "docs/release-preparation-0.3.2.md").read_text().split()
+    )
+    assert "Status: published 2026-10-27" in preparation
+    assert "preserve the pre-publication candidate rationale" in preparation
+
     release_notes = " ".join(
         (ROOT / ".github/release-notes/0.3.2.md").read_text().split()
     )
@@ -51,15 +54,23 @@ def test_candidate_docs_do_not_claim_a_public_release() -> None:
     assert "Before a successful Trusted Publishing run" in release_notes
     assert "After publication" in release_notes
     assert "immutable `v0.3.2` GitHub Release" in release_notes
+
     changelog = (ROOT / "CHANGELOG.md").read_text()
-    candidate = changelog.split("## 0.3.2 — Unpublished candidate", 1)[1].split(
-        "## 0.3.1", 1
-    )[0]
-    assert "Public `0.3.1` remains current" in candidate
-    assert "No AskLens migration" in candidate
+    released = changelog.split("## 0.3.2 — 2026-10-27", 1)[1].split("## 0.3.1", 1)[0]
+    assert "current published alpha" in released
+    assert "No AskLens migration" in released
+
     install = (ROOT / "docs/installation.md").read_text()
-    assert "## Current published alpha: 0.3.1" in install
-    assert "Do not install `0.3.2` from PyPI" in install
+    assert "## Current published alpha: 0.3.2" in install
+    for identity in (
+        "5ab7e9e76f6a39a59894ae2fce600e4c707077c3",
+        "b3cb5a5b84fdeb35f1b4ce972a0abd33b6934982",
+        "9fba0b64b5f4efc5ae15cc9790374d3528acc1af",
+        "739d5411cd0b0ab63ac8dae9e9a0a4f2cf396cb2e0f0ef5bbfac9a2c4607b050",
+        "e522055e3b34eac434cabff6db8bb4c278e210591bcd95027956f2449daee177",
+    ):
+        assert identity in install
+    assert "Do not install `0.3.2` from PyPI" not in install
 
 
 def test_all_upgrade_origins_are_explicit_and_authenticated() -> None:
@@ -81,9 +92,8 @@ def test_all_upgrade_origins_are_explicit_and_authenticated() -> None:
     )
 
 
-def test_candidate_does_not_change_runtime_bounds_or_migrations() -> None:
-    """Preparation retains the current source baseline's declared support surface."""
-    # Explicit invariants also work in shallow checkouts and exported source.
+def test_release_retains_runtime_bounds_and_migrations() -> None:
+    """Closeout retains the released support surface and migration graph."""
     project = tomllib.loads((ROOT / "pyproject.toml").read_text())["project"]
     assert project["requires-python"] == ">=3.12"
     assert project["dependencies"] == ["Django>=5.2,<7.0", "pydantic>=2,<3"]
