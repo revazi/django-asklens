@@ -63,6 +63,6 @@ nav:
       - Internal surface audit: internal-surface-leakage-audit.md
       - Internal failure modes: internal-failure-mode-matrix.md
       - HTTP/internal crosswalk: http-internal-envelope-crosswalk.md
-      - Proposed 0.3.2 preparation: release-preparation-0.3.2.md
+      - 0.3.2 release preparation record: release-preparation-0.3.2.md
       - Release process: releasing.md
       - Docs build and Pages activation: pages-deployment.md

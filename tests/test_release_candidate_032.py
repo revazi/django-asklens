@@ -41,6 +41,10 @@ def test_release_closeout_records_public_identity_and_preserves_history() -> Non
     assert "`django-asklens==0.3.2` is the current published alpha" in index
     assert "PyPI version record" in index
 
+    mkdocs = (ROOT / "mkdocs.yml").read_text()
+    assert "0.3.2 release preparation record" in mkdocs
+    assert "Proposed 0.3.2 preparation" not in mkdocs
+
     preparation = " ".join(
         (ROOT / "docs/release-preparation-0.3.2.md").read_text().split()
     )
