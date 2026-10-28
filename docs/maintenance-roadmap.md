@@ -1,17 +1,17 @@
 # 0.3.x maintenance roadmap
 
 This is a prioritized engineering split, not a release promise or a substitute
-for tracked review. The immutable `v0.2.0`, `v0.3.0`, and `v0.3.1` tags,
-releases, and public artifacts remain historical records and must not be moved,
+for tracked review. The immutable `v0.2.0`, `v0.3.0`, `v0.3.1`, and `v0.3.2`
+tags, releases, and public artifacts remain historical records and must not be moved,
 recreated, or overwritten. The historical `0.1.0a1` package remains an
 unsupported testing artifact, not an upgrade origin.
 
 No future version or delivery date is promised here. Each change still requires
 its own tracked review and exact-head evidence.
 
-## Published `0.3.1` maintenance scope
+## Published `0.3.2` maintenance scope
 
-`0.3.1` is the current published maintenance release: compatible,
+`0.3.2` is the current published maintenance release: compatible,
 migration-free work that hardens release operations and closes focused evidence
 gaps without expanding package contracts. It remains an alpha maintenance
 release.
@@ -42,10 +42,11 @@ release.
    percentage threshold. Permission-resolution, cross-adapter scope, audit, and
    observability failures remain high-value review areas.
 5. **Keep executable installation and provenance guidance current.** The
-   current public `0.3.1` wheel and source distribution must stay tied to
+   current public `0.3.2` wheel and source distribution must stay tied to
    independently recorded digests and immutable documentation. Local rebuilds
-   remain separate evidence. Public `0.3.0` is the immediate prior supported
-   upgrade origin, and `0.2.0` remains the older supported `0.2.x` origin.
+   remain separate evidence. Public `0.3.1` is the immediate prior supported
+   upgrade origin, `0.3.0` is an older checked origin, and `0.2.0` remains the
+   older supported `0.2.x` origin.
 6. **Maintain synthetic operational evidence.** Re-run package, Django,
    migration, PostgreSQL, and reference-browser checks when their affected paths
    change. Synthetic checks are not live-provider, production-capacity,
@@ -85,7 +86,7 @@ Playwright coverage must not be reduced to fund it.
 
 ## Separately reviewed future-minor work
 
-The following categories are not `0.3.1` maintenance. They require tracked design
+The following categories are not compatible `0.3.x` maintenance. They require tracked design
 and compatibility review in a future minor line; this roadmap assigns neither a
 version nor a delivery date.
 

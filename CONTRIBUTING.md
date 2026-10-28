@@ -2,7 +2,7 @@
 
 Thanks for your interest in Django AskLens.
 
-Django AskLens 0.3.1 is a public alpha. APIs may change, and contributions should keep the package safe, small, and deterministic.
+Django AskLens 0.3.2 is the current public alpha. APIs may change, and contributions should keep the package safe, small, and deterministic.
 
 ## Development setup
 

@@ -7,12 +7,12 @@ provider call, frontend, or MCP integration.
 ## Artifact boundary
 
 > [!IMPORTANT]
-> This guide describes immutable public `django-asklens==0.3.1`, the current
+> This guide describes immutable public `django-asklens==0.3.2`, the current
 > alpha release. Authenticate the selected public artifact against
-> [Installation](installation.md#current-published-alpha-031). Public `0.3.0`
-> is the immediate prior supported upgrade origin, `0.2.0` is the supported
-> older `0.2.x` origin, and the historical `0.1.0a1` package is not a supported
-> upgrade origin.
+> [Installation](installation.md#current-published-alpha-032). Public `0.3.1`
+> is the immediate prior supported upgrade origin, `0.3.0` is an older checked
+> origin, `0.2.0` is the supported older `0.2.x` origin, and the historical
+> `0.1.0a1` package is not a supported upgrade origin.
 
 The disposable smoke at the end instead builds one wheel from the current local
 source, installs that exact file, and reports its digest. That local rebuild is
@@ -22,8 +22,8 @@ separate evidence and is not the immutable public wheel. See
 For a browser-first, no-API-key evaluation using the repository's existing
 synthetic app and exact offline questions, use the
 [current source-demo journey](test-project-demo.md#sqlite-frontend-and-admin-first-run-start-to-reset).
-That source path can contain unshipped onboarding polish and is not a description
-of additional behavior in the immutable public `0.3.1` artifact.
+Mutable source may become newer; use the immutable `v0.3.2` snapshot when
+reproducing release-specific behavior.
 
 ## 1. Install the exact core artifact
 
@@ -35,7 +35,7 @@ mkdir asklens-core-quickstart
 cd asklens-core-quickstart
 python -m venv .venv-asklens-core
 .venv-asklens-core/bin/python -m pip install --no-cache-dir \
-  'django-asklens==0.3.1'
+  'django-asklens==0.3.2'
 .venv-asklens-core/bin/django-admin startproject quickstart .
 .venv-asklens-core/bin/python manage.py startapp shop
 ```
@@ -252,9 +252,9 @@ with permission, membership, model, or scope diagnostics.
 
 ## 7. Run the disposable wheel smoke
 
-For public-release evidence, use a clean immutable `v0.3.1` source checkout.
-Running this command from the current candidate checkout instead builds
-unpublished `0.3.2` and is only local candidate evidence:
+For release-source evidence, use a clean immutable `v0.3.2` source checkout.
+Running this command from mutable `main` instead builds local bytes and is only
+separate local evidence:
 
 ```bash
 bash scripts/quickstart-core-smoke.sh

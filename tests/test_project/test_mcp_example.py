@@ -193,7 +193,7 @@ def test_mcp_quickstart_docs_cover_the_bounded_safe_flow() -> None:
 
     for document in (guide, example):
         normalized_document = " ".join(document.split())
-        assert "python -m pip install 'django-asklens[mcp]==0.3.1'" in document
+        assert "python -m pip install 'django-asklens[mcp]==0.3.2'" in document
         assert "same-version local rebuild" in normalized_document
         assert "not a supported upgrade" in normalized_document
         assert "server-owned" in document

@@ -15,7 +15,7 @@
 
 Safe natural-language querying over explicitly registered Django models. AskLens does **not** let an LLM write SQL. It asks a provider for structured JSON, validates that plan against your catalog and the current request's permissions, compiles a read-only Django ORM query, and returns table-ready JSON.
 
-`django-asklens==0.3.2` is the prepared alpha release line, not a stable or production-certified release. Its public availability and immutable artifact identity are established only by the [`v0.3.2` GitHub Release](https://github.com/revazi/django-asklens/releases/tag/v0.3.2) and [PyPI version record](https://pypi.org/project/django-asklens/0.3.2/); until those exist and public verification succeeds, `0.3.1` remains current. Adapters may still change. Authenticate public artifacts before use; hashes and upgrade origins are in [Installation](docs/installation.md), and the [0.3.2 preparation record](docs/release-preparation-0.3.2.md) preserves candidate scope and evidence.
+`django-asklens==0.3.2` is the current published alpha, not a stable or production-certified release. Its public availability and immutable artifact identity are established by the [`v0.3.2` GitHub Release](https://github.com/revazi/django-asklens/releases/tag/v0.3.2) and [PyPI version record](https://pypi.org/project/django-asklens/0.3.2/). Adapters may still change. Authenticate public artifacts before use; hashes and upgrade origins are in [Installation](docs/installation.md), and the [0.3.2 preparation record](docs/release-preparation-0.3.2.md) preserves the pre-publication candidate scope and evidence.
 
 Django AskLens was created by [Revaz Zakalashvili](https://github.com/revazi).
 
@@ -99,8 +99,7 @@ remain active.
 
 ## Installation
 
-After confirming that the `0.3.2` PyPI record exists and authenticating the
-release artifacts:
+After authenticating the public `0.3.2` release artifacts:
 
 ```bash
 python -m pip install 'django-asklens==0.3.2'

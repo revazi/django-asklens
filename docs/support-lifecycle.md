@@ -13,12 +13,13 @@ Artifact provenance remains part of every support statement:
 - The immutable `django-asklens==0.2.0` PyPI release is the first supported
   alpha release and the supported `0.2.x` upgrade origin; use its tagged
   documentation.
-- Immutable public `django-asklens==0.3.1` is the current alpha release. Use its
-  [`v0.3.1` tag](https://github.com/revazi/django-asklens/tree/v0.3.1),
-  [GitHub Release](https://github.com/revazi/django-asklens/releases/tag/v0.3.1),
+- Immutable public `django-asklens==0.3.2` is the current alpha release. Use its
+  [`v0.3.2` tag](https://github.com/revazi/django-asklens/tree/v0.3.2),
+  [GitHub Release](https://github.com/revazi/django-asklens/releases/tag/v0.3.2),
   and exact public identities in [Installation](installation.md). A same-version
-  local rebuild remains separate local evidence. Public `0.3.0` is the
-  immediate prior supported upgrade origin.
+  local rebuild remains separate local evidence. Public `0.3.1` is the
+  immediate prior supported upgrade origin; `0.3.0` remains an older checked
+  origin.
 - `0.1.0a1` was a testing artifact only and is not a supported upgrade origin.
 
 Do not combine packages, workers, clients, documentation, or persisted plans
@@ -29,7 +30,7 @@ matching artifact.
 
 ## Current evidence
 
-The immutable `0.2.0`, `0.3.0`, and `0.3.1` releases use the following
+The immutable `0.2.0`, `0.3.0`, `0.3.1`, and `0.3.2` releases use the following
 repository-operated support matrix. Claims apply only to the exact commit and
 artifacts that passed the named checks:
 
@@ -43,7 +44,7 @@ artifacts that passed the named checks:
   - PG18 / Python 3.13 / Django 6.1.
 - The reference browser/API/MCP smoke runs on PostgreSQL 18, Python 3.13, and
   Django 6.1.
-- Public `0.3.1` package metadata requires Python `>=3.12`, Django
+- Public `0.3.2` package metadata requires Python `>=3.12`, Django
   `>=5.2,<7.0`, and Pydantic v2. The optional API extra requires DRF
   `>=3.18,<4`; the optional MCP extra requires FastMCP `>=3.4,<5`.
 
@@ -169,9 +170,9 @@ provisional, optional, internal, and unsupported areas. The 0.3.x boundary is
 limited to its exact registration, trusted-execution, public-error, and
 observability rows. See the [AskLens specification](asklens-specification.md).
 
-Immutable public `0.3.1` is the current alpha. Public `0.3.0` is its immediate
-prior supported upgrade origin, while `0.2.0` remains the supported older
-`0.2.x` origin. Both actionable upgrade paths require normal host checks but no
+Immutable public `0.3.2` is the current alpha. Public `0.3.1` is its immediate
+prior supported upgrade origin, `0.3.0` remains an older checked origin, and
+`0.2.0` remains the supported older `0.2.x` origin. Both actionable upgrade paths require normal host checks but no
 AskLens migration for this scope; every persisted plan is revalidated by the
 current facade. `0.1.0a1` remains a testing artifact and is not a supported
 upgrade origin. There is no fixed deprecation window or rollback promise.
@@ -180,6 +181,7 @@ stay internal, draft, unfrozen, and unversioned. Do not add document versions,
 schema versions, extension negotiation, or previous-shape compatibility.
 
 Do not record or handle schema changes. The first-install migrations, changelog
-entries, exact public-artifact checks for `0.2.0`, `0.3.0`, and `0.3.1`, and
+entries, exact public-artifact checks for `0.2.0`, `0.3.0`, `0.3.1`, and
+`0.3.2`, and
 separate exact local rebuild checks are repository-operated evidence; they are
 not production certification or an independent security review.

@@ -4,14 +4,14 @@ Django AskLens is the Django implementation of the [AskLens specification](askle
 
 > **Alpha trust-boundary warning:** `parse_query_plan()` establishes structure only. Use `execute_plan(plan, request=request)` for execution: it treats mappings and existing `QueryPlan` objects as untrusted and repeats current catalog, permission, limit, and request-scope validation. The compiler and compiled-query executor are internal and not public exports. Never treat a previously validated `QueryPlan` as a reusable authorization token.
 
-Install immutable public `0.3.1`, the current alpha, after authenticating the
+Install immutable public `0.3.2`, the current alpha, after authenticating the
 selected artifact against [Installation](installation.md):
 
 ```bash
-python -m pip install 'django-asklens==0.3.1'
+python -m pip install 'django-asklens==0.3.2'
 ```
 
-Install `django-asklens[api]==0.3.1` only when you want the built-in provisional
+Install `django-asklens[api]==0.3.2` only when you want the built-in provisional
 DRF routes under `django_asklens.api` or the packaged reference frontend. A
 same-version local rebuild is separate evidence and is not the public artifact.
 For a fresh project with complete registration startup wiring, explicit global

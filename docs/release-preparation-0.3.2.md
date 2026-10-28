@@ -1,9 +1,12 @@
-# Proposed 0.3.2 release preparation
+# 0.3.2 release preparation record
 
-**Status: unpublished candidate.** Public `django-asklens==0.3.1` remains the
-current published alpha. There are no public `0.3.2` artifact hashes, tag, or
-release record established by this document. Local builds and digests are
-candidate evidence only. Do not install `0.3.2` from PyPI before publication.
+**Status: published 2026-10-27.** `django-asklens==0.3.2` is the current
+published alpha. The immutable [`v0.3.2` GitHub Release](https://github.com/revazi/django-asklens/releases/tag/v0.3.2),
+[PyPI record](https://pypi.org/project/django-asklens/0.3.2/), and exact public
+identities in [Installation](installation.md) establish the release—not this
+mutable preparation document. The sections below preserve the pre-publication
+candidate rationale, evidence, and gates as historical context; their future
+or candidate tense is not current release status.
 
 ## Why a patch release
 
@@ -92,7 +95,7 @@ These results are bounded local preparation evidence, not final hosted approval,
 public artifact verification, production certification, or independent review.
 No real-project commit, push, tag, upload, deployment, or outreach was performed.
 
-## Remaining release gates
+## Historical release gates (subsequently completed)
 
 1. Review the final diff, package metadata, changelog, and candidate notes.
 2. Verify the full local suite, dependency audit, docs rendering, candidate
@@ -108,6 +111,8 @@ No real-project commit, push, tag, upload, deployment, or outreach was performed
    downloaded public wheel/sdist, and verify the post-publication matrix before
    updating current-release status and public hash records.
 
-No preparation step deploys Pages, requests OIDC, approves an environment,
-changes publisher settings, posts outreach, or publishes Python artifacts.
-See the [release runbook](releasing.md) for publication and incident boundaries.
+At preparation time, none of these steps deployed Pages, requested OIDC,
+approved an environment, changed publisher settings, posted outreach, or
+published Python artifacts. The later authorized Pages deployment and `0.3.2`
+Trusted Publishing run are separate records. See the
+[release runbook](releasing.md) for publication and incident boundaries.

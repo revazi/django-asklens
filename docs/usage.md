@@ -4,7 +4,7 @@
 
 > [!IMPORTANT]
 > This journey describes the optional provisional API in immutable public
-> `django-asklens==0.3.1`, the current alpha release. Authenticate the selected
+> `django-asklens==0.3.2`, the current alpha release. Authenticate the selected
 > public artifact against [Installation](installation.md). The API remains alpha
 > and outside the governed 0.3.x boundary. A same-version local rebuild is
 > separate local evidence, not the public artifact. The historical `0.1.0a1`
@@ -14,9 +14,9 @@ This path uses Django's existing session authentication, one normal user, a host
 
 ### 1. Install and mount the current optional API
 
-Install `django-asklens[api]==0.3.1` only after authenticating the public
+Install `django-asklens[api]==0.3.2` only after authenticating the public
 artifact. See
-[Installation](installation.md#authenticated-api-prerequisites-for-public-031).
+[Installation](installation.md#authenticated-api-prerequisites-for-public-032).
 Add the normal host auth/session apps and middleware, `rest_framework`, AskLens,
 and the one host app that owns registration:
 

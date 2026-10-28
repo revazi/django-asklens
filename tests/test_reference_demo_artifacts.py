@@ -506,8 +506,8 @@ def test_api4a_source_and_exact_wheel_evidence_are_strict_and_route_local() -> N
         assert required in wheel_smoke
 
 
-def test_package_provenance_identifies_public_031_and_separate_local_rebuilds() -> None:
-    """Current 0.3.1, prior 0.3.0/0.2.0, and local rebuilds stay distinct."""
+def test_package_provenance_identifies_public_032_and_separate_local_rebuilds() -> None:
+    """Current 0.3.2, prior releases, and local rebuilds stay distinct."""
 
     readme = read_text(ROOT / "README.md")
     index = read_text(ROOT / "docs" / "index.md")
@@ -516,28 +516,28 @@ def test_package_provenance_identifies_public_031_and_separate_local_rebuilds() 
     core_api = read_text(ROOT / "docs" / "core-python-api.md")
     contributing = read_text(ROOT / "CONTRIBUTING.md")
     provenance_docs = (install,)
-    tagged_031_docs = "https://github.com/revazi/django-asklens/blob/v0.3.1/README.md"
-    release_031 = "https://github.com/revazi/django-asklens/releases/tag/v0.3.1"
+    tagged_032_docs = "https://github.com/revazi/django-asklens/blob/v0.3.2/README.md"
+    release_032 = "https://github.com/revazi/django-asklens/releases/tag/v0.3.2"
     tagged_020_docs = "https://github.com/revazi/django-asklens/blob/v0.2.0/README.md"
-    tag_object = "34f123230c2ea09622f0f2906eeaf775619f78bb"
-    commit = "1b19ba8dea81117d9ff79d64bd28e3136cd93e6e"
-    tree = "5a914eb84b697d0d7c030b311d68c305df9a9ed5"
-    wheel = "django_asklens-0.3.1-py3-none-any.whl"
-    wheel_sha256 = "4332c62aad6e7b27f553af3f8796ed6090e6207ddad6a30a1c4665e9a1085887"
-    sdist = "django_asklens-0.3.1.tar.gz"
-    sdist_sha256 = "5e011f2272a7fe6f53df5bae757d045042d39e31cfba40eb51766d703eb38dde"
+    tag_object = "5ab7e9e76f6a39a59894ae2fce600e4c707077c3"
+    commit = "b3cb5a5b84fdeb35f1b4ce972a0abd33b6934982"
+    tree = "9fba0b64b5f4efc5ae15cc9790374d3528acc1af"
+    wheel = "django_asklens-0.3.2-py3-none-any.whl"
+    wheel_sha256 = "739d5411cd0b0ab63ac8dae9e9a0a4f2cf396cb2e0f0ef5bbfac9a2c4607b050"
+    sdist = "django_asklens-0.3.2.tar.gz"
+    sdist_sha256 = "e522055e3b34eac434cabff6db8bb4c278e210591bcd95027956f2449daee177"
     commands = (
-        "python -m pip install 'django-asklens==0.3.1'",
-        "python -m pip install 'django-asklens[api]==0.3.1'",
-        "python -m pip install 'django-asklens[mcp]==0.3.1'",
+        "python -m pip install 'django-asklens==0.3.2'",
+        "python -m pip install 'django-asklens[api]==0.3.2'",
+        "python -m pip install 'django-asklens[mcp]==0.3.2'",
     )
 
     for document in provenance_docs:
         normalized = " ".join(document.replace("\n> ", " ").split())
         assert "current published alpha" in normalized
         assert "production-certified" in normalized
-        assert tagged_031_docs in document
-        assert release_031 in document
+        assert tagged_032_docs in document
+        assert release_032 in document
         assert tag_object in document
         assert commit in document
         assert tree in document
@@ -546,8 +546,8 @@ def test_package_provenance_identifies_public_031_and_separate_local_rebuilds() 
         for command in commands:
             assert command in document
         assert "local" in normalized and "separate" in normalized
-        assert "pre-publication wording" in normalized
-        assert "historical release evidence" in normalized
+        assert "PyPI version record" in normalized
+        assert "immutable" in normalized
         assert "Python `>=3.12`" in normalized
         assert "Django `>=5.2,<7.0`" in normalized
         assert "Python 3.12" in normalized and "3.13" in normalized
@@ -576,8 +576,8 @@ def test_package_provenance_identifies_public_031_and_separate_local_rebuilds() 
     assert "## Package provenance" not in readme
     assert wheel_sha256 not in readme
     assert tag_object not in readme
-    assert "prepared alpha release line" in readme
-    assert "`0.3.1` remains current" in readme
+    assert "current published alpha" in readme
+    assert "`0.3.1` remains current" not in readme
     assert "production-certified" in readme
     assert "[Installation](docs/installation.md)" in readme
     index_positions = [
@@ -594,8 +594,8 @@ def test_package_provenance_identifies_public_031_and_separate_local_rebuilds() 
     assert "[Installation](installation.md)" in index
     assert index.index(provenance_heading) < index.index("## Guides")
 
-    current_heading = "## Current published alpha: 0.3.1"
-    immediate_heading = "## Immediate prior release and upgrade origin: 0.3.0"
+    current_heading = "## Current published alpha: 0.3.2"
+    immediate_heading = "## Immediate prior release and upgrade origin: 0.3.1"
     older_heading = "## Older supported 0.2.x upgrade origin: 0.2.0"
     source_heading = "## Source checkout and exact local artifacts"
     positions = [
@@ -615,7 +615,7 @@ def test_package_provenance_identifies_public_031_and_separate_local_rebuilds() 
     assert current_commands == list(commands)
     for required in (
         "bash scripts/published-package-smoke.sh",
-        "--version 0.3.1",
+        "--version 0.3.2",
         f"--wheel-sha256 {wheel_sha256}",
         f"--sdist-sha256 {sdist_sha256}",
         "fixed PyPI hosts",
@@ -623,16 +623,16 @@ def test_package_provenance_identifies_public_031_and_separate_local_rebuilds() 
         "production, live-provider, deployment, adoption, or",
         "independent-security evidence",
         "same-version local rebuild",
-        "not either immutable public artifact",
+        "separate local evidence",
     ):
         assert required in normalized_current_section
 
     immediate_section = install[positions[1] : positions[2]]
     for required in (
-        "v0.3.0",
-        "immediate prior public release",
-        "django_asklens-0.3.0-py3-none-any.whl",
-        "django_asklens-0.3.0.tar.gz",
+        "v0.3.1",
+        "immediate prior release records",
+        "django_asklens-0.3.1-py3-none-any.whl",
+        "django_asklens-0.3.1.tar.gz",
     ):
         assert required in immediate_section
 
@@ -651,9 +651,12 @@ def test_package_provenance_identifies_public_031_and_separate_local_rebuilds() 
 
     source_section = install[positions[3] :]
     normalized_source_section = " ".join(source_section.split())
-    assert "locally built wheel reports `0.3.2`" in normalized_source_section
-    assert "not either immutable public `0.3.1` artifact" in normalized_source_section
-    assert "### Exact local release-source package evidence" in source_section
+    assert (
+        "wheel built from mutable `main` may report `0.3.2`"
+        in normalized_source_section
+    )
+    assert "not either immutable public `0.3.2` artifact" in normalized_source_section
+    assert "### Exact local source-package evidence" in source_section
     assert "authenticates the exact public `0.3.0`" in normalized_source_section
     assert "separate probe authenticates published `0.2.0`" in normalized_source_section
     assert "authenticates the exact public `0.3.1`" in normalized_source_section
@@ -664,15 +667,15 @@ def test_package_provenance_identifies_public_031_and_separate_local_rebuilds() 
     assert "private-candidate-evaluation.md" not in install
     assert "pilot-intake-worksheet.md" not in install
 
-    assert "python -m pip install 'django-asklens==0.3.1'" in core_api
+    assert "python -m pip install 'django-asklens==0.3.2'" in core_api
     normalized_core_api = " ".join(core_api.split())
     assert "same-version local rebuild is separate evidence" in normalized_core_api
     assert "built-in provisional DRF routes" in normalized_core_api
     assert "python -m pip install django-asklens\n" not in core_api
-    assert "public `0.3.1` `[mcp]` extra" in index
+    assert "public `0.3.2` `[mcp]` extra" in index
     assert "[AskLens specification](asklens-specification.md)" in index
     assert ASKLENS_SPECIFICATION.is_file()
-    assert "Django AskLens 0.3.1 is a public alpha." in contributing
+    assert "Django AskLens 0.3.2 is the current public alpha." in contributing
 
     current_state_paths = [
         ROOT / "README.md",
@@ -779,10 +782,10 @@ def test_031_release_notes_are_bounded_neutral_and_not_packaged() -> None:
         assert required in normalized
 
     assert "## Unreleased" in changelog
-    assert "## 0.3.2 — Unpublished candidate" in changelog
+    assert "## 0.3.2 — 2026-10-27" in changelog
     assert changelog.index("## 0.3.2") < changelog.index("## 0.3.1")
     assert "## 0.3.1 — 2026-10-04" in changelog
-    assert "immutable public `0.3.1`, the current published alpha" in " ".join(
+    assert "immutable public `0.3.1`, the immediate prior published alpha" in " ".join(
         changelog.split()
     )
     assert ".github/release-notes" not in manifest
@@ -817,7 +820,7 @@ def test_core_quickstart_is_linear_executable_and_fail_closed() -> None:
 
     normalized_guide = " ".join(guide.replace("\n> ", " ").split())
     for required in (
-        "immutable public `django-asklens==0.3.1`",
+        "immutable public `django-asklens==0.3.2`",
         "Authenticate the selected public artifact",
         "not a supported upgrade origin",
         'scope_mode="global"',
@@ -897,14 +900,14 @@ def test_authenticated_api_quickstart_is_current_private_and_disposable() -> Non
     assert "host-created authenticated user" in readme
     assert "does not provide a login or token endpoint" in readme
 
-    install_heading = "## Authenticated API prerequisites for public 0.3.1"
+    install_heading = "## Authenticated API prerequisites for public 0.3.2"
     assert install_heading in install
     install_section = install[install.index(install_heading) :]
     normalized_install_section = " ".join(install_section.split())
     for required in (
-        "immutable public `0.3.1` alpha",
-        "python -m pip install 'django-asklens[api]==0.3.1'",
-        "local `0.3.1` rebuild",
+        "immutable public `0.3.2` alpha",
+        "python -m pip install 'django-asklens[api]==0.3.2'",
+        "local `0.3.2` rebuild",
         "not the public wheel",
         "[api]",
         '"rest_framework"',
@@ -934,7 +937,7 @@ def test_authenticated_api_quickstart_is_current_private_and_disposable() -> Non
     assert usage_positions == sorted(usage_positions)
     normalized_usage = " ".join(usage.replace("\n> ", " ").split())
     for required in (
-        "immutable public `django-asklens==0.3.1`",
+        "immutable public `django-asklens==0.3.2`",
         "provisional API",
         "not a supported upgrade origin",
         "normal user",
@@ -1559,9 +1562,8 @@ def test_alpha_surface_inventory_has_a_narrow_0_3_contract() -> None:
         "internal, draft, unfrozen, and unversioned",
         "AskLens specification",
         "do not add document versions",
-        "Version `0.2.0` is the first supported alpha release",
-        "Immutable public `0.3.1` is the current release",
-        "first supported alpha release",
+        "version `0.2.0` is the immutable supported older `0.2.x`",
+        "Immutable public `0.3.2` is the current release",
         "testing artifact only",
         "not a supported upgrade origin",
         "Do not record or handle previous-version schema changes",
