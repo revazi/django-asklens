@@ -1,7 +1,7 @@
 # Django Packages read-only observation and operator steps
 
-**Observed:** 2026-10-27 UTC (read-only checks completed at approximately
-23:39 UTC), without logging in or changing external state.
+**Observed:** 2026-11-12 UTC (read-only checks completed at approximately
+15:24 UTC), without logging in or changing external state.
 
 ## Sources checked
 
@@ -16,23 +16,20 @@
 - Reporting grid all-packages page 2:
   <https://djangopackages.org/grids/g/reporting/packages/?page=2>
 
-Each of the listing and grid URLs returned HTTP 200 in the signed-out check.
-The public versions page 1 also returned HTTP 200; requesting versions page 2
-returned HTTP 404, and the page-1 response did not expose another release-data
-page.
+Every listed URL returned HTTP 200 in the signed-out check.
 
 ## Package-listing observation
 
 The package listing exists and identified `django-asklens`. It linked the
-project's GitHub repository, documentation, and PyPI project. At observation
-time it reported that its package data had last been fetched roughly 13 hours
-and 34 minutes earlier. Its public release-data response still displayed
-`0.3.1`, not the already-public PyPI `0.3.2` release:
-<https://pypi.org/project/django-asklens/0.3.2/>.
+project's GitHub repository, documentation, and PyPI project. The public
+release-data endpoint included both `0.3.2` and `0.3.1`, so the earlier
+point-in-time stale-version observation no longer applies. This establishes only
+that the public Django Packages response exposed those release labels; it is not
+an endorsement, usage signal, security review, or guarantee that every metadata
+field is current.
 
-That is a point-in-time stale-metadata observation, not evidence that the
-`0.3.2` release is missing from PyPI or that Django Packages will remain stale.
-No fetch/refresh control was used because that would change external state and
+No fetch/refresh control was used. The listing was already sufficient for this
+read-only observation, and using that control would change external state and
 may require an authenticated maintainer action.
 
 ## Reporting-grid observation
@@ -61,8 +58,9 @@ AskLens appropriate for Reporting:
 
 1. Sign in to Django Packages using the maintainer's own account; do not share
    credentials or automate account access.
-2. Recheck the package listing metadata. If it is still stale, use the site's
-   package-data refresh control and verify the signed-out page afterward.
+2. Recheck the package listing metadata. Use the site's package-data refresh
+   control only if visible metadata has become stale, then verify the signed-out
+   page afterward.
 3. Open the Reporting grid's site-provided edit/add-package flow, select the
    existing `django-asklens` package rather than creating a duplicate, and
    propose only factual comparison fields supported by current documentation.

@@ -239,10 +239,15 @@ def test_outreach_packets_are_drafts_with_observed_limits() -> None:
             r"No (?:post or )?submission has been made", " ".join(draft.split())
         )
         assert "Maintainer review" in draft
-        assert "not ready" in draft.lower()
-        assert "documentation closeout" in draft
+        assert "Content-ready" in draft
+        assert "80128e2784ae2fdbdbb5ca29efea3e01aa2d147a" in draft
         assert "exact" in draft.lower()
         assert "synthetic" in draft.lower()
+    assert "https://forum.djangoproject.com/c/projects/11" in forum
+    assert "Show & Tell category" in forum
+    assert "https://django-news.com/submit/" in news
+    assert "returned HTTP 404" in news
+    assert "current public submission route was not discoverable" in news
     assert "without logging in" in packages
     assert re.search(r"\*\*Observed:\*\* 20\d{2}-\d{2}-\d{2} UTC", packages)
     assert "9 of 23 packages" in packages
@@ -250,8 +255,8 @@ def test_outreach_packets_are_drafts_with_observed_limits() -> None:
     assert "Pages 1 and 2" in packages
     assert "Neither returned page contained" in packages
     assert "versions/?page=1" in packages
-    assert "still displayed\n`0.3.1`" in packages
-    assert "already-public PyPI `0.3.2`" in packages
+    assert "included both `0.3.2` and `0.3.1`" in packages
+    assert "stale-version observation no longer applies" in packages
     assert "No login," in packages
     assert "not ready to submit" in awesome.lower()
     assert "under 100 stars" in awesome

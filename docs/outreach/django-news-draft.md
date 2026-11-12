@@ -1,13 +1,13 @@
 # Draft — Django News submission
 
-**Status (refreshed 2026-10-27):** Prepared for Revaz Zakalashvili to review,
-but **not ready to submit** while the mutable public documentation still
-contains pre-publication `0.3.2`/current-`0.3.1` wording. No submission has been
-made. The `v0.3.2` GitHub Release, PyPI record, documentation endpoints, and
-showcase endpoints linked below were rechecked; HTTP availability does not cure
-the stale release labels. The submitter is the project's creator and
-maintainer. This draft was prepared with AI assistance and requires the
-maintainer's final review after the documentation closeout.
+**Status (refreshed 2026-11-12):** Content-ready for Revaz Zakalashvili's
+final review and manual submission if he chooses. No submission has been made.
+The `v0.3.2` GitHub Release, PyPI record, public documentation, showcase, and
+security guidance linked below were rechecked after the successful Pages
+deployment from commit `80128e2784ae2fdbdbb5ca29efea3e01aa2d147a`; the checked
+pages identify `0.3.2` as the current published alpha. The submitter is the
+project's creator and maintainer. This draft was prepared with AI assistance and
+must be edited into the maintainer's own voice before submission.
 
 ## Suggested fields
 
@@ -61,12 +61,27 @@ Submitted by Revaz Zakalashvili, the project's author and maintainer. The
 submission text was prepared with AI assistance and reviewed by the author.
 The demo contains synthetic data and makes no live provider call.
 
+## Public submission-route observation
+
+A signed-out read-only check on 2026-11-12 found that
+<https://django-news.com/> is currently served as the Django News Newsletter on
+Buttondown. The homepage exposed subscription, archive, sponsorship, jobs, and
+podcast links, but no public content-submission or suggestion link. The guessed
+`https://django-news.com/submit/` route returned HTTP 404. The public Google
+Document linked from “Sponsor Us” is sponsorship guidance, not a content
+submission form.
+
+This does not prove that Django News accepts no community submissions. It means
+the current public submission route was not discoverable in the bounded
+signed-out check. The maintainer must confirm an editor-approved channel from a
+trusted current source rather than guessing a form, automating contact, or
+sending this packet unsolicited.
+
 ## Maintainer review before submission
 
-- Complete and deploy the post-release documentation closeout, then verify that
-  the linked public pages no longer call `0.3.2` unpublished or `0.3.1` current.
-- Check Django News' current submission form and field limits rather than
-  assuming this packet matches a future form unchanged.
+- Confirm the current editor-approved submission/contact channel and any field
+  limits. If no channel can be verified, retain this as a draft and do not send
+  it.
 - Re-read and edit the summary in the submitter's own voice.
 - Recheck every public link while signed out and confirm that `0.3.2` is still
   the intended current alpha.
