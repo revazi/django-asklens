@@ -262,3 +262,89 @@ def test_outreach_packets_are_drafts_with_observed_limits() -> None:
     assert "under 100 stars" in awesome
     assert "- [x] Yes" in awesome
     assert "- [x] No, it is free and open source" in awesome
+
+
+def test_awesome_django_packet_is_factual_and_operator_gated() -> None:
+    """Awesome Django evidence stays current, bounded, and non-submitting."""
+
+    packet_path = ROOT / "docs" / "outreach" / "awesome-django-submission-packet.md"
+    packet = packet_path.read_text(encoding="utf-8")
+    compact = " ".join(packet.split())
+
+    assert "Operator-only submission gate: CLOSED" in packet
+    assert "observed 2026-11-12 UTC" in compact
+    assert "signed-out, read-only HTTP access" in compact
+    assert "d3172df8c12f9be714fa490f7d6c402ce15e3afe" in packet
+    for upstream_path in (
+        "contributing.md",
+        ".github/pull_request_template.md",
+        "README.md#general",
+    ):
+        assert (
+            "wsvincent/awesome-django/blob/"
+            "d3172df8c12f9be714fa490f7d6c402ce15e3afe/"
+            f"{upstream_path}"
+        ) in packet
+    assert "Third-Party Packages → General" in compact
+    assert "ten direct entries" in compact
+    assert "directly after `iommi`" in compact
+    assert "no case-insensitive match for `AskLens` or `django-asklens`" in compact
+
+    proposed_entry = (
+        "- [django-asklens](https://github.com/revazi/django-asklens) - "
+        "Validate read-only semantic query plans over explicitly registered "
+        "Django models."
+    )
+    assert proposed_entry in packet
+
+    assert "2026-07-03T02:07:07Z" in packet
+    assert "5 GitHub stars" in packet
+    assert "six public GitHub releases" in compact
+    for version in ("v0.1.0a0", "v0.1.0a1", "v0.2.0", "v0.3.0", "v0.3.1", "v0.3.2"):
+        assert f"`{version}`" in packet
+    assert "django-asklens==0.3.2" in packet
+    assert "5ab7e9e76f6a39a59894ae2fce600e4c707077c3" in packet
+    assert "b3cb5a5b84fdeb35f1b4ce972a0abd33b6934982" in packet
+    assert "9fba0b64b5f4efc5ae15cc9790374d3528acc1af" in packet
+    assert "739d5411cd0b0ab63ac8dae9e9a0a4f2cf396cb2e0f0ef5bbfac9a2c4607b050" in packet
+    assert "e522055e3b34eac434cabff6db8bb4c278e210591bcd95027956f2449daee177" in packet
+    assert "https://revazi.github.io/django-asklens/" in packet
+
+    for requirement in (
+        "six months of active maintenance",
+        "fewer than 100 GitHub stars",
+        "stable release history",
+        "Clear documentation",
+        "real problem for the broader Django community",
+        "starter-kit or scaffolding repository",
+        "no separate license criterion",
+        "Ordering and entry formatting",
+    ):
+        assert requirement in packet
+    assert "The two objective failures—age and stars—are enough" in compact
+    assert "qualitative requirements also remain inconclusive" in compact
+
+    for disclosure in (
+        "creator and maintainer",
+        "prepared with AI assistance",
+        "only the exact configured questions",
+        "does not interpret arbitrary natural-language wording",
+        "all demo records are synthetic",
+        "not claims of adoption, endorsement, broad stability",
+        "independent security review",
+    ):
+        assert disclosure in compact
+
+    assert "Independent review finding:" in packet
+    assert "none was available or performed" in compact
+    assert "No Awesome Django fork, branch, issue, pull request" in compact
+    assert "Do not consider submission before `2027-01-03T02:07:07Z`" in compact
+    assert "Only an authorized human maintainer" in compact
+    assert "If any requirement is unmet or inconclusive" in compact
+    assert "No PR has been made" in packet
+
+    config = (ROOT / "mkdocs.yml").read_text(encoding="utf-8")
+    manifest = (ROOT / "MANIFEST.in").read_text(encoding="utf-8")
+    assert "outreach/" in config
+    assert packet_path.name not in config
+    assert "prune docs/outreach" in manifest
