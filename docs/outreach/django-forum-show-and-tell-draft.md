@@ -1,13 +1,18 @@
 # Draft — Django Forum Show & Tell
 
-**Status (refreshed 2026-10-27):** Prepared for Revaz Zakalashvili to review,
-but **not ready to post** while the mutable public documentation still contains
-pre-publication `0.3.2`/current-`0.3.1` wording. No post or submission has been
-made. The `v0.3.2` GitHub Release, PyPI files, documentation endpoints, and
-showcase endpoints linked below were rechecked; HTTP availability does not cure
-the stale release labels. The author is the creator and maintainer of Django
-AskLens. This draft was prepared with AI assistance and requires the author's
-final review after the documentation closeout.
+**Status (refreshed 2026-11-12):** Content-ready for Revaz Zakalashvili's
+final review and manual posting if he chooses. No post or submission has been
+made. The `v0.3.2` GitHub Release, PyPI files, public documentation, showcase,
+and security guidance linked below were rechecked after the successful Pages
+deployment from commit `80128e2784ae2fdbdbb5ca29efea3e01aa2d147a`; the checked
+pages identify `0.3.2` as the current published alpha. The author is the creator
+and maintainer of Django AskLens. This draft was prepared with AI assistance and
+must be edited into the author's own voice before posting.
+
+**Intended location:** Django Forum's public
+[Show & Tell category](https://forum.djangoproject.com/c/projects/11), which was
+available signed out and describes itself as a place to show projects and ask
+for feedback. Posting requires the maintainer's own authenticated account.
 
 ## Proposed title
 
@@ -82,13 +87,12 @@ uses synthetic data only.
 
 - Re-read the final text in the author's own voice; remove anything the author
   cannot personally support.
-- Complete and deploy the post-release documentation closeout, then verify that
-  the linked public pages no longer call `0.3.2` unpublished or `0.3.1` current.
 - Recheck the GitHub Release, PyPI version, documentation, showcase, and security
   links while signed out.
 - Confirm that `0.3.2` is still the intended version to describe and retain the
   alpha, exact-dummy-question, synthetic-data, affiliation, and AI disclosures.
-- Preview the post in Django Forum and check code-block and link rendering.
+- Open the signed-out Show & Tell category above, then preview the post through
+  the maintainer's own account and check code-block and link rendering.
 - Post only through the maintainer's own account. Do not automate login or
   submission. After posting, record the public URL separately rather than
   changing this draft to imply community adoption or endorsement.
