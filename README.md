@@ -21,6 +21,22 @@ Django AskLens was created by [Revaz Zakalashvili](https://github.com/revazi).
 
 ---
 
+## Integrate your first model — no API key
+
+Start with [Your first scoped question](docs/quickstart-app.md): copy a minimal
+Django consumer to a fresh directory, install the authenticated public `0.3.2`
+core wheel, and ask **Show my paid orders**. Two synthetic Django users receive
+different owner-scoped results; an empty query succeeds and an unauthorized
+user gets an opaque denial. No test-project imports, API/MCP extras, Docker, or
+live provider are needed. Dummy mode matches exact configured questions, not
+arbitrary natural language.
+
+The guide includes the runnable files, expected JSON, registration/permission
+explanation, host-model transition, troubleshooting, and bounded cleanup. These
+are new example files on current source, using existing published package
+behavior—not files retroactively added to immutable `v0.3.2`. The larger browser
+demo below remains available separately.
+
 ## Try AskLens locally — no API key
 
 Prerequisites are Python 3.12 or newer, [uv](https://docs.astral.sh/uv/), and

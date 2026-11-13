@@ -22,6 +22,7 @@ live-LLM, arbitrary-language, customer-data, or production evidence.
 
 ## Run it
 
+- [Your first scoped question in a minimal installed-package Django app](quickstart-app.md) — exact dummy question, user-backed row scope, empty/denied examples, and host-model transition
 - [Try the current synthetic source demo locally—no API key](test-project-demo.md#sqlite-frontend-and-admin-first-run-start-to-reset)
 - [Install an authenticated public artifact](installation.md)
 - [Core-only executable quickstart](quickstart-core.md)

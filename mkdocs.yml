@@ -32,6 +32,7 @@ nav:
       - Local source demo: test-project-demo.md
       - Browser showcase: showcase.md
   - Get started:
+      - Your first scoped question: quickstart-app.md
       - Installation: installation.md
       - Core quickstart: quickstart-core.md
       - Register host models: registration.md
