@@ -6,7 +6,14 @@ The project is alpha and APIs may change before a stable release.
 
 ## Unreleased
 
-No additional changes since `0.3.2`.
+### Security maintenance
+
+- Updated only the locked indirect `dnspython` (`2.9.0` → `2.9.2`) and `opentelemetry-api` (`1.45.1` → `1.45.2`) entries after the 2026-11-13 audit found GHSA-vvf4-9x63-8xvv and GHSA-mf5v-w3w3-f6cg in the optional MCP/development dependency chain. Runtime dependency bounds are unchanged; hosts must audit their own resolved environments.
+
+### Documentation and examples
+
+- Added a minimal standalone Django consumer and first-scoped-question guide using the authenticated published `0.3.2` core wheel, exact dummy questions, synthetic user-owned orders, ordinary Django permissions, safe empty/denied outcomes, and a host-model transition. These new source examples do not modify immutable public artifacts or package API behavior.
+- Added Django-only consumer regressions and source-level pytest coverage; automated exact-wheel public-tutorial CI remains a separate follow-up.
 
 ## 0.3.2 — 2026-10-27
 

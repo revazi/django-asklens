@@ -4,6 +4,12 @@ This is the shortest complete path from an exact core wheel to two reviewed
 Django resources and trusted Python execution. It uses no Django REST Framework,
 provider call, frontend, or MCP integration.
 
+To ask an exact offline question rather than supply a plan directly, start with
+[Your first scoped question](quickstart-app.md). That minimal consumer adds
+synthetic seed data, normal Django user permissions, scoped success/empty/denial
+examples, and host-model transition instructions using the installed public
+package. The direct-plan guide below remains the core API reference path.
+
 ## Artifact boundary
 
 > [!IMPORTANT]
