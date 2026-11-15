@@ -13,7 +13,8 @@ The project is alpha and APIs may change before a stable release.
 ### Documentation and examples
 
 - Added a minimal standalone Django consumer and first-scoped-question guide using the authenticated published `0.3.2` core wheel, exact dummy questions, synthetic user-owned orders, ordinary Django permissions, safe empty/denied outcomes, and a host-model transition. These new source examples do not modify immutable public artifacts or package API behavior.
-- Added Django-only consumer regressions and source-level pytest coverage; automated exact-wheel public-tutorial CI remains a separate follow-up.
+- Added Django-only consumer regressions and source-level pytest coverage.
+- Added opt-in public-tutorial replay to the existing isolated core-wheel installer and supported CI matrix. It consumes the actual example and marked guide commands/expected JSON, validates installed candidate bytes and offline/import isolation, checks rejection/audit behavior, and cleans only owned temporaries. Historical published-package probes do not run this opt-in replay by default; candidate replay is not public-artifact authentication.
 
 ## 0.3.2 — 2026-10-27
 

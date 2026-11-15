@@ -5,6 +5,7 @@ include compose.yaml
 exclude mkdocs.yml
 include .github/scripts/wheel-smoke.sh
 include .github/scripts/wheel_smoke.py
+include .github/scripts/quickstart_smoke.py
 recursive-include conformance *.json *.md
 recursive-include django_asklens/contracts/schemas *.json
 recursive-include django_asklens/templates *.html

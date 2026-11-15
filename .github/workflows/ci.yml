@@ -164,6 +164,8 @@ jobs:
           required_sdist_suffixes = {
               "/.github/scripts/wheel-smoke.sh",
               "/.github/scripts/wheel_smoke.py",
+              "/.github/scripts/quickstart_smoke.py",
+              "/examples/quickstart/manage.py",
               "/README.md",
               "/LICENSE",
               "/compose.yaml",
@@ -201,6 +203,8 @@ jobs:
           --output "$RUNNER_TEMP/asklens-source-api-routes.json"
 
       - name: Smoke test core wheel install without DRF
+        env:
+          ASKLENS_TUTORIAL_SMOKE: "1"
         run: |
           bash .github/scripts/wheel-smoke.sh \
             core \

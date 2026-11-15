@@ -106,6 +106,7 @@ host-owned and should be audited separately.
 
 ## 3. Migrate, check, and seed synthetic records
 
+<!-- asklens-smoke:setup -->
 ```bash
 .venv/bin/python manage.py migrate
 .venv/bin/python manage.py check
@@ -135,6 +136,7 @@ project to restore the original state.
 
 ## 4. Ask an exact question
 
+<!-- asklens-smoke:alice -->
 ```bash
 .venv/bin/python manage.py ask_orders 'Show my paid orders' --as-user alice
 ```
@@ -142,6 +144,7 @@ project to restore the original state.
 The response has `response_type: "query"`. Its `result` contains typed `columns`,
 `data`, and `result_metadata` (including `truncated: false`). The exact `data` is:
 
+<!-- asklens-smoke:alice-data -->
 ```json
 [
   {"product": "North class", "total_cents": 2000},
@@ -152,12 +155,14 @@ The response has `response_type: "query"`. Its `result` contains typed `columns`
 The draft order and Bob's South order must not appear. Try the same question as
 Bob:
 
+<!-- asklens-smoke:bob -->
 ```bash
 .venv/bin/python manage.py ask_orders 'Show my paid orders' --as-user bob
 ```
 
 Its `data` is exactly:
 
+<!-- asklens-smoke:bob-data -->
 ```json
 [{"product": "South membership", "total_cents": 9900}]
 ```
@@ -180,6 +185,7 @@ permission, or tenant from a query plan. In a web application, use the real
 
 A permitted query can legitimately return no rows:
 
+<!-- asklens-smoke:empty -->
 ```bash
 .venv/bin/python manage.py ask_orders 'Show my refunded orders' --as-user alice
 ```
@@ -189,6 +195,7 @@ Expected: `response_type: "query"`, `result.data: []`,
 
 The same paid-order question without the resource permission is denied:
 
+<!-- asklens-smoke:denied -->
 ```bash
 .venv/bin/python manage.py ask_orders 'Show my paid orders' --as-user no-report
 ```
@@ -200,6 +207,7 @@ superuser, or broaden the queryset to make it work.
 
 Unconfigured wording also fails safely with a nonzero exit:
 
+<!-- asklens-smoke:unmatched -->
 ```bash
 .venv/bin/python manage.py ask_orders 'Find every order please' --as-user alice
 ```
@@ -247,6 +255,7 @@ query or a production data-loading tool.
 
 Run the example's Django-only regression tests:
 
+<!-- asklens-smoke:tests -->
 ```bash
 .venv/bin/python manage.py test shop
 .venv/bin/python manage.py makemigrations --check --dry-run
@@ -289,9 +298,44 @@ run broad database deletion commands against a host project.
 
 Manual maintainer execution against an authenticated installed artifact is
 technical evidence, not independent onboarding, adoption, production-readiness,
-or security certification. Automated consumer CI following this public path is
-the separate follow-up [#185](https://github.com/revazi/django-asklens/issues/185).
-The existing [candidate-wheel smoke](quickstart-core.md#7-run-the-disposable-wheel-smoke)
-continues separately; it does not authenticate a rebuilt wheel as the public
+or security certification.
+
+### Automated candidate-wheel replay
+
+[#185](https://github.com/revazi/django-asklens/issues/185) adds an opt-in replay
+within the existing core wheel installer, across the existing Python/Django CI
+matrix. After building a local candidate (not a public release), reproduce it
+from the source checkout with the development tools installed:
+
+```bash
+uv run --no-sync python -m build --wheel
+ASKLENS_TUTORIAL_SMOKE=1 uv run --no-sync bash .github/scripts/wheel-smoke.sh \
+  core 'Django>=5.2,<5.3' '5.2.'
+```
+
+The installer selects the built wheel, creates an owned environment outside the
+checkout, and selects the requested Django band. The runner copies this actual
+example, then reads the marked command/expected-JSON blocks above directly from
+this guide. Only the `.venv/bin/python` interpreter is replaced with the already
+installed isolated interpreter; no alternate example or expected row list is
+generated. It runs setup, the five question attempts, the Django tests, and the
+migration drift check. It verifies installed package bytes against the exact
+wheel, rejects checkout/test-project/optional-package imports, blocks network
+calls during example execution, checks rejection query counts, and independently
+checks the five metadata-only audit outcomes.
+
+Missing/duplicate blocks, changed questions or expected rows that no longer
+match, missing migrations/registration, unexpected exits, unsafe audit outcomes,
+or isolation violations fail the run. Failure output is bounded; cleanup removes
+only the owned temporary project and environment on success or failure. The
+runner's `--guide` option permits a copied guide for deliberate mismatch testing;
+normal CI always reads this public source guide. Environment creation/build and
+dependency installation may use network access; question execution may not.
+
+This opt-in path is **candidate-wheel evidence**, not a rerun of the public PyPI
+download/authentication steps in section 2. It defaults off for historical
+published-package/upgrade probes, preserving their artifact identity and scope.
+The existing [direct-plan candidate-wheel smoke](quickstart-core.md#7-run-the-disposable-wheel-smoke)
+also remains available; neither authenticates a rebuilt wheel as the public
 artifact. No package release, live provider call, deployment, or external
 submission is performed by this guide.
