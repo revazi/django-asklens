@@ -36,6 +36,7 @@ if [[ ! -f "$wheel" ]]; then
   echo "Wheel does not exist: $wheel" >&2
   exit 2
 fi
+wheel="$(cd "$(dirname "$wheel")" && pwd)/$(basename "$wheel")"
 "$smoke_venv/bin/python" -m pip install --quiet --upgrade pip
 "$smoke_venv/bin/python" -m pip install --quiet "$django_package"
 "$smoke_venv/bin/python" -m pip install --quiet "${wheel}${extra}"
@@ -46,6 +47,29 @@ fi
     ASKLENS_FORBIDDEN_SOURCE_ROOT="$project_root" \
     "$smoke_venv/bin/python" "$project_root/.github/scripts/wheel_smoke.py" "$mode"
 )
+
+# Opt in only for the current candidate core CI path. Historical published
+# upgrade probes also use this installer and must not inherit a newer tutorial.
+case "${ASKLENS_TUTORIAL_SMOKE:-0}" in
+  0) ;;
+  1)
+    if [[ "$mode" != "core" ]]; then
+      echo "The public tutorial requires a core-only wheel environment." >&2
+      exit 2
+    fi
+    (
+      cd "$smoke_venv"
+      env -u PYTHONPATH -u PYTHONHOME -u DJANGO_SETTINGS_MODULE \
+        "$smoke_venv/bin/python" -s \
+        "$project_root/.github/scripts/quickstart_smoke.py" \
+        --source-root "$project_root" --wheel "$wheel"
+    )
+    ;;
+  *)
+    echo "ASKLENS_TUTORIAL_SMOKE must be 0 or 1." >&2
+    exit 2
+    ;;
+esac
 
 source_snapshot="${ASKLENS_SOURCE_API_SNAPSHOT:-}"
 if [[ "$mode" == "api" && -n "$source_snapshot" ]]; then
