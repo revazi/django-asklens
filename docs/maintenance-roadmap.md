@@ -71,6 +71,41 @@ and configuration/acceptance evidence are separate unresolved gates. The tiny
 synthetic preflight cannot close them. No release, deployment, automatic retry,
 model substitution, new public contract or dependency-PR change is included.
 
+### Issue #189: registration guidance without a new helper
+
+The [registration guide](registration.md#start-with-one-scoped-field) now starts
+with a scoped one-field declaration and includes an executable
+[before/after comparison and API decision](registration.md#beforeafter-less-presentation-boilerplate-same-policy).
+Against baseline `f6ad3d2`, the quickstart's registration goes from 31 to 21
+source lines, keeping all 10 keyword arguments; only two redundant labels are
+removed. Nine of the original 12 field entries are mandatory binding/type/
+nullability decisions. This is a reproducible structural measurement, not a
+first-query timing or independent usability/adoption result.
+
+Existing `register`, `CatalogRegistry`, `SemanticResource.build` and `Metric`
+behavior already supplies presentation defaults and validation. No new helper,
+public-contract change, permissive scope default, automatic model/field/choice
+exposure, or migration is justified by this evidence. Resource timezone/scope,
+private bindings, member permissions and metric cardinality stay explicit.
+The expanded guide and compact source example use supported `0.3.x` behavior;
+they do not change immutable public artifacts.
+
+Local source/candidate verification: 722 focused registry/catalog/compiler/
+planning/facade/compatibility/conformance/consumer tests passed (4 skipped), and
+the full offline branch-coverage run passed 1,510 tests (11 live/PostgreSQL skips).
+Regressions execute the documented examples, check before/after metadata and
+private-policy equivalence, reject omitted enum choices/display labels, recheck
+private metric permissions/current scope, and exercise invalid, duplicate,
+missing and cached-import startup paths. Isolated installed-wheel core tutorial,
+admin, API and MCP recipes passed, including source/wheel API-route parity.
+Ruff, Django/migration checks, strict docs/rendered links, build/Twine/package
+contents/exclusions and the locked audit also passed locally. These are synthetic
+local checks, not hosted-check or independent-review approval, public artifact
+authentication, live-provider acceptance, or production security certification.
+Keep [#189](https://github.com/revazi/django-asklens/issues/189) open until its
+focused PR has independent approval and hosted checks; no merge, release or
+deployment is implied.
+
 ### Point-in-time locked dependency audit
 
 At `2026-10-04T09:31:52Z`, the following exact command completed successfully

@@ -644,6 +644,62 @@ def test_django_choices_are_not_automatic_enum_aliases() -> None:
     assert validated.filters[0].value == "Paid"
 
 
+@pytest.mark.parametrize("op", ["eq", "neq", "in"])
+@pytest.mark.parametrize(
+    ("value", "accepted"),
+    [
+        ("active", True),
+        ("current", True),
+        ("draft", False),
+        ("Draft", False),
+        ("Active", False),
+    ],
+)
+def test_reviewed_enum_subset_never_imports_choices_or_labels(
+    op: str, value: str, accepted: bool
+) -> None:
+    """Omitted choices stay hidden/rejected; only reviewed aliases normalize."""
+
+    registry = CatalogRegistry()
+    registry.register(
+        model=CanonicalValueFixture,
+        name="canonical_values",
+        timezone="UTC",
+        scope_mode="global",
+        fields={
+            "state": {
+                "binding": "enum_text_value",
+                "type": "enum",
+                "nullable": False,
+                "enum": {
+                    "type": "string",
+                    "values": [
+                        {"value": "active", "label": "Active", "aliases": ["current"]}
+                    ],
+                },
+            }
+        },
+    )
+    assert registry.to_dict()["resources"][0]["fields"][0]["enum"] == {
+        "type": "string",
+        "values": [{"value": "active", "label": "Active", "aliases": ["current"]}],
+    }
+    payload = {
+        "resource": "canonical_values",
+        "intent": "list",
+        "select": ["state"],
+        "filters": [
+            {"field": "state", "op": op, "value": [value] if op == "in" else value}
+        ],
+    }
+    if not accepted:
+        with pytest.raises(PlanValidationError, match="registered enum value or alias"):
+            parse_and_validate_query_plan(payload, registry=registry)
+    else:
+        validated = parse_and_validate_query_plan(payload, registry=registry)
+        assert validated.filters[0].value == (["active"] if op == "in" else "active")
+
+
 def test_unknown_resource_fails() -> None:
     plan = parse_valid_plan(resource="payments")
 

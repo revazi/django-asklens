@@ -19,18 +19,8 @@ register(
     description="Synthetic orders owned by the current authenticated user.",
     timezone="UTC",
     fields={
-        "product": {
-            "binding": "product",
-            "type": "string",
-            "nullable": False,
-            "label": "Product",
-        },
-        "status": {
-            "binding": "status",
-            "type": "string",
-            "nullable": False,
-            "label": "Status",
-        },
+        "product": {"binding": "product", "type": "string", "nullable": False},
+        "status": {"binding": "status", "type": "string", "nullable": False},
         "total_cents": {
             "binding": "total_cents",
             "type": "integer",
