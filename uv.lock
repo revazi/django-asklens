@@ -596,6 +596,9 @@ dev = [
 docs = [
     { name = "mkdocs" },
 ]
+typing = [
+    { name = "mypy" },
+]
 
 [package.metadata]
 requires-dist = [
@@ -614,7 +617,7 @@ dev = [
     { name = "fastmcp", specifier = ">=3.4,<5" },
     { name = "httpx", specifier = ">=0.28.1,<0.29" },
     { name = "jsonschema", specifier = ">=4.26,<5" },
-    { name = "mypy", specifier = ">=1.13" },
+    { name = "mypy", specifier = "==2.4.0" },
     { name = "playwright", specifier = ">=1.62,<2" },
     { name = "psycopg", extras = ["binary"], specifier = ">=3.2,<4" },
     { name = "pytest", specifier = ">=8" },
@@ -624,6 +627,7 @@ dev = [
     { name = "uvicorn", specifier = ">=0.35,<1" },
 ]
 docs = [{ name = "mkdocs", specifier = "==1.6.1" }]
+typing = [{ name = "mypy", specifier = "==2.4.0" }]
 
 [[package]]
 name = "djangorestframework"

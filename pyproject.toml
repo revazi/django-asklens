@@ -86,7 +86,7 @@ dev = [
     "fastmcp>=3.4,<5",
     "httpx>=0.28.1,<0.29",
     "jsonschema>=4.26,<5",
-    "mypy>=1.13",
+    { include-group = "typing" },
     "playwright>=1.62,<2",
     "psycopg[binary]>=3.2,<4",
     "pytest>=8",
@@ -98,12 +98,15 @@ dev = [
 docs = [
     "mkdocs==1.6.1",
 ]
+typing = [
+    "mypy==2.4.0",
+]
 
 [tool.setuptools.packages.find]
 include = ["django_asklens*"]
 
 [tool.setuptools.package-data]
-django_asklens = ["contracts/schemas/*.json", "templates/**/*.html"]
+django_asklens = ["py.typed", "contracts/schemas/*.json", "templates/**/*.html"]
 
 [tool.pytest.ini_options]
 DJANGO_SETTINGS_MODULE = "tests.test_project.settings"

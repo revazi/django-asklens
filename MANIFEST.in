@@ -19,3 +19,4 @@ exclude scripts/capture-showcase.py
 exclude scripts/capture-showcase.sh
 exclude scripts/verify-docs-site.py
 recursive-include tests/e2e *.py
+recursive-include tests/installed_consumer/typing *.py *.ini
