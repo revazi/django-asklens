@@ -15,13 +15,14 @@ from rest_framework.test import APIClient
 from django_asklens import Metric
 from django_asklens.catalog.registry import default_registry
 from django_asklens.models import SemanticQueryRun
+from tests.evaluation.live_support import live_enabled
 from tests.test_project.models import Account, AccountMembership, Customer, Order
 
 pytestmark = [
     pytest.mark.django_db,
     pytest.mark.skipif(
-        os.environ.get("DJANGO_ASKLENS_LIVE_LLM") != "1",
-        reason="Set DJANGO_ASKLENS_LIVE_LLM=1 to run live provider API tests.",
+        not live_enabled(os.environ),
+        reason="Explicit live network/charge consent required; see docs/providers.md.",
     ),
 ]
 
@@ -42,36 +43,6 @@ def clear_default_registry() -> None:
     default_registry.clear()
     yield
     default_registry.clear()
-
-
-@pytest.fixture
-def live_settings(settings):
-    """Configure AskLens from environment variables for live API tests."""
-
-    api_key = os.environ.get("DJANGO_ASKLENS_LIVE_LLM_API_KEY")
-    model = os.environ.get("DJANGO_ASKLENS_LIVE_LLM_MODEL")
-    base_url = os.environ.get(
-        "DJANGO_ASKLENS_LIVE_LLM_BASE_URL",
-        "https://api.openai.com/v1",
-    )
-    if not api_key or not model:
-        pytest.skip(
-            "Set DJANGO_ASKLENS_LIVE_LLM_API_KEY and "
-            "DJANGO_ASKLENS_LIVE_LLM_MODEL for live provider API tests."
-        )
-
-    settings.DJANGO_ASKLENS = {
-        "LLM_BACKEND": "openai_compatible",
-        "LLM_BASE_URL": base_url,
-        "LLM_API_KEY": api_key,
-        "LLM_MODEL": model,
-        "LLM_TIMEOUT_SECONDS": 45,
-        "LLM_TEMPERATURE": 0,
-        "MAX_ROWS": 50,
-        "MAX_JOINS": 2,
-        "MAX_METRICS": 5,
-        "MAX_GROUP_BY": 3,
-    }
 
 
 @pytest.fixture
@@ -204,7 +175,7 @@ def test_live_openai_compatible_api_query_is_tenant_scoped_and_audited(
         format="json",
     )
 
-    assert response.status_code == 200, response.data
+    assert response.status_code == 200
     statuses = {
         row["status"] for row in response.data["result"]["data"] if "status" in row
     }
@@ -233,7 +204,7 @@ def test_live_openai_compatible_api_rejects_or_sanitizes_tenant_field_request(
         format="json",
     )
 
-    assert response.status_code in {200, 400}, response.data
+    assert response.status_code in {200, 400}
     assert "Traceback" not in str(response.data)
     assert "api-alpha" not in str(response.data)
     assert "api-beta" not in str(response.data)

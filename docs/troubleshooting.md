@@ -138,6 +138,26 @@ failure also maps to `asklens.provider.failed`; the public code intentionally do
 not expose its underlying body or cause. Default verification needs no live call.
 See [providers](providers.md) for the existing configuration contract.
 
+### Separately authorized synthetic provider preflight
+
+The new source/candidate [standalone preflight](providers.md#standalone-fixed-synthetic-preflight)
+can reject missing/invalid configuration offline. An actual provider request
+requires a separate explicit `--allow-network-and-charges` invocation after the
+network/charge disclosure and operator authorization. Do not run it from
+`manage.py` or a bootstrapped host: the standalone path avoids Django setup,
+settings resolution, registry access, scopes, rows, application SQL and audit
+writes. It uses only a fixed synthetic prompt/schema, no private questions or
+catalog. Its output is fixed safe categories and, on success, non-sensitive
+configuration/date metadata, not raw causes or bodies. It bypasses provider-I/O
+logging even if that host setting is enabled.
+
+**Live path UNVERIFIED; actual acceptance INCOMPLETE.** A tiny synthetic pass
+would not validate the current full AskLens strict schema, authorize a user,
+prove scope/audit readiness, or establish production acceptance. The current
+application-schema mismatch with OpenAI's documented strict subset remains an
+explicit gate. Do not weaken schema validation or permissions to bypass it.
+`check_asklens` remains counts-only and never invokes this probe.
+
 ### Empty is success, not denial
 
 A successful list or grouped query can return typed `columns`, `data: []` and

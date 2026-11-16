@@ -41,9 +41,14 @@ For exact-question mismatches, malformed plans and provider failures, use the
 The public provider error does not reveal private questions or provider causes;
 do not enable provider I/O logging merely to complete onboarding.
 
-## OpenAI-compatible backend
+## One OpenAI onboarding path — UNVERIFIED
 
-AskLens includes an OpenAI-compatible chat-completions provider implemented with Python stdlib HTTP. It adds no required runtime dependency.
+**Actual live acceptance is INCOMPLETE.** No provider API call or billed test was
+performed for this change. Public documentation and deterministic mocks are not
+live transport evidence, model-quality evidence, or production acceptance.
+
+The existing stdlib HTTP backend is reused; no provider SDK is required. This
+path pins the dated snapshot of the previously documented GPT-4.1 mini model:
 
 ```python
 import os
@@ -52,51 +57,138 @@ DJANGO_ASKLENS = {
     "LLM_BACKEND": "openai_compatible",
     "LLM_BASE_URL": "https://api.openai.com/v1",
     "LLM_API_KEY": os.environ["OPENAI_API_KEY"],
-    "LLM_MODEL": "gpt-4.1-mini",
+    "LLM_MODEL": "gpt-4.1-mini-2025-04-14",
     "LLM_TIMEOUT_SECONDS": 30,
     "LLM_TEMPERATURE": 0,
+    "LOG_LLM_IO": False,
+    "AUDIT_INCLUDE_CONTENT": False,
 }
 ```
 
-Use environment variables or your deployment secret manager for `LLM_API_KEY`. Do not commit API keys or place them in docs, fixtures, or tests.
+Supply keys through an approved secret manager or protected process environment,
+not command-line values, committed files, examples, logs, tickets, or test
+fixtures. The example reads the key only when the host loads these settings;
+never use real keys in offline tests. Use a clean standalone interpreter for the
+probe below, not `manage.py`, a host shell, or a wrapper that bootstraps Django.
 
-## Gemini through the OpenAI-compatible endpoint
+### Public configuration evidence (checked 2026-11-16)
 
-Gemini can be used through Google's OpenAI-compatible endpoint:
+- OpenAI's [GPT-4.1 mini model reference](https://developers.openai.com/api/docs/models/gpt-4.1-mini)
+  lists the `gpt-4.1-mini-2025-04-14` snapshot, Chat Completions
+  (`/v1/chat/completions`), and Structured Outputs support. This is support for
+  the stated API features, not an evaluation of AskLens or of model quality.
+- **Deprecation warning:** OpenAI's [deprecations reference](https://developers.openai.com/api/docs/deprecations)
+  lists this snapshot as deprecated on **2026-10-14**, with shutdown on
+  **2027-01-14**. This bounded recipe retains and pins the existing documented
+  model family, not a long-term recommendation. Recheck the public availability
+  before seeking live authorization; after shutdown this recipe cannot pass.
+  A replacement needs its own verified configuration and acceptance, not a
+  silent model substitution.
+- The [Structured Outputs guide](https://developers.openai.com/api/docs/guides/structured-outputs)
+  documents `response_format.type="json_schema"` with `strict: true`, its
+  supported JSON Schema subset, all properties required (nullable unions for
+  optional values), and `additionalProperties: false` for every object.
+  JSON mode (`json_object`), function calling alone, and merely returning JSON
+  are not equivalent. An OpenAI-compatible URL does **not** establish these
+  features; other compatible services, including the previously illustrated
+  Gemini endpoint, are not validated onboarding paths here.
 
-```python
-import os
+**Known application-schema gate:** current generated AskLens planner/unified
+response schemas contain optional properties not all listed in `required` and
+open-ended objects. They do not satisfy that documented strict subset as-is.
+The synthetic schema below intentionally avoids those constructs. A successful
+probe would establish only one tiny schema exchange, **not full AskLens-schema
+compatibility**. Application live evaluations may fail with schema rejection;
+do not switch off strict mode, weaken validation, or fall back to permissive
+parsing. Schema adaptation and actual application-provider acceptance remain
+separate unresolved issue gates; this change does not redesign the internal
+[draft schemas or provisional orchestration](compatibility.md).
 
-DJANGO_ASKLENS = {
-    "LLM_BACKEND": "openai_compatible",
-    "LLM_BASE_URL": "https://generativelanguage.googleapis.com/v1beta/openai",
-    "LLM_API_KEY": os.environ["GEMINI_API_KEY"],
-    "LLM_MODEL": "gemini-2.5-flash",
-    "LLM_TIMEOUT_SECONDS": 30,
-    "LLM_TEMPERATURE": 0,
-}
+### Limits and retry semantics
+
+| Path | Request/concurrency bound | Timeout and retries |
+| --- | --- | --- |
+| Standalone synthetic preflight | At most **one** POST per invocation, one choice, serial, `max_completion_tokens=32`; reads at most 16 KiB + 1 byte | Default 30 seconds; explicitly configurable from 1 to 30 finite seconds; no retries, redirects, failover, proxies, cookies or SDK |
+| Opt-in tests below | At most **seven** POSTs per serial pytest session and **one** per test; `max_completion_tokens=2048` | 30 seconds per call; no retries, redirects, proxy inheritance or failover; parallel workers rejected |
+| Normal application provider | One initial POST per `complete_json()` invocation; stdlib redirects may add requests; no package-wide request, concurrency or financial limit | Configured `LLM_TIMEOUT_SECONDS` (example: 30); no AskLens automatic retries or failover; stdlib default redirect/proxy behavior is unchanged |
+
+The timeout is a stdlib network/socket-operation timeout, **not a guaranteed
+wall-clock deadline** (DNS, connect phases and slow reads can extend elapsed
+time). The preflight also bounds response bytes, not just output tokens. A token
+or request cap is **not a guaranteed financial cap**. Repeated processes/runs can
+incur additional charges. The application does not add this probe's token or
+response-byte caps to normal queries. Host retries, parallelism and financial
+controls require separate operator policy; there is no invented spending limit.
+
+## Standalone fixed-synthetic preflight
+
+This is a new **source/candidate** module, not part of immutable public `0.3.2`
+artifacts. From this checkout (or a wheel built from it), the default is offline:
+
+```bash
+uv run python -m django_asklens.provider_preflight
 ```
 
-As with every provider, Gemini output is still parsed as untrusted JSON and validated locally before execution.
+It prints a prior network/charge disclosure and
+`{"code": "consent_required", "status": "not_passed"}` (exit 2). It does not
+read any key without the explicit flag. `--help` is also offline. Neither an
+ambient `OPENAI_API_KEY`, Django provider settings nor live-test flags grant
+consent. Unsupported options, invalid/absent keys and nonfinite/out-of-range
+timeouts fail safely before transport; supplied values are never echoed.
 
-For local prompt/provider tuning, you can temporarily enable provider I/O logging:
+**Only after separate operator authorization for network use and possible
+charges**, supply `DJANGO_ASKLENS_PREFLIGHT_API_KEY` through the approved secret
+source and run this deliberately opted-in command. No live request is authorized
+by this guide or by issue creation:
 
-```python
-DJANGO_ASKLENS = {
-    # ...
-    "LOG_LLM_IO": True,
-}
+```bash
+uv run python -m django_asklens.provider_preflight --allow-network-and-charges
 ```
 
-This logs the outbound chat-completions request body, raw provider response, and parsed JSON content to the `django_asklens.llms.openai_compatible` logger at `INFO` level. Authorization headers and API keys are excluded. Treat these logs as sensitive anyway: they can include user questions, permission-scoped provider-guidance/catalog metadata, and provider-generated plans/help. Do not enable this in production unless your logging pipeline is approved for that data.
+Optional `--timeout-seconds 10` lowers the socket-operation timeout. Endpoint,
+model, prompt and schema overrides are deliberately unavailable. The only user
+message is the fixed synthetic request `Return {"probe":"ok"}.`; the strict
+schema is a closed object with the single required enum property `probe="ok"`.
+There is no application question, catalog/guidance, registry inspection, row
+sample, permission resolution, scope callback, audit write or application SQL.
 
-The provider sends a request to:
+The module imports package/provider definitions (including creation of the
+package's empty default-registry object); it **does not read or populate that
+registry**, load Django settings, call `django.setup()`, or import host apps.
+It composes the existing stdlib provider's request builder and JSON parsers,
+not `complete_json()` or its settings-backed provider-I/O logger. The isolated
+transport never reads HTTP error bodies, follows redirects or uses ambient
+proxies/global installed openers. There are no content logs or artifact files.
+An arbitrary Python startup hook, interpreter wrapper, malicious local package,
+or a host that calls this function after its own startup is outside this
+standalone guarantee; use a clean process. This is not a privileged Django
+management command and does not change counts-only `check_asklens`.
 
-```text
-POST {LLM_BASE_URL}/chat/completions
-```
+Exit 0 means **synthetic exchange only**. Output records fixed non-sensitive
+configured provider, endpoint and snapshot (not server-attested model identity),
+UTC observation time, timeout, temperature,
+request/concurrency/token bounds and zero retries, with application acceptance
+still `incomplete`. This metadata can be retained for a later **authorized** live
+observation; never retain payloads, authorization, URLs with secrets or raw
+exceptions. Exit 2 returns only a fixed failure category, not provider advice:
 
-For normal live `/asklens/query/` calls, it requests strict JSON output with a unified AskLens provider-response schema using OpenAI-compatible `response_format={"type": "json_schema", ...}`. That single response chooses either a data `QueryPlan` or capability `QueryHelp`. Other lower-level planner/helper APIs may request their narrower schemas directly.
+| Category | Private operator action; no automatic retry |
+| --- | --- |
+| `consent_required` | Obtain separate authorization before opting in. |
+| `invalid_arguments` / `invalid_configuration` | Review the supported flag, finite timeout and dedicated protected key source; no transport occurred. |
+| `schema_or_request_rejected` | HTTP 400/422 can indicate schema **or another request** rejection; it is not proof of which one. Review documented strict support privately. |
+| `authentication_rejected` | HTTP 401/403; privately check key validity/access without echoing it. |
+| `timed_out` / `network_failed` | Review approved connectivity/timeout policy; do not add blind retries. |
+| `rate_limited` | HTTP 429; respect provider policy and obtain approval before another invocation. |
+| `redirect_rejected` | Do not forward credentials to a different endpoint. |
+| `invalid_output` | Refusal, truncation, oversized/malformed content or a mismatched synthetic object; no compatibility acceptance. |
+| `provider_failed` / `probe_failed` / `interrupted` | Stop and investigate through approved private operations; no raw provider exception is emitted. |
+
+Do not enable `LOG_LLM_IO` to complete onboarding. For ordinary application
+calls that opt-in setting logs request URLs/bodies, provider response/error
+bodies and parsed content. Even though authorization headers are filtered,
+URLs with secret parameters and arbitrary provider-echoed secrets can leak.
+The probe avoids this logger entirely, even when host logging is enabled.
 
 ## Provider interface
 
@@ -146,29 +238,52 @@ DJANGO_ASKLENS = {
 
 To opt into data-question resource shortlisting, set a positive value such as `4` after validating representative questions against your catalog.
 
-## Testing live providers
+## Testing live providers — separate authorization required
 
-Default tests never call live providers and require no API keys.
+Default tests/diagnostics/CI stay offline, require no keys and do not run the
+probe. The existing two opt-in evaluation modules now require **both**
+`DJANGO_ASKLENS_LIVE_LLM=1` and
+`DJANGO_ASKLENS_LIVE_LLM_CONSENT=network-and-charges`. Enabling just one flag
+cannot invoke their transport. They are not the no-bootstrap synthetic probe:
+they start the repository test Django app, create synthetic database fixtures,
+send fixed test questions and permission-scoped synthetic guidance, execute
+validated plans and test tenant denial/audit behavior. Never substitute a real
+host settings module, catalog, rows or user questions.
 
-Run the opt-in live smoke test only when you explicitly want to test a configured provider:
+**UNVERIFIED / actual live acceptance INCOMPLETE.** No live evaluation was run
+for this change. The strict application-schema gate above remains unresolved.
+Only after separate network/charge authorization, supply the protected
+`DJANGO_ASKLENS_LIVE_LLM_API_KEY` variable and run serially, with no xdist,
+`--showlocals`, content logging, recording/capture plugins or payload artifacts:
 
 ```bash
 DJANGO_ASKLENS_LIVE_LLM=1 \
-DJANGO_ASKLENS_LIVE_LLM_API_KEY="$OPENAI_API_KEY" \
-DJANGO_ASKLENS_LIVE_LLM_MODEL="gpt-4.1-mini" \
-uv run pytest tests/evaluation/test_live_openai_compatible.py \
+DJANGO_ASKLENS_LIVE_LLM_CONSENT=network-and-charges \
+uv run pytest --tb=no -q tests/evaluation/test_live_openai_compatible.py \
   tests/evaluation/test_live_api_openai_compatible.py
 ```
 
-Optional:
+Endpoint and model default to the exact fixed configuration above. If explicitly
+supplied, `DJANGO_ASKLENS_LIVE_LLM_BASE_URL` and
+`DJANGO_ASKLENS_LIVE_LLM_MODEL` must match it; missing/invalid configuration skips
+without transport. The shared fixture disables provider I/O logging, checks
+consent again at transport, enforces one request/test and seven/session, rejects
+concurrent calls/parallel workers, and isolates redirects/proxies. Multiple
+sessions are not a global quota. Existing parsing, catalog, permission, trusted
+fail-closed scope and structural-budget validation remain mandatory; every data
+plan still converges on `execute_plan()`. The probe grants none of these rights.
 
-```bash
-DJANGO_ASKLENS_LIVE_LLM_BASE_URL="https://api.openai.com/v1"
-```
+If an authorized result is obtained later, record exact non-sensitive provider,
+snapshot, endpoint, temperature, timeout, request/token/concurrency configuration,
+UTC observation date, test selection, pass/fail category and actual request
+count. Never record credentials, request/response payloads, raw exceptions or
+secret-bearing URLs. A synthetic result is not application authorization,
+audit readiness, full-schema support, reliability, production readiness, or a
+substitute for that later application acceptance. Leave #188's live-evidence
+gate open until resolved by the owner.
 
-The example Django app can also use the live provider by setting `DJANGO_ASKLENS_DEMO_LIVE_LLM=1` before starting `tests.test_project.demo_settings`. See [Example Django AskLens integration](test-project-demo.md).
-
-Live provider output must still pass strict schema parsing plus catalog/permission validation. Unified live query responses validate either the returned `QueryPlan` or the returned `QueryHelp` suggestions; help suggestions get executable plans synthesized and validated locally. Before production use, validate live provider behavior in a safe non-production environment that mirrors your permissions and tenant scoping.
+The source demo's separate `DJANGO_ASKLENS_DEMO_LIVE_LLM=1` path is not this
+probe or its bounded test harness; do not enable it during offline onboarding.
 
 ## Safety notes
 
@@ -176,4 +291,4 @@ Live provider output must still pass strict schema parsing plus catalog/permissi
 - QueryPlan validation remains mandatory.
 - Never execute provider-generated SQL.
 - Do not send sample rows to providers by default.
-- Errors and opt-in provider I/O logs exclude API keys and authorization headers.
+- Keep provider I/O logging off; authorization filtering alone cannot sanitize arbitrary URLs or provider bodies.

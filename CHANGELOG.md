@@ -6,6 +6,12 @@ The project is alpha and APIs may change before a stable release.
 
 ## Unreleased
 
+### Provider onboarding (offline-verifiable portion)
+
+- Added a default-off standalone fixed-synthetic OpenAI preflight using the existing stdlib request builder/parsers, with explicit per-invocation network/charge consent, prior disclosure, safe configuration/failure categories, isolated nonlogging transport, one serial request, finite 1–30 second socket-operation timeout, response/token bounds and no redirects/retries. It does not bootstrap Django or access application settings, registry, scopes, rows, SQL or audit storage.
+- Documented one pinned GPT-4.1 mini path with dated public strict-output support evidence and its announced deprecation/shutdown. Full application-schema strict compatibility remains an evidenced unresolved gate; synthetic success is not application authorization or production acceptance.
+- Extended existing default-skipped live tests with separate network/charge consent and one-request/test, seven-request/serial-session bounds. Added deterministic hostile-failure/privacy/isolation coverage. **Live path UNVERIFIED; actual live acceptance INCOMPLETE**: no provider API call or billed test was performed. No governed execution/error/observability contract, counts-only `check_asklens`, dependency or migration change is introduced; this source/candidate module is not in immutable public `0.3.2` artifacts.
+
 ### Security maintenance
 
 - Updated only the locked indirect `dnspython` (`2.9.0` → `2.9.2`) and `opentelemetry-api` (`1.45.1` → `1.45.2`) entries after the 2026-11-13 audit found GHSA-vvf4-9x63-8xvv and GHSA-mf5v-w3w3-f6cg in the optional MCP/development dependency chain. Runtime dependency bounds are unchanged; hosts must audit their own resolved environments.
