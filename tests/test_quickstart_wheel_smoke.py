@@ -125,6 +125,7 @@ def test_environment_drops_host_policy_and_checkout_injection(helper, monkeypatc
     for key in (
         "PYTHONPATH",
         "PYTHONHOME",
+        "PYTHONOPTIMIZE",
         "DJANGO_SETTINGS_MODULE",
         "DJANGO_ASKLENS_LIVE_LLM",
     ):
@@ -133,6 +134,7 @@ def test_environment_drops_host_policy_and_checkout_injection(helper, monkeypatc
     assert not set(environment) & {
         "PYTHONPATH",
         "PYTHONHOME",
+        "PYTHONOPTIMIZE",
         "DJANGO_SETTINGS_MODULE",
         "DJANGO_ASKLENS_LIVE_LLM",
     }
@@ -177,5 +179,80 @@ def test_core_installer_opt_in_is_wired_to_existing_matrix():
     assert "quickstart_smoke.py" in shell
     assert "env -u PYTHONPATH -u PYTHONHOME -u DJANGO_SETTINGS_MODULE" in shell
     assert 'ASKLENS_TUTORIAL_SMOKE: "1"' in workflow
+    assert workflow.count('ASKLENS_ADAPTER_SMOKE: "1"') == 3
+    assert 'case "${ASKLENS_ADAPTER_SMOKE:-0}" in' in shell
+    assert '--adapter "$mode"' in shell
     assert "include .github/scripts/quickstart_smoke.py" in manifest
     subprocess.run(["bash", "-n", ROOT / ".github/scripts/wheel-smoke.sh"], check=True)
+
+
+@pytest.mark.parametrize("mode", ["core", "api", "mcp"])
+def test_adapter_commands_are_read_from_canonical_guides(helper, tmp_path, mode):
+    filename, module, settings = helper.ADAPTER_RECIPES[mode]
+    guide = ROOT / "docs" / filename
+    command = helper.read_adapter_command(guide, mode)
+    assert command == ["test", module, f"--settings={settings}"]
+    text = guide.read_text()
+    alternate = tmp_path / "guide.md"
+    alternate.write_text(text.replace(f"shop.{module.split('.')[-1]}", "shop.tests"))
+    with pytest.raises(helper.TutorialFailure, match="Unexpected adapter"):
+        helper.read_adapter_command(alternate, mode)
+    alternate.write_text(
+        text + f"\n<!-- asklens-adapter:{mode} -->\n```bash\nwrong\n```\n"
+    )
+    with pytest.raises(helper.TutorialFailure, match="Missing/duplicate"):
+        helper.read_adapter_command(alternate, mode)
+    alternate.write_text(text.replace(f"<!-- asklens-adapter:{mode} -->", ""))
+    with pytest.raises(helper.TutorialFailure, match="Missing/duplicate"):
+        helper.read_adapter_command(alternate, mode)
+
+
+@pytest.mark.parametrize("mode", ["core", "api", "mcp"])
+def test_adapter_isolation_allows_only_selected_extra(
+    helper, tmp_path, monkeypatch, mode
+):
+    from types import SimpleNamespace
+
+    selected = {"core": None, "api": "rest_framework", "mcp": "fastmcp"}[mode]
+    present = {selected} - {None}
+    monkeypatch.setattr(helper, "sys", SimpleNamespace(modules={}))
+    monkeypatch.setattr(
+        helper.importlib.util, "find_spec", lambda name: name in present or None
+    )
+    helper.assert_import_isolation(tmp_path, mode)
+    unselected = "fastmcp" if selected != "fastmcp" else "rest_framework"
+    present.add(unselected)
+    with pytest.raises(helper.TutorialFailure, match="Unselected optional"):
+        helper.assert_import_isolation(tmp_path, mode)
+    present.remove(unselected)
+    if selected:
+        present.remove(selected)
+        with pytest.raises(helper.TutorialFailure, match="Selected optional"):
+            helper.assert_import_isolation(tmp_path, mode)
+    else:
+        helper.sys.modules["tests.forbidden"] = object()
+        with pytest.raises(helper.TutorialFailure, match="Forbidden consumer"):
+            helper.assert_import_isolation(tmp_path, mode)
+
+
+def test_adapter_failure_cleans_only_owned_project(helper, tmp_path, monkeypatch):
+    source = tmp_path / "source"
+    example = source / "examples/quickstart"
+    example.mkdir(parents=True)
+    (example / "manage.py").write_text("# synthetic")
+    wheel = tmp_path / "candidate.whl"
+    wheel.write_bytes(b"candidate-bytes")
+    parent = tmp_path / "owned-parent"
+    parent.mkdir()
+    sentinel = parent / "keep.txt"
+    sentinel.write_text("keep")
+    monkeypatch.chdir(parent)
+    monkeypatch.setattr(helper, "assert_installed_wheel", lambda *_: None)
+    monkeypatch.setattr(
+        helper, "read_adapter_command", lambda *_: ["test", "shop.api_recipe"]
+    )
+    monkeypatch.setattr(helper, "run_command", lambda *_: response({}, status=70))
+    with pytest.raises(helper.TutorialFailure, match="failed.*70"):
+        helper.replay_adapter(source, wheel, "api")
+    assert list(parent.iterdir()) == [sentinel]
+    assert (example / "manage.py").exists()

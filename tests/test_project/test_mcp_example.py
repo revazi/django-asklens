@@ -191,26 +191,32 @@ def test_mcp_quickstart_docs_cover_the_bounded_safe_flow() -> None:
     example = (repository_root / "examples" / "mcp" / "README.md").read_text()
     docs_index = (repository_root / "docs" / "index.md").read_text()
 
-    for document in (guide, example):
-        normalized_document = " ".join(document.split())
-        assert "python -m pip install 'django-asklens[mcp]==0.3.2'" in document
-        assert "same-version local rebuild" in normalized_document
-        assert "not a supported upgrade" in normalized_document
-        assert "server-owned" in document
-        assert "asklens_capabilities" in document
-        assert "resource_summaries" in document
-        assert "asklens_validate_plan" in document
-        assert "asklens_execute_plan" in document
-        assert "include_rows=False" in document
-        assert "row_return_denied" in document
-        for forbidden_argument in (
-            "username",
-            "user",
-            "permissions",
-            "tenant",
-            "scope",
-        ):
-            assert f"`{forbidden_argument}`" in document
+    # The guide owns the recipe; the example README links to it, rather than
+    # maintaining a second checklist that can drift (including version pins).
+    assert "mcp-integration.md#bounded-mcp-quickstart" in example
+    assert "source-only" in example
+    assert "provisional" in example
+    assert "production authentication" in example
+    normalized_guide = " ".join(guide.split())
+    assert "django_asklens-0.3.2-py3-none-any.whl[mcp]" in guide
+    assert "same-version local rebuild" in normalized_guide
+    assert "not a supported upgrade" in normalized_guide
+    for required in (
+        "server-owned",
+        "asklens_capabilities",
+        "resource_summaries",
+        "asklens_validate_plan",
+        "asklens_execute_plan",
+        "include_rows=False",
+        "row_return_denied",
+        "MCP_MAX_RETURNED_ROWS",
+        "source-only",
+        "shop.mcp_recipe",
+        "ASKLENS_ADAPTER_SMOKE=1",
+    ):
+        assert required in guide
+    for forbidden_argument in ("username", "user", "permissions", "tenant", "scope"):
+        assert f"`{forbidden_argument}`" in guide
 
     assert "'django-asklens[mcp]'" not in guide
     assert "Bounded MCP quickstart" in docs_index

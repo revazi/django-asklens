@@ -1,0 +1,25 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>My orders — minimal table</title>
+  <script src="{% static 'shop/table.js' %}" defer></script>
+</head>
+<body>
+<main>
+  <h1>My orders</h1>
+  <p id="question-help">Offline fixture: use “Show my paid orders” or “Show my refunded orders” exactly.</p>
+  <form id="ask-form" action="/asklens/query/" method="post">
+    {% csrf_token %}
+    <label for="question">Question</label>
+    <input id="question" name="question" value="Show my paid orders" required aria-describedby="question-help">
+    <button type="submit">Ask</button>
+  </form>
+  <p id="status" role="status" aria-live="polite"></p>
+  <div id="results" aria-busy="false"></div>
+  <p>Empty results apply only to your current authorized scope. If access fails, sign in again or ask your host administrator to review access. Do not broaden scope to recover.</p>
+</main>
+</body>
+</html>

@@ -1,89 +1,152 @@
 # MCP integration notes
 
-Status: AskLens ships dependency-free MCP adapter helpers, an `AskLensMCPToolSet` wrapper, and an optional FastMCP bridge under `django_asklens.mcp`. The repository also includes an opt-in ASGI/Uvicorn MCP endpoint for the runnable local test project. Django AskLens does not provide a production authentication layer; host projects remain responsible for authenticating MCP callers, mapping trusted server-side context to a Django request-like object, and testing each context-scoped resource provider. Resource registration fails when neither an explicit resource mode nor the safe context-scoped project default supplies the scope policy. MCP/Python/client-provider call sites also need host-side auth, rate limits, and timeout/concurrency controls before calling AskLens; see [Host throttling and audit controls](host-throttle-and-audit-controls.md).
+MCP is an **optional, provisional** adapter under the [compatibility policy](compatibility.md).
+It does not supply production authentication, tenant resolution, or transport
+protection. All execution still converges on the trusted facade, with explicit
+registration, current permissions, fail-closed scope, bounded read-only ORM, and
+metadata-only audit. See [Host controls](host-throttle-and-audit-controls.md)
+for rate/concurrency limits and timeouts; omitting rows does not reduce query cost.
 
 ## Bounded MCP quickstart
 
-This path describes immutable public `django-asklens==0.3.2`, the current alpha;
-the historical `0.1.0a1` testing artifact is not a supported upgrade origin.
-Authenticate the selected public artifact against
-[Installation](installation.md), then install the exact MCP surface:
+Start after [Your first scoped question](quickstart-app.md), using its copied
+consumer, model/migration, single `ShopConfig.ready()` registration import,
+`requires_permission`, and trusted `visible_orders(request)` ownership scope.
+The default permission resolver calls the current `request.user.get_all_permissions()`;
+permission assignment and tenant membership are server-owned, never plan/tool
+arguments. Invalid/anonymous scope never broadens to the model manager.
+
+The dependency-free helpers/toolset need only core `django-asklens==0.3.2`
+(`Django>=5.2,<7.0`, `pydantic>=2,<3`). For the optional FastMCP bridge, install
+**only** the `mcp` extra, which adds `fastmcp>=3.4,<5` and no DRF:
 
 ```bash
-python -m pip install 'django-asklens[mcp]==0.3.2'
+# Reuse the authenticated public wheel from the minimal quickstart.
+uv pip install --python .venv/bin/python 'artifacts/django_asklens-0.3.2-py3-none-any.whl[mcp]'
+.venv/bin/python manage.py migrate --settings=quickstart.mcp_settings
+.venv/bin/python manage.py check --settings=quickstart.mcp_settings
+.venv/bin/python manage.py check_asklens --fail-on-empty --settings=quickstart.mcp_settings
 ```
 
-A same-version local rebuild may be used for local release verification, but
-its bytes and digest are separate evidence and are not the public wheel.
+Authenticate immutable public `0.3.2` against [Installation](installation.md).
+A same-version local rebuild is separate evidence, not the public wheel.
+`0.1.0a1` is not a supported upgrade origin. The new `examples/quickstart` MCP
+files are **source-only additions**, not files in immutable public `0.3.2`;
+they use already-published capabilities. The older generic sketch in
+[`examples/mcp/`](../examples/mcp/) links here rather than defining another recipe.
 
-Authenticate the MCP connection in the host, then map its trusted server-owned
-context to one Django request-like object:
+### Settings and server-owned request wiring
+
+`quickstart.mcp_settings` extends core settings (not the web/API settings),
+retains exact dummy questions and metadata-only database audit, and adds:
 
 ```python
-from types import SimpleNamespace
-
-from django_asklens.mcp import AskLensMCPToolSet, create_fastmcp_server
-
-
-def request_from_context(context):
-    principal = authenticated_principal_from_context(context)  # Host-owned.
-    return SimpleNamespace(
-        user=principal.user,
-        reporting_tenant=principal.reporting_tenant,
-    )
-
-
-toolset = AskLensMCPToolSet(request_factory=request_from_context)
-server = create_fastmcp_server(toolset)
+# After importing core settings; no API URLs, DRF, or web middleware.
+DJANGO_ASKLENS = {
+    **DJANGO_ASKLENS,
+    "API_PERMISSION_CLASSES": ["django_asklens.access.IsAuthenticated"],
+    "REQUEST_PERMISSIONS_GETTER": None,
+    "MCP_ALLOW_ROW_RETURN": False,
+    "MCP_MAX_RETURNED_ROWS": 1,
+}
 ```
 
-The host-defined authentication function must reject invalid sessions. Derive
-custom permissions and every context scope from the resulting request. FastMCP
-injects its server context; no tool schema should accept client `username`,
-`user`, `permissions`, `tenant`, or `scope` selectors.
+The concrete [host wiring](https://github.com/revazi/django-asklens/blob/main/examples/quickstart/quickstart/mcp.py)
+exposes `make_toolset(authenticated_user_id)` and
+`make_server(authenticated_user_id)`. The required host callback authenticates
+and resolves a verified **server-side session** on every tool invocation. It
+must reject invalid/expired sessions and return the server-mapped Django user
+PK, not a claim from tool arguments, headers supplied as identity, question
+text, or a client-selected username. There is no default identity or public
+user selector. The factory refetches an active Django user each call, avoiding
+stale permission caches, applies `can_access_asklens(request)`, and passes a
+server-created request to the toolset. Use a uniform host-owned safe transport
+error for rejected authentication; never serialize exception text or user
+existence. The example deliberately does **not** implement a production login
+or transport authentication layer.
 
-Use compact discovery and only fetch details when needed:
+```python
+# Host startup AFTER Django setup; supply your already-verified session lookup.
+from quickstart.mcp import make_server
 
-```text
-asklens_capabilities() -> permission-scoped resource_summaries
-asklens_query_plan_schema()
-asklens_describe_resource(resource="orders")
+server = make_server(resolve_authenticated_user_id)  # Required host function.
+# Mount/run this server only behind the host's authenticated MCP transport.
 ```
 
-Then validate and execute a synthetic semantic plan:
+Internally it constructs `AskLensMCPToolSet(request_factory=...,
+expose_query_tool=False, default_include_rows=False)` and passes it to
+`create_fastmcp_server()`. FastMCP injects server context; the five tools' input
+schemas omit `user`, `username`, `permissions`, `tenant`, `scope`, and context.
+The provider-backed `asklens_query` tool stays disabled. For a tenant-aware
+host, resolve membership server-side and attach the trusted attributes required
+by its permission getter and `scope_provider`; do not copy this synthetic
+single-owner policy as a production tenancy model.
+
+### Validate, execute, and test both row gates
+
+Discover compact metadata with `asklens_capabilities()`, then request
+`asklens_query_plan_schema()` and `asklens_describe_resource(resource="orders")`
+as needed. Submit this untrusted synthetic plan to `asklens_validate_plan` and
+then `asklens_execute_plan`:
 
 ```python
 plan = {
     "resource": "orders",
-    "intent": "aggregate",
-    "group_by": [{"field": "status"}],
-    "metrics": [{"metric": "order_count"}],
+    "intent": "list",
+    "select": ["product", "total_cents"],
+    "filters": [{"field": "status", "op": "eq", "value": "paid"}],
     "limit": 10,
 }
-validation = asklens_validate_plan(plan=plan)
-assert validation["valid"] is True
-execution = asklens_execute_plan(plan=validation["plan"], include_rows=False)
 ```
 
-Validation reports `executed: false`; it is not authorization. Execution
-revalidates the current request, resolves scope, applies budgets, and audits.
-The safe default returns `rows_omitted: true` with empty `data`. A deliberate
-`include_rows=True` request while `MCP_ALLOW_ROW_RETURN` is false still omits
-rows and reports `row_return_denied: true`. Row omission is not query-cost
-control.
+Validation reports `executed: false` and is not reusable authorization. Execution
+refetches identity, revalidates current permission and trusted scope, and audits.
+The adapter currently flattens the core `result` into top-level `columns`,
+`data`, `row_count`, and `result_metadata`; do not assume the HTTP envelope.
 
-First-run checks:
+| Host setting / request | Expected for Alice's two paid orders |
+| --- | --- |
+| Default host off, default request | `rows_omitted: true`, `data: []`, `row_count: 2` |
+| Host off, `include_rows=True` | Still omitted; `row_return_denied: true` |
+| Host on, default request | Still omitted — host approval alone is insufficient |
+| Explicit host `MCP_ALLOW_ROW_RETURN=True`, request `include_rows=True`, cap 1 | First authorized row only; `mcp_returned_row_count: 1`, `mcp_row_limit: 1`, `mcp_rows_truncated: true`, executed `row_count: 2` |
 
-- Test each registered context-scoped provider with the authenticated request.
-- Keep the provider-backed `asklens_query` tool disabled unless required.
-- Verify every tool schema omits `username`, `user`, `permissions`, `tenant`,
-  and `scope` arguments.
-- Keep row return off and add host authentication, transport protection, route
-  gates, rate limits, timeouts, concurrency controls, and audit policy.
+Row return is a deliberate data-disclosure decision: MCP clients may place tool
+output into an LLM context. The recipe enables it **only inside a test override**,
+not by default. `MCP_MAX_RETURNED_ROWS` caps the tool payload, not execution;
+`MAX_ROWS`/plan limits still bound execution. `result_metadata.truncated` is
+false here because the database result fits the plan limit; the separate
+`mcp_rows_truncated` flag means the transport cap removed an already-executed row.
+Neither is a cursor. Narrow the query rather than inventing pagination.
 
-See the tested [`examples/mcp/` checklist](../examples/mcp/) and
-`tests/test_project/test_mcp_example.py`. The repository demo is synthetic local
-evidence, not production authentication or a production-wire acceptance test.
+Run the installed recipe:
+
+<!-- asklens-adapter:mcp -->
+```bash
+.venv/bin/python manage.py test shop.mcp_recipe --settings=quickstart.mcp_settings
+```
+
+It uses a synthetic host-owned session map (not a real transport), tests both
+gates/cap, active-user/session rejection, and revokes permission between
+validation and execution to prove current-request denial with zero order SQL.
+It verifies actual FastMCP-generated schemas and metadata-only audit. No rows,
+protected fields, permission tokens, tenant existence, raw errors, or audit
+content are printed for diagnosis. There are no live LLM calls or credentials.
+
+From a current checkout, reuse the existing isolated candidate installer:
+
+```bash
+uv run --no-sync python -m build --wheel
+ASKLENS_ADAPTER_SMOKE=1 uv run --no-sync bash .github/scripts/wheel-smoke.sh mcp 'Django>=5.2,<5.3' '5.2.'
+```
+
+The runner reads the marked command above, copies the actual consumer outside
+the checkout, checks installed candidate bytes and MCP-only dependency/import
+isolation, and blocks execution-time network calls. It does not authenticate
+the public wheel or prove production wire acceptance, independent adoption,
+production readiness, or security certification. Installation may use network
+access; recipe execution does not. For real-transport **synthetic source-demo**
+evidence only, see [Runnable test-project MCP endpoint](#runnable-test-project-mcp-endpoint).
 
 ## Why AskLens still matters with MCP
 

@@ -16,6 +16,9 @@ The project is alpha and APIs may change before a stable release.
 - Added Django-only consumer regressions and source-level pytest coverage.
 - Added opt-in public-tutorial replay to the existing isolated core-wheel installer and supported CI matrix. It consumes the actual example and marked guide commands/expected JSON, validates installed candidate bytes and offline/import isolation, checks rejection/audit behavior, and cleans only owned temporaries. Historical published-package probes do not run this opt-in replay by default; candidate replay is not public-artifact authentication.
 
+- Consolidated progressive API/admin and MCP recipes after the minimal consumer, with exact optional dependencies/settings/wiring, server-derived identity, current-request authorization and trusted row scope, metadata-only audit, table/empty/opaque-denial outcomes, and explicit MCP row gates/caps. Native admin remains Django-only and audit admin stays view-only; all adapter shapes remain provisional.
+- Added an opt-in minimal safe accessible columns/data consumer and installed-candidate recipe replay to the existing installer/matrix, including real session login/CSRF and optional Chromium checks against the isolated local API server. Browser DOM interception and local synthetic HTTP evidence are separately labeled; no runtime/dependency/migration change or production-authentication claim is introduced. These are source-only example additions, not changes to immutable public `0.3.2` artifacts.
+
 ## 0.3.2 — 2026-10-27
 
 This is the current published alpha. Its immutable `v0.3.2` GitHub Release and

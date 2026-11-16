@@ -166,6 +166,10 @@ jobs:
               "/.github/scripts/wheel_smoke.py",
               "/.github/scripts/quickstart_smoke.py",
               "/examples/quickstart/manage.py",
+              "/examples/quickstart/quickstart/api_settings.py",
+              "/examples/quickstart/shop/static/shop/table.js",
+              "/examples/quickstart/shop/templates/shop/table.html",
+              "/tests/e2e/quickstart_table.py",
               "/README.md",
               "/LICENSE",
               "/compose.yaml",
@@ -205,6 +209,7 @@ jobs:
       - name: Smoke test core wheel install without DRF
         env:
           ASKLENS_TUTORIAL_SMOKE: "1"
+          ASKLENS_ADAPTER_SMOKE: "1"
         run: |
           bash .github/scripts/wheel-smoke.sh \
             core \
@@ -212,6 +217,8 @@ jobs:
             "${{ matrix.django-version-prefix }}"
 
       - name: Smoke test MCP extra wheel install
+        env:
+          ASKLENS_ADAPTER_SMOKE: "1"
         run: |
           bash .github/scripts/wheel-smoke.sh \
             mcp \
@@ -221,6 +228,7 @@ jobs:
       - name: Smoke test API extra wheel install
         env:
           ASKLENS_SOURCE_API_SNAPSHOT: ${{ runner.temp }}/asklens-source-api-routes.json
+          ASKLENS_ADAPTER_SMOKE: "1"
         run: |
           bash .github/scripts/wheel-smoke.sh \
             api \
@@ -359,6 +367,16 @@ jobs:
 
       - name: Install Chromium and system dependencies
         run: uv run --no-sync playwright install --with-deps chromium
+
+      - name: Test minimal columns/data consumer in Chromium
+        run: uv run --no-sync python tests/e2e/quickstart_table.py
+
+      - name: Test minimal UI against an installed candidate API server
+        run: |
+          uv run --no-sync python -m build --wheel
+          ASKLENS_ADAPTER_SMOKE=1 ASKLENS_BROWSER_PYTHON="$PWD/.venv/bin/python" \
+            uv run --no-sync bash .github/scripts/wheel-smoke.sh \
+            api 'Django>=5.2,<5.3' '5.2.'
 
       - name: Run disposable Compose/Playwright reference smoke
         run: bash scripts/reference-demo-smoke.sh

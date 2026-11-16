@@ -13,7 +13,7 @@ recursive-include docs *.md
 exclude docs/mkdocs_hooks.py
 prune docs/assets
 prune docs/outreach
-recursive-include examples *.md *.py
+recursive-include examples *.md *.py *.html *.js
 recursive-include scripts *.py *.sh
 exclude scripts/capture-showcase.py
 exclude scripts/capture-showcase.sh

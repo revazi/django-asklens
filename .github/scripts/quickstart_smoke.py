@@ -94,7 +94,7 @@ def read_tutorial(guide: Path) -> dict[str, object]:
     return blocks
 
 
-def assert_installed_wheel(wheel: Path, source: Path) -> None:
+def assert_installed_wheel(wheel: Path, source: Path, mode: str = "core") -> None:
     """Check actual installed bytes, not merely a version/direct_url string."""
     import django_asklens
 
@@ -115,16 +115,21 @@ def assert_installed_wheel(wheel: Path, source: Path) -> None:
             installed = package / name.removeprefix("django_asklens/")
             if not installed.is_file() or installed.read_bytes() != archive.read(name):
                 raise TutorialFailure("Installed package bytes differ from candidate")
-    assert_import_isolation(source)
+    assert_import_isolation(source, mode)
 
 
-def assert_import_isolation(source: Path) -> None:
-    """Check before and after every app step, including failure/test paths."""
+def assert_import_isolation(source: Path, mode: str = "core") -> None:
+    """Allow only the selected extra, before and after every consumer step."""
+    allowed = {"core": None, "api": "rest_framework", "mcp": "fastmcp"}[mode]
+    forbidden = {"tests", "rest_framework", "fastmcp"} - {allowed}
     for optional in ("rest_framework", "fastmcp"):
-        if importlib.util.find_spec(optional) is not None:
-            raise TutorialFailure(f"Optional dependency present in core: {optional}")
+        present = importlib.util.find_spec(optional) is not None
+        if optional != allowed and present:
+            raise TutorialFailure(f"Unselected optional dependency present: {optional}")
+        if optional == allowed and not present:
+            raise TutorialFailure(f"Selected optional dependency missing: {optional}")
     for name, module in tuple(sys.modules.items()):
-        if name.split(".")[0] in {"tests", "rest_framework", "fastmcp"}:
+        if name.split(".")[0] in forbidden:
             raise TutorialFailure(f"Forbidden consumer import: {name}")
         filename = getattr(module, "__file__", None)
         if name.startswith("django_asklens") and filename:
@@ -151,10 +156,16 @@ def guarded_step(arguments: list[str]) -> None:
     """Child entry: execute a guide command with network and import guards."""
     source, wheel = (Path(value).resolve() for value in arguments[:2])
     label, *command = arguments[2:]
-    assert_installed_wheel(wheel, source)
+    adapter_mode = (
+        label.removeprefix("adapter-") if label.startswith("adapter-") else None
+    )
+    mode = adapter_mode or "core"
+    assert_installed_wheel(wheel, source, mode)
     if Path.cwd().resolve().is_relative_to(source):
         raise TutorialFailure("Consumer execution is inside the source checkout")
-    os.environ["DJANGO_SETTINGS_MODULE"] = "quickstart.settings"
+    os.environ["DJANGO_SETTINGS_MODULE"] = (
+        ADAPTER_RECIPES[mode][2] if adapter_mode else "quickstart.settings"
+    )
     with (
         patch(
             "socket.socket.connect", side_effect=TutorialFailure("Network forbidden")
@@ -188,7 +199,7 @@ def guarded_step(arguments: list[str]) -> None:
         except SystemExit as exc:
             exit_code = exc.code
         finally:
-            assert_import_isolation(source)
+            assert_import_isolation(source, mode)
             if rejected:
                 table = connection.ops.quote_name(Order._meta.db_table)
                 if any(table in query["sql"] for query in capture):
@@ -220,13 +231,20 @@ def consumer_environment() -> dict[str, str]:
     return {
         key: value
         for key, value in os.environ.items()
-        if key not in {"PYTHONPATH", "PYTHONHOME", "DJANGO_SETTINGS_MODULE"}
+        if key
+        not in {"PYTHONPATH", "PYTHONHOME", "PYTHONOPTIMIZE", "DJANGO_SETTINGS_MODULE"}
         and not key.startswith("DJANGO_ASKLENS")
     } | {"PYTHONNOUSERSITE": "1"}
 
 
 def run_command(
-    project: Path, source: Path, wheel: Path, label: str, command: list[str]
+    project: Path,
+    source: Path,
+    wheel: Path,
+    label: str,
+    command: list[str],
+    *,
+    extra_environment: dict[str, str] | None = None,
 ) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
         [
@@ -241,7 +259,7 @@ def run_command(
             *command,
         ],
         cwd=project,
-        env=consumer_environment(),
+        env=consumer_environment() | (extra_environment or {}),
         text=True,
         capture_output=True,
         timeout=90,
@@ -333,6 +351,96 @@ def replay(source: Path, wheel: Path, guide: Path) -> None:
     )
 
 
+# One source of truth for each guide's executable adapter entry point. The
+# installer/environment lifecycle and guarded child runner are shared with core.
+ADAPTER_RECIPES = {
+    "core": ("usage.md", "shop.admin_recipe", "quickstart.web_settings"),
+    "api": ("usage.md", "shop.api_recipe", "quickstart.api_settings"),
+    "mcp": ("mcp-integration.md", "shop.mcp_recipe", "quickstart.mcp_settings"),
+}
+
+
+def read_adapter_command(guide: Path, mode: str) -> list[str]:
+    matches = re.findall(
+        rf"<!-- asklens-adapter:{mode} -->\n```bash\n(.*?)\n```",
+        guide.read_text(encoding="utf-8"),
+        re.DOTALL,
+    )
+    if len(matches) != 1:
+        raise TutorialFailure("Missing/duplicate adapter recipe command")
+    _, module, settings_module = ADAPTER_RECIPES[mode]
+    command = shlex.split(matches[0])
+    expected = [
+        ".venv/bin/python",
+        "manage.py",
+        "test",
+        module,
+        f"--settings={settings_module}",
+    ]
+    if command != expected:
+        raise TutorialFailure("Unexpected adapter recipe command")
+    return command[2:]
+
+
+def replay_adapter(source: Path, wheel: Path, mode: str) -> None:
+    guide = source / "docs" / ADAPTER_RECIPES[mode][0]
+    command = read_adapter_command(guide, mode)
+    assert_installed_wheel(wheel, source, mode)
+    parent = Path.cwd().resolve()
+    if parent.is_relative_to(source):
+        raise TutorialFailure("Run the adapter smoke outside the source checkout")
+    print(f"candidate_wheel_sha256={hashlib.sha256(wheel.read_bytes()).hexdigest()}")
+    print(f"adapter_recipe={mode}")
+    with tempfile.TemporaryDirectory(prefix="asklens-adapter-", dir=parent) as owned:
+        try:
+            shutil.copytree(
+                source / "examples" / "quickstart",
+                owned,
+                dirs_exist_ok=True,
+                ignore=shutil.ignore_patterns(
+                    "__pycache__", "*.pyc", "db.sqlite3", ".venv", "artifacts"
+                ),
+            )
+            outcome = run_command(
+                Path(owned), source, wheel, f"adapter-{mode}", command
+            )
+            require_success(outcome, f"adapter-{mode}")
+            if "Ran 3 tests" not in outcome.stderr:
+                raise TutorialFailure("Adapter recipe did not execute its test cases")
+            browser_python = os.environ.get("ASKLENS_BROWSER_PYTHON")
+            if mode == "api" and browser_python:
+                interpreter = Path(browser_python)
+                if not interpreter.is_absolute() or not interpreter.is_file():
+                    raise TutorialFailure(
+                        "Browser driver interpreter must be an absolute file"
+                    )
+                browser = run_command(
+                    Path(owned),
+                    source,
+                    wheel,
+                    "adapter-api",
+                    [
+                        "test",
+                        "shop.browser_recipe",
+                        "--settings=quickstart.api_settings",
+                    ],
+                    extra_environment={
+                        "ASKLENS_BROWSER_PYTHON": str(interpreter),
+                        "ASKLENS_BROWSER_SCRIPT": str(
+                            source / "tests/e2e/quickstart_table.py"
+                        ),
+                    },
+                )
+                require_success(browser, "installed API browser")
+                if "Ran 1 test" not in browser.stderr:
+                    raise TutorialFailure("Installed browser recipe did not execute")
+                print("PASS installed candidate API browser (local synthetic HTTP)")
+        finally:
+            print("adapter_cleanup=owned-directory-only")
+    print("adapter_cleanup=complete")
+    print(f"PASS installed candidate {mode} recipe (not public artifact/wire proof)")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--source-root", type=Path, required=True)
@@ -340,10 +448,16 @@ def main() -> None:
     parser.add_argument(
         "--guide", type=Path, help="Alternate guide for mismatch testing only"
     )
+    parser.add_argument("--adapter", choices=ADAPTER_RECIPES)
     args = parser.parse_args()
     source = args.source_root.resolve()
-    guide = args.guide or source / "docs" / "quickstart-app.md"
-    replay(source, args.wheel.resolve(), guide)
+    if args.adapter:
+        if args.guide:
+            parser.error("--guide is only available for the core tutorial replay")
+        replay_adapter(source, args.wheel.resolve(), args.adapter)
+    else:
+        guide = args.guide or source / "docs" / "quickstart-app.md"
+        replay(source, args.wheel.resolve(), guide)
 
 
 if __name__ == "__main__":

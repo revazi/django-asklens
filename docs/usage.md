@@ -2,297 +2,198 @@
 
 ## Authenticated normal-user API quickstart
 
-> [!IMPORTANT]
-> This journey describes the optional provisional API in immutable public
-> `django-asklens==0.3.2`, the current alpha release. Authenticate the selected
-> public artifact against [Installation](installation.md). The API remains alpha
-> and outside the governed 0.3.x boundary. A same-version local rebuild is
-> separate local evidence, not the public artifact. The historical `0.1.0a1`
-> testing artifact is not a supported upgrade origin.
+After [Your first scoped question](quickstart-app.md), choose **one** adapter.
+Reuse that copied application's model, migration, exact dummy questions,
+`shop.apps.ShopConfig`, and single `AppConfig.ready()` registration import;
+do not copy the complex test project. These recipes use existing immutable public
+`django-asklens==0.3.2` capabilities, but the new `examples/quickstart` adapter
+files are **source-only additions**, absent from immutable public artifacts.
+Authenticate the public wheel via [Installation](installation.md); a same-version
+candidate rebuild is separate evidence. The historical `0.1.0a1` artifact is not
+a supported upgrade origin.
 
-This path uses Django's existing session authentication, one normal user, a host-created Django permission, a permission-scoped catalog, deterministic `DummyProvider`, and the current metadata-only database audit. AskLens does not create a login view, authentication backend, or token endpoint and does not accept identity, permission, or scope claims from the client.
+HTTP, admin/frontend, MCP, settings, and question orchestration are
+[provisional](compatibility.md), not frozen 0.3.x wire contracts. All defaults
+below are synthetic, offline, metadata-only audited, and local-only, not a
+production authentication/deployment template.
 
-### 1. Install and mount the current optional API
+### 1. Choose dependencies and settings
 
-Install `django-asklens[api]==0.3.2` only after authenticating the public
-artifact. See
-[Installation](installation.md#authenticated-api-prerequisites-for-public-032).
-Add the normal host auth/session apps and middleware, `rest_framework`, AskLens,
-and the one host app that owns registration:
+From the copied quickstart directory with its authenticated wheel in `artifacts/`:
+
+| Path | Install in the existing `.venv` | Settings module | Needs DRF? |
+| --- | --- | --- | --- |
+| API + custom table or packaged browser UI | `uv pip install --python .venv/bin/python 'artifacts/django_asklens-0.3.2-py3-none-any.whl[api]'` | `quickstart.api_settings` | Yes: the `api` extra |
+| Native Django admin query + view-only audit admin | Existing core wheel is sufficient | `quickstart.web_settings` | **No** |
+| MCP helpers / FastMCP bridge | See [MCP recipe](mcp-integration.md#bounded-mcp-quickstart) | `quickstart.mcp_settings` | No |
+
+No separate admin extra exists. The core requires `Django>=5.2,<7.0` and
+`pydantic>=2,<3`; `api` adds `djangorestframework>=3.18,<4.0` only. Installing an
+extra into an existing environment does not remove other extras: start fresh
+when checking dependency isolation.
+
+The opt-in [web settings](https://github.com/revazi/django-asklens/blob/main/examples/quickstart/quickstart/web_settings.py)
+add Django sessions, messages, admin, staticfiles, DjangoTemplates with request,
+auth and messages context processors, and this middleware stack:
 
 ```python
-INSTALLED_APPS = [
-    "django.contrib.auth",
-    "django.contrib.contenttypes",
-    "django.contrib.sessions",
-    "rest_framework",
-    "django_asklens",
-    "shop.apps.ShopConfig",
-]
-
 MIDDLEWARE = [
+    "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
+    "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "django.contrib.messages.middleware.MessageMiddleware",
 ]
 ```
 
-Mount the API under the current documented paths:
+`quickstart.api_settings` additionally adds `"rest_framework"` to
+`INSTALLED_APPS` and explicitly sets DRF's `DEFAULT_AUTHENTICATION_CLASSES` to
+`["rest_framework.authentication.SessionAuthentication"]`. Both keep the core
+`DJANGO_ASKLENS` dummy/audit settings and explicitly set:
 
 ```python
-from django.urls import include, path
-
-urlpatterns = [
-    path("", include("django_asklens.api.urls")),
-]
-```
-
-Run all normal host and AskLens migrations so session authentication, model permissions, and audit records are available:
-
-```bash
-python manage.py migrate
-python manage.py check
-```
-
-The default AskLens route permission requires an authenticated user. Keep your host's existing login/session flow; do not treat a username, permission string, user ID, tenant ID, or scope token in an API payload as trusted.
-
-### 2. Register one context-scoped resource once
-
-Put the registration in one project-owned module. This example assumes `Order` has the shown account membership relation; adapt the trusted queryset to the host's own policy:
-
-```python
-# shop/asklens_registration.py
-from django_asklens import register
-
-from .models import Order
-
-ORDER_REPORT_PERMISSION = "shop.view_order"
-
-
-def visible_orders(request):
-    user = getattr(request, "user", None)
-    if user is None or not user.is_authenticated:
-        return Order.objects.none()
-    return Order.objects.filter(account__memberships__user=user)
-
-
-register(
-    timezone="UTC",
-    model=Order,
-    name="orders",
-    label="Orders",
-    description="Orders visible to the current user.",
-    fields={
-        "status": {
-            "binding": "status",
-            "type": "string",
-            "nullable": False,
-            "label": "Status",
-        },
-    },
-    default_order=(("status", "asc"),),
-    requires_permission=ORDER_REPORT_PERMISSION,
-    scope_mode="context_scoped",
-    scope_provider=visible_orders,
-)
-```
-
-Import only that module from the host app's `AppConfig.ready()` method:
-
-```python
-# shop/apps.py
-from django.apps import AppConfig
-
-
-class ShopConfig(AppConfig):
-    name = "shop"
-
-    def ready(self):
-        from . import asklens_registration  # noqa: F401
-```
-
-AskLens does not autodiscover host resources. Do not also import this registration from URLs, models, admin modules, or another `AppConfig`; duplicate/autoreloader-unsafe paths fail rather than broadening access.
-
-Configure one deterministic offline plan and metadata-only database audit:
-
-```python
+# After importing core settings; preserve the configured DUMMY_PLANS.
 DJANGO_ASKLENS = {
-    "LLM_BACKEND": "dummy",
-    "DUMMY_PLANS": {
-        "List my order statuses": {
-            "query_plan": {
-                "resource": "orders",
-                "intent": "list",
-                "select": ["status"],
-                "order_by": [{"field": "status", "direction": "asc"}],
-                "limit": 20,
-            },
-            "presentation": {"kind": "table"},
-        }
-    },
-    "AUDIT_MODE": "database",
-    "AUDIT_INCLUDE_CONTENT": False,
+    **DJANGO_ASKLENS,
+    "API_PERMISSION_CLASSES": ["django_asklens.access.IsAuthenticated"],
+    "REQUEST_PERMISSIONS_GETTER": None,
 }
 ```
 
-The resource permission and scope identity are server-owned. The host-code `requires_permission` token is necessarily visible to trusted developers, but it must not appear in API, catalog, or audit responses. Public semantic field names do not expose their private Django bindings.
+The route gate authenticates the caller; the default permission getter calls
+`request.user.get_all_permissions()` for the **current request**. It does not
+accept client claims. If replacing `REQUEST_PERMISSIONS_GETTER`, derive only
+server-owned permissions from that authenticated request. The existing resource's
+`requires_permission="shop.view_order"` and `visible_orders(request)` then
+independently enforce member visibility and `Order.objects.filter(owner_id=user.pk)`.
+Anonymous scope returns `Order.objects.none()`; missing/invalid scope never
+falls back to an unrestricted manager. Permission tokens, bindings, protected
+fields, and scope identities must not appear in API, catalog, or audit responses.
 
-### 3. Create and authorize a normal host user
+### 2. Wire routes and host authentication
 
-Use the host's normal account lifecycle. For a local synthetic verification, create a non-staff/non-superuser account and assign the existing Django model permission server-side after migrations:
+The committed URL modules are deliberately small:
 
 ```python
-# python manage.py shell
-from django.contrib.auth import get_user_model
-from django.contrib.auth.models import Permission
+# quickstart/web_urls.py: Django-only admin
+from django.contrib import admin
+from django.urls import path
 
-User = get_user_model()
-user, _ = User.objects.get_or_create(username="asklens-reader")
-user.is_staff = False
-user.is_superuser = False
-user.set_unusable_password()  # local verification uses force_login below
-user.save()
-permission = Permission.objects.get(
-    content_type__app_label="shop",
-    codename="view_order",
-)
-user.user_permissions.add(permission)
+urlpatterns = [path("admin/", admin.site.urls)]
 ```
-
-The permission name above is trusted host setup, not an HTTP input or output. Refresh the user/request after changing permissions so Django's permission cache cannot make a local check stale. Real users authenticate through the host's existing login flow; this quickstart does not promise or add another authentication backend.
-
-### 4. Verify the permission-scoped catalog first
-
-Before querying, use the same current authenticated identity to fetch `GET /asklens/catalog/`. The following Django test-client check exercises normal session middleware without creating an AskLens login endpoint:
 
 ```python
-from django.contrib.auth import get_user_model
-from django.test import Client
+# quickstart/api_urls.py: API plus host-owned login/table views (see source)
+from django.urls import include, path
+from .web_urls import urlpatterns as admin_urls
 
-user = get_user_model().objects.get(username="asklens-reader")
-client = Client()
-client.force_login(user)
-response = client.get("/asklens/catalog/")
-assert response.status_code == 200
-catalog = response.json()
-assert [item["name"] for item in catalog["resources"]] == ["orders"]
-assert [item["name"] for item in catalog["resources"][0]["fields"]] == ["status"]
+urlpatterns = [*admin_urls, path("", include("django_asklens.api.urls"))]
 ```
 
-An abbreviated current response is:
+The actual `api_urls.py` also mounts Django's `LoginView` at `/accounts/login/`
+and a `login_required` template view at `/table/`. These are **host example
+code**, not AskLens authentication endpoints. The packaged browser UI is a
+separate optional shell; see [Optional packaged frontend](#5-optional-packaged-frontend).
+It and this custom table call the API and require the API extra. The native
+admin query form POSTs directly to Django and does not.
 
-```json
-{
-  "resources": [
-    {
-      "name": "orders",
-      "label": "Orders",
-      "timezone": "UTC",
-      "fields": [
-        {"name": "status", "label": "Status", "type": "string", "nullable": false}
-      ],
-      "metrics": []
-    }
-  ]
-}
-```
-
-The catalog contains no rows, sample values, bindings, permission tokens, model labels, scope identifiers, tenant details, or scope-provider implementation. A normal authenticated user without the resource permission receives `HTTP 200` with `{"resources": []}` rather than learning that the hidden resource exists.
-
-### 5. Submit the deterministic query
-
-Using the same session-authenticated client:
-
-```python
-import json
-
-response = client.post(
-    "/asklens/query/",
-    data=json.dumps({"question": "List my order statuses"}),
-    content_type="application/json",
-)
-assert response.status_code == 200
-payload = response.json()
-assert payload["response_type"] == "query"
-assert payload["plan"]["resource"] == "orders"
-assert payload["plan"]["intent"] == "list"
-assert payload["result"]["columns"][0]["key"] == "status"
-```
-
-Current successful behavior is `HTTP 200` with `response_type: "query"`, the
-revalidated semantic `plan`, one complete `result` child containing typed
-columns, authorized scoped rows, `row_count`, timing, deterministic
-`result_metadata`, and a `run_id`. The response also echoes the question
-submitted by that authorized caller. It must not expose the Django binding,
-permission token, model label, scope identity, other users' rows, provider
-envelope, or credentials. Repeating the synthetic request with unchanged scoped
-data gives the same canonical projection after excluding `run_id` and
-`result.duration_ms`.
-
-### 6. Keep denials opaque and diagnose host setup
-
-With the documented session setup, anonymous `GET /asklens/catalog/` and `POST /asklens/query/` return `HTTP 403` with `asklens.authorization.denied` at the route gate and create no AskLens audit row. A host that replaces the authentication/permission classes can change the transport status and required authentication headers, but failures emitted by these AskLens views still use the route-local envelope below and must preserve pre-orchestration denial.
-
-Every handled failure from the four AskLens DRF views has exactly one body shape:
-
-```json
-{
-  "error": {
-    "code": "asklens.parse.invalid",
-    "message": "The AskLens request could not be parsed."
-  }
-}
-```
-
-Only a privacy-aware database-audited AskLens failure may add top-level `run_id`. Failure bodies never add `response_type`, echo `question`, repeat `status`, or expose DRF `detail`. Parser/media/method failures use `asklens.parse.invalid`; authentication/permission/debug denials use `asklens.authorization.denied`; opaque missing/inaccessible runs use `asklens.member.unavailable`; throttling uses `asklens.budget.exceeded`; and audit-unavailable/unexpected failures use `asklens.execute.failed`. HTTP statuses and applicable `Allow`, `WWW-Authenticate`, and `Retry-After` headers are preserved.
-
-`POST /asklens/query/` accepts only `question`, `debug`, `include_presentation`, `plan`, and `presentation` at the top level. Every other key—including client-supplied user, permission, tenant, scope, or audit-routing claims—is rejected before shared orchestration, audit, or application-data SQL. The response does not reflect the unknown key/value or serializer diagnostics.
-
-A normal authenticated user without the resource permission sees no resource in the catalog. If that user submits the known question anyway, current query behavior is `HTTP 400` with only the safe member error and optional database audit id:
-
-```json
-{
-  "error": {
-    "code": "asklens.member.unavailable",
-    "message": "A requested query member is unavailable."
-  },
-  "run_id": 1
-}
-```
-
-Unknown and unauthorized resources deliberately share `asklens.member.unavailable`; the denial performs zero registered application-data SQL and creates one failed audit row in database audit mode. Do not weaken that opacity, return the required permission, or reveal whether a hidden member exists.
-
-Diagnose trusted host setup instead:
-
-1. Run `python manage.py check` and confirm the one `AppConfig.ready()` registration import runs in every process.
-2. Verify the host created the intended permission and assigned it to the current user/group; inspect `user.get_all_permissions()` only in trusted server-side diagnostics.
-3. Refresh the authenticated request/user after permission changes, then fetch the permission-scoped catalog again.
-4. If the resource is visible but execution fails, test the trusted `scope_provider(request)` with the current user and confirm it returns a lazy queryset for the registered model.
-
-Never broaden the default manager, accept client-supplied identity/scope, or expose permission/startup diagnostics through the opaque query error.
-
-### 7. Verify metadata-only audit outcomes
-
-With `AUDIT_MODE="database"` and `AUDIT_INCLUDE_CONTENT=False`, the documented sequence has these current outcomes:
-
-- anonymous route denial: no AskLens audit row because orchestration did not start;
-- authenticated hidden-resource query: one failed audit row, stable error code, zero row count, blank question, and an empty operational plan because the member was unavailable;
-- each authorized query: one success audit row with row count and a plan containing only resource and intent.
-
-In metadata-only mode the stored question is blank. Audit rows do not persist result rows, raw rejected input, complete validated plans, filters, private bindings, permission tokens, model labels, scope identifiers, provider payloads, or credentials. The authorized HTTP caller still receives the current query response described above; do not copy that response, its rows, or its echoed question into another audit/log sink by default.
-
-Run detail deliberately changed during alpha. `GET /asklens/runs/<id>/` first applies the configured API permission classes, then permits the row owner or a user with global `asklens.view_semanticqueryrun`; `is_staff` alone no longer grants cross-user review. Inaccessible and missing IDs return the same opaque `404`, and reads create no audit row. Unless the current `AUDIT_INCLUDE_CONTENT` value is exactly boolean `True`, display blanks the question and reduces even a legacy full-content plan to resource/intent metadata. Stored free-form errors are never reflected: recognized codes become canonical safe `{code, message}`, unknown/malformed text becomes a fixed generic safe error, and success/blank errors become `null`.
-
-`AUDIT_DATABASE_ALIAS=None` preserves ordinary Django read/write routing. A trusted non-empty alias is used explicitly for built-in database audit writes and run-detail reads, cannot come from client input, and never falls back to `default`; invalid or unavailable configuration fails with fixed safe read behavior or normal sink-failure handling. Lifecycle commands keep their independent explicit `--database` selection. If full content is enabled, the host owns retention, access, redaction, deletion, backup/replica handling, and every display/export surface.
-
-Route authentication and member/scope validation do not bound request volume or database runtime. Configure host-owned throttling, concurrency limits, statement timeout, and request timeout before production-like use; see [Host throttling and audit controls](host-throttle-and-audit-controls.md). Keep read-only database defense, retention, access, redaction, deletion, monitoring, and any custom sink policy host-owned as well.
-
-Run the matching disposable exact-wheel check from a current source checkout with:
+Migrate/check the chosen stack (use `web_settings` instead for admin only):
 
 ```bash
-bash scripts/quickstart-core-smoke.sh --api
+.venv/bin/python manage.py migrate --settings=quickstart.api_settings
+.venv/bin/python manage.py check --settings=quickstart.api_settings
+.venv/bin/python manage.py check_asklens --fail-on-empty --settings=quickstart.api_settings
 ```
 
-The smoke prints only provenance hashes, counts, HTTP statuses, the stable denial code, audit booleans/statuses, and cleanup markers—not rows, questions, usernames, permission tokens, scope identifiers, or raw payloads.
+Keep real host authentication, HTTPS, secure cookies, CSRF, and session policy
+host-owned. Do not publish `--as-user`, username/tenant selection, or an identity
+header as authentication. The base seed's three normal users have unusable
+passwords and cannot log in. Executable recipe tests set a **test-only** password
+inside disposable test databases and submit the real Django login form with
+CSRF; no login credentials are seeded, printed, or required from the reader.
+Admin tests create a separate synthetic staff user with the resource permission
+and owned fixtures; `is_staff` alone does not authorize rows. Do not make users
+superusers or weaken seeding safeguards to get a query working.
+
+### 3. Verify table-ready success, empty, and opaque denial
+
+The following marked commands are replayed from this guide by the installed
+candidate-wheel harness. They create and destroy their own test database; the
+existing quickstart database and unusable-password seed stay unchanged.
+
+<!-- asklens-adapter:api -->
+```bash
+.venv/bin/python manage.py test shop.api_recipe --settings=quickstart.api_settings
+```
+
+<!-- asklens-adapter:core -->
+```bash
+.venv/bin/python manage.py test shop.admin_recipe --settings=quickstart.web_settings
+```
+
+| Current-request outcome | Session API | Native admin query page |
+| --- | --- | --- |
+| Anonymous | Catalog/query `HTTP 403`; no orchestration/audit | Redirect to `/admin/login/` |
+| Authenticated POST without CSRF | `HTTP 403`, safe authorization error, no audit | `HTTP 403`, no audit |
+| Exact `Show my paid orders`, authorized owner | `HTTP 200`, `response_type: "query"`, complete `result` | `HTTP 200`, Product/Total table with the same scoped cells |
+| Exact `Show my refunded orders`, authorized owner | `HTTP 200`, typed columns, `data: []`, `row_count: 0` | `HTTP 200`, “No rows” — successful empty state |
+| Same paid question after resource permission removal | Catalog becomes `{"resources": []}`; query `HTTP 400`, `asklens.member.unavailable` | `HTTP 200` form with “A requested query member is unavailable.” and no result table |
+
+Successful API `result.columns` keys are `product` and `total_cents`.
+`result.data` is exactly the Alice data in the [minimal quickstart](quickstart-app.md#4-ask-an-exact-question),
+never Bob's row or the draft order. `result.result_metadata.truncated` is false.
+The API echoes the authorized caller's question and semantic plan; do not log
+those response bodies. The admin renders the same columns/data as cells, not a
+second execution path. See the [minimal safe columns/data consumer](custom-ui.md).
+
+The tests revoke the permission **between requests** and execute a previously
+known question again. Denial performs zero registered application-data SQL.
+Unknown and unauthorized members have the same opaque error; do not infer
+protected fields, permissions, or tenant existence. Admin route-gate denial
+instead returns `HTTP 403` before orchestration. Do not display raw errors,
+permission diagnostics, provider bodies, or audit records as recovery hints.
+
+### 4. Audit and safe recovery
+
+With `AUDIT_MODE="database"` and `AUDIT_INCLUDE_CONTENT=False`, each accepted
+success/empty attempt creates one success audit row; an accepted member denial
+creates one failed audit row. The stored question is blank and the operational
+plan contains only resource and intent. Anonymous/CSRF/route-gate denials create
+no audit row. Keep metadata-only defaults and host-owned retention/access;
+never enable full content for onboarding convenience.
+
+The `SemanticQueryRun` admin remains **view-only**, including for superusers:
+no add/change/delete or bulk delete. Give trusted reviewers only the intended
+Django audit-view permission, not ordinary query users cross-user audit access.
+The recipe verifies this with direct mutation POSTs as well as missing UI
+controls. Query permission is not audit permission. For provisional run-detail
+visibility/redaction and audit routing, see [Query through the optional API](#4-query-through-the-optional-api).
+
+If setup fails, run migrations and system checks, verify the one registration
+import, and inspect permission assignment and the trusted scope provider only
+in server-side diagnostics. Refresh the user/request after permission changes;
+never return permission lists or broaden the queryset to recover. Dummy mode
+answers **only** the exact configured questions. Host-owned throttling,
+concurrency limits, statement timeout, and request timeout are still necessary;
+see [Host controls](host-throttle-and-audit-controls.md).
+
+For installed evidence, build a local candidate and reuse the existing installer:
+
+```bash
+uv run --no-sync python -m build --wheel
+ASKLENS_ADAPTER_SMOKE=1 uv run --no-sync bash .github/scripts/wheel-smoke.sh core 'Django>=5.2,<5.3' '5.2.'
+ASKLENS_ADAPTER_SMOKE=1 uv run --no-sync bash .github/scripts/wheel-smoke.sh api 'Django>=5.2,<5.3' '5.2.'
+```
+
+It copies the actual consumer outside the checkout, checks installed wheel bytes
+and optional-dependency isolation before/after execution, blocks execution-time
+network calls, and replays the marked commands above. Core/admin is checked
+**without DRF**; API is checked without FastMCP. Candidate smoke evidence is not
+public-PyPI artifact authentication, production wire acceptance, independent
+adoption, or security certification. Environment installation may use network
+access; recipe execution does not. The [custom UI verification](custom-ui.md#verification-and-evidence-limits)
+adds an optional installed-server Chromium replay using the same installer;
+its only HTTP is to the owned local synthetic test server.
 
 ## 1. Register resources
 
@@ -571,11 +472,66 @@ remain separate from adapter routing and human help:
 `help.content` is not an internal machine document. A safe provider fallback
 reason, when present, is `help.error`.
 
+### HTTP failures and audit visibility
+
+Every handled failure from the four AskLens DRF views has one route-local shape:
+
+```json
+{
+  "error": {
+    "code": "asklens.member.unavailable",
+    "message": "A requested query member is unavailable."
+  }
+}
+```
+
+Only an accepted database-audited failure may add top-level `run_id`. Failure
+bodies never add `response_type`, echo `question`, repeat `status`, or expose
+DRF `detail`. Parser/media/method failures use `asklens.parse.invalid`;
+authentication/permission/debug denials use `asklens.authorization.denied`;
+missing/inaccessible runs and unknown/unauthorized query members use
+`asklens.member.unavailable`; throttling uses `asklens.budget.exceeded`; and
+audit-unavailable/unexpected failures use `asklens.execute.failed`. Applicable
+`Allow`, `WWW-Authenticate`, and `Retry-After` headers are preserved. Replacing
+host authentication classes may change statuses/headers, but must preserve
+pre-orchestration denial and the safe AskLens error envelope.
+
+`POST /asklens/query/` accepts only `question`, `debug`, `include_presentation`,
+`plan`, and `presentation` at the top level. Unknown keys (including user,
+permission, tenant, scope, or audit-routing claims) fail before orchestration,
+audit, or application-data SQL, without reflecting rejected input/diagnostics.
+Catalog metadata contains no rows, sample values, bindings, permission tokens,
+model labels, scope identifiers, or tenant details.
+
+Metadata-only audit stores no result rows, complete plans, filters, private
+bindings, permission tokens, model labels, scope identifiers, provider payloads,
+or credentials. Do not copy authorized HTTP response bodies into another log
+or audit sink by default.
+
+`GET /asklens/runs/<id>/` first applies API route gates, then requires row
+ownership or global `asklens.view_semanticqueryrun`; `is_staff` alone does not
+grant cross-user review. Missing/inaccessible IDs share an opaque `404`; reads
+create no audit row. Unless current `AUDIT_INCLUDE_CONTENT` is exactly boolean
+`True`, display blanks the question and reduces even legacy full-content plans
+to resource/intent. Stored free-form errors are never reflected: recognized
+codes become canonical safe errors; unknown/malformed text becomes a fixed
+safe generic error; success/blank errors become `null`.
+
+`AUDIT_DATABASE_ALIAS=None` preserves Django routing. A trusted non-empty alias
+explicitly controls built-in database audit writes and run-detail reads, never
+comes from client input, and never falls back to `default`. Invalid/unavailable
+configuration fails with safe read/sink-failure behavior. Lifecycle commands
+retain their independent explicit `--database` selection. If full content is
+enabled, the host owns retention, access, redaction, deletion, backups/replicas,
+and every display/export surface; it is not required for any recipe here.
+
 ## 5. Optional packaged frontend
 
 Projects that want full control over layout, tables, charts, or saved-query UX can build a custom UI directly on the AskLens API; see [Building a custom AskLens UI](custom-ui.md).
 
-Projects that want a built-in reference/demo UI can install the `api` extra and mount the dependency-free AskLens frontend. It uses the same API endpoints and Django session authentication as the rest of AskLens. Users can save useful questions locally in their browser; saved plans are sent back only as normal query requests and are revalidated against current permissions before execution.
+Projects that want a built-in reference/demo UI must install the `api` extra
+and mount the AskLens frontend (no separate browser framework/build toolchain).
+It calls the same API endpoints and uses host Django session authentication. Users can save useful questions locally in their browser; saved plans are sent back only as normal query requests and are revalidated against current permissions before execution.
 
 ```python
 # urls.py
