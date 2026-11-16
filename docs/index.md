@@ -79,6 +79,8 @@ secondary to the runnable integration and safety guides above.
 
 - [Current Django AskLens surface](alpha-surface-inventory.md)
 - [0.3.x maintenance roadmap](maintenance-roadmap.md)
+- [Observed integration contract decisions](integration-contract-review.md)
+- [External first-run study protocol — preparation only](first-run-study.md)
 - [Test coverage baseline and critical-boundary map](test-coverage.md)
 - [Draft internal contract schemas](internal-contracts.md)
 - [Internal semantic decision index](internal-semantic-decision-index.md)
