@@ -205,6 +205,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.contrib.sessions.middleware.SessionMiddleware",
+    "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
 ]
 ```
@@ -236,7 +237,13 @@ bash scripts/quickstart-core-smoke.sh --api
 
 The default command without `--api` remains the U2 core-only exact-wheel smoke. Both modes create one `mktemp`-owned root and remove it on success or failure; neither deletes a caller-owned path. Build and dependency installation may use configured package indexes. The smoke is local current-artifact evidence only—not PostgreSQL, release, upgrade, production, external-usability, or security-certification evidence.
 
-Continue with the [authenticated normal-user API quickstart](usage.md#authenticated-normal-user-api-quickstart) for registration, host permission assignment, catalog-first verification, the current query/denial statuses, and audit expectations.
+Continue after the [minimal installed-package quickstart](quickstart-app.md)
+with the canonical [API/admin recipe](usage.md#authenticated-normal-user-api-quickstart)
+for opt-in settings/routes, real session/CSRF verification, current-request
+permission and row scope, catalog-first checks, table/empty/denial outcomes,
+and view-only audit admin. The native admin needs no API extra; the packaged
+browser UI and minimal custom table do. The new adapter example files are
+source-only additions, not retroactive changes to immutable `0.3.2` artifacts.
 
 ## Django setup
 

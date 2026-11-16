@@ -1,316 +1,161 @@
 # Building a custom AskLens UI
 
-AskLens does not require the packaged browser UI. Treat the packaged page as a demo shell around the public API. Production projects can build their own React, Vue, HTMX, Django-template, mobile, Slack, or internal dashboard UI and render AskLens results however they want.
+## Minimal columns/data consumer
 
-Before replacing that shell, the [synthetic source-demo journey](test-project-demo.md#sqlite-frontend-and-admin-first-run-start-to-reset) provides a no-API-key reference for login, an exact suggested success, scoped empty results, safe errors, opaque denial, and cleanup. At the immutable `v0.3.2` tag it reflects release-source behavior; mutable `main` may become newer than the public wheel.
+Start with the [installed-package quickstart](quickstart-app.md), then enable
+the [session API recipe](usage.md#authenticated-normal-user-api-quickstart).
+The **API extra is required** for both this custom browser consumer and the
+packaged reference frontend. Native Django admin query/audit pages do not
+require it. The HTTP/frontend shapes are [optional and provisional](compatibility.md),
+not governed wire contracts.
 
-## Endpoints to call
+The one minimal, framework-free consumer lives in the copied host application:
 
-Mount the API routes:
+- [table template](https://github.com/revazi/django-asklens/blob/main/examples/quickstart/shop/templates/shop/table.html)
+- [plain JavaScript renderer and request handler](https://github.com/revazi/django-asklens/blob/main/examples/quickstart/shop/static/shop/table.js)
+- [host routes](https://github.com/revazi/django-asklens/blob/main/examples/quickstart/quickstart/api_urls.py)
 
-```python
-from django.urls import include, path
+These are new **source-only examples**, not files shipped inside immutable
+public `0.3.2`. They consume existing published capabilities. They are neither
+a dashboard/chart builder nor a production-ready UI product. Reuse/adapt this
+small consumer in any host UI rather than copying the complex test project.
 
-urlpatterns = [
-    path("", include("django_asklens.api.urls")),
-]
-```
+`quickstart.api_urls` mounts `/table/` behind Django `login_required`, Django's
+host-owned `LoginView` at `/accounts/login/`, and `django_asklens.api.urls`.
+Django supplies the CSRF token through `{% csrf_token %}`. The script POSTs
+JSON with `credentials: "same-origin"`, `mode: "same-origin"`, and
+`X-CSRFToken`; redirects are rejected rather than interpreted as data. It sends
+only `question` and `include_presentation: false`, never a user, permission,
+tenant, or scope claim. The API independently authenticates and revalidates the
+current request; a protected HTML page is not a substitute for route permission
+and trusted row scope. Exact dependencies/settings/authentication and executable
+CSRF checks belong to the [API recipe](usage.md), not a second setup here.
 
-Then call the same permission-gated endpoints your UI needs:
+The synthetic seed has no usable login passwords. Run the recipe tests for the
+ready-to-execute path; a real host supplies its existing account lifecycle.
+If trying the template in a local browser, first configure an authenticated
+host account and static serving appropriate to that disposable host. The
+example's `DEBUG=False` settings deliberately do not promise a `runserver`
+static-file deployment. Never copy its local secret/settings into production.
 
-```text
-GET  /asklens/catalog/
-GET  /asklens/capabilities/
-POST /asklens/query/
-GET  /asklens/runs/<id>/
-```
+### Render only the declared projection
 
-The endpoints use your normal Django/DRF authentication and configured AskLens
-API permission classes. Catalog resource/field visibility and query-help
-suggestions are scoped to the current request. Machine capabilities describe
-the installed implementation and contain no resource catalog or human help.
-
-## Discover machine capabilities and the visible catalog
-
-Use `/asklens/capabilities/` for machine-readable query features and limits.
-An abbreviated response is:
-
-```json
-{
-  "intents": ["list", "aggregate"],
-  "filter_logic": "implicit_and",
-  "types": [
-    {"name": "string", "operators": ["eq", "neq", "contains", "icontains", "in", "isnull"]}
-  ],
-  "time_grains": ["day", "week", "month", "quarter", "year"],
-  "limits": {"max_result_rows": 500, "default_result_limit": 100},
-  "features": {"registered_metrics": true, "raw_sql": false},
-  "aggregate_policies": {
-    "to_many_count_policies": ["count_rows", "count_distinct"],
-    "numeric_to_many": false
-  },
-  "backend_restrictions": []
-}
-```
-
-Use `/asklens/catalog/` separately for permission-scoped resources:
+For a successful `response_type: "query"`, the HTTP payload has one complete
+`result` child:
 
 ```json
 {
-  "resources": [
-    {
-      "name": "orders",
-      "label": "Orders",
-      "timezone": "UTC",
-      "fields": [
-        {"name": "status", "label": "Status", "type": "enum", "nullable": false}
-      ],
-      "metrics": [
-        {"name": "order_count", "label": "Orders", "result_type": "integer"}
-      ]
-    }
-  ]
-}
-```
-
-Both responses are metadata only and contain no rows or sample values. Ask a
-help question through `/asklens/query/` when the UI needs human suggestions.
-Common UI uses include:
-
-- combine catalog field types with capability operator rules
-- display visible resources/fields in a help panel
-- hide the query composer when the catalog has no resources
-- render starter questions from `help.content.suggestions`
-
-## Ask a question
-
-Send natural-language questions to `/asklens/query/`:
-
-```http
-POST /asklens/query/
-Content-Type: application/json
-
-{"question": "Show orders by status"}
-```
-
-A data-query response includes `response_type: "query"`, adapter metadata, and
-one complete core `result` document with normalized rows, column metadata,
-timing, and deterministic limit metadata:
-
-```json
-{
-  "run_id": 42,
-  "question": "Show orders by status",
-  "response_type": "query",
-  "plan": {"resource": "orders", "intent": "aggregate", "limit": 10},
   "result": {
     "columns": [
-      {"key": "status", "label": "Status", "type": "string", "nullable": false},
-      {
-        "key": "order_count",
-        "label": "Orders",
-        "type": "integer",
-        "nullable": false
-      }
+      {"key": "product", "label": "Product", "type": "string", "nullable": false},
+      {"key": "total_cents", "label": "Total (cents)", "type": "integer", "nullable": false}
     ],
-    "data": [
-      {"status": "paid", "order_count": 120},
-      {"status": "pending", "order_count": 34}
-    ],
-    "row_count": 2,
-    "duration_ms": 18,
-    "result_metadata": {
-      "limit": 10,
-      "limit_scope": "groups",
-      "truncated": false
-    }
-  },
-  "presentation": {"kind": "bar", "x": {"field": "status"}, "y": {"field": "order_count"}}
-}
-```
-
-For grouped aggregate/chart responses, `result.result_metadata.limit` caps
-returned groups or slices. For list/table responses, it caps returned rows. If
-`result.result_metadata.truncated` is true, another matching row/group exists
-beyond the returned limit; show a message such as “Showing the first N results.
-Refine filters or increase the limit.” Ungrouped aggregates have effective limit
-one and are never truncated. AskLens does not provide cursor pagination.
-
-Use each column's canonical `type` and `nullable` metadata rather than inferring
-types from the first row. Decimal values are strings to preserve precision.
-Empty ungrouped aggregates contain one row (`count=0`, other aggregate values
-`null`); empty grouped aggregates contain no rows and add `result.empty: true`.
-Present that as a successful scoped result (for example, “No matching rows in
-your current authorized scope”), not as an authorization failure or a statement
-about rows outside the current user's scope.
-
-Render tables by iterating `result.columns` for headers and `result.data` for row
-values:
-
-```js
-function renderTable(response) {
-  const table = document.createElement("table");
-  const thead = table.createTHead();
-  const header = thead.insertRow();
-  response.result.columns.forEach((column) => {
-    const th = document.createElement("th");
-    th.textContent = column.label || column.key;
-    header.appendChild(th);
-  });
-
-  const tbody = table.createTBody();
-  response.result.data.forEach((row) => {
-    const tr = tbody.insertRow();
-    response.result.columns.forEach((column) => {
-      const td = tr.insertCell();
-      td.textContent = row[column.key] ?? "";
-    });
-  });
-  return table;
-}
-```
-
-Render charts with any charting library by mapping `presentation.x.field` and
-`presentation.y.field` to values in `result.data`:
-
-```js
-function toBarSeries(response) {
-  const x = response.presentation?.x?.field;
-  const y = response.presentation?.y?.field;
-  if (!x || !y) return null;
-  return response.result.data.map((row) => ({
-    label: row[x],
-    value: row[y],
-  }));
-}
-```
-
-## Presentation is separate and optional
-
-`presentation` is display metadata outside QueryPlan, not an executable renderer contract. It cannot affect authorization, scope, compilation, ordering, limits, or returned values. Your UI can:
-
-- ignore it and always render a table
-- use it to choose a chart type
-- replace it with your own chart rules
-- request no presentation when you only need serialized data
-
-```http
-POST /asklens/query/
-Content-Type: application/json
-
-{"question": "Show orders by status", "include_presentation": false}
-```
-
-When `include_presentation` is false, the response still includes the complete
-`result` child and audit metadata.
-
-## Handle help responses
-
-Questions such as `show me example queries` or `what can I ask?` return
-`response_type: "capabilities"` and do not execute a database query. Exact
-machine `capabilities` and permission-scoped `catalog` documents are siblings of
-adapter-only `routing` and human `help` objects:
-
-```json
-{
-  "response_type": "capabilities",
-  "routing": {"intent": {"intent": "capabilities"}, "source": "fallback"},
-  "capabilities": {"intents": ["list", "aggregate"], "filter_logic": "implicit_and"},
-  "catalog": {"resources": [{"name": "orders", "label": "Orders"}]},
-  "help": {
-    "source": "deterministic",
-    "content": {
-      "answer": "Try these examples.",
-      "suggestions": [
-        {
-          "question": "Show count of Orders by Status",
-          "resource_name": "orders",
-          "plan": {"resource": "orders", "intent": "aggregate"}
-        }
-      ]
-    }
+    "data": [{"product": "North class", "total_cents": 2000}],
+    "row_count": 1,
+    "result_metadata": {"limit": 10, "limit_scope": "rows", "truncated": false}
   }
 }
 ```
 
-`help.content` is human guidance, not the internal machine capabilities
-document. An optional safe fallback reason appears as `help.error`.
+This abbreviated single-row shape illustrates rendering; the exact paid-order
+fixture returns **two** rows as documented in the minimal quickstart. Do not
+infer column names or types from the first row. The implementation:
 
-Your UI should branch on `response_type`:
+1. Iterates `result.columns` for headers and cell lookup; ignores any other row
+   keys. It uses canonical `type`/`nullable` metadata as the type contract, not
+   JavaScript numeric inference. Decimal values remain strings (no precision
+   loss); null/missing cells display `—`.
+2. Creates DOM nodes and assigns `textContent` for labels and values. It never
+   uses `innerHTML`, evaluates presentation metadata, creates returned links,
+   or renders raw error bodies. Django autoescaping remains enabled.
+3. Adds a table caption and `<th scope="col">`, a real form label, keyboard
+   submit controls, `role="status"`/polite live status, and `aria-busy` during
+   requests. The submit button is disabled during execution and restored on
+   every outcome, keeping keyboard controls available for recovery.
+4. Clears previous results **before every request and on failure**. Old rows
+   must not remain visible after session expiry, permission revocation, or a
+   malformed response.
 
-```js
-if (response.response_type === "capabilities") {
-  renderSuggestions(response.help.content.suggestions);
-} else {
-  renderTable(response);
-}
+The custom consumer intentionally ignores optional `presentation`. It does not
+render charts or turn display hints into query policy.
+
+### Empty, limited, help, and failure states
+
+- `Show my paid orders` returns the current authorized owner's paid rows.
+- `Show my refunded orders` returns `HTTP 200`, the same typed columns and
+  `data: []`. Show “No matching rows in your current authorized scope,” not
+  “no data exists” or “permission denied.” Empty grouped aggregates likewise
+  have no rows; an empty ungrouped aggregate instead has one row (count zero,
+  other values null).
+- `result.result_metadata.truncated: true` means another matching row/group
+  exists beyond the execution limit. Explain that the result is limited and
+  invite a narrower question. This is **not pagination**; no cursor is provided.
+- A help response has `response_type: "capabilities"` rather than `result`.
+  This minimal UI asks for an exact configured data question instead. A richer
+  host may safely render `help.content.suggestions` as text; replayed plans
+  remain untrusted and must be revalidated on the current request.
+- Unknown and unauthorized members both yield `asklens.member.unavailable`.
+  Keep that opacity. Refresh the visible catalog or ask the host administrator
+  to review access; never reveal protected fields, permissions, tenant
+  existence, raw errors, or audit content to explain a denial.
+- `401`/`403`: sign in again or request a host access review. An HTML CSRF or
+  login response is not result JSON; never display its raw body.
+- `429`: wait and follow the host retry policy/`Retry-After`. Do not loop retries
+  automatically. A network error or unexpected response gets a fixed safe
+  message, not `exception.message` or provider diagnostics. Use the exact
+  configured dummy question or retry later; do not broaden scope.
+
+Handled AskLens API failures use `{ "error": { "code": "asklens.…",
+"message": "…" } }`, with an optional audit `run_id`. Do not look for legacy
+`detail`, echoed question, or a result on failure. The renderer uses stable
+codes/statuses and fixed UI recovery messages; it does not inspect or display
+server diagnostics. Full provisional API and audit visibility rules remain in
+the [usage guide](usage.md#4-query-through-the-optional-api).
+
+## Discovery and host-owned extensions
+
+Use `GET /asklens/catalog/` for current-request visible resources/fields and
+`GET /asklens/capabilities/` for machine features/limits. Neither contains rows
+or sample values. Keep both authenticated. Do not use catalog absence to
+confirm that a hidden resource or tenant exists.
+
+A host may save questions/plans in its own storage, but AskLens alpha does not
+ship a saved-query model. Avoid persisting result rows, provider bodies, or
+sensitive questions by default. Submit saved/provider/client-produced plans
+back to AskLens for current permission, scope, and budget validation. Audit
+records are not a result cache and must not be used as an access workaround.
+
+## Verification and evidence limits
+
+The API recipe exercises real Django login/session/CSRF and installed candidate
+bytes with a disposable database. The standalone Chromium check uses the actual
+template/script with **synthetic intercepted HTTP responses** to check safe DOM
+rendering (including HTML-like values), empty/error/recovery/loading states,
+keyboard submission, and request credentials/CSRF shape:
+
+```bash
+uv run --no-sync playwright install chromium
+uv run --no-sync python tests/e2e/quickstart_table.py
 ```
 
-## Handle failures
+That default mode is a browser DOM regression, **not** installed-artifact or
+production wire acceptance. To additionally exercise the actual copied host
+and installed candidate API over local HTTP, reuse the same installer after
+building the wheel (the separate dev interpreter supplies only Playwright):
 
-Every handled failure from the four AskLens DRF views uses one route-local shape:
-
-```json
-{
-  "error": {
-    "code": "asklens.authorization.denied",
-    "message": "The current request is not authorized."
-  }
-}
+```bash
+uv run --no-sync python -m build --wheel
+ASKLENS_ADAPTER_SMOKE=1 ASKLENS_BROWSER_PYTHON="$PWD/.venv/bin/python" \
+  uv run --no-sync bash .github/scripts/wheel-smoke.sh api 'Django>=5.2,<5.3' '5.2.'
 ```
 
-A privacy-aware accepted AskLens failure may also include top-level `run_id` when the database audit sink created a row. Do not look for legacy `response_type`, echoed `question`, redundant `status`, or DRF `detail` fields. Branch on `error.code`, display only `error.message`, and continue honoring the HTTP status plus `Allow`, `WWW-Authenticate`, or `Retry-After` headers where applicable. This adapter is local to AskLens routes; unrelated host DRF endpoints keep the host's configured exception behavior.
-
-Query request objects are strict. Send only `question`, `debug`, `include_presentation`, `plan`, and `presentation`; do not send user IDs, permissions, tenant IDs, scope tokens, audit aliases, or other policy claims. Unknown top-level keys fail before orchestration and are not echoed.
-
-## Saving queries
-
-A custom UI can save useful questions in local storage, bookmarks, a project-owned database table, or another application-owned model. AskLens does not ship a first-class server-side saved-query model in alpha. A saved item can store:
-
-```json
-{
-  "question": "Show count of Orders by Status",
-  "plan": {"resource": "orders", "intent": "aggregate"}
-}
-```
-
-When replaying a saved suggestion, send both fields back to `/asklens/query/`:
-
-```http
-POST /asklens/query/
-Content-Type: application/json
-
-{
-  "question": "Show count of Orders by Status",
-  "plan": {"resource": "orders", "intent": "aggregate"}
-}
-```
-
-The normal AskLens API revalidates submitted plans against the current request's permissions, resource catalog, field rules, and current plan limits before execution. Execution then resolves the resource's fail-closed scope policy: deliberately reviewed per-resource `global` scope or a trusted current-request `scope_provider` under `context_scoped`, which may be configured once as the safe project default. Missing or invalid scope rejects without falling back to the model manager. This applies to clicked suggestions, browser-saved plans, server-saved plans, and UI-edited plans with changed filters, date intervals, ordering, or limits. A saved plan is an optimization and UX convenience, not a permission bypass.
-
-If you build server-side saved queries, keep them project-owned until AskLens grows a first-class saved-query model after alpha. Suggested fields are:
-
-- owner/user or team
-- title
-- original question
-- optional saved plan JSON
-- created/updated timestamps
-- last run id or last run summary
-
-## Audit runs
-
-For successful data queries and safe failures, AskLens writes `SemanticQueryRun` audit records. Retrieve one through:
-
-```http
-GET /asklens/runs/42/
-```
-
-Use this for “view previous run” screens or audit links. The run endpoint still checks whether the current user may view the run.
-
-## Safety reminders for custom UIs
-
-- Do not send database rows or sample values to LLM providers from your UI.
-- Do not turn AskLens plans into SQL execution; AskLens is designed for validated Django ORM queries.
-- Handle API failures through `error.code` and display only `error.message`. Unknown and unauthorized members intentionally share `asklens.member.unavailable`; do not attempt to infer hidden catalog membership.
-- Do not trust saved plans from the browser; submit them back to AskLens for revalidation.
-- Keep route permissions on the API even if the UI page has its own access gate.
+The optional `shop.browser_recipe` uses Django's disposable static live test
+server in the isolated API-wheel environment. Chromium submits the real host
+login form, loads the actual static script, demonstrates scoped table/empty/
+opaque-denied states, and verifies authenticated requests without CSRF fail.
+The browser driver imports no AskLens checkout; the server retains the wheel
+byte/import checks and outbound-network block, and browser traffic is limited
+to that owned local server. Test-only credentials and response bodies are not
+printed. No live LLM or external account is involved. This is **local synthetic
+HTTP evidence**, not production wire acceptance. Neither browser mode proves
+independent adoption, production readiness, or security certification.

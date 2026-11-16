@@ -13,6 +13,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+import pytest
+
 ROOT = Path(__file__).resolve().parents[1]
 EXAMPLE = ROOT / "examples" / "quickstart"
 
@@ -41,6 +43,39 @@ def test_minimal_consumer_behaviour_in_disposable_project(tmp_path: Path) -> Non
     )
     assert completed.returncode == 0, completed.stdout + completed.stderr
     assert "Ran 8 tests" in completed.stderr
+    assert not (project / "db.sqlite3").exists()
+
+
+@pytest.mark.parametrize(
+    ("module", "settings"),
+    [
+        ("admin_recipe", "web_settings"),
+        ("api_recipe", "api_settings"),
+        ("mcp_recipe", "mcp_settings"),
+    ],
+)
+def test_opt_in_adapter_recipes_in_disposable_project(tmp_path, module, settings):
+    project = tmp_path / "consumer"
+    shutil.copytree(
+        EXAMPLE, project, ignore=shutil.ignore_patterns("__pycache__", "*.pyc")
+    )
+    result = subprocess.run(
+        [
+            sys.executable,
+            "manage.py",
+            "test",
+            f"shop.{module}",
+            f"--settings=quickstart.{settings}",
+            "--verbosity",
+            "1",
+        ],
+        cwd=project,
+        env={"PATH": os.environ.get("PATH", ""), "PYTHONPATH": str(ROOT)},
+        text=True,
+        capture_output=True,
+        timeout=90,
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
     assert not (project / "db.sqlite3").exists()
 
 

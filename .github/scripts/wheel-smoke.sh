@@ -71,6 +71,25 @@ case "${ASKLENS_TUTORIAL_SMOKE:-0}" in
     ;;
 esac
 
+# Current source additions only: never replay new recipes against historical
+# published artifacts/upgrade origins unless explicitly requested.
+case "${ASKLENS_ADAPTER_SMOKE:-0}" in
+  0) ;;
+  1)
+    (
+      cd "$smoke_venv"
+      env -u PYTHONPATH -u PYTHONHOME -u DJANGO_SETTINGS_MODULE \
+        "$smoke_venv/bin/python" -s \
+        "$project_root/.github/scripts/quickstart_smoke.py" \
+        --source-root "$project_root" --wheel "$wheel" --adapter "$mode"
+    )
+    ;;
+  *)
+    echo "ASKLENS_ADAPTER_SMOKE must be 0 or 1." >&2
+    exit 2
+    ;;
+esac
+
 source_snapshot="${ASKLENS_SOURCE_API_SNAPSHOT:-}"
 if [[ "$mode" == "api" && -n "$source_snapshot" ]]; then
   if [[ ! -f "$source_snapshot" ]]; then

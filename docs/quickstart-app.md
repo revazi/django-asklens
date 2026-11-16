@@ -99,8 +99,8 @@ PY
 ```
 
 The import path must be inside this example's `.venv`, not the source checkout.
-Do not use `pip install -e`, install optional extras, or add the checkout to the
-module search path. Hash verification authenticates the public artifact, not
+Do not use `pip install -e`, install optional extras **for this core step**, or
+add the checkout to the module search path. Hash verification authenticates the public artifact, not
 its fitness for a particular deployment; dependency resolutions remain
 host-owned and should be audited separately.
 
@@ -264,6 +264,28 @@ Run the example's Django-only regression tests:
 These tests use a disposable test database. They cover both user scopes, empty
 results, opaque denial with zero order-table queries, unmatched wording, audit
 privacy, seed repeatability/refusal, and CLI selector validation.
+
+## Next: choose one adapter
+
+Keep this minimal core path unchanged; opt into just the surface you need:
+
+- [API or native admin](usage.md#authenticated-normal-user-api-quickstart):
+  exact extras/settings/routes, real session/CSRF verification, current-request
+  permission/scope, and table-ready success, empty, and opaque-denied outcomes.
+  The native admin needs no DRF; browser consumers need the API extra.
+- [Minimal safe columns/data UI](custom-ui.md): the same host's small plain-JS
+  table with safe rendering, accessibility basics, and recovery, not a dashboard.
+- [MCP](mcp-integration.md#bounded-mcp-quickstart): host-authenticated server
+  identity, no rows by default, and explicit host/request row gates and caps.
+
+The opt-in `quickstart/*_settings.py`, URL/tool wiring, `shop/*_recipe.py`, and
+table template/static script are newer **source-only additions** using existing
+public `0.3.2` capabilities. They are not in immutable public artifacts. Adapter
+shapes remain provisional under the [compatibility policy](compatibility.md).
+Their marked guide commands reuse the installed-candidate harness with
+`ASKLENS_ADAPTER_SMOKE=1`; historical published-artifact probes keep it off.
+All execution is synthetic/offline; no login passwords, live LLM, or secrets
+are added to the base quickstart.
 
 ## Troubleshooting
 

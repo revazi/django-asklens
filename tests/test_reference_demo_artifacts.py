@@ -925,25 +925,22 @@ def test_authenticated_api_quickstart_is_current_private_and_disposable() -> Non
     usage_heading = "## Authenticated normal-user API quickstart"
     ordered_usage_headings = (
         usage_heading,
-        "### 1. Install and mount the current optional API",
-        "### 2. Register one context-scoped resource once",
-        "### 3. Create and authorize a normal host user",
-        "### 4. Verify the permission-scoped catalog first",
-        "### 5. Submit the deterministic query",
-        "### 6. Keep denials opaque and diagnose host setup",
-        "### 7. Verify metadata-only audit outcomes",
+        "### 1. Choose dependencies and settings",
+        "### 2. Wire routes and host authentication",
+        "### 3. Verify table-ready success, empty, and opaque denial",
+        "### 4. Audit and safe recovery",
     )
     usage_positions = [usage.index(heading) for heading in ordered_usage_headings]
     assert usage_positions == sorted(usage_positions)
     normalized_usage = " ".join(usage.replace("\n> ", " ").split())
     for required in (
         "immutable public `django-asklens==0.3.2`",
-        "provisional API",
+        "[provisional](compatibility.md)",
         "not a supported upgrade origin",
         "normal user",
         "server-owned",
         "AppConfig.ready()",
-        "force_login",
+        "real Django login form",
         "GET /asklens/catalog/",
         "POST /asklens/query/",
         "HTTP 403",
