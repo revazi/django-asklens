@@ -153,9 +153,18 @@ logging even if that host setting is enabled.
 
 **Live path UNVERIFIED; actual acceptance INCOMPLETE.** A tiny synthetic pass
 would not validate the current full AskLens strict schema, authorize a user,
-prove scope/audit readiness, or establish production acceptance. The current
-application-schema mismatch with OpenAI's documented strict subset remains an
-explicit gate. Do not weaken schema validation or permissions to bypass it.
+prove scope/audit readiness, or establish production acceptance. The
+[source/candidate offline schema gate](providers.md#offline-strict-schema-gate-resolved-live-acceptance-still-incomplete)
+is now repaired at the OpenAI-compatible boundary, not by changing application
+QueryPlan contracts: optional non-nullable values use null omission markers on
+the strict wire and normalize back before existing validation. All actual
+emitted planner/unified objects were already closed; unused raw model schemas
+were the source of the earlier open-map report. Open maps are not silently
+truncated or accepted. Actual live application acceptance and the deprecated
+snapshot's lifecycle/model-selection gates remain unresolved in #188. A later
+HTTP 400/422 still does not identify schema rejection rather than another
+request rejection. Do not disable strict mode, weaken validation/permissions,
+substitute a model silently, or enable provider I/O logging to bypass a failure.
 `check_asklens` remains counts-only and never invokes this probe.
 
 ### Empty is success, not denial

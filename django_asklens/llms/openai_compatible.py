@@ -9,6 +9,10 @@ from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
 from django_asklens.exceptions import LLMProviderError
+from django_asklens.llms._openai_schema import (
+    normalize_wire_response,
+    strict_wire_schema,
+)
 from django_asklens.llms.base import LLMMessage
 from django_asklens.settings import get_asklens_setting
 
@@ -61,8 +65,9 @@ class OpenAICompatibleProvider:
         log_llm_response(response_payload)
         content = extract_message_content(response_payload)
         parsed_content = parse_json_content(content)
-        log_llm_parsed_content(parsed_content)
-        return parsed_content
+        normalized_content = normalize_wire_response(parsed_content, schema)
+        log_llm_parsed_content(normalized_content)
+        return normalized_content
 
 
 def log_llm_request(request: Request) -> None:
@@ -183,7 +188,7 @@ def build_chat_completions_request(
             "type": "json_schema",
             "json_schema": {
                 "name": str(schema.get("title") or "QueryPlan"),
-                "schema": dict(schema),
+                "schema": strict_wire_schema(schema),
                 "strict": True,
             },
         },
