@@ -52,6 +52,25 @@ release.
    change. Synthetic checks are not live-provider, production-capacity,
    deployment, adoption, or independent-security evidence.
 
+### Issue #188: offline strict-schema gate only
+
+The focused source/candidate repair resolves the reproduced offline
+required/closed-object schema gate at the OpenAI-compatible provider boundary.
+All emitted planner/compact-unified objects were already closed; the actual
+mismatch was optional properties outside `required`. The earlier open-map
+report referred to the unused full unified model schema, not its emitted compact
+schema. Nullable wire omission markers and incoming normalization preserve the
+existing application contracts and validation; open maps are rejected rather
+than truncated. Mocked transports and synthetic credentials provide offline
+schema/semantic evidence only. See the [exact mapping and limits](providers.md#offline-strict-schema-gate-resolved-live-acceptance-still-incomplete).
+
+**Keep #188 open.** Authorized live application acceptance remains incomplete;
+no provider API query, credential inspection or billed operation was performed.
+The pinned snapshot's deprecation/shutdown and any replacement model-selection
+and configuration/acceptance evidence are separate unresolved gates. The tiny
+synthetic preflight cannot close them. No release, deployment, automatic retry,
+model substitution, new public contract or dependency-PR change is included.
+
 ### Point-in-time locked dependency audit
 
 At `2026-10-04T09:31:52Z`, the following exact command completed successfully

@@ -50,6 +50,21 @@ and requires explicit release notes and actionable migration guidance. This
 policy provides no fixed deprecation period and makes no compatibility promise
 for `0.4.0` or 1.0.
 
+## Provider wire representation is not an application contract
+
+The issue #188 source/candidate offline repair adapts only the OpenAI-compatible
+provider boundary. Its copied strict schema requires all object properties and
+uses null omission markers for originally optional non-nullable values;
+normalization removes only those markers before existing application validation.
+It does not change QueryPlan defaults, explicit-limit semantics, application
+schema accessors, the five draft documents, or dummy/custom provider contracts.
+Open maps cannot be faithfully closed by deleting keys and are rejected before
+transport. No schema negotiation, governed surface, migration or execution route
+is added. Existing catalog, authorization, scope and budget validation remains
+mandatory. Offline conformance is not live-provider acceptance; see the
+[remaining provider gates](providers.md#offline-strict-schema-gate-resolved-live-acceptance-still-incomplete).
+This candidate behavior is not evidence about immutable public 0.3.2 artifacts.
+
 ## Upgrade to public 0.3.2
 
 The immediate prior supported origin is immutable public `0.3.1`. Published

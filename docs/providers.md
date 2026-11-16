@@ -93,16 +93,59 @@ probe below, not `manage.py`, a host shell, or a wrapper that bootstraps Django.
   features; other compatible services, including the previously illustrated
   Gemini endpoint, are not validated onboarding paths here.
 
-**Known application-schema gate:** current generated AskLens planner/unified
-response schemas contain optional properties not all listed in `required` and
-open-ended objects. They do not satisfy that documented strict subset as-is.
-The synthetic schema below intentionally avoids those constructs. A successful
-probe would establish only one tiny schema exchange, **not full AskLens-schema
-compatibility**. Application live evaluations may fail with schema rejection;
-do not switch off strict mode, weaken validation, or fall back to permissive
-parsing. Schema adaptation and actual application-provider acceptance remain
-separate unresolved issue gates; this change does not redesign the internal
-[draft schemas or provisional orchestration](compatibility.md).
+### Offline strict-schema gate resolved; live acceptance still incomplete
+
+The source/candidate OpenAI-compatible boundary now copies the requested schema
+into a strict wire representation: every declared object property is required,
+originally optional non-nullable properties gain a nullable union, and Pydantic
+`default` annotations are removed from the wire copy. Local references are
+retained. Objects must already have `additionalProperties: false`; open maps
+are rejected before transport, never closed by deleting meaningful keys.
+This is a narrow adaptation of the schemas AskLens actually emits, not a general
+JSON Schema compiler or a guarantee for arbitrary compatible services/models.
+
+The reproduced mismatch is precise:
+
+| Emitted application schema | Properties previously outside `required` |
+| --- | --- |
+| Planner envelope | `presentation` |
+| Planner `QueryPlan` / compact unified `query_plan` | `filters`, `group_by`, `metrics`, `select`, `order_by`, `limit` |
+| Planner `GroupBySpec` / compact unified grouping item | `date_trunc` |
+| Planner `OrderBySpec` / compact unified ordering item | `field`, `metric`, `direction` |
+| Planner `PresentationSpec` | `kind`, `x`, `y` |
+| Compact unified envelope | `query_plan`, `presentation`, `query_help` |
+| Compact unified presentation | `x`, `y` |
+| Compact unified help / suggestion item | `suggestions`, `notes` / `fields`, `metrics`, `date_fields`, `why` |
+
+**Correction to the earlier gate description:** these actual emitted schemas
+already close every object. Open maps occur in the unused full
+`AskLensProviderResponse.model_json_schema()` (raw plan/suggestion-plan fields),
+not the compact unified request. Standalone help removes the suggestion-plan
+property before emission; its optional fields and the intent schema receive
+the same boundary adaptation.
+
+On return, only null markers introduced for originally non-nullable optional
+properties become omissions. An originally nullable null remains a value.
+False, zero, empty strings/collections, explicit limits, filter values, order,
+help references and meaningful inactive branches are not discarded. In
+particular, a null limit marker leaves the limit **unset**, so the current host
+default applies; an explicit limit is retained and budget-checked. These wire
+markers do not make null a new valid value in an application QueryPlan. Unknown
+keys and invalid required values remain available for normal rejection. The
+existing application parsers, catalog/permission checks and trusted execution
+facade still validate all provider output; strict mode remains enabled, with no
+permissive fallback. Dummy/custom providers and application schema accessors
+are unchanged. See the [compatibility boundary](compatibility.md).
+
+Deterministic synthetic-credential tests inspect the actual mocked transport
+request and validate synthetic responses against its adapted schema, then test
+normalization and existing application validation/execution. This resolves only
+issue #188's **offline required/closed-object schema gate**. It is not provider
+wire acceptance, model-quality evidence or production readiness. The tiny
+preflight below still cannot establish full application-schema acceptance.
+Actual authorized application-provider acceptance and the pinned snapshot's
+lifecycle/model-selection gates remain unresolved; **#188 stays open**. Do not
+disable strict mode or weaken validation if a later authorized call is rejected.
 
 ### Limits and retry semantics
 
@@ -251,7 +294,8 @@ validated plans and test tenant denial/audit behavior. Never substitute a real
 host settings module, catalog, rows or user questions.
 
 **UNVERIFIED / actual live acceptance INCOMPLETE.** No live evaluation was run
-for this change. The strict application-schema gate above remains unresolved.
+for this change. Only the offline schema gate above is resolved; actual
+application-provider acceptance and lifecycle/model-selection gates remain open.
 Only after separate network/charge authorization, supply the protected
 `DJANGO_ASKLENS_LIVE_LLM_API_KEY` variable and run serially, with no xdist,
 `--showlocals`, content logging, recording/capture plugins or payload artifacts:
