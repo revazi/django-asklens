@@ -32,6 +32,17 @@ accepts or returns independently governed.
 | Compiler, ORM bindings, private helpers | **Internal** | Compiler/prepared/context objects, private names, Django paths, SQL, querysets, scope providers, diagnostics, and implementation modules are excluded even if technically importable. |
 | Raw SQL, mutation, automatic exposure, client policy | **Unsupported** | Raw SQL, writes, automatic model/field exposure, client-supplied identity/tenant/permission/scope, and execution outside the facade remain unsupported. |
 
+## Evidence-backed integration decisions
+
+The [#191 integration review](integration-contract-review.md) maps actual
+quickstart, installed consumer, API/admin/MCP, frontend/provider and audit
+persistence dependencies to narrow retain/defer decisions. It evaluates and
+retains the five-document unversioned policy, with no negotiation, governed
+surface expansion or runtime change. Its
+[practical notices and upgrade checks](integration-contract-review.md#practical-notices-and-upgrade-checks)
+apply the rules below to selected supported callers without creating a fixed
+deprecation period. Prospective consumers are not adoption evidence.
+
 ## Consumer typing does not expand this boundary
 
 The source/candidate [public-API typing baseline](typing.md) inventories these

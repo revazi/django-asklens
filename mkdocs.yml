@@ -51,6 +51,7 @@ nav:
   - Reference:
       - AskLens specification: asklens-specification.md
       - Compatibility boundary: compatibility.md
+      - Integration contract decisions: integration-contract-review.md
       - Public-API typing: typing.md
       - Support lifecycle: support-lifecycle.md
       - Evaluation fixtures: evaluation.md
@@ -60,6 +61,7 @@ nav:
   - Maintainer evidence:
       - Current alpha surface: alpha-surface-inventory.md
       - Maintenance roadmap: maintenance-roadmap.md
+      - First-run study protocol (preparation): first-run-study.md
       - Test coverage: test-coverage.md
       - Internal contracts: internal-contracts.md
       - Internal semantic decisions: internal-semantic-decision-index.md

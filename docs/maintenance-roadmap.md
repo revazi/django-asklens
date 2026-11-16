@@ -134,10 +134,63 @@ audit passed locally (120 audited packages, no known vulnerabilities or adverse
 statuses). Lock changes only split/pin the existing mypy tool into its own group;
 no resolved package version or runtime dependency changed.
 
-Keep [#190](https://github.com/revazi/django-asklens/issues/190) open pending
-independent approval, hosted PR checks and exact-merge checks. These local checks
-are not approval, public-artifact authentication, live-provider acceptance,
-production security certification, a release or a deployment.
+[#190](https://github.com/revazi/django-asklens/issues/190) is closed following
+independent approval and all 16 hosted PR checks in
+[PR #215](https://github.com/revazi/django-asklens/pull/215), merged at
+`1188e981b5fb4fba468f7ecfcf97e0886aa22874`; exact-merge CI, docs and CodeQL
+also passed. These checks are not public-artifact authentication, live-provider
+acceptance, production security certification, a release or a deployment.
+
+### Issues #191 and #192: contract review and study preparation
+
+The [evidence-linked integration review](integration-contract-review.md) records
+observed imports/settings, HTTP/MCP and frontend/provider dependencies, and
+actual audit/dummy/preview-plan reuse. It distinguishes repository-operated
+synthetic consumers from prospective integrations; no consenting external or
+executed TypeScript consumer evidence is asserted. Retain decisions preserve
+the existing governed subset and provisional adapters. The five internal
+unversioned draft documents remain unchanged, with no negotiation or
+previous-shape handling. Practical notices, current-facade revalidation and
+upgrade/rollback limits apply existing policy, not a new deprecation window.
+No accepted runtime/API change, migration or speculative redesign is introduced;
+shared-spec evolution remains with #200/#205, live provider gates with #188.
+
+The [first-run study protocol and result instrument](first-run-study.md) select
+the authenticated public `0.3.2` wheel plus exact source example SHA, with a
+one-file blank-registration task variant so registration effort is observable.
+It defines neutral unassisted work, scoped Alice/Bob success and safe denial,
+explicit timing/assistance criteria, privacy/retention, independent-participant
+eligibility and focused triage. Ten minutes is a hypothesis only. Source files
+and protocol revision are separate identities from the public package.
+
+Local verification for this documentation/test-only slice: **1,522 passed,
+11 skipped** in the standard full offline suite (live providers and optional
+PostgreSQL service skipped). Focused compatibility/export/import/schema/audit/
+adapter revalidation checks passed (115 tests), as did focused example/study/
+consumer checks (70 tests). Installed candidate core tutorial/admin, API and
+MCP recipes, source/wheel API-route parity, positive typing plus 24 exact
+negative diagnostics, strict docs/rendered-site validation (40 pages), Ruff
+lint/format (279 files), Django/migration checks, build/Twine and CI package
+contents/exclusions passed. The unchanged lock's audit resolved 121 packages
+and reported no known vulnerabilities/adverse statuses in 120 audited packages.
+
+A separate **maintainer rehearsal**, not an independent session, authenticated
+the exact public wheel/sdist and used the pinned source example outside the
+checkout (Python 3.12.9, macOS arm64, Django 6.1.3, Pydantic 2.14.3). The blank
+registration produced an empty registry; restoring the reviewed declaration
+then passed migrations/checks, scoped Alice/Bob commands, opaque nonzero denial,
+all nine example tests and host migration-drift checks. Import provenance and
+absence of DRF/FastMCP were checked. No human registration effort or first-query
+time was measured; scripted restoration is not task completion by a participant.
+These results do not authenticate a candidate as the public artifact or prove
+production transport/provider acceptance, adoption or security certification.
+No runtime, dependency, lock, migration, release or deployment change is made.
+
+**Delivery status:** #191 awaits final independent review, hosted checks and
+merge evidence before closure. #192 is preparation only and remains **open**:
+no explicit maintainer review of the final protocol has been evidenced. Worker
+review/CI cannot satisfy that criterion. #193 owns separately authorized
+recruitment, consent and actual independent sessions; none occurred here.
 
 ### Point-in-time locked dependency audit
 
