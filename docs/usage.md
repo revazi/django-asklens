@@ -1,5 +1,9 @@
 # Usage guide
 
+For setup failures or safe query recovery, follow the
+[troubleshooting decision path](troubleshooting.md). Registry counts, migration
+readiness, request authorization and successful empty results are separate states.
+
 ## Authenticated normal-user API quickstart
 
 After [Your first scoped question](quickstart-app.md), choose **one** adapter.

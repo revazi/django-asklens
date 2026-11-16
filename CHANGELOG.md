@@ -12,6 +12,9 @@ The project is alpha and APIs may change before a stable release.
 
 ### Documentation and examples
 
+- Added a shared troubleshooting decision path for startup/registration, migrations, configuration, exact dummy wording, malformed plans, provider failures, opaque denial and valid empty results. It distinguishes counts-only `check_asklens` from readiness and privileged host diagnosis from safe user recovery, including the arbitrary-host-startup limitation. No diagnostic output, runtime behavior, public error contract or migration changed.
+- Added setup-failure and synthetic consumer regressions for fixed safe errors, metadata-only audit and rejection before application-data SQL, reusing the existing installed-candidate consumer replay.
+
 - Added a minimal standalone Django consumer and first-scoped-question guide using the authenticated published `0.3.2` core wheel, exact dummy questions, synthetic user-owned orders, ordinary Django permissions, safe empty/denied outcomes, and a host-model transition. These new source examples do not modify immutable public artifacts or package API behavior.
 - Added Django-only consumer regressions and source-level pytest coverage.
 - Added opt-in public-tutorial replay to the existing isolated core-wheel installer and supported CI matrix. It consumes the actual example and marked guide commands/expected JSON, validates installed candidate bytes and offline/import isolation, checks rejection/audit behavior, and cleans only owned temporaries. Historical published-package probes do not run this opt-in replay by default; candidate replay is not public-artifact authentication.

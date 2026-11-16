@@ -1,5 +1,9 @@
 # Building a custom AskLens UI
 
+Use the [troubleshooting decision path](troubleshooting.md) to distinguish safe
+caller recovery from privileged host diagnosis. Never explain protected-member
+existence or turn a successful empty result into an access error.
+
 ## Minimal columns/data consumer
 
 Start with the [installed-package quickstart](quickstart-app.md), then enable

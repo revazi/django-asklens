@@ -37,6 +37,7 @@ nav:
       - Core quickstart: quickstart-core.md
       - Register host models: registration.md
       - Usage and authenticated API: usage.md
+      - Troubleshooting: troubleshooting.md
   - Integrate:
       - Providers: providers.md
       - Build a custom UI: custom-ui.md
