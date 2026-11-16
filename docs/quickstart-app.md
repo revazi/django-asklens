@@ -225,7 +225,10 @@ nor `owner_id` is registered as a queryable field. `visible_orders(request)`
 returns a lazy queryset filtered by the current authenticated user's primary
 key; anonymous requests get `Order.objects.none()`. Registration also requires
 `shop.view_order`: resource permission and row ownership are separate checks.
-There is no unrestricted-manager fallback.
+There is no unrestricted-manager fallback. The
+[registration guide's before/after](registration.md#beforeafter-less-presentation-boilerplate-same-policy)
+shows how this same declaration omits redundant labels without omitting any
+field binding, type, nullability, permission, timezone or scope decision.
 
 For a real application:
 

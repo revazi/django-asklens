@@ -3,6 +3,10 @@
 For setup failures or safe query recovery, follow the
 [troubleshooting decision path](troubleshooting.md). Registry counts, migration
 readiness, request authorization and successful empty results are separate states.
+For a small host-model declaration, start with the
+[one-field scoped registration](registration.md#start-with-one-scoped-field)
+and [equivalent before/after example](registration.md#beforeafter-less-presentation-boilerplate-same-policy).
+No model discovery or new registration helper is needed.
 
 ## Authenticated normal-user API quickstart
 

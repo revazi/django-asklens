@@ -68,6 +68,20 @@ def test_minimal_consumer_behaviour_in_disposable_project(tmp_path: Path) -> Non
             "    for app in INSTALLED_APPS\n]\n",
             None,
         ),
+        (
+            "invalid-declaration",
+            "INSTALLED_APPS = [\n"
+            '    "invalid_app.InvalidConfig" if app.startswith("shop") else app\n'
+            "    for app in INSTALLED_APPS\n]\n",
+            None,
+        ),
+        (
+            "cached-import",
+            "INSTALLED_APPS = [\n"
+            '    "cached_app.CachedConfig" if app.startswith("shop") else app\n'
+            "    for app in INSTALLED_APPS\n]\n",
+            "OK",
+        ),
     ],
 )
 def test_existing_setup_checks_have_distinct_limits(
@@ -94,6 +108,31 @@ def test_existing_setup_checks_have_distinct_limits(
             '        runpy.run_module("shop.asklens_registration")\n',
             encoding="utf-8",
         )
+    elif case == "invalid-declaration":
+        (project / "invalid_app.py").write_text(
+            "from shop.apps import ShopConfig\n"
+            "class InvalidConfig(ShopConfig):\n"
+            "    def ready(self):\n"
+            "        super().ready()\n"
+            "        from django_asklens import register\n"
+            "        from shop.asklens_registration import visible_orders\n"
+            "        from shop.models import Order\n"
+            "        register(\n"
+            "            model=Order, name='invalid', timezone='UTC',\n"
+            "            scope_mode='context_scoped', scope_provider=visible_orders,\n"
+            "            fields={'status': {'type': 'string', 'nullable': False}})\n",
+            encoding="utf-8",
+        )
+    elif case == "cached-import":
+        (project / "cached_app.py").write_text(
+            "from shop.apps import ShopConfig\n"
+            "class CachedConfig(ShopConfig):\n"
+            "    def ready(self):\n"
+            "        super().ready()\n"
+            "        import importlib\n"
+            "        importlib.import_module('shop.asklens_registration')\n",
+            encoding="utf-8",
+        )
 
     def run(command: str, *args: str) -> subprocess.CompletedProcess[str]:
         return subprocess.run(
@@ -114,7 +153,12 @@ def test_existing_setup_checks_have_distinct_limits(
     summary = run("check_asklens", "--fail-on-empty")
     if expected_status is None:
         assert summary.returncode != 0
-        assert "DuplicateResourceError" in summary.stderr
+        expected_error = (
+            "InvalidResourceError"
+            if case == "invalid-declaration"
+            else "DuplicateResourceError"
+        )
+        assert expected_error in summary.stderr
         assert "AskLens registry summary" not in summary.stdout
         return
 

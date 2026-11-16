@@ -1,5 +1,7 @@
 """Current identity, policy, catalog, and request revalidation tests."""
 
+from decimal import Decimal
+
 import pytest
 
 from django_asklens import Metric
@@ -122,6 +124,73 @@ def test_same_plan_uses_each_current_request_scope() -> None:
 
     assert paid.rows == ({"status": "paid"},)
     assert pending.rows == ({"status": "pending"},)
+
+
+def test_metric_only_private_binding_keeps_permission_and_current_scope(
+    django_assert_num_queries,
+) -> None:
+    """Aggregate backing need not expose rows or cache preview authorization."""
+
+    registry = CatalogRegistry()
+    resource = registry.register(
+        model=Order,
+        name="orders",
+        timezone="UTC",
+        fields={"status": {"binding": "status", "type": "string", "nullable": False}},
+        metrics=[
+            Metric(
+                "revenue",
+                op="sum",
+                binding="total",
+                result_type="decimal",
+                requires_permission="shop.view_financials",
+            )
+        ],
+        requires_permission="shop.view_orders",
+        scope_mode="context_scoped",
+        scope_provider=lambda request: Order.objects.filter(
+            status=request.visible_status
+        ),
+    )
+    assert "total" not in resource.fields
+    assert (
+        registry.to_dict(permissions={"shop.view_orders"})["resources"][0]["metrics"]
+        == []
+    )
+    previewed = parse_and_validate_query_plan(
+        {
+            "resource": "orders",
+            "intent": "aggregate",
+            "metrics": [{"metric": "revenue"}],
+        },
+        registry=registry,
+        permissions={"shop.view_orders", "shop.view_financials"},
+    )
+    create_order(email="paid@example.com", status="paid", total="10.00")
+    create_order(email="pending@example.com", status="pending", total="20.00")
+    for status, expected in (("paid", "10.00"), ("pending", "20.00")):
+        result = execute_plan(
+            previewed,
+            request=request_with(
+                "shop.view_orders", "shop.view_financials", visible_status=status
+            ),
+            registry=registry,
+        )
+        assert result.rows == ({"revenue": Decimal(expected)},)
+
+    with django_assert_num_queries(0):
+        with pytest.raises(PublicAskLensError) as caught:
+            execute_plan(
+                previewed, request=request_with("shop.view_orders"), registry=registry
+            )
+        assert public_error_payload(caught.value) == MEMBER_ERROR
+        with pytest.raises(PublicAskLensError) as caught:
+            execute_plan(
+                {"resource": "orders", "intent": "list", "select": ["total"]},
+                request=request_with("shop.view_orders", "shop.view_financials"),
+                registry=registry,
+            )
+        assert public_error_payload(caught.value) == MEMBER_ERROR
 
 
 def test_resource_and_metric_permissions_are_rechecked_before_sql(
