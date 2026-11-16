@@ -51,6 +51,7 @@ nav:
   - Reference:
       - AskLens specification: asklens-specification.md
       - Compatibility boundary: compatibility.md
+      - Public-API typing: typing.md
       - Support lifecycle: support-lifecycle.md
       - Evaluation fixtures: evaluation.md
       - Demo query ideas: demo-queries.md

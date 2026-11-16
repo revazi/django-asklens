@@ -2,6 +2,7 @@ include CHANGELOG.md
 include CONTRIBUTING.md
 include SECURITY.md
 include compose.yaml
+include uv.lock
 exclude mkdocs.yml
 include .github/scripts/wheel-smoke.sh
 include .github/scripts/wheel_smoke.py
@@ -19,3 +20,4 @@ exclude scripts/capture-showcase.py
 exclude scripts/capture-showcase.sh
 exclude scripts/verify-docs-site.py
 recursive-include tests/e2e *.py
+recursive-include tests/installed_consumer/typing *.py *.ini

@@ -353,6 +353,7 @@ Release checks cover Python 3.12 and 3.13.
 - [source demo frontend/admin first run](docs/test-project-demo.md#sqlite-frontend-and-admin-first-run-start-to-reset)
 - [Synthetic browser showcase and reproducible capture](docs/showcase.md)
 - [Changelog](CHANGELOG.md)
+- [Public-API typing baseline and limits](docs/typing.md)
 - [Contributing](CONTRIBUTING.md)
 - [Security policy](SECURITY.md)
 

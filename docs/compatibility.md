@@ -32,6 +32,14 @@ accepts or returns independently governed.
 | Compiler, ORM bindings, private helpers | **Internal** | Compiler/prepared/context objects, private names, Django paths, SQL, querysets, scope providers, diagnostics, and implementation modules are excluded even if technically importable. |
 | Raw SQL, mutation, automatic exposure, client policy | **Unsupported** | Raw SQL, writes, automatic model/field exposure, client-supplied identity/tenant/permission/scope, and execution outside the facade remain unsupported. |
 
+## Consumer typing does not expand this boundary
+
+The source/candidate [public-API typing baseline](typing.md) inventories these
+imports and checks bounded consumers against an installed wheel. Its inline
+annotations and `py.typed` marker do not govern additional dataclass construction,
+helper imports, Django/DRF types, dynamic result contents or draft documents.
+Runtime validation and all trust boundaries remain mandatory.
+
 ## Change rules within 0.3.x
 
 An ordinary `0.3.z` patch may add compatible optional behavior, fix defects, or
