@@ -262,8 +262,10 @@ Run the example's Django-only regression tests:
 ```
 
 These tests use a disposable test database. They cover both user scopes, empty
-results, opaque denial with zero order-table queries, unmatched wording, audit
-privacy, seed repeatability/refusal, and CLI selector validation.
+results, opaque denial with zero order-table queries, hostile/unmatched wording,
+malformed dummy envelopes, invalid dummy settings, simulated provider failures,
+metadata-only audit, seed repeatability/refusal, and CLI selector validation.
+No live provider is called.
 
 ## Next: choose one adapter
 
@@ -288,6 +290,9 @@ All execution is synthetic/offline; no login passwords, live LLM, or secrets
 are added to the base quickstart.
 
 ## Troubleshooting
+
+For the shared setup/query decision path, including what green checks do **not**
+prove, see [Troubleshooting setup and query failures](troubleshooting.md).
 
 | Symptom | Safe next step |
 | --- | --- |

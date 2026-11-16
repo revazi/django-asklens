@@ -36,6 +36,11 @@ language. Tests and evaluation fixtures should use it by default. To try the
 existing synthetic source demo with reviewed success, empty, denial, and error
 paths, follow [Example Django AskLens integration](test-project-demo.md#sqlite-frontend-and-admin-first-run-start-to-reset).
 
+For exact-question mismatches, malformed plans and provider failures, use the
+[troubleshooting decision path](troubleshooting.md#dummy-mismatch-versus-malformed-plan-versus-provider-failure).
+The public provider error does not reveal private questions or provider causes;
+do not enable provider I/O logging merely to complete onboarding.
+
 ## OpenAI-compatible backend
 
 AskLens includes an OpenAI-compatible chat-completions provider implemented with Python stdlib HTTP. It adds no required runtime dependency.

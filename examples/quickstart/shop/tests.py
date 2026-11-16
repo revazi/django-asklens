@@ -1,15 +1,19 @@
 """Consumer-app regressions, runnable with Django alone (no pytest/extras)."""
 
 import json
+from contextlib import nullcontext
 from io import StringIO
+from unittest.mock import patch
 
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.management import call_command
 from django.core.management.base import CommandError
 from django.db import connection
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.test.utils import CaptureQueriesContext
 
+from django_asklens.exceptions import LLMProviderError
 from django_asklens.models import SemanticQueryRun
 from shop.models import Order
 
@@ -43,6 +47,8 @@ class QuickstartTests(TestCase):
         result = self.ask("Show my refunded orders")
         self.assertEqual(result["response_type"], "query")
         self.assertEqual(result["result"]["data"], [])
+        self.assertEqual(result["result"]["row_count"], 0)
+        self.assertTrue(result["result"]["columns"])
         self.assertFalse(result["result"]["result_metadata"]["truncated"])
 
     def test_denial_is_opaque_and_executes_no_order_queries(self):
@@ -63,12 +69,108 @@ class QuickstartTests(TestCase):
         self.assertEqual(SemanticQueryRun.objects.count(), 1)
 
     def test_arbitrary_wording_is_not_interpreted(self):
-        output = StringIO()
-        with CaptureQueriesContext(connection) as queries:
-            with self.assertRaises(CommandError):
-                call_command("ask_orders", "Find every order please", stdout=output)
-        self.assertEqual(json.loads(output.getvalue())["response_type"], "error")
-        self.assertFalse(any('"shop_order"' in q["sql"] for q in queries))
+        for question in (
+            "Find every order please",
+            "show my paid orders",
+            "Show my paid orders!",
+            "<script>synthetic-private-question-187</script> tenant permission key",
+        ):
+            with self.subTest(question=question):
+                SemanticQueryRun.objects.all().delete()
+                output = StringIO()
+                with CaptureQueriesContext(connection) as queries:
+                    with self.assertRaises(CommandError):
+                        call_command("ask_orders", question, stdout=output)
+                self.assertEqual(
+                    json.loads(output.getvalue()),
+                    {
+                        "response_type": "error",
+                        "error": {
+                            "code": "asklens.provider.failed",
+                            "message": (
+                                "The query provider could not produce "
+                                "a usable response."
+                            ),
+                        },
+                    },
+                )
+                self.assertFalse(any('"shop_order"' in q["sql"] for q in queries))
+                run = SemanticQueryRun.objects.get()
+                self.assertEqual(run.question, "")
+                self.assertEqual(run.plan, {})
+                self.assertNotIn(question, output.getvalue() + run.error)
+
+    def test_failed_exact_questions_are_safe_and_metadata_only(self):
+        """Reproduce fixture/config/provider failures through the actual consumer."""
+
+        private = "synthetic-private-187 <script>hostile</script> tenant permission key"
+        cases = (
+            (
+                "malformed-envelope",
+                {"DUMMY_PLANS": {"Show my paid orders": {"private": private}}},
+                None,
+                "asklens.plan.invalid",
+                "The query plan is invalid.",
+            ),
+            (
+                "invalid-configuration",
+                {"DUMMY_PLANS": private},
+                None,
+                "asklens.provider.failed",
+                "The query provider could not produce a usable response.",
+            ),
+            (
+                "provider-failure",
+                {},
+                LLMProviderError(private),
+                "asklens.provider.failed",
+                "The query provider could not produce a usable response.",
+            ),
+        )
+        for label, configuration, failure, code, message in cases:
+            with self.subTest(label=label):
+                SemanticQueryRun.objects.all().delete()
+                output = StringIO()
+                with (
+                    override_settings(
+                        DJANGO_ASKLENS={**settings.DJANGO_ASKLENS, **configuration}
+                    ),
+                    patch(
+                        "django_asklens.llms.openai_compatible."
+                        "OpenAICompatibleProvider.complete_json",
+                        side_effect=AssertionError("No live provider is allowed"),
+                    ),
+                ):
+                    # Only the provider-failure case replaces the dummy call;
+                    # the others exercise the real deterministic parser/config.
+                    provider_patch = (
+                        patch(
+                            "django_asklens.llms.dummy.DummyProvider.complete_json",
+                            side_effect=failure,
+                        )
+                        if failure is not None
+                        else nullcontext()
+                    )
+                    with provider_patch, CaptureQueriesContext(connection) as queries:
+                        with self.assertRaises(CommandError):
+                            call_command(
+                                "ask_orders", "Show my paid orders", stdout=output
+                            )
+                self.assertEqual(
+                    json.loads(output.getvalue()),
+                    {
+                        "response_type": "error",
+                        "error": {"code": code, "message": message},
+                    },
+                )
+                self.assertFalse(any('"shop_order"' in q["sql"] for q in queries))
+                run = SemanticQueryRun.objects.get()
+                self.assertEqual(run.question, "")
+                self.assertEqual(run.plan, {})
+                self.assertEqual(run.status, SemanticQueryRun.Status.FAILED)
+                self.assertEqual(run.row_count, 0)
+                self.assertEqual(run.error, f"{code}: {message}")
+                self.assertNotIn(private, output.getvalue() + str(run.plan) + run.error)
 
     def test_audit_defaults_do_not_persist_question_or_full_plan(self):
         self.ask()

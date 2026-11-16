@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from io import StringIO
 from typing import Any
+from unittest.mock import Mock
 
 import pytest
 from django.core.management import call_command, get_commands
@@ -193,3 +194,54 @@ def test_summary_counts_only_safe_metadata_without_invoking_scope_provider(
     assert provider_calls == []
     for marker in private_markers:
         assert marker not in stdout
+
+
+def test_counts_are_not_configuration_or_provider_readiness(
+    settings, monkeypatch, django_assert_num_queries
+) -> None:
+    """Invalid runtime settings do not broaden the metadata-only command."""
+
+    settings.DJANGO_ASKLENS = {
+        "AUDIT_MODE": "private-invalid-mode-187",
+        "LLM_BACKEND": "openai_compatible",
+        "LLM_API_KEY": "synthetic-not-a-credential-187",
+        "DUMMY_PLANS": "private-invalid-plans-187",
+    }
+    default_registry.register(
+        timezone="UTC",
+        model=Order,
+        name="private-resource-187",
+        scope_mode="global",
+        fields={
+            "private-field-187": {
+                "binding": "internal_notes",
+                "type": "string",
+                "nullable": False,
+            }
+        },
+    )
+    traps = []
+    for path in (
+        "django_asklens.llms.factory.get_llm_provider",
+        "django_asklens.llms.dummy.DummyProvider.complete_json",
+        "django_asklens.llms.openai_compatible.OpenAICompatibleProvider.complete_json",
+        "django_asklens.permissions.get_request_permissions",
+    ):
+        trap = Mock(side_effect=AssertionError("The command resolved runtime policy"))
+        monkeypatch.setattr(path, trap)
+        traps.append(trap)
+
+    with django_assert_num_queries(0):
+        stdout, stderr = call_check("--fail-on-empty")
+
+    assert stdout == expected_summary(
+        resources=1,
+        global_resources=1,
+        context_scoped_resources=0,
+        fields=1,
+        metrics=0,
+        status="OK",
+    )
+    assert stderr == ""
+    for trap in traps:
+        trap.assert_not_called()
