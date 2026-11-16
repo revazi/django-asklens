@@ -39,6 +39,23 @@ compatibility guarantees. Settings are keys of `DJANGO_ASKLENS` unless noted.
 | Provider orchestration uses reviewed dummy envelopes; OpenAI-compatible source/candidate mocks exercise copied strict wire schemas and normalization before ordinary validation. Custom providers, planning models, prompts, presentation and settings remain provisional. | [provider policy and remaining #188 gates](providers.md#offline-strict-schema-gate-resolved-live-acceptance-still-incomplete), [provider tests](../tests/llms/), [planning tests](../tests/planning/) | **Retain current boundary adaptation; defer live acceptance to #188.** Wire omission markers are not application null/default semantics, document versions or changes to dummy/custom providers. No live-provider use, arbitrary-NL success or lifecycle acceptance is observed here. |
 | Complex demo/operational fixtures exercise budget, access, frontend, audit routing and observability configuration beyond the minimal consumer. These are repository-owned scenarios, not external host evidence. | [test-project settings](../tests/test_project/settings.py), [settings defaults](../django_asklens/settings.py), [host controls](host-throttle-and-audit-controls.md), [observability tests](../tests/execution/test_observability.py) | **Retain existing classifications.** Only `OBSERVABILITY_SINK`'s documented callback/default-off behavior is governed; other settings/default resolution remain provisional. Recheck every enabled limit/access/audit configuration on upgrade; do not turn the whole defaults mapping into a compatibility promise. |
 
+### Configured use versus available settings
+
+The [complex demo settings](../tests/test_project/demo_settings.py) explicitly
+set `MAX_ROWS`, `MAX_JOINS`, `MAX_METRICS`, `MAX_GROUP_BY`, API access and a
+server-owned permission getter in addition to dummy plans/MCP row policy.
+Its environment-selected live-provider branch is an **opt-in recipe**, not
+observed live acceptance. `LLM_MODEL`, `LLM_BASE_URL`, `LLM_API_KEY`,
+`LLM_TIMEOUT_SECONDS`, `LLM_TEMPERATURE` and `LOG_LLM_IO` belong to that
+provisional provider boundary; this review did not enable it or inspect values.
+`FRONTEND_TITLE`, `FRONTEND_SUBTITLE`, `FRONTEND_STARTER_QUESTIONS` and
+`FRONTEND_PERMISSION_CHECK` are available provisional frontend configuration,
+not additional requirements discovered from the custom table. Likewise,
+`AUDIT_SINK`, `AUDIT_DATABASE_ALIAS` and `OBSERVABILITY_SINK` have operational
+regression evidence, not external-consumer adoption evidence. Do not confuse
+the complete [defaults mapping](../django_asklens/settings.py) with keys the
+minimal installed example must configure.
+
 ### Persisted and reusable documents actually present
 
 The package's database persistence is the operational
