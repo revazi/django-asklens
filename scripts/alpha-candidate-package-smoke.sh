@@ -67,8 +67,8 @@ mkdir -p "$artifacts" "$source_tree"
 git archive "$source_commit" -- \
   .github/release-notes .github/scripts \
   CHANGELOG.md CONTRIBUTING.md LICENSE MANIFEST.in README.md SECURITY.md \
-  compose.yaml pyproject.toml conformance django_asklens docs examples scripts \
-  tests/e2e \
+  compose.yaml pyproject.toml uv.lock conformance django_asklens docs examples scripts \
+  tests/e2e tests/installed_consumer/typing \
   | tar -x -C "$source_tree"
 echo "Building exact source commit: $source_commit"
 evidence_python="$(uv run --no-sync python -c 'import sys; print(sys.executable)')"
@@ -115,6 +115,8 @@ wheel = Path(sys.argv[1])
 sdist = Path(sys.argv[2])
 with zipfile.ZipFile(wheel) as archive:
     wheel_names = set(archive.namelist())
+    if "django_asklens/py.typed" not in wheel_names:
+        raise SystemExit("Missing inline typing marker in wheel.")
     metadata_names = [
         name for name in wheel_names if name.endswith(".dist-info/METADATA")
     ]
@@ -157,6 +159,8 @@ forbidden_prefixes = (
     "docker",
     "httpx",
     "jsonschema",
+    "mypy",
+    "django-stubs",
     "playwright",
     "psycopg",
 )
@@ -176,6 +180,12 @@ if "dev" in (metadata.get_all("Provides-Extra", []) or []):
 with tarfile.open(sdist, "r:gz") as archive:
     source_names = set(archive.getnames())
 required_source_suffixes = {
+    "/django_asklens/py.typed",
+    "/scripts/check-consumer-types.py",
+    "/tests/installed_consumer/typing/mypy.ini",
+    "/tests/installed_consumer/typing/positive.py",
+    "/tests/installed_consumer/typing/negative.py",
+    "/uv.lock",
     "/.github/scripts/wheel-smoke.sh",
     "/.github/scripts/wheel_smoke.py",
     "/compose.yaml",

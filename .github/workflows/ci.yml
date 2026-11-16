@@ -91,6 +91,12 @@ jobs:
       - name: Build package
         run: uv run --no-sync python -m build
 
+      - name: Check installed-wheel public API typing
+        if: matrix.python-version == '3.12' && matrix.django-version == '5.2'
+        run: >-
+          uv run --no-sync python scripts/check-consumer-types.py
+          dist/django_asklens-0.3.2-py3-none-any.whl
+
       - name: Check package metadata
         run: uv run --no-sync twine check dist/*
 
@@ -121,7 +127,7 @@ jobs:
               requirement
               for requirement in metadata.get_all("Requires-Dist", [])
               if requirement.lower().replace("_", "-").startswith(
-                  ("coverage", "httpx", "playwright", "psycopg")
+                  ("coverage", "httpx", "playwright", "psycopg", "mypy", "django-stubs")
               )
           ]
           if forbidden_requirements:
@@ -142,6 +148,7 @@ jobs:
 
           required_wheel_files = {
               "django_asklens/__init__.py",
+              "django_asklens/py.typed",
               "django_asklens/api/views.py",
               "django_asklens/contracts/schemas/capabilities.schema.json",
               "django_asklens/contracts/schemas/catalog.schema.json",
@@ -185,6 +192,12 @@ jobs:
               "/docs/test-coverage.md",
               "/scripts/alpha-candidate-package-smoke.sh",
               "/scripts/coverage-baseline.sh",
+              "/scripts/check-consumer-types.py",
+              "/tests/installed_consumer/typing/mypy.ini",
+              "/tests/installed_consumer/typing/positive.py",
+              "/tests/installed_consumer/typing/negative.py",
+              "/django_asklens/py.typed",
+              "/uv.lock",
               "/scripts/download_pypi_artifacts.py",
               "/scripts/published-package-smoke.sh",
               "/scripts/reference-demo-smoke.sh",

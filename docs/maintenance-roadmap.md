@@ -106,6 +106,39 @@ Keep [#189](https://github.com/revazi/django-asklens/issues/189) open until its
 focused PR has independent approval and hosted checks; no merge, release or
 deployment is implied.
 
+### Issue #190: bounded installed-wheel consumer typing
+
+The source/candidate [typing inventory and limits](typing.md) follow the governed
+registration, execution/result-access, public-error and observability boundary.
+Existing inline annotations were sufficient; the only package typing change is
+a `py.typed` marker. No duplicate stubs, runtime typing dependencies, annotation
+rewrite, optional-adapter imports or runtime behavior changes are introduced.
+A pinned development-only mypy group and copied outside-checkout consumers check
+precise positive types and exactly 24 expected-negative diagnostics. CI runs the
+bounded installed-wheel command; it does not claim repository-wide strict typing.
+The single `django.db.models` missing-typing override cannot establish model or
+queryset precision. Dynamic field mappings, request/scope internals, result cells
+and draft document envelopes still require runtime validation; DRF/MCP adapters
+remain optional/provisional.
+
+Local synthetic verification: the installed candidate passes positive and exact
+negative checks, including with checkout-shadowing environment variables set;
+the same command also runs from the packaged sdist. The focused registry/catalog/
+compiler/planning/facade/results/compatibility/conformance/import/consumer suite
+passed 851 tests (4 skips). Full offline branch coverage passed 1,520 tests
+(11 live/PostgreSQL skips), with no percentage gate. Isolated installed core
+tutorial/admin, API and MCP recipes passed, including source/wheel API-route
+parity. Ruff, Django/migration checks, strict docs/rendered-site validation,
+build/Twine, CI package-content/exclusion/typing-dependency checks, and the locked
+audit passed locally (120 audited packages, no known vulnerabilities or adverse
+statuses). Lock changes only split/pin the existing mypy tool into its own group;
+no resolved package version or runtime dependency changed.
+
+Keep [#190](https://github.com/revazi/django-asklens/issues/190) open pending
+independent approval, hosted PR checks and exact-merge checks. These local checks
+are not approval, public-artifact authentication, live-provider acceptance,
+production security certification, a release or a deployment.
+
 ### Point-in-time locked dependency audit
 
 At `2026-10-04T09:31:52Z`, the following exact command completed successfully

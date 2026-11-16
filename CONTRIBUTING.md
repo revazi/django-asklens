@@ -83,6 +83,18 @@ GitHub Pages remains a manual operator action; see
 - [Provider configuration](docs/providers.md)
 - [Security checklist](docs/security-checklist.md)
 
-## Typing note
+## Bounded consumer typing
 
-Mypy is not currently an alpha CI gate because the Django/DRF typing baseline is not clean yet. Type annotations are still encouraged for public functions and core helpers.
+The installed-wheel public-API typing baseline is an alpha CI gate, not a
+repository-wide mypy check. Reproduce it against a freshly built candidate:
+
+```bash
+artifacts="$(mktemp -d)"
+uv run --locked --group dev python -m build --outdir "$artifacts"
+uv run --locked --group dev python scripts/check-consumer-types.py \
+  "$artifacts/django_asklens-0.3.2-py3-none-any.whl"
+```
+
+See the [import inventory, exact coverage and Django/DRF limits](docs/typing.md).
+Keep public annotations useful without blanket `Any`, global ignore-errors,
+broad suppressions, runtime typing dependencies or a whole-repository rewrite.
