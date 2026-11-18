@@ -1,0 +1,58 @@
+name: Integration friction
+description: Tell us where installation, examples or host integration became unclear.
+title: "[Integration] "
+labels: [question]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Public report: no secrets or customer data.** Do not attach credentials,
+        .env files, private schemas, real questions/rows, raw provider bodies or logs,
+        or private endpoints (including URLs with secret parameters). Recreate the
+        confusing step with synthetic names and data; use safe public error codes.
+        Suspected security problem? **Do not post it here.** Follow the
+        [private security policy](https://github.com/revazi/django-asklens/security/policy).
+        This form is for usability/setup friction, not a promise of consulting support.
+        For new behavior see [feature requests](https://github.com/revazi/django-asklens/blob/main/CONTRIBUTING.md#feature-requests).
+  - type: checkboxes
+    id: public-safety
+    attributes:
+      label: Safe public evidence
+      options:
+        - label: This report uses synthetic data only, contains no secrets or customer data, and is not a private security report.
+          required: true
+  - type: textarea
+    id: artifact
+    attributes:
+      label: Exact version and artifact
+      description: Package version, install command and extras; public wheel/sdist or local candidate/source? For source give commit SHA; for a candidate give SHA and SHA-256. Include the guide/example URL and revision you followed. A same-version rebuild is not the public artifact.
+    validations:
+      required: true
+  - type: textarea
+    id: platform
+    attributes:
+      label: Platform and relevant dependency versions
+      description: OS/architecture, Python, Django, Pydantic, and (if used) database, DRF or FastMCP versions. Identify core/API/admin/MCP integration and synthetic settings, never a full environment dump.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Intended outcome and expected next step
+      description: What were you trying to achieve, and what did the guide lead you to expect?
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior or confusing step
+      description: Where did you stop, what was unclear, and what did you try? Give safe error codes/status only, not raw logs, tracebacks or payloads. Timing is optional; do not infer user-study results from a rehearsal.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Minimal synthetic reproduction
+      description: Give the smallest synthetic files/settings and exact commands/guide step that reproduce the friction. Prefer an offline dummy-provider example; no production access or live-provider run is needed.
+    validations:
+      required: true

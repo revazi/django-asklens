@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Feature request
+    url: https://github.com/revazi/django-asklens/blob/main/CONTRIBUTING.md#feature-requests
+    about: Propose a concrete outcome and explain why existing behavior is insufficient; synthetic evidence only.
+  - name: Support question
+    url: https://github.com/revazi/django-asklens/blob/main/CONTRIBUTING.md#support-questions
+    about: Start with troubleshooting, then ask a bounded public configuration question without secrets or customer data.
+  - name: Private security report — never a public issue
+    url: https://github.com/revazi/django-asklens/security/policy
+    about: Follow SECURITY.md; use private vulnerability reporting if enabled, otherwise an established private maintainer channel.

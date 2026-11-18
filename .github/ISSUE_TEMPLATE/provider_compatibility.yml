@@ -1,0 +1,66 @@
+name: Provider compatibility
+description: Report a bounded provider configuration or structured-output mismatch safely.
+title: "[Provider] "
+labels: [question]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Public report: no secrets or customer data.** Never attach API keys,
+        authorization headers, .env files, private endpoints (including URLs with
+        secret parameters), private schemas, real questions/rows, raw provider
+        request/response bodies or logs. Use synthetic fixtures and safe error codes.
+        Suspected security problem? **Do not post it here.** Follow the
+        [private security policy](https://github.com/revazi/django-asklens/security/policy).
+        **No live request or spend is required to report.** Mocks and schema inspection
+        are not live wire acceptance. OpenAI-compatible does not mean every endpoint
+        supports the same strict structured outputs; see [current limits](https://github.com/revazi/django-asklens/blob/main/docs/providers.md).
+  - type: checkboxes
+    id: public-safety
+    attributes:
+      label: Safe public evidence
+      options:
+        - label: This report uses synthetic data only, contains no secrets or customer data, and is not a private security report.
+          required: true
+  - type: textarea
+    id: artifact
+    attributes:
+      label: Exact version and artifact
+      description: Package version, install command and extras; public wheel/sdist or local candidate/source? For source give commit SHA; for a candidate give SHA and SHA-256. Include the provider-guide revision. A same-version rebuild is not the public artifact.
+    validations:
+      required: true
+  - type: textarea
+    id: platform
+    attributes:
+      label: Platform and relevant dependency versions
+      description: OS/architecture, Python, Django, Pydantic and relevant adapter versions. Include only minimal synthetic settings, never a full environment dump.
+    validations:
+      required: true
+  - type: textarea
+    id: provider
+    attributes:
+      label: Provider, model and evidence boundary
+      description: Public provider family and exact model/snapshot (or synthetic alias for a private service); planner/unified mode, strict-output support, timeout and retry settings. Is this offline inspection/mocked transport or an already-authorized synthetic live observation? For an existing live result give the observation date; do not make a new request. Omit URLs, credentials and payloads.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: What should happen? Link public structured-output requirements if relevant.
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      description: Give only safe error codes/status and sanitized observations. Do not paste raw exceptions, tracebacks, provider bodies or logs. State what remains unverified.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Minimal synthetic reproduction
+      description: Prefer an offline mocked response/schema fixture with exact commands and synthetic input. Keep validation/permissions/scope/budgets active. A tiny preflight pass is not full application compatibility.
+    validations:
+      required: true
