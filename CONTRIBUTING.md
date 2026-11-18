@@ -1,7 +1,9 @@
 # Contributing to Django AskLens
 
-Thanks for your interest in Django AskLens. `0.3.2` is the current public alpha;
-APIs may change. Keep contributions safe, small and deterministic.
+Thanks for your interest in Django AskLens.
+
+Django AskLens 0.3.2 is the current public alpha. APIs may change; keep
+contributions safe, small and deterministic.
 
 - **Integrating the package?** Start with [Your first scoped question](docs/quickstart-app.md),
   not the internal test project. [Installation](docs/installation.md) distinguishes
