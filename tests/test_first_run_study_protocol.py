@@ -47,6 +47,23 @@ def test_study_selects_public_artifact_and_exact_configured_dummy_question() -> 
         assert command in protocol
 
 
+def test_maintainer_approval_pins_exact_protocol_and_keeps_execution_gated() -> None:
+    protocol_commit = "27a1e3e1f1b2286f8b079fecdfb10363b4da17d9"
+    reviewed_protocol = (
+        f"https://github.com/revazi/django-asklens/blob/{protocol_commit}/"
+        "docs/first-run-study.md"
+    )
+    for path in ("docs/first-run-study.md", "docs/maintenance-roadmap.md"):
+        contents = " ".join((ROOT / path).read_text(encoding="utf-8").split())
+        assert "**2026-11-18 UTC**" in contents
+        assert "maintainer explicitly **approved**" in contents
+        assert reviewed_protocol in contents
+        assert "#192's" in contents
+        assert "for protocol preparation only" in contents
+        assert "#193" in contents
+        assert "remain separately unauthorized and incomplete" in contents
+
+
 def test_study_and_contract_review_are_discoverable() -> None:
     for path in ("mkdocs.yml", "docs/index.md"):
         contents = (ROOT / path).read_text(encoding="utf-8")
