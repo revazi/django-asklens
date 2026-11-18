@@ -354,7 +354,8 @@ Release checks cover Python 3.12 and 3.13.
 - [Synthetic browser showcase and reproducible capture](docs/showcase.md)
 - [Changelog](CHANGELOG.md)
 - [Public-API typing baseline and limits](docs/typing.md)
-- [Contributing](CONTRIBUTING.md)
+- [Contributing: locked setup and focused tests](CONTRIBUTING.md)
+- [Contributor tasks and safe feedback routes](docs/contributing.md)
 - [Security policy](SECURITY.md)
 
 ---

@@ -72,6 +72,13 @@ configured offline questions match exact text only.
 - [Example Django AskLens integration](test-project-demo.md)
 - [Synthetic performance baseline](performance-baseline.md)
 
+## Contribute or report friction
+
+Start at the [contributor and feedback hub](contributing.md) for the locked offline
+setup, focused tests, small-task availability and safe bug/integration/provider
+reports. It also distinguishes features, support and **private** security reports.
+No secrets or customer data belong in public feedback.
+
 ## Maintainer evidence
 
 These internal and release-process records are useful for review, but are

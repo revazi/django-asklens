@@ -1,0 +1,58 @@
+name: Bug report
+description: Reproduce incorrect AskLens behavior using synthetic data only.
+title: "[Bug] "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Public report: no secrets or customer data.** Do not attach credentials,
+        .env files, private schemas, real questions/rows, raw provider bodies or logs,
+        or private endpoints (including URLs with secret parameters). Use synthetic
+        names and data, and a safe public error code rather than a raw exception.
+        Suspected permission, tenant, scope or other security bypass? **Do not post it here.**
+        Follow the [private security policy](https://github.com/revazi/django-asklens/security/policy).
+        For setup help use Integration friction; for new behavior see
+        [feature requests](https://github.com/revazi/django-asklens/blob/main/CONTRIBUTING.md#feature-requests).
+  - type: checkboxes
+    id: public-safety
+    attributes:
+      label: Safe public evidence
+      options:
+        - label: This report uses synthetic data only, contains no secrets or customer data, and is not a private security report.
+          required: true
+  - type: textarea
+    id: artifact
+    attributes:
+      label: Exact version and artifact
+      description: Package version, install command and extras; public wheel/sdist or local candidate/source? For source give commit SHA; for a candidate give SHA and SHA-256. Note the source-doc/example revision if different. A same-version rebuild is not the public artifact.
+    validations:
+      required: true
+  - type: textarea
+    id: platform
+    attributes:
+      label: Platform and relevant dependency versions
+      description: OS/architecture, Python, Django, Pydantic, and (if used) database, DRF or FastMCP versions. Include the relevant adapter and synthetic settings, never a full environment dump.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: What should happen? Link the relevant documentation and revision if possible.
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      description: What happened instead? Include only a safe error code/status and sanitized observations, not raw logs, tracebacks or payloads.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Minimal synthetic reproduction
+      description: Give the smallest synthetic model/registration/settings and exact commands, input and checks. Prefer the offline dummy provider; identify the exact configured question. Do not run a live provider just to file this report.
+    validations:
+      required: true

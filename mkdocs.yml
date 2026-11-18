@@ -58,6 +58,8 @@ nav:
       - Demo query ideas: demo-queries.md
       - Conformance: conformance.md
       - Performance baseline: performance-baseline.md
+  - Contribute:
+      - Contributor guide and feedback: contributing.md
   - Maintainer evidence:
       - Current alpha surface: alpha-surface-inventory.md
       - Maintenance roadmap: maintenance-roadmap.md
