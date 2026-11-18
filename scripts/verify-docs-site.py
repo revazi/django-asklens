@@ -16,6 +16,7 @@ REQUIRED_NAV_LABELS = {
     "Build a custom UI",
     "MCP integration",
     "Security checklist",
+    "Contributor guide and feedback",
 }
 SHOWCASE_ASSETS = {
     "assets/showcase/scoped-revenue.png",

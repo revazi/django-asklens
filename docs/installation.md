@@ -128,12 +128,20 @@ production certification.
 
 ## Source checkout and exact local artifacts
 
-Use `uv` when developing in this repository:
+For repository development, follow the canonical
+[contributor setup and focused-test guide](../CONTRIBUTING.md#development-setup).
+Its first offline check is:
 
 ```bash
-uv sync --group dev
-uv run pytest
+export DJANGO_ASKLENS_LIVE_LLM=0
+export DJANGO_ASKLENS_DEMO_LIVE_LLM=0
+uv sync --locked --group dev
+uv run --no-sync pytest tests/test_scaffold.py
 ```
+
+Expect five smoke tests to pass, with no provider key, Docker or database service.
+Dependency installation may use the network; default pytest is offline. Continue
+with [the smallest relevant test and full PR checks](../CONTRIBUTING.md#choose-the-smallest-relevant-test).
 
 A wheel built from mutable `main` may report `0.3.2`, but it is not either
 immutable public `0.3.2` artifact. Record the exact source snapshot and locally

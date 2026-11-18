@@ -102,9 +102,10 @@ Ruff, Django/migration checks, strict docs/rendered links, build/Twine/package
 contents/exclusions and the locked audit also passed locally. These are synthetic
 local checks, not hosted-check or independent-review approval, public artifact
 authentication, live-provider acceptance, or production security certification.
-Keep [#189](https://github.com/revazi/django-asklens/issues/189) open until its
-focused PR has independent approval and hosted checks; no merge, release or
-deployment is implied.
+**Delivery status:** [#189](https://github.com/revazi/django-asklens/issues/189)
+is closed following [merged PR #214](https://github.com/revazi/django-asklens/pull/214)
+at `00dd48cca9244ca8d0b4e059fcbf0380aba3374a`. The measurements above remain
+historical source/candidate evidence, not a release or deployment.
 
 ### Issue #190: bounded installed-wheel consumer typing
 
