@@ -3,11 +3,22 @@
 Prepared for [#192](https://github.com/revazi/django-asklens/issues/192), with
 session execution in [#193](https://github.com/revazi/django-asklens/issues/193).
 **No sessions, recruitment, external contact or independent usability results
-are established by this document.** Explicit maintainer review of this final
-protocol is required **before recruitment**; worker review and green CI do not
-satisfy that gate. Record the maintainer's dated decision and exact reviewed
-protocol commit in #192. Until then, keep #192 open. Recruitment route and
-participant consent authorization are separate #193 gates.
+are established by this document.**
+
+## Maintainer approval — #192 only
+
+On **2026-11-18 UTC**, the maintainer explicitly **approved** the exact merged
+protocol at commit
+[`27a1e3e1f1b2286f8b079fecdfb10363b4da17d9`](https://github.com/revazi/django-asklens/blob/27a1e3e1f1b2286f8b079fecdfb10363b4da17d9/docs/first-run-study.md).
+This dated decision satisfies #192's maintainer-review criterion for protocol
+preparation only; worker review and green CI are not substitutes for it.
+
+Approval does **not** authorize #193 execution. A specific recruitment route,
+participant contact, consent process, recording, custodian/storage setup and
+actual sessions remain separately unauthorized and incomplete. The approved
+protocol's consent, privacy, artifact, timing, storage and recruitment
+requirements below remain unchanged; any artifact or task revision requires
+new maintainer review.
 
 ## Question, participants and stopping rule
 
@@ -266,12 +277,12 @@ rather than uploading a session recording, transcript or terminal log.
 | Low | Wording or optional improvement that does not block safe completion; group duplicates, rank by observed recurrence and effort. |
 | Out of scope / insufficient evidence | Product request, unsupported platform, unverified cause or missing timing. Record limitation and investigate/defer, not an invented defect or a participant failure. |
 
-Before #193 contacts anyone: obtain explicit maintainer review of the final
-protocol, separately authorize a specific recruitment route/consent process,
-name the custodian/storage, and pass the fixed-artifact rehearsal. Then run
-actual willing independent sessions (at least three, aiming for five), report
-all outcomes including negative/incomplete results, triage focused issues and
-publish only consented de-identified findings. Fewer sessions leave #193's
-sample criterion incomplete unless the maintainer explicitly revises scope.
-Preparation, worker approval, rehearsal and CI do not complete #192's maintainer
-review criterion or #193's study. See the [roadmap evidence/status](maintenance-roadmap.md#issues-191-and-192-contract-review-and-study-preparation).
+The exact protocol's maintainer-review gate is satisfied as recorded above.
+Before #193 contacts anyone: separately authorize a specific recruitment
+route/consent process, name the custodian/storage, and pass the fixed-artifact
+rehearsal. Then run actual willing independent sessions (at least three, aiming
+for five), report all outcomes including negative/incomplete results, triage
+focused issues and publish only consented de-identified findings. Fewer sessions
+leave #193's sample criterion incomplete unless the maintainer explicitly
+revises scope. Protocol approval, preparation, worker review, rehearsal and CI
+do not authorize or complete #193's study. See the [roadmap evidence/status](maintenance-roadmap.md#issues-191-and-192-contract-review-and-study-preparation).

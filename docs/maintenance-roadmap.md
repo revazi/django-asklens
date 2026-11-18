@@ -186,11 +186,16 @@ These results do not authenticate a candidate as the public artifact or prove
 production transport/provider acceptance, adoption or security certification.
 No runtime, dependency, lock, migration, release or deployment change is made.
 
-**Delivery status:** #191 awaits final independent review, hosted checks and
-merge evidence before closure. #192 is preparation only and remains **open**:
-no explicit maintainer review of the final protocol has been evidenced. Worker
-review/CI cannot satisfy that criterion. #193 owns separately authorized
-recruitment, consent and actual independent sessions; none occurred here.
+**Delivery status:** #191 is closed following independent review and all 16
+hosted PR checks in [PR #216](https://github.com/revazi/django-asklens/pull/216),
+merged at `27a1e3e1f1b2286f8b079fecdfb10363b4da17d9`; exact-merge CI, docs and
+CodeQL also passed. On **2026-11-18 UTC**, the maintainer explicitly **approved**
+the [exact protocol at that commit](https://github.com/revazi/django-asklens/blob/27a1e3e1f1b2286f8b079fecdfb10363b4da17d9/docs/first-run-study.md),
+satisfying #192's final maintainer-review criterion for protocol preparation
+only. Worker review/CI are not substitutes for that decision. #193's recruitment
+route, participant contact, consent process, recording, custodian/storage setup
+and actual sessions remain separately unauthorized and incomplete. No study or
+independent usability result is claimed.
 
 ### Point-in-time locked dependency audit
 
