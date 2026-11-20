@@ -67,7 +67,7 @@ examples used here. No new release or docs-site deployment is part of this work.
 ## Register only what this report needs
 
 This is the quickstart's existing
-[`shop/asklens_registration.py`](https://github.com/revazi/django-asklens/blob/main/examples/quickstart/shop/asklens_registration.py),
+[`shop/asklens_registration.py`](https://github.com/revazi/django-asklens/blob/66705194d480a98983bf153e5170b7528bc00f99/examples/quickstart/shop/asklens_registration.py),
 imported once by `ShopConfig.ready()`. It is host code, not a provider response:
 
 <!-- asklens-article-source:registration -->
@@ -231,7 +231,7 @@ recovery, not a policy explanation, a superuser retry or a false empty success.
 ### 4. A provider-produced plan that is not usable
 
 Use the copied, article-only
-[`quickstart/invalid_plan_settings.py`](https://github.com/revazi/django-asklens/blob/main/examples/quickstart/quickstart/invalid_plan_settings.py).
+[`quickstart/invalid_plan_settings.py`](https://github.com/revazi/django-asklens/blob/66705194d480a98983bf153e5170b7528bc00f99/examples/quickstart/quickstart/invalid_plan_settings.py).
 It retains the dummy backend and metadata-only audit, but makes the exact paid
 question return this intentionally invalid envelope:
 

@@ -1,5 +1,38 @@
 # Draft — Django News submission
 
+## #196 article-led variant — 2026-11-20, blocked and unsubmitted
+
+**Current gate:** the signed-out [current rule/route check](sharing-plan-196.md)
+found no authoritative public editorial submission route/rules. The old guessed
+`/submit/` route still returned HTTP 404. This is **blocked pending recheck**,
+not permission to contact editors, use a sponsorship route or submit to a guessed
+endpoint. The historical “Content-ready” label below is not current clearance.
+
+**Proposed title:** Scoped Django analytics without executing model-generated SQL
+
+**Proposed URL:**
+<https://github.com/revazi/django-asklens/blob/66705194d480a98983bf153e5170b7528bc00f99/docs/integration-article.md>
+
+**Short editorial summary, not submitted:**
+
+> A practical Django AskLens integration article walks through explicit fields
+> and private bindings, permission-filtered metadata, current-request row scope
+> and bounded results. Four outcomes—success, empty, opaque denial and an invalid
+> provider plan—were replayed against an installed candidate using synthetic data
+> and exact-question dummy planning, without a live model. Public `0.3.2` remains
+> a distinct immutable alpha; the host example/article are newer source additions.
+> The prospective submitter is creator/maintainer Revaz Zakalashvili, and the
+> draft was prepared with substantial AI assistance. No independent usability,
+> separate-application adoption or production-readiness claim is made.
+
+No editor field/length limits are invented here. Before any separately
+authorized future submission, verify the exact reviewed source/evidence link,
+obtain author review in their own voice, then adapt this existing summary to
+verified editorial rules without dropping disclosures. See the
+[verification record](../article-evidence-196.md); no new site deployment exists.
+
+## Historical #168 release-demo variant (not newly reverified)
+
 **Status (refreshed 2026-11-12):** Content-ready for Revaz Zakalashvili's
 final review and manual submission if he chooses. No submission has been made.
 The `v0.3.2` GitHub Release, PyPI record, public documentation, showcase, and

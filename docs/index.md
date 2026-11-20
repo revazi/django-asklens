@@ -33,6 +33,7 @@ configured offline questions match exact text only.
 
 ## Integrate it
 
+- [Draft: scoped analytics without executing model-generated SQL](integration-article.md) — practical host integration with four offline installed-candidate outcomes; not an externally published article
 - [Register host-owned models](registration.md)
 - [Configure providers](providers.md)
 - [Use the authenticated API](usage.md)
@@ -89,6 +90,8 @@ secondary to the runnable integration and safety guides above.
 - [Observed integration contract decisions](integration-contract-review.md)
 - [External first-run study protocol — preparation only](first-run-study.md)
 - [Test coverage baseline and critical-boundary map](test-coverage.md)
+- [Package review before the integration article](package-review-196.md)
+- [Exact article replay evidence and limits](article-evidence-196.md)
 - [Draft internal contract schemas](internal-contracts.md)
 - [Internal semantic decision index](internal-semantic-decision-index.md)
 - [Internal metadata, result, and error leakage audit](internal-surface-leakage-audit.md)

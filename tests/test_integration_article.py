@@ -160,3 +160,61 @@ def test_article_reuses_candidate_core_installer_and_never_defaults_on():
     assert "core-only wheel environment" in shell
     for script in ("scripts/published-package-smoke.sh",):
         assert "ASKLENS_ARTICLE_SMOKE=1" not in (ROOT / script).read_text()
+
+
+def test_draft_navigation_disclosures_and_channel_gates_are_explicit():
+    article = " ".join(ARTICLE.read_text().split())
+    for disclosure in (
+        "not submitted or externally posted",
+        "AI assistance",
+        "creator and maintainer",
+        "synthetic",
+        "exact configured",
+        "alpha",
+        "candidate wheel",
+        "#193 human sessions",
+        "#194 representative application",
+    ):
+        assert disclosure in article
+    navigation = (ROOT / "mkdocs.yml").read_text()
+    assert "Draft integration article: integration-article.md" in navigation
+    assert "Article replay evidence: article-evidence-196.md" in navigation
+    assert "Package review before the article: package-review-196.md" in navigation
+    plan = (ROOT / "docs/outreach/sharing-plan-196.md").read_text()
+    for boundary in (
+        "2026-11-20 UTC",
+        "signed-out",
+        "Blocked pending an authoritative editorial route/rules recheck",
+        "Blocked under #169",
+        "No post, submission, contact",
+        "not permission to post",
+        "https://forum.djangoproject.com/tos",
+        "https://www.djangoproject.com/conduct/",
+        "https://djangopackages.org/acceptable-use/",
+        "https://django-news.com/submit/",
+    ):
+        assert boundary in " ".join(plan.split())
+    assert "sharing-plan-196.md" not in navigation
+    assert "prune docs/outreach" in (ROOT / "MANIFEST.in").read_text()
+    for draft in ("django-forum-show-and-tell-draft.md", "django-news-draft.md"):
+        text = (ROOT / "docs/outreach" / draft).read_text()
+        assert "#196 article-led variant" in text
+        assert "sharing-plan-196.md" in text
+        assert "Historical #168" in text
+
+
+def test_rendered_validator_rejects_sharing_plan_search_leak(tmp_path):
+    from tests.test_showcase_and_docs_artifacts import load_module
+
+    validator = load_module(
+        "article_docs_validator", ROOT / "scripts/verify-docs-site.py"
+    )
+    (tmp_path / "index.html").write_text("<html></html>")
+    (tmp_path / "search").mkdir()
+    (tmp_path / "search/search_index.json").write_text(
+        '{"location":"sharing-plan-196"}'
+    )
+    failures, _ = validator.validate_site(tmp_path)
+    assert any(
+        "outreach draft found in search index: sharing-plan-196" in f for f in failures
+    )

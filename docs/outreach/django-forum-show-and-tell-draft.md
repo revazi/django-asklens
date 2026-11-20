@@ -1,5 +1,47 @@
 # Draft — Django Forum Show & Tell
 
+## #196 article-led variant — 2026-11-20, unposted
+
+**Current gate:** independent/owner review and private triage pending; no posting
+is authorized. The [dated sharing-plan rule check](sharing-plan-196.md) supersedes
+any interpretation of the historical “Content-ready” status below as current
+clearance. In particular, Show & Tell's invitation is not an exemption from the
+Forum terms' advertising/solicitation restrictions. If educational fit is
+unclear, remain blocked; do not automate access or ask for an exception here.
+
+Reuse the proposed title below, with this shorter article-led body only after
+separate owner authorization and editing into the owner's own voice:
+
+> I created and maintain Django AskLens, an alpha Django package. I have drafted
+> a practical [integration article](https://github.com/revazi/django-asklens/blob/66705194d480a98983bf153e5170b7528bc00f99/docs/integration-article.md)
+> about scoped analytics without executing provider-generated SQL. It follows
+> one small host model from explicit semantic fields/private bindings through
+> permission-filtered metadata and current-request scope validation to a bounded
+> result. Authentication, policy correctness, timeouts and rate limits remain
+> the host's responsibility.
+>
+> The examples include success, empty results, opaque denial and an invalid
+> provider plan. They were replayed with synthetic data and exact-question dummy
+> planning against an installed candidate wheel, not a live model. Public
+> `0.3.2` is a separate immutable alpha artifact; the article/host examples are
+> newer source additions. There are no external onboarding sessions or separate
+> application findings to report. The existing captioned showcase is a different
+> synthetic demo, not a live-provider result.
+>
+> This draft was prepared with substantial AI assistance. A useful integration
+> question is whether the distinction between resource permission and row scope
+> is clear in this small example. Any later reproduction should use synthetic
+> data and the privacy-safe feedback routes linked in the article; suspected
+> vulnerabilities belong in the private security route.
+
+The source link above pins the article/examples commit; the
+[verification record](../article-evidence-196.md) identifies later checks and
+limitations. Replace the link only with an exact independently reviewed merged
+revision (or a separately deployed and checked article), not an assumed live
+site page. Do not paste the historical release-demo variant as a second topic.
+
+## Historical #168 release-demo variant (not newly reverified)
+
 **Status (refreshed 2026-11-12):** Content-ready for Revaz Zakalashvili's
 final review and manual posting if he chooses. No post or submission has been
 made. The `v0.3.2` GitHub Release, PyPI files, public documentation, showcase,
