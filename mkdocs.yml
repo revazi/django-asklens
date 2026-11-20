@@ -33,6 +33,7 @@ nav:
       - Browser showcase: showcase.md
   - Get started:
       - Your first scoped question: quickstart-app.md
+      - Draft integration article: integration-article.md
       - Installation: installation.md
       - Core quickstart: quickstart-core.md
       - Register host models: registration.md
@@ -65,6 +66,8 @@ nav:
       - Maintenance roadmap: maintenance-roadmap.md
       - First-run study protocol (preparation): first-run-study.md
       - Test coverage: test-coverage.md
+      - Package review before the article: package-review-196.md
+      - Article replay evidence: article-evidence-196.md
       - Internal contracts: internal-contracts.md
       - Internal semantic decisions: internal-semantic-decision-index.md
       - Internal surface audit: internal-surface-leakage-audit.md

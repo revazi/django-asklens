@@ -29,6 +29,7 @@ DRAFT_MARKERS = {
     "django-forum-show-and-tell-draft",
     "django-news-draft",
     "django-packages-observation",
+    "sharing-plan-196",
 }
 
 

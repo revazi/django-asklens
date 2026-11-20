@@ -164,7 +164,13 @@ def guarded_step(arguments: list[str]) -> None:
     if Path.cwd().resolve().is_relative_to(source):
         raise TutorialFailure("Consumer execution is inside the source checkout")
     os.environ["DJANGO_SETTINGS_MODULE"] = (
-        ADAPTER_RECIPES[mode][2] if adapter_mode else "quickstart.settings"
+        ADAPTER_RECIPES[mode][2]
+        if adapter_mode
+        else (
+            "quickstart.invalid_plan_settings"
+            if label == "article-invalid"
+            else "quickstart.settings"
+        )
     )
     with (
         patch(
@@ -180,8 +186,10 @@ def guarded_step(arguments: list[str]) -> None:
         import django
 
         django.setup()
-        if label == "audit":
-            verify_audit()
+        if label in {"audit", "article-audit"}:
+            verify_audit(successes=2 if label == "article-audit" else 3)
+            if label == "article-audit":
+                verify_article_catalog()
             assert_import_isolation(source)
             return
 
@@ -189,7 +197,7 @@ def guarded_step(arguments: list[str]) -> None:
         from django.test.utils import CaptureQueriesContext
         from shop.models import Order
 
-        rejected = label in {"denied", "unmatched"}
+        rejected = label in {"denied", "unmatched", "article-denied", "article-invalid"}
         capture = CaptureQueriesContext(connection) if rejected else nullcontext()
         exit_code = 0
         try:
@@ -207,8 +215,8 @@ def guarded_step(arguments: list[str]) -> None:
         raise SystemExit(exit_code)
 
 
-def verify_audit() -> None:
-    """Only the five tutorial question attempts may populate this fresh DB."""
+def verify_audit(*, successes: int = 3) -> None:
+    """Only the replayed question attempts may populate this fresh DB."""
     from django.conf import settings
 
     from django_asklens.models import SemanticQueryRun
@@ -217,9 +225,11 @@ def verify_audit() -> None:
     if config["LLM_BACKEND"] != "dummy" or config["AUDIT_INCLUDE_CONTENT"] is not False:
         raise TutorialFailure("Offline/metadata-only tutorial settings changed")
     records = list(SemanticQueryRun.objects.all())
-    if len(records) != 5:
-        raise TutorialFailure("Expected one audit record per tutorial question")
-    if sorted(record.status for record in records) != ["failed"] * 2 + ["success"] * 3:
+    if len(records) != successes + 2:
+        raise TutorialFailure("Expected one audit record per replayed question")
+    if sorted(record.status for record in records) != (
+        ["failed"] * 2 + ["success"] * successes
+    ):
         raise TutorialFailure("Unexpected tutorial audit outcomes")
     for record in records:
         if record.question != "" or set(record.plan) - {"resource", "intent"}:
@@ -308,9 +318,100 @@ def verify_response(
             raise TutorialFailure(f"Incorrect tutorial row count: {label}")
 
 
-def replay(source: Path, wheel: Path, guide: Path) -> None:
+ARTICLE_COMMANDS = {
+    "success": ["ask_orders", "Show my paid orders", "--as-user", "alice"],
+    "empty": ["ask_orders", "Show my refunded orders", "--as-user", "alice"],
+    "denied": ["ask_orders", "Show my paid orders", "--as-user", "no-report"],
+    "invalid": [
+        "ask_orders",
+        "Show my paid orders",
+        "--as-user",
+        "alice",
+        "--settings=quickstart.invalid_plan_settings",
+    ],
+}
+
+
+def read_article(guide: Path) -> dict[str, object]:
+    """Read every article outcome/expected response, failing on drift or omission."""
+    blocks = {}
+    pattern = r"<!-- asklens-article:([a-z-]+) -->\n```(bash|json)\n(.*?)\n```"
+    for label, language, content in re.findall(
+        pattern, guide.read_text(encoding="utf-8"), re.DOTALL
+    ):
+        if label in blocks:
+            raise TutorialFailure("Duplicate article step")
+        if label in ARTICLE_COMMANDS and language == "bash":
+            command = shlex.split(content)
+            if command != [".venv/bin/python", "manage.py", *ARTICLE_COMMANDS[label]]:
+                raise TutorialFailure("Unexpected article command")
+            blocks[label] = [command[2:]]
+        elif label.removesuffix("-response") in ARTICLE_COMMANDS and (
+            label.endswith("-response") and language == "json"
+        ):
+            try:
+                blocks[label] = json.loads(content)
+            except json.JSONDecodeError as exc:
+                raise TutorialFailure("Invalid article expected response") from exc
+        else:
+            raise TutorialFailure("Unknown article step or language")
+    if set(blocks) != set(ARTICLE_COMMANDS) | {
+        f"{label}-response" for label in ARTICLE_COMMANDS
+    }:
+        raise TutorialFailure("Missing required article steps")
+    return blocks
+
+
+def verify_article_response(result, label: str, expected: object) -> None:
+    """Compare the complete safe CLI document except measured duration_ms."""
+    if result.returncode == 70:
+        require_success(result, f"article-{label} guard")
+    rejected = label in {"denied", "invalid"}
+    if result.returncode != (1 if rejected else 0):
+        raise TutorialFailure("Unexpected article exit status")
+    try:
+        document = json.loads(result.stdout)
+    except json.JSONDecodeError as exc:
+        raise TutorialFailure("Invalid article response") from exc
+    if not rejected:
+        duration = document.get("result", {}).pop("duration_ms", None)
+        if type(duration) is not int or duration < 0:
+            raise TutorialFailure("Missing article duration measurement")
+    if document != expected:
+        raise TutorialFailure(f"Article expected response differs: {label}")
+
+
+def verify_article_catalog() -> None:
+    """Check article visibility claims using the installed package and real users."""
+    from django.contrib.auth import get_user_model
+
+    from django_asklens.catalog import serialize_catalog
+
+    users = get_user_model().objects
+    allowed = serialize_catalog(
+        permissions=users.get(username="asklens-alice").get_all_permissions()
+    )
+    denied = serialize_catalog(
+        permissions=users.get(username="asklens-no-report").get_all_permissions()
+    )
+    if denied != {"resources": []} or len(allowed["resources"]) != 1:
+        raise TutorialFailure("Article resource visibility differs")
+    resource = allowed["resources"][0]
+    if resource["name"] != "orders" or {
+        field["name"] for field in resource["fields"]
+    } != {"product", "status", "total_cents"}:
+        raise TutorialFailure("Article field visibility differs")
+    if any(
+        token in json.dumps(allowed)
+        for token in ("binding", "owner", "shop.Order", "requires_permission")
+    ):
+        raise TutorialFailure("Article catalog exposed private host metadata")
+
+
+def replay(source: Path, wheel: Path, guide: Path, *, article: bool = False) -> None:
     """Reuse an already-installed wheel; own and clean only the copied project."""
-    blocks = read_tutorial(guide)
+    blocks = read_article(guide) if article else read_tutorial(guide)
+    tutorial = read_tutorial(source / "docs/quickstart-app.md") if article else blocks
     assert_installed_wheel(wheel, source)
     parent = Path.cwd().resolve()
     if parent.is_relative_to(source):
@@ -329,17 +430,30 @@ def replay(source: Path, wheel: Path, guide: Path) -> None:
                     "__pycache__", "*.pyc", "db.sqlite3", ".venv", "artifacts"
                 ),
             )
-            for command in blocks["setup"]:
+            for command in tutorial["setup"]:
                 require_success(
                     run_command(project, source, wheel, "setup", command), "setup"
                 )
-            for label in ("alice", "bob", "empty", "denied", "unmatched"):
-                expected = blocks.get(f"{label}-data", [])
-                result = run_command(project, source, wheel, label, blocks[label][0])
-                verify_response(result, label, expected)
-                print(f"tutorial_step={label}:passed")
-            require_success(run_command(project, source, wheel, "audit", []), "audit")
-            for command in blocks["tests"]:
+            steps = (
+                ARTICLE_COMMANDS
+                if article
+                else ("alice", "bob", "empty", "denied", "unmatched")
+            )
+            for label in steps:
+                child_label = f"article-{label}" if article else label
+                result = run_command(
+                    project, source, wheel, child_label, blocks[label][0]
+                )
+                if article:
+                    verify_article_response(result, label, blocks[f"{label}-response"])
+                else:
+                    verify_response(result, label, blocks.get(f"{label}-data", []))
+                print(f"{'article' if article else 'tutorial'}_step={label}:passed")
+            audit_label = "article-audit" if article else "audit"
+            require_success(
+                run_command(project, source, wheel, audit_label, []), audit_label
+            )
+            for command in tutorial["tests"]:
                 require_success(
                     run_command(project, source, wheel, "tests", command), "tests"
                 )
@@ -347,7 +461,8 @@ def replay(source: Path, wheel: Path, guide: Path) -> None:
             print("tutorial_cleanup=owned-directory-only")
     print("tutorial_cleanup=complete")
     print(
-        "PASS public tutorial exact-candidate-wheel replay (not public artifact proof)"
+        f"PASS {'article' if article else 'public tutorial'} "
+        "exact-candidate-wheel replay (not public artifact proof)"
     )
 
 
@@ -448,16 +563,19 @@ def main() -> None:
     parser.add_argument(
         "--guide", type=Path, help="Alternate guide for mismatch testing only"
     )
-    parser.add_argument("--adapter", choices=ADAPTER_RECIPES)
+    selection = parser.add_mutually_exclusive_group()
+    selection.add_argument("--adapter", choices=ADAPTER_RECIPES)
+    selection.add_argument("--article", action="store_true")
     args = parser.parse_args()
     source = args.source_root.resolve()
     if args.adapter:
         if args.guide:
-            parser.error("--guide is only available for the core tutorial replay")
+            parser.error("--guide is only available for tutorial/article replays")
         replay_adapter(source, args.wheel.resolve(), args.adapter)
     else:
-        guide = args.guide or source / "docs" / "quickstart-app.md"
-        replay(source, args.wheel.resolve(), guide)
+        filename = "integration-article.md" if args.article else "quickstart-app.md"
+        guide = args.guide or source / "docs" / filename
+        replay(source, args.wheel.resolve(), guide, article=args.article)
 
 
 if __name__ == "__main__":

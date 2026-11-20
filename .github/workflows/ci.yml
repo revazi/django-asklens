@@ -222,6 +222,7 @@ jobs:
       - name: Smoke test core wheel install without DRF
         env:
           ASKLENS_TUTORIAL_SMOKE: "1"
+          ASKLENS_ARTICLE_SMOKE: "1"
           ASKLENS_ADAPTER_SMOKE: "1"
         run: |
           bash .github/scripts/wheel-smoke.sh \

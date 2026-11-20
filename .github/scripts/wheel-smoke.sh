@@ -71,6 +71,29 @@ case "${ASKLENS_TUTORIAL_SMOKE:-0}" in
     ;;
 esac
 
+# The article reuses the same installed consumer, isolation and network guards.
+# Like the tutorial, it is current-candidate evidence, never a historical probe.
+case "${ASKLENS_ARTICLE_SMOKE:-0}" in
+  0) ;;
+  1)
+    if [[ "$mode" != "core" ]]; then
+      echo "The integration article requires a core-only wheel environment." >&2
+      exit 2
+    fi
+    (
+      cd "$smoke_venv"
+      env -u PYTHONPATH -u PYTHONHOME -u DJANGO_SETTINGS_MODULE \
+        "$smoke_venv/bin/python" -s \
+        "$project_root/.github/scripts/quickstart_smoke.py" \
+        --source-root "$project_root" --wheel "$wheel" --article
+    )
+    ;;
+  *)
+    echo "ASKLENS_ARTICLE_SMOKE must be 0 or 1." >&2
+    exit 2
+    ;;
+esac
+
 # Current source additions only: never replay new recipes against historical
 # published artifacts/upgrade origins unless explicitly requested.
 case "${ASKLENS_ADAPTER_SMOKE:-0}" in
