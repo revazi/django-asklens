@@ -13,7 +13,7 @@ Reuse the proposed title below, with this shorter article-led body only after
 separate owner authorization and editing into the owner's own voice:
 
 > I created and maintain Django AskLens, an alpha Django package. I have drafted
-> a practical [integration article](https://github.com/revazi/django-asklens/blob/66705194d480a98983bf153e5170b7528bc00f99/docs/integration-article.md)
+> a practical [integration article](https://github.com/revazi/django-asklens/blob/9f6317690632ab82573a1b52d71774ceab2282ea/docs/integration-article.md)
 > about scoped analytics without executing provider-generated SQL. It follows
 > one small host model from explicit semantic fields/private bindings through
 > permission-filtered metadata and current-request scope validation to a bounded
@@ -34,7 +34,7 @@ separate owner authorization and editing into the owner's own voice:
 > data and the privacy-safe feedback routes linked in the article; suspected
 > vulnerabilities belong in the private security route.
 
-The source link above pins the article/examples commit; the
+The source link above pins the complete article/prose snapshot; the
 [verification record](../article-evidence-196.md) identifies later checks and
 limitations. Replace the link only with an exact independently reviewed merged
 revision (or a separately deployed and checked article), not an assumed live

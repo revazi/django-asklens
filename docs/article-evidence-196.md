@@ -12,6 +12,17 @@ source/assertion review; it must not be reduced to a test count.
 - Article/examples/runner implementation:
   [`66705194d480a98983bf153e5170b7528bc00f99`](https://github.com/revazi/django-asklens/commit/66705194d480a98983bf153e5170b7528bc00f99).
   Runtime package source is unchanged from the baseline.
+- Complete article/prose/navigation snapshot and final verification source:
+  [`9f6317690632ab82573a1b52d71774ceab2282ea`](https://github.com/revazi/django-asklens/commit/9f6317690632ab82573a1b52d71774ceab2282ea).
+  The later evidence/link-only follow-up does not change runtime, examples or
+  executable article blocks.
+- Final replay candidate, built from a clean `git archive` of that snapshot with
+  `SOURCE_DATE_EPOCH=1795192916`: wheel SHA-256
+  `c6ac182f510fa3d796ce29d1da540a4143375f0df28ae3b6043188bcb410fc3a`;
+  sdist SHA-256
+  `1e4ef2f082c495bdb76fd1353d438537cb0f02c1bd9df6a6aee039346bc055d0`.
+  Names remain `django_asklens-0.3.2-py3-none-any.whl` and
+  `django_asklens-0.3.2.tar.gz`; same-version candidates are not public artifacts.
 - Initial candidate: `django_asklens-0.3.2-py3-none-any.whl`, SHA-256
   `3653507b5c753b23508e80e315ac472535c696ae1b370a533adb1a1fa03db8f8`.
   This was a local build of unchanged runtime bytes, **not** a public artifact.
@@ -70,7 +81,11 @@ commands, wrong exits, unexpected response fields, invalid duration, guard
 failures and expected-output drift have negative regression tests in
 [`test_integration_article.py`](../tests/test_integration_article.py).
 
-## Initial replay results
+## Replayed outcomes
+
+All four outcomes below passed on both the initial and final replay candidates.
+The final core tutorial/admin, API and MCP recipes and bounded typing checks
+also passed again; source/wheel API-route snapshots matched exactly.
 
 | Outcome | Observed / asserted |
 | --- | --- |
@@ -84,18 +99,50 @@ failures and expected-output drift have negative regression tests in
 | Bounded typing | Installed `py.typed`, positive fixture and exactly 24 negative diagnostics pass without optional adapters. |
 | Focused article/tutorial/source consumer tests | 54 passed. Source-level tests alone are not installed-artifact evidence. |
 
-## Remaining verification and closeout gates
+## Final local verification
 
-Final full/focused checks, package contents/Twine, locked audit and strict
-rendered docs results will be appended after the complete prose/navigation
-revision is checked. Hosted checks and mandatory independent review of the
+Executed against `9f6317690632ab82573a1b52d71774ceab2282ea`, with live consent
+and logging off and key variables removed unread as above:
+
+| Check | Local result and scope |
+| --- | --- |
+| `bash scripts/coverage-baseline.sh` with `PYTEST_ADDOPTS=-rs` | **1555 passed, 11 skipped**. Seven skips require live network/charge consent; three are PostgreSQL timeout/role checks and one is the PostgreSQL server-major guard. Informational branch measurement has no percentage gate and is not security/correctness proof. |
+| Focused registry/catalog/compiler/planning/facade/results/schema/conformance/compatibility/export/import/optional-dependency/typing-harness/article/tutorial subset | **878 passed, 4 skipped** (the same PostgreSQL-only checks). Existing composition/generative/conformance infrastructure was reused. |
+| Ruff lint / format; `compileall` | Pass; 287 Python files already formatted. |
+| Django `check`; `makemigrations asklens --check --dry-run` | No issues; no migration drift. Runtime, migrations, dependency graph and conformance fixtures are unchanged from the review baseline. |
+| Strict MkDocs build and `scripts/verify-docs-site.py site` | Pass: 44 HTML pages; rendered local links/fragments/navigation/assets checked. Sharing drafts/plan absent from rendered files and search; no deployment. |
+| Local rendered article in Chromium | Pass at 1280px and 390px viewport widths: one title, four outcome headings, disclosures present, no horizontal page overflow; external HTTP(S) requests blocked and JavaScript disabled. No new screenshot/video capture; not a full accessibility audit. |
+| Final evidence/link-only follow-up | 51 article/tutorial/docs regression tests pass; strict docs and lint/format pass again. No executable article block, example, runner or runtime source changes. |
+| Exact-source build / Twine / archive inspection | Wheel and sdist pass; schemas, `py.typed`, runner, article and invalid-plan host fixture included where expected; dev dependencies, outreach, media, generated site and local-only artifacts excluded. |
+| `scripts/alpha-candidate-package-smoke.sh` | Pass against exact committed source: core/API/MCP installs, schema/metadata/exclusions, authenticated public **0.3.1 / 0.3.0 / 0.2.0** origins upgraded to a separate candidate while preserving synthetic migration state/audit row. This does **not** authenticate public `0.3.2` or establish a live integration. |
+| `uv audit --locked --preview-features audit-command` | No known vulnerabilities or adverse project statuses in 120 audited packages (121 resolved). Point-in-time advisory lookup, not proof of dependency safety. |
+| Installed final candidate | All four article outcomes, core tutorial/admin, API and MCP recipes, source/wheel API-route parity, and positive/24-negative typing consumers pass with byte/import/network guards. |
+
+To reproduce the focused subset, use `pytest -q -rs` with `tests/catalog`,
+`tests/compiler`, `tests/planning`, `tests/execution`, `tests/results`,
+`tests/contracts`, `tests/conformance`, `tests/test_compatibility_contract.py`,
+`tests/test_export_surface.py`, `tests/test_import_boundaries.py`,
+`tests/test_optional_drf.py`, `tests/test_consumer_typing_harness.py`,
+`tests/test_quickstart_wheel_smoke.py` and `tests/test_integration_article.py`.
+Docs use the locked docs group, `mkdocs build --strict --clean` and the rendered
+validator, then restore the locked dev group before further tests.
+
+The package-evidence script builds its **own** ephemeral candidate from the same
+source (wheel `c4124d964c7499be3894701f724b311eae60b619869eebd7b060d720c4740a02`,
+sdist `07692f8c9d4a8583071b64613b62e7b3555bf384e4b0432e3bbd14bd69f8afb4`).
+It is not the deterministic final replay artifact named above; do not combine
+their digests. The script cleans only its owned temporary resources.
+
+## Remaining closeout gates
+
+Hosted checks, private maintainer triage and mandatory independent review of the
 exact eventual PR head remain separate gates; no approval is claimed here.
 The parent may perform authorized merge/exact-merge CI/docs/CodeQL checks and
 #196/#183 closeout afterward. No #198 or later task is started by this record.
 
 ## External-action and evidence limits
 
-The [maintainer-only sharing plan](https://github.com/revazi/django-asklens/blob/main/docs/outreach/sharing-plan-196.md)
+The [maintainer-only sharing plan](https://github.com/revazi/django-asklens/blob/9f6317690632ab82573a1b52d71774ceab2282ea/docs/outreach/sharing-plan-196.md)
 records dated signed-out public rules/route observations and channel blocks.
 It and the refreshed existing drafts are excluded from rendered docs/search
 and Python distributions. They are not published submissions or approval to

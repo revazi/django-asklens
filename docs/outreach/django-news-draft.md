@@ -11,7 +11,7 @@ endpoint. The historical “Content-ready” label below is not current clearanc
 **Proposed title:** Scoped Django analytics without executing model-generated SQL
 
 **Proposed URL:**
-<https://github.com/revazi/django-asklens/blob/66705194d480a98983bf153e5170b7528bc00f99/docs/integration-article.md>
+<https://github.com/revazi/django-asklens/blob/9f6317690632ab82573a1b52d71774ceab2282ea/docs/integration-article.md>
 
 **Short editorial summary, not submitted:**
 
