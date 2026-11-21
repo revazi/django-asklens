@@ -99,7 +99,7 @@ docs = [
     "mkdocs==1.6.1",
 ]
 typing = [
-    "mypy==2.4.0",
+    "mypy==2.4.1",
 ]
 
 [tool.setuptools.packages.find]
